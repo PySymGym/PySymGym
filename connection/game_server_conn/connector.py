@@ -1,8 +1,6 @@
 import logging
 import logging.config
-import queue
-from contextlib import closing
-from typing import Type
+from typing import Optional
 
 import websocket
 
@@ -12,9 +10,6 @@ from .messages import (
     ClientMessage,
     GameOverServerMessage,
     GameStateServerMessage,
-    GetTrainMapsMessageBody,
-    GetValidationMapsMessageBody,
-    MapsServerMessage,
     Reward,
     RewardServerMessage,
     ServerMessage,
@@ -24,36 +19,8 @@ from .messages import (
 )
 
 
-def get_validation_maps(ws_strings_queue: queue.Queue) -> list[GameMap]:
-    return get_maps(
-        ws_strings_queue, with_message_body_type=GetValidationMapsMessageBody
-    )
-
-
-def get_train_maps(ws_strings_queue: queue.Queue) -> list[GameMap]:
-    return get_maps(ws_strings_queue, with_message_body_type=GetTrainMapsMessageBody)
-
-
-def get_maps(
-    ws_strings_queue: queue.Queue,
-    with_message_body_type: Type[GetTrainMapsMessageBody]
-    | Type[GetValidationMapsMessageBody],
-) -> list[GameMap]:
-    request_all_maps_message = ClientMessage(with_message_body_type())
-
-    map_socket_url = ws_strings_queue.get()
-    with closing(websocket.create_connection(map_socket_url)) as ws:
-        ws.send(request_all_maps_message.to_json())
-        maps_message = ws.recv()
-    ws_strings_queue.put(map_socket_url)
-
-    return MapsServerMessage.from_json_handle(
-        maps_message, expected=MapsServerMessage
-    ).MessageBody.Maps
-
-
-class NAgent:
-    class WrongAgentStateError(Exception):
+class Connector:
+    class WrongConnectorStateError(Exception):
         def __init__(
             self, source: str, received: str, expected: str, at_step: int
         ) -> None:
@@ -66,37 +33,53 @@ class NAgent:
         pass
 
     class GameOver(Exception):
-        pass
+        def __init__(
+            self,
+            actual_coverage: Optional[int],
+            tests_count: int,
+            errors_count: int,
+            *args,
+        ) -> None:
+            self.actual_coverage = actual_coverage
+            self.tests_count = tests_count
+            self.errors_count = errors_count
+            super().__init__(*args)
 
     def __init__(
         self,
         ws: websocket.WebSocket,
-        map_id_to_play: int,
+        map: GameMap,
         steps: int,
     ) -> None:
         self.ws = ws
 
-        start_message = ClientMessage(
-            StartMessageBody(MapId=map_id_to_play, StepsToPlay=steps)
-        )
+        start_message = ClientMessage(StartMessageBody(MapId=map.Id, StepsToPlay=steps))
         logging.debug(f"--> StartMessage  : {start_message}")
         self.ws.send(start_message.to_json())
         self._current_step = 0
         self.game_is_over = False
-        self.map_id = map_id_to_play
+        self.map = map
+        self.steps = steps
 
     def _raise_if_gameover(self, msg) -> GameOverServerMessage | str:
         if self.game_is_over:
-            raise NAgent.GameOver
+            raise Connector.GameOver
 
         matching_message_type = ServerMessage.from_json_handle(
             msg, expected=ServerMessage
         ).MessageType
         match matching_message_type:
             case ServerMessageType.GAMEOVER:
+                deser_msg = GameOverServerMessage.from_json_handle(
+                    msg, expected=GameOverServerMessage
+                )
                 self.game_is_over = True
                 logging.debug(f"--> {matching_message_type}")
-                raise NAgent.GameOver
+                raise Connector.GameOver(
+                    actual_coverage=deser_msg.MessageBody.ActualCoverage,
+                    tests_count=deser_msg.MessageBody.TestsCount,
+                    errors_count=deser_msg.MessageBody.ErrorsCount,
+                )
             case _:
                 return msg
 
@@ -131,7 +114,7 @@ class NAgent:
     def _process_reward_server_message(self, msg):
         match msg.MessageType:
             case ServerMessageType.INCORRECT_PREDICTED_STATEID:
-                raise NAgent.IncorrectSentStateError(
+                raise Connector.IncorrectSentStateError(
                     f"Sending state_id={self._sent_state_id} \
                     at step #{self._current_step} resulted in {msg.MessageType}"
                 )
