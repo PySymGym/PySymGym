@@ -1,0 +1,3 @@
+[submodule "GameServers/VSharp"]
+	path = GameServers/VSharp
+	url = https://github.com/gsvgit/VSharp.git
