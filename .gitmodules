@@ -1,3 +1,21 @@
 [submodule "GameServers/VSharp"]
 	path = GameServers/VSharp
 	url = https://github.com/gsvgit/VSharp.git
+[submodule "maps/DotNet/Maps/LiteDB"]
+	path = maps/DotNet/Maps/LiteDB
+	url = https://github.com/mbdavid/LiteDB.git
+[submodule "maps/DotNet/Maps/StandaloneUnity"]
+	path = maps/DotNet/Maps/StandaloneUnity
+	url = https://github.com/mxprshn/StandaloneUnity.git
+[submodule "maps/DotNet/Maps/BizHawk"]
+	path = maps/DotNet/Maps/BizHawk
+	url = https://github.com/TASEmulators/BizHawk.git
+[submodule "maps/DotNet/Maps/advanced-algorithms"]
+	path = maps/DotNet/Maps/advanced-algorithms
+	url = https://github.com/justcoding121/advanced-algorithms.git
+[submodule "maps/DotNet/Maps/C-Sharp-Algorithms"]
+	path = maps/DotNet/Maps/C-Sharp-Algorithms
+	url = https://github.com/aalhour/C-Sharp-Algorithms.git
+[submodule "maps/DotNet/Maps/rd"]
+	path = maps/DotNet/Maps/rd
+	url = https://github.com/JetBrains/rd.git
