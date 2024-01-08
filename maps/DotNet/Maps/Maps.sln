@@ -40,6 +40,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RdFramework.Reflection", "r
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RdFramework", "rd\rd-net\RdFramework\RdFramework.csproj", "{9B62D1BF-F90F-4D4A-8380-22556A41C2FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Root", "Root\Root.csproj", "{085D616A-92C1-4154-B1F2-5C8648FD9FB0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -110,6 +112,10 @@ Global
 		{9B62D1BF-F90F-4D4A-8380-22556A41C2FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B62D1BF-F90F-4D4A-8380-22556A41C2FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B62D1BF-F90F-4D4A-8380-22556A41C2FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{085D616A-92C1-4154-B1F2-5C8648FD9FB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{085D616A-92C1-4154-B1F2-5C8648FD9FB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{085D616A-92C1-4154-B1F2-5C8648FD9FB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{085D616A-92C1-4154-B1F2-5C8648FD9FB0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AE36105D-8B03-46A0-9519-67A2FECFE34C} = {3F19D593-F2CC-48ED-897D-6B9762958D4A}
