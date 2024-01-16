@@ -5,5 +5,5 @@ Python infrastructure to train paths selectors for symbolic execution engines.
 
 This repository contains submodules, so use the following command to get sources locally. 
 ```
-git clone --recurse-submodules
+git clone --recurse-submodules https://github.com/gsvgit/PySymGym.git
 ```
