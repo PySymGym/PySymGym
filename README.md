@@ -7,3 +7,9 @@ This repository contains submodules, so use the following command to get sources
 ```
 git clone --recurse-submodules https://github.com/gsvgit/PySymGym.git
 ```
+
+Build .net game server (V#)
+```
+cd GameServers/VSharp
+dotnet build -c Release
+```
