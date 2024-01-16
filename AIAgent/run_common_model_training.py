@@ -44,6 +44,7 @@ TABLES_PATH = Path("./ml_tables.log")
 COMMON_MODELS_PATH = Path(COMMON_MODELS_PATH)
 BEST_MODELS_DICT = Path(BEST_MODELS_DICT_PATH)
 TRAINING_DATA_PATH = Path(TRAINING_DATA_PATH)
+DATASET_ROOT_PATH = Path(DATASET_ROOT_PATH)
 
 
 logging.basicConfig(
@@ -61,6 +62,9 @@ if not BEST_MODELS_DICT.exists():
 
 if not TRAINING_DATA_PATH.exists():
     os.makedirs(TRAINING_DATA_PATH)
+
+if not DATASET_ROOT_PATH.exists():
+    os.makedirs(DATASET_ROOT_PATH)
 
 
 def create_file(file: Path):
