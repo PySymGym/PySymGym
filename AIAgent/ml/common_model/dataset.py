@@ -115,9 +115,9 @@ class FullDataset:
 
     def update(
         self,
-        map_name,
+        map_name: str,
         map_result: tuple[int, int, int, int],
-        map_steps,
+        map_steps: list[HeteroData],
         move_to_cpu=False,
     ):
         if move_to_cpu:
@@ -125,6 +125,10 @@ class FullDataset:
                 x.to("cpu")
         filtered_map_steps = self.filter_map_steps(map_steps)
         if map_name in self.maps_data.keys():
+            if self.maps_data[map_name][0] == map_result:
+                logging.info(f"Steps on map {map_name} were merged with current steps with result {map_result}")
+                filtered_map_steps = self.remove_similar_steps(filtered_map_steps)
+                self.merge_steps(filtered_map_steps, map_name)
             if self.maps_data[map_name][0] < map_result:
                 logging.info(
                     f"The model with result = {self.maps_data[map_name][0]} was replaced with the model with "
@@ -135,3 +139,53 @@ class FullDataset:
         else:
             filtered_map_steps = self.remove_similar_steps(filtered_map_steps)
             self.maps_data[map_name] = (map_result, filtered_map_steps)
+
+    def merge_steps(self, steps: list[HeteroData], map_name: str):
+        merged_steps = []
+
+        def create_dict(steps_list: list[HeteroData]):
+            steps_dict = dict()
+            for step in steps:
+                states_num = step["state_vertex"].x.shape[0]
+                game_v_num = step["game_vertex"].x.shape[0]
+                if states_num + game_v_num in steps_list:
+                    steps_dict[states_num + game_v_num].append(step)
+                else:
+                    steps_dict[states_num + game_v_num] = [step]
+            return steps_dict
+
+        def flatten_and_sort_hetero_data(step: HeteroData):
+            return [
+                torch.sort(step["game_vertex"].x)[0],
+                torch.sort(step["state_vertex"].x)[0],
+                torch.sort(step["game_vertex_history_state_vertex"].edge_index)[0],
+                torch.sort(step["state_vertex_parent_of_state_vertex"].edge_index)[0],
+                torch.sort(step["game_vertex_to_game_vertex"].edge_type)[0],
+                torch.sort(step["game_vertex_history_state_vertex"].edge_attr)[0],
+                torch.sort(step["game_vertex_in_state_vertex"].edge_index)[0],
+            ]
+
+        new_steps = create_dict(steps)
+        old_steps = create_dict(self.maps_data[map_name])
+
+        for vertex_num in new_steps.keys():
+            for old_step in new_steps[vertex_num]:
+                for new_step in old_steps[vertex_num]:
+                    if flatten_and_sort_hetero_data(
+                        new_step
+                    ) == flatten_and_sort_hetero_data(old_step):
+                        old_step.y_true[old_step.y_true != 0] = 1
+                        all_possible_states = torch.logical_or(
+                            new_step.y_true,
+                            old_step.y_true,
+                            out=torch.empty(
+                                old_step.y_true.shape[0], dtype=torch.float32
+                            ),
+                        )
+                        old_step.y_true = all_possible_states / torch.sum(
+                            all_possible_states
+                        )
+                        merged_steps.append(old_step)
+                    else:
+                        merged_steps.append(new_step)
+        self.maps_data[map_name] = (self.maps_data[map_name][0], merged_steps)
