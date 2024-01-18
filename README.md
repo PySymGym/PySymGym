@@ -39,4 +39,3 @@ Install [black](https://github.com/psf/black) code formatter by running followin
 ```bash
 pip install pre-commit && pre-commit install
 ```
-
