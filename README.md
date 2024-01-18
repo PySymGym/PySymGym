@@ -2,17 +2,9 @@
 Python infrastructure to train paths selectors for symbolic execution engines.
 
 
-## Launch guide
+## Installation and usage
 
-Firstly, follow the steps in [Environment setup](#environment-setup) to create virtual environment
-
-...
-
-## Contribution
-
-Here's a quick guide to start contributing:
-
-### Environment setup
+### Installation
 
 In repository root run:
 ```bash
@@ -22,11 +14,20 @@ source .env/bin/activate
 pip install requirements.txt
 ```
 
-### Linting
+#### GPU installation:
 
-Install black formatter by running this command in repo root
+To use GPU, the correct `torch` and `torch_geometric` version should be installed depending on your host device. You may first need to `pip uninstall` these packages, provided by requirements.
+Then follow installation instructions provided on [torch](https://pytorch.org/get-started/locally/) and [torch_geometric](https://pytorch-geometric.readthedocs.io/en/stable/install/installation.html#installation-from-wheels) websites.
+
+### Usage
+
+...
+
+### Linting tools
+
+Install [black](https://github.com/psf/black) code formatter by running following command in repo root to check your codestyle before committing:
 ```bash
 pip install pre-commit && pre-commit install
 ```
-to check your codestyle on pre-commit
+
 
