@@ -6,12 +6,12 @@ Python infrastructure to train paths selectors for symbolic execution engines.
 
 
 This repository contains submodules, so use the following command to get sources locally. 
-```
-git clone --recurse-submodules https://github.com/gsvgit/PySymGym.git
+```sh
+git submodule update --init --recursive
 ```
 
 Build .net game server (V#)
-```
+```sh
 cd GameServers/VSharp
 dotnet build -c Release
 ```
@@ -36,6 +36,6 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 ## Linting tools
 
 Install [black](https://github.com/psf/black) code formatter by running following command in repo root to check your codestyle before committing:
-```bash
+```sh
 pip install pre-commit && pre-commit install
 ```
