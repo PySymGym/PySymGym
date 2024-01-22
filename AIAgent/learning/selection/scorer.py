@@ -3,8 +3,6 @@
 
 from typing import Iterable
 
-from bit_coder.bit_coder import convert_to_big_int
-
 from common.classes import GameResult
 
 
@@ -50,4 +48,4 @@ def straight_scorer(model_results: Iterable[GameResult]) -> tuple:
         data=[res.steps_count for res in model_results], bound=0
     )
 
-    return convert_to_big_int(coverage_score, tests_score, errors_score, steps_score)
+    return coverage_score, tests_score, errors_score, steps_score
