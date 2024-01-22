@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from contextlib import contextmanager, suppress
 
@@ -35,7 +34,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
         )
         retries_left -= 1
     raise RuntimeError(
-        f"Retries exsausted wnen trying to connect to {server_instance.ws_url}: {retries_left} left"
+        f"Retries exhausted when trying to connect to {server_instance.ws_url}: {retries_left} left"
     )
 
 
