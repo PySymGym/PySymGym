@@ -19,6 +19,7 @@ class GeneralConfig:
     IMPORT_MODEL_INIT = ...
     EXPORT_MODEL_INIT = ...
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    DATASET_BASE_PATH = "/Users/emax/Data/PySymGym/maps/DotNet/Maps/ManuallyCollected/bin/Debug/net7.0"
 
 
 class BrokerConfig:
@@ -73,7 +74,7 @@ class FeatureConfig:
         enabled=True, save_path=Path("./report/epochs_tables/")
     )
     ON_GAME_SERVER_RESTART = OnGameServerRestartFeature(
-        enabled=False, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1
+        enabled=True, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1
     )
 
 
