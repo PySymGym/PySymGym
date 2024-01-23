@@ -7,7 +7,7 @@ import torch
 
 
 class GeneralConfig:
-    SERVER_COUNT = 16
+    SERVER_COUNT = 1
     NUM_GENERATIONS = 20
     NUM_PARENTS_MATING = 22
     KEEP_ELITISM = 2
@@ -73,7 +73,7 @@ class FeatureConfig:
         enabled=True, save_path=Path("./report/epochs_tables/")
     )
     ON_GAME_SERVER_RESTART = OnGameServerRestartFeature(
-        enabled=True, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1
+        enabled=False, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1
     )
 
 
