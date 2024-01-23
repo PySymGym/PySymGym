@@ -13,7 +13,6 @@ from common.utils import get_states
 from config import FeatureConfig, GeneralConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
-from connection.game_server_conn.utils import MapsType
 from learning.timer.resources_manager import manage_map_inference_times_array
 from learning.timer.stats import compute_statistics
 from learning.timer.utils import get_map_inference_times
@@ -137,13 +136,12 @@ def play_game(
     with_predictor: Predictor,
     max_steps: int,
     maps: list[GameMap],
-    maps_type: MapsType,
     with_dataset=None,
 ):
     # random.shuffle(maps)
     with tqdm.tqdm(
         total=len(maps),
-        desc=f"{with_predictor.name():20}: {maps_type.value}",
+        desc=f"{with_predictor.name():20}",
         **TQDM_FORMAT_DICT,
     ) as pbar:
         list_of_map2result: list[Map2Result] = []
