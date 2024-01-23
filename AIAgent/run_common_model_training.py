@@ -5,7 +5,7 @@ import multiprocessing as mp
 import os
 import random
 import typing as t
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -13,13 +13,11 @@ from pathlib import Path
 import joblib
 import numpy as np
 import optuna
-import pandas as pd
 import torch
 import torch.nn as nn
 import tqdm
 from common.game import GameMap
 from config import GeneralConfig
-from connection.broker_conn.socket_manager import game_server_socket_manager
 from epochs_statistics.tables import create_pivot_table, table_to_string
 from learning.play_game import play_game
 from ml.common_model.dataset import FullDataset
@@ -33,7 +31,7 @@ from ml.common_model.paths import (
 )
 from ml.common_model.utils import csv2best_models, get_model
 from ml.common_model.wrapper import BestModelsWrapper, CommonModelWrapper
-from ml.models.RGCNEdgeTypeTAG2VerticesDouble.model_modified import (
+from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2.model_modified import (
     StateModelEncoderLastLayer,
 )
 from ml.models.StateGNNEncoderConvEdgeAttr.model_modified import (

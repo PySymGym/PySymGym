@@ -1,11 +1,10 @@
 import logging
+import os
 from statistics import StatisticsError
 from time import perf_counter
 from typing import TypeAlias
 
 import tqdm
-from func_timeout import FunctionTimedOut, func_set_timeout
-
 from common.classes import GameResult, Map2Result
 from common.constants import TQDM_FORMAT_DICT
 from common.game import GameMap
@@ -13,6 +12,7 @@ from common.utils import get_states
 from config import FeatureConfig, GeneralConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
+from func_timeout import FunctionTimedOut, func_set_timeout
 from learning.timer.resources_manager import manage_map_inference_times_array
 from learning.timer.stats import compute_statistics
 from learning.timer.utils import get_map_inference_times
@@ -146,6 +146,10 @@ def play_game(
     ) as pbar:
         list_of_map2result: list[Map2Result] = []
         for game_map in maps:
+            game_map.AssemblyFullName = os.path.join(
+                GeneralConfig.DATASET_BASE_PATH, game_map.AssemblyFullName
+            )
+
             logging.info(f"<{with_predictor.name()}> is playing {game_map.MapName}")
 
             try:
