@@ -7,6 +7,7 @@ Python infrastructure to train paths selectors for symbolic execution engines.
 
 This repository contains submodules, so use the following command to get sources locally. 
 ```sh
+git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
 ```
 
@@ -21,7 +22,7 @@ Create & activate virtual environment:
 python3 -m pip install virtualenv
 python3 -m virtualenv .env
 source .env/bin/activate
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 ### GPU installation:
