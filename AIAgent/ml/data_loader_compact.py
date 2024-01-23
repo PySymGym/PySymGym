@@ -69,6 +69,8 @@ class ServerDataloaderHeteroVector:
                             int(v.CoveredByTest),
                             int(v.VisitedByState),
                             int(v.TouchedByState),
+                            int(v.ContainsCall),
+                            int(v.ContainsThrow),
                         ]
                     )
                 )
@@ -91,11 +93,12 @@ class ServerDataloaderHeteroVector:
                     np.array(
                         [
                             s.Position,
-                            s.PredictedUsefulness,
                             s.PathConditionSize,
                             s.VisitedAgainVertices,
                             s.VisitedNotCoveredVerticesInZone,
                             s.VisitedNotCoveredVerticesOutOfZone,
+                            s.StepWhenMovedLastTime,
+                            s.InstructionsVisitedInCurrentBlock,
                         ]
                     )
                 )
@@ -104,8 +107,12 @@ class ServerDataloaderHeteroVector:
                     v_to = vertex_map[h.GraphVertexId]
                     edges_index_s_v_history.append(np.array([state_index, v_to]))
                     edges_index_v_s_history.append(np.array([v_to, state_index]))
-                    edges_attr_s_v.append(np.array([h.NumOfVisits]))
-                    edges_attr_v_s.append(np.array([h.NumOfVisits]))
+                    edges_attr_s_v.append(
+                        np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
+                    )
+                    edges_attr_v_s.append(
+                        np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
+                    )
                 state_index = state_index + 1
             else:
                 state_doubles += 1
@@ -113,7 +120,11 @@ class ServerDataloaderHeteroVector:
         # state and its childen edges: state -> state
         for s in game_states:
             for ch in s.Children:
-                edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
+                try:
+                    edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
+                except KeyError:
+                    print("[ERROR]: KeyError")
+                    return None, None
 
         # state position edges: vertex -> state and back
         for v in graphVertices:
@@ -123,9 +134,22 @@ class ServerDataloaderHeteroVector:
 
         data["game_vertex"].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
         data["state_vertex"].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
-        data["game_vertex_to_game_vertex"].edge_index = (
+
+        def tensor_not_empty(tensor):
+            return tensor.numel() != 0
+
+        # dumb fix
+        def null_if_empty(tensor):
+            return (
+                tensor
+                if tensor_not_empty(tensor)
+                else torch.empty((2, 0), dtype=torch.int64)
+            )
+
+        data["game_vertex_to_game_vertex"].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
         )
+
         data["game_vertex_to_game_vertex"].edge_attr = torch.tensor(
             np.array(edges_attr_v_v), dtype=torch.long
         )
@@ -142,17 +166,6 @@ class ServerDataloaderHeteroVector:
             .t()
             .contiguous()
         )
-
-        def tensor_not_empty(tensor):
-            return tensor.numel() != 0
-
-        # dumb fix
-        def null_if_empty(tensor):
-            return (
-                tensor
-                if tensor_not_empty(tensor)
-                else torch.empty((2, 0), dtype=torch.int64)
-            )
 
         data["state_vertex_history_game_vertex"].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
@@ -180,6 +193,35 @@ class ServerDataloaderHeteroVector:
         # data.state_map = state_map
         # print("Doubles", state_doubles, len(state_map))
         return data, state_map
+
+    @staticmethod
+    def get_expected_value(file_path: str, state_map: Dict[int, int]) -> torch.tensor:
+        """Get tensor for states"""
+        expected = {}
+        with open(file_path) as f:
+            data = json.load(f)
+            state_set = set()
+            for d in data:
+                sid = d["StateId"]
+                if sid not in state_set:
+                    state_set.add(sid)
+                    values = [
+                        d["NextInstructionIsUncoveredInZone"],
+                        d["ChildNumberNormalized"],
+                        d["VisitedVerticesInZoneNormalized"],
+                        d["Productivity"],
+                        d["DistanceToReturnNormalized"],
+                        d["DistanceToUncoveredNormalized"],
+                        d["DistanceToNotVisitedNormalized"],
+                        d["ExpectedWeight"],
+                    ]
+                    expected[sid] = np.array(values)
+        ordered = []
+        ordered_by_index = list(zip(*sorted(state_map.items(), key=lambda x: x[1])))[0]
+        for k in ordered_by_index:
+            ordered.append(expected[k])
+        # print(ordered, state_map)
+        return torch.tensor(np.array(ordered), dtype=torch.float)
 
     @staticmethod
     def get_expected_value(file_path: str, state_map: Dict[int, int]) -> torch.tensor:
