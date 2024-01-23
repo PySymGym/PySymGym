@@ -3,7 +3,6 @@ import logging.config
 from typing import Optional
 
 import websocket
-
 from common.game import GameMap, GameState
 
 from .messages import (
@@ -53,7 +52,7 @@ class Connector:
     ) -> None:
         self.ws = ws
 
-        start_message = ClientMessage(StartMessageBody(MapId=map.Id, StepsToPlay=steps))
+        start_message = ClientMessage(StartMessageBody(**map.to_dict()))
         logging.debug(f"--> StartMessage  : {start_message}")
         self.ws.send(start_message.to_json())
         self._current_step = 0

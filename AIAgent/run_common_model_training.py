@@ -1,3 +1,5 @@
+import argparse
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -5,18 +7,19 @@ import random
 import typing as t
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 
+import joblib
 import numpy as np
+import optuna
 import pandas as pd
 import torch
 import torch.nn as nn
 import tqdm
-from torch_geometric.loader import DataLoader
-
+from common.game import GameMap
 from config import GeneralConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
-from connection.game_server_conn.utils import MapsType, get_maps
 from epochs_statistics.tables import create_pivot_table, table_to_string
 from learning.play_game import play_game
 from ml.common_model.dataset import FullDataset
@@ -36,9 +39,7 @@ from ml.models.RGCNEdgeTypeTAG2VerticesDouble.model_modified import (
 from ml.models.StateGNNEncoderConvEdgeAttr.model_modified import (
     StateModelEncoderLastLayer as RefStateModelEncoderLastLayer,
 )
-import optuna
-from functools import partial
-import joblib
+from torch_geometric.loader import DataLoader
 
 LOG_PATH = Path("./ml_app.log")
 TABLES_PATH = Path("./ml_tables.log")
@@ -79,14 +80,13 @@ def play_game_task(task):
         with_predictor=cmwrapper,
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
-        maps_type=MapsType.TRAIN,
         with_dataset=dataset,
     )
     return result
 
 
 @dataclass
-class TrainConfig:
+class TrialSettings:
     lr: float
     epochs: int
     batch_size: int
@@ -95,8 +95,8 @@ class TrainConfig:
     random_seed: int
 
 
-def train(trial: optuna.trial.Trial, dataset: FullDataset):
-    config = TrainConfig(
+def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
+    config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 32, 1024),
         epochs=10,
@@ -139,14 +139,12 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset):
 
     cmwrapper = CommonModelWrapper(model)
 
-    with game_server_socket_manager() as ws:
-        all_maps = get_maps(websocket=ws, type=MapsType.TRAIN)
-        maps = np.array_split(all_maps, GeneralConfig.SERVER_COUNT)
-        random.shuffle(maps)
-        tasks = [
-            (maps[i], FullDataset("", ""), cmwrapper)
-            for i in range(GeneralConfig.SERVER_COUNT)
-        ]
+    maps = np.array_split(maps, GeneralConfig.SERVER_COUNT)
+    random.shuffle(maps)
+    tasks = [
+        (maps[i], FullDataset("", ""), cmwrapper)
+        for i in range(GeneralConfig.SERVER_COUNT)
+    ]
 
     mp.set_start_method("spawn", force=True)
     # p = Pool(GeneralConfig.SERVER_COUNT)
@@ -229,42 +227,58 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset):
     return max(all_average_results)
 
 
-def get_dataset(
-    generate_dataset: bool, ref_model_init: t.Callable[[], torch.nn.Module]
+def generate_dataset(
+    maps: list[GameMap], ref_model_init: t.Callable[[], torch.nn.Module]
 ):
     dataset = FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
-
-    if generate_dataset:
-        with game_server_socket_manager() as ws:
-            all_maps = get_maps(websocket=ws, type=MapsType.TRAIN)
-        # creating new dataset
-        best_models_dict = csv2best_models(ref_model_init=ref_model_init)
-        play_game(
-            with_predictor=BestModelsWrapper(best_models_dict),
-            max_steps=GeneralConfig.MAX_STEPS,
-            maps=all_maps,
-            maps_type=MapsType.TRAIN,
-            with_dataset=dataset,
-        )
-        dataset.save()
-    else:
-        # loading existing dataset
-        dataset.load()
+    best_models_dict = csv2best_models(ref_model_init=ref_model_init)
+    play_game(
+        with_predictor=BestModelsWrapper(best_models_dict),
+        max_steps=GeneralConfig.MAX_STEPS,
+        maps=maps,
+        with_dataset=dataset,
+    )
+    dataset.save()
     return dataset
 
 
+def get_dataset():
+    return FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
+
+
 def main():
-    print(GeneralConfig.DEVICE)
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--datasetdescription",
+        type=str,
+        help="full paths to JSON-file with dataset description",
+        required=True,
+    )
+    parser.add_argument(
+        "--generatedataset",
+        type=bool,
+        help="set this flag if dataset generation is needed",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    args = parser.parse_args()
+
     ref_model_initializer = lambda: RefStateModelEncoderLastLayer(
         hidden_channels=32, out_channels=8
     )
+    with open(args.datasetdescription, "r") as maps_json:
+        maps = GameMap.schema().load(json.loads(maps_json.read()), many=True)
+    if args.generatedataset:
+        dataset = generate_dataset(maps=maps, ref_model_init=ref_model_initializer)
+    else:
+        dataset = get_dataset()
 
-    generate_dataset = False
-    dataset = get_dataset(generate_dataset, ref_model_init=ref_model_initializer)
+    print(GeneralConfig.DEVICE)
 
     sampler = optuna.samplers.TPESampler(n_startup_trials=10)
     study = optuna.create_study(sampler=sampler, direction="maximize")
-    objective = partial(train, dataset=dataset)
+    objective = partial(train, dataset=dataset, maps=maps)
     study.optimize(objective, n_trials=100)
     joblib.dump(study, f"{datetime.fromtimestamp(datetime.now().timestamp())}.pkl")
 

@@ -4,10 +4,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from dataclasses_json import config, dataclass_json
-
 from common.game import GameMap, GameState, Reward
 from config import FeatureConfig
+from dataclasses_json import config, dataclass_json
 
 from .unsafe_json import obj_from_dict
 
@@ -15,8 +14,7 @@ from .unsafe_json import obj_from_dict
 class ClientMessageType(str, Enum):
     START = "start"
     STEP = "step"
-    GETTRAINMAPS = "gettrainmaps"
-    GETVALIDATIONMAPS = "getvalidationmaps"
+    STOP = "stop"
 
 
 @dataclass_json
@@ -28,24 +26,7 @@ class ClientMessageBody:
 
 @dataclass_json
 @dataclass(slots=True)
-class GetTrainMapsMessageBody(ClientMessageBody):
-    def type(self) -> ClientMessageType:
-        return ClientMessageType.GETTRAINMAPS
-
-
-@dataclass_json
-@dataclass(slots=True)
-class GetValidationMapsMessageBody(ClientMessageBody):
-    def type(self) -> ClientMessageType:
-        return ClientMessageType.GETVALIDATIONMAPS
-
-
-@dataclass_json
-@dataclass(slots=True)
-class StartMessageBody(ClientMessageBody):
-    MapId: int
-    StepsToPlay: int
-
+class StartMessageBody(ClientMessageBody, GameMap):
     def type(self) -> ClientMessageType:
         return ClientMessageType.START
 
@@ -76,18 +57,12 @@ class ClientMessage:
         self.MessageType = self.MessageBody.type()
 
 
-@dataclass_json
-@dataclass(slots=True)
-class MapsMessageBody:
-    Maps: list[GameMap]
-
-
 class ServerMessageType(str, Enum):
-    MAPS = "Maps"
-    READY_FOR_NEXT_STEP = "ReadyForNextStep"
-    MOVE_REVARD = "MoveReward"
     GAMEOVER = "GameOver"
+    MOVE_REVARD = "MoveReward"
     INCORRECT_PREDICTED_STATEID = "IncorrectPredictedStateId"
+    READY_FOR_NEXT_STEP = "ReadyForNextStep"
+    SERVER_ERROR = "ServerError"
 
 
 @dataclass_json
@@ -119,11 +94,6 @@ class GameStateServerMessage(ServerMessage):
 @dataclass(slots=True)
 class RewardServerMessage(ServerMessage):
     MessageBody: Reward
-
-
-@dataclass(slots=True)
-class MapsServerMessage(ServerMessage):
-    MessageBody: MapsMessageBody
 
 
 @dataclass(slots=True)
