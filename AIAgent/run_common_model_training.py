@@ -109,9 +109,9 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
 
     path_to_weights = os.path.join(
         PRETRAINED_MODEL_PATH,
-        "RGCNEdgeTypeTAG2VerticesDouble",
+        "RGCNEdgeTypeTAG3VerticesDoubleHistory2",
         "64ch",
-        "100e",
+        "50e",
         "GNN_state_pred_het_dict",
     )
     model = get_model(
@@ -230,6 +230,9 @@ def generate_dataset(
 ):
     dataset = FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
     best_models_dict = csv2best_models(ref_model_init=ref_model_init)
+    best_models_dict = {
+        k.replace("Method_", ""): v for k, v in best_models_dict.items()
+    }
     play_game(
         with_predictor=BestModelsWrapper(best_models_dict),
         max_steps=GeneralConfig.MAX_STEPS,
