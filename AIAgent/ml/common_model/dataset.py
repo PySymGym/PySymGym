@@ -3,6 +3,7 @@ import torch
 
 import os
 import numpy as np
+import random
 
 import tqdm
 import logging
@@ -91,7 +92,11 @@ class FullDataset:
         result = []
         for map_result, map_steps in self.maps_data.values():
             if map_result[0] >= threshold:
-                for step in map_steps:
+                if len(map_steps) > 2000:
+                    selected_steps = random.sample(map_steps, 2000)
+                else:
+                    selected_steps = map_steps
+                for step in selected_steps:
                     if step.use_for_train:
                         result.append(step)
         return result
@@ -125,12 +130,15 @@ class FullDataset:
                 x.to("cpu")
         filtered_map_steps = self.filter_map_steps(map_steps)
         if map_name in self.maps_data.keys():
-            if self.maps_data[map_name][0] == map_result:
-                logging.info(
-                    f"Steps on map {map_name} were merged with current steps with result {map_result}"
-                )
+            if self.maps_data[map_name][0] == map_result and map_result[0] == 100:
+                init_steps_num = len(self.maps_data[map_name][1])
+
                 filtered_map_steps = self.remove_similar_steps(filtered_map_steps)
                 self.merge_steps(filtered_map_steps, map_name)
+                new_steps_num = len(self.maps_data[map_name][1])
+                logging.info(
+                    f"Steps on map {map_name} were merged with current steps with result {map_result}. {len(filtered_map_steps)} + {init_steps_num} -> {new_steps_num}. "
+                )
             if self.maps_data[map_name][0] < map_result:
                 logging.info(
                     f"The model with result = {self.maps_data[map_name][0]} was replaced with the model with "
@@ -177,21 +185,28 @@ class FullDataset:
         old_steps = create_dict(self.maps_data[map_name][1])
 
         for vertex_num in new_steps.keys():
+            flattened_old_steps = []
+            if vertex_num in old_steps.keys():
+                for old_step in old_steps[vertex_num]:
+                    flattened_old_steps.append(flatten_and_sort_hetero_data(old_step))
             for new_step in new_steps[vertex_num]:
-                if vertex_num in old_steps.keys():
-                    for step_num, old_step in enumerate(old_steps[vertex_num]):
-                        new_g_v, new_s_v = flatten_and_sort_hetero_data(new_step)
-                        old_g_v, old_s_v = flatten_and_sort_hetero_data(old_step)
+                new_g_v, new_s_v = flatten_and_sort_hetero_data(new_step)
+                should_add = True
+                for step_num, (old_g_v, old_s_v) in enumerate(flattened_old_steps):
+                    if np.array_equal(new_g_v, old_g_v) and np.array_equal(
+                        new_s_v, old_s_v
+                    ):
+                        y_true_sum = (
+                            old_steps[vertex_num][step_num].y_true + new_step.y_true
+                        )
+                        y_true_sum[y_true_sum != 0] = 1
 
-                        if np.array_equal(new_g_v, old_g_v) and np.array_equal(
-                            new_s_v, old_s_v
-                        ):
-                            y_true_sum = old_step.y_true + new_step.y_true
-                            y_true_sum[y_true_sum != 0] = 1
-
-                            old_step.y_true = y_true_sum / torch.sum(y_true_sum)
-                            old_steps[vertex_num][step_num] = old_step
-                            break
-                merged_steps.append(new_step)
+                        old_steps[vertex_num][step_num].y_true = y_true_sum / torch.sum(
+                            y_true_sum
+                        )
+                        should_add = False
+                        break
+                if should_add:
+                    merged_steps.append(new_step)
         merged_steps.extend(sum(old_steps.values(), []))
         self.maps_data[map_name] = (self.maps_data[map_name][0], merged_steps)
