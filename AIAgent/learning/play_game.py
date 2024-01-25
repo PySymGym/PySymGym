@@ -98,8 +98,8 @@ def play_map(
         map_result = (
             model_result.actual_coverage_percent,
             -model_result.tests_count,
-            model_result.errors_count,
             -model_result.steps_count,
+            model_result.errors_count,
         )
         with_dataset.update(with_connector.map.MapName, map_result, map_steps)
     return model_result, end_time - start_time

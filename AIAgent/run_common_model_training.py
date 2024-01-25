@@ -143,19 +143,18 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
 
     cmwrapper = CommonModelWrapper(model)
 
-    maps = np.array_split(maps, GeneralConfig.SERVER_COUNT)
-    random.shuffle(maps)
-    tasks = [
-        (maps[i], FullDataset("", ""), cmwrapper)
-        for i in range(GeneralConfig.SERVER_COUNT)
-    ]
+    with game_server_socket_manager() as ws:
+        all_maps = get_maps(websocket=ws, type=MapsType.TRAIN)
+        tasks = [
+            ([all_maps[i]], FullDataset("", ""), cmwrapper)
+            for i in range(len(all_maps))
+        ]
 
     mp.set_start_method("spawn", force=True)
-    # p = Pool(GeneralConfig.SERVER_COUNT)
 
     all_average_results = []
     for epoch in range(config.epochs):
-        data_list = dataset.get_plain_data()
+        data_list = dataset.get_plain_data(80)
         data_loader = DataLoader(data_list, batch_size=config.batch_size, shuffle=True)
         print("DataLoader size", len(data_loader))
 
@@ -192,7 +191,7 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
         cmwrapper.make_copy(str(epoch + 1))
 
         with mp.Pool(GeneralConfig.SERVER_COUNT) as p:
-            result = list(p.map(play_game_task, tasks))
+            result = list(p.map(play_game_task, tasks, 1))
 
             all_results = []
             for maps_result, maps_data in result:
@@ -226,7 +225,6 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
         torch.save(model.state_dict(), Path(path_to_model))
         del data_list
         del data_loader
-    # p.close()
 
     return max(all_average_results)
 
