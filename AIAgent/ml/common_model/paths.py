@@ -11,6 +11,7 @@ DATASET_ROOT_PATH = os.path.join("report", "dataset")
 DATASET_MAP_RESULTS_FILENAME = os.path.join("report", "dataset_state.csv")
 TRAINING_DATA_PATH = os.path.join("report", "run_tables")
 PRETRAINED_MODEL_PATH = os.path.join(ROOT, "ml", "models")
+RAW_FILES_PATH = os.path.join("report", "SerializedEpisodes")
 
 PATH_TO_MODELS_FOR_PARALLEL_ARCHITECTURE = os.path.join(
     ROOT, "ml", "pretrained_models", "models_for_parallel_architecture"

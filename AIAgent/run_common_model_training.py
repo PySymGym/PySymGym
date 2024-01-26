@@ -28,6 +28,7 @@ from ml.common_model.paths import (
     DATASET_ROOT_PATH,
     PRETRAINED_MODEL_PATH,
     TRAINING_DATA_PATH,
+    RAW_FILES_PATH,
 )
 from ml.common_model.utils import csv2best_models, get_model
 from ml.common_model.wrapper import BestModelsWrapper, CommonModelWrapper
@@ -38,6 +39,10 @@ from ml.models.StateGNNEncoderConvEdgeAttr.model_modified import (
     StateModelEncoderLastLayer as RefStateModelEncoderLastLayer,
 )
 from torch_geometric.loader import DataLoader
+from ml.data_loader_compact import ServerDataloaderHeteroVector
+import optuna
+from functools import partial
+import joblib
 
 LOG_PATH = Path("./ml_app.log")
 TABLES_PATH = Path("./ml_tables.log")
@@ -280,6 +285,9 @@ def main():
     global DATASET_BASE_PATH
     DATASET_BASE_PATH = args.datasetbasepath
 
+    print(GeneralConfig.DEVICE)
+    loader = ServerDataloaderHeteroVector(Path(RAW_FILES_PATH), DATASET_ROOT_PATH)
+    loader.save_dataset_for_training(DATASET_MAP_RESULTS_FILENAME)
     ref_model_initializer = lambda: RefStateModelEncoderLastLayer(
         hidden_channels=32, out_channels=8
     )
