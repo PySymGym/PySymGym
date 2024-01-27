@@ -136,6 +136,7 @@ def play_game(
     with_predictor: Predictor,
     max_steps: int,
     maps: list[GameMap],
+    dataset_base_path: str,
     with_dataset=None,
 ):
     # random.shuffle(maps)
@@ -147,7 +148,7 @@ def play_game(
         list_of_map2result: list[Map2Result] = []
         for game_map in maps:
             game_map.AssemblyFullName = os.path.join(
-                GeneralConfig.DATASET_BASE_PATH, game_map.AssemblyFullName
+                dataset_base_path, game_map.AssemblyFullName
             )
 
             logging.info(f"<{with_predictor.name()}> is playing {game_map.MapName}")
