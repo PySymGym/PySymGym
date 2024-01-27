@@ -6,11 +6,11 @@ import signal
 import subprocess
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from queue import Empty, Queue
 
 import psutil
 from aiohttp import web
-
 from common.constants import SERVER_WORKING_DIR
 from config import BrokerConfig, FeatureConfig, GeneralConfig, ServerConfig
 from connection.broker_conn.classes import ServerInstanceInfo, Undefined, WSUrl
@@ -87,7 +87,7 @@ def run_server_instance(port: int, start_server: bool) -> ServerInstanceInfo:
         "dotnet",
         "VSharp.ML.GameServer.Runner.dll",
         "--datasetdescription",
-        "/Users/emax/Data/PySymGym/maps/DotNet/Maps/dataset.json",
+        str(Path("maps/DotNet/Maps/dataset.json").absolute()),
         "--mode",
         "server",
         "--port",
