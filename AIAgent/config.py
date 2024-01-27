@@ -19,7 +19,6 @@ class GeneralConfig:
     IMPORT_MODEL_INIT = ...
     EXPORT_MODEL_INIT = ...
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    DATASET_BASE_PATH = "/Users/emax/Data/PySymGym/maps/DotNet/Maps/ManuallyCollected/bin/Debug/net7.0"
 
 
 class BrokerConfig:
