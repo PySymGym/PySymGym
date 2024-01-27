@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from config import BrokerConfig
+import os
 
 
 def _build_bar_format() -> str:
@@ -47,6 +48,6 @@ TEMP_EPOCH_INFERENCE_TIMES_DIR = Path(".epoch_inference_times/")
 BASE_NN_OUT_FEATURES_NUM = 8
 
 # assuming we start from /VSharp/VSharp.ML.AIAgent
-SERVER_WORKING_DIR = (
-    "/Users/emax/Data/PySymGym/GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Debug/net7.0/"
-)
+SERVER_WORKING_DIR = Path(
+    "GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Debug/net7.0"
+).absolute()

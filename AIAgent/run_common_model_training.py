@@ -73,11 +73,13 @@ def append_to_file(file: Path, s: str):
 
 
 def play_game_task(task):
+    global DATASET_BASE_PATH
     maps, dataset, cmwrapper = task[0], task[1], task[2]
     result = play_game(
         with_predictor=cmwrapper,
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
+        dataset_base_path=GeneralConfig.DATASET_BASE_PATH,
         with_dataset=dataset,
     )
     return result
@@ -228,6 +230,7 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
 def generate_dataset(
     maps: list[GameMap], ref_model_init: t.Callable[[], torch.nn.Module]
 ):
+    global DATASET_BASE_PATH
     dataset = FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
     best_models_dict = csv2best_models(ref_model_init=ref_model_init)
     best_models_dict = {
@@ -237,6 +240,7 @@ def generate_dataset(
         with_predictor=BestModelsWrapper(best_models_dict),
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
+        dataset_base_path=DATASET_BASE_PATH,
         with_dataset=dataset,
     )
     dataset.save()
@@ -257,13 +261,22 @@ def main():
         required=True,
     )
     parser.add_argument(
+        "--datasetbasepath",
+        type=str,
+        help="path to dir with explored dlls",
+        required=True,
+    )
+    parser.add_argument(
         "--generatedataset",
         type=bool,
         help="set this flag if dataset generation is needed",
         action=argparse.BooleanOptionalAction,
         default=False,
     )
+
     args = parser.parse_args()
+    global DATASET_BASE_PATH
+    DATASET_BASE_PATH = args.datasetbasepath
 
     ref_model_initializer = lambda: RefStateModelEncoderLastLayer(
         hidden_channels=32, out_channels=8
