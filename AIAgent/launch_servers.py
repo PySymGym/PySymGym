@@ -86,8 +86,6 @@ def run_server_instance(port: int, start_server: bool) -> ServerInstanceInfo:
     launch_server = [
         "dotnet",
         "VSharp.ML.GameServer.Runner.dll",
-        "--datasetdescription",
-        str(Path("maps/DotNet/Maps/dataset.json").absolute()),
         "--mode",
         "server",
         "--port",
