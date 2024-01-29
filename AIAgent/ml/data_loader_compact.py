@@ -17,6 +17,8 @@ import csv
 from common.game import GameState
 from dataclasses import dataclass
 import tqdm
+import multiprocessing as mp
+from functools import partial
 
 
 # NUM_NODE_FEATURES = 49
@@ -52,7 +54,7 @@ class Step:
 @dataclass(slots=True)
 class MapStatistics:
     MapName: TypeAlias = MapName
-    Steps: TypeAlias = Generator[Step, None, None]
+    Steps: TypeAlias = list[Step]
     Result: TypeAlias = Result
 
 
@@ -108,8 +110,6 @@ class ServerDataloaderHeteroVector:
                             int(v.CoveredByTest),
                             int(v.VisitedByState),
                             int(v.TouchedByState),
-                            int(v.ContainsCall),
-                            int(v.ContainsThrow),
                         ]
                     )
                 )
@@ -132,12 +132,11 @@ class ServerDataloaderHeteroVector:
                     np.array(
                         [
                             s.Position,
+                            # s.PredictedUsefulness,
                             s.PathConditionSize,
                             s.VisitedAgainVertices,
                             s.VisitedNotCoveredVerticesInZone,
                             s.VisitedNotCoveredVerticesOutOfZone,
-                            s.StepWhenMovedLastTime,
-                            s.InstructionsVisitedInCurrentBlock,
                         ]
                     )
                 )
@@ -146,12 +145,8 @@ class ServerDataloaderHeteroVector:
                     v_to = vertex_map[h.GraphVertexId]
                     edges_index_s_v_history.append(np.array([state_index, v_to]))
                     edges_index_v_s_history.append(np.array([v_to, state_index]))
-                    edges_attr_s_v.append(
-                        np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
-                    )
-                    edges_attr_v_s.append(
-                        np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
-                    )
+                    edges_attr_s_v.append(np.array([h.NumOfVisits]))
+                    edges_attr_v_s.append(np.array([h.NumOfVisits]))
                 state_index = state_index + 1
             else:
                 state_doubles += 1
@@ -159,11 +154,7 @@ class ServerDataloaderHeteroVector:
         # state and its childen edges: state -> state
         for s in game_states:
             for ch in s.Children:
-                try:
-                    edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
-                except KeyError:
-                    print("[ERROR]: KeyError")
-                    return None, None
+                edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
 
         # state position edges: vertex -> state and back
         for v in graphVertices:
@@ -173,22 +164,9 @@ class ServerDataloaderHeteroVector:
 
         data["game_vertex"].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
         data["state_vertex"].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
-
-        def tensor_not_empty(tensor):
-            return tensor.numel() != 0
-
-        # dumb fix
-        def null_if_empty(tensor):
-            return (
-                tensor
-                if tensor_not_empty(tensor)
-                else torch.empty((2, 0), dtype=torch.int64)
-            )
-
-        data["game_vertex_to_game_vertex"].edge_index = null_if_empty(
+        data["game_vertex_to_game_vertex"].edge_index = (
             torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
         )
-
         data["game_vertex_to_game_vertex"].edge_attr = torch.tensor(
             np.array(edges_attr_v_v), dtype=torch.long
         )
@@ -205,6 +183,17 @@ class ServerDataloaderHeteroVector:
             .t()
             .contiguous()
         )
+
+        def tensor_not_empty(tensor):
+            return tensor.numel() != 0
+
+        # dumb fix
+        def null_if_empty(tensor):
+            return (
+                tensor
+                if tensor_not_empty(tensor)
+                else torch.empty((2, 0), dtype=torch.int64)
+            )
 
         data["state_vertex_history_game_vertex"].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
@@ -271,13 +260,7 @@ class ServerDataloaderHeteroVector:
                 pickle.dump(self.dataset, f)
             self.dataset = []
 
-    def process_step(self, map_name: MapName) -> Generator[Step, None, None]:
-        def get_step_ids(map_name: str):
-            file_names = os.listdir(os.path.join(self.raw_files_path, map_name))
-            step_ids = list(map(lambda file_name: file_name.split("_")[0], file_names))
-            step_ids.remove("result")
-            return step_ids
-
+    def process_step(self, map_path: Path, step_id: str) -> Step:
         def get_states_properties(
             file_path: str, state_map: StateMap
         ) -> Step.StatesProperties:
@@ -318,44 +301,52 @@ class ServerDataloaderHeteroVector:
             states_distribution[state_map[state_id]] = 1
             return states_distribution
 
-        map_path = os.path.join(self.raw_files_path, map_name)
-
-        for step_id in get_step_ids(map_name):
-            with open(os.path.join(map_path, step_id + GAMESTATESUFFIX)) as f:
-                data = json.load(f)
-                graph, state_map = self.convert_input_to_tensor(
-                    GameState.from_dict(data)
+        with open(os.path.join(map_path, step_id + GAMESTATESUFFIX)) as f:
+            data = json.load(f)
+            graph, state_map = self.convert_input_to_tensor(GameState.from_dict(data))
+            if graph is not None:
+                # add_expected values
+                states_properties = get_states_properties(
+                    os.path.join(map_path, step_id + STATESUFFIX),
+                    state_map,
                 )
-                if graph is not None:
-                    # add_expected values
-                    states_properties = get_states_properties(
-                        os.path.join(map_path, step_id + STATESUFFIX),
-                        state_map,
-                    )
-            distribution = get_states_distribution(
-                os.path.join(map_path, step_id + MOVEDSTATESUFFIX), state_map
-            )
-            step: Step = Step(graph, distribution, states_properties)
-            yield step
+        distribution = get_states_distribution(
+            os.path.join(map_path, step_id + MOVEDSTATESUFFIX), state_map
+        )
+        step = Step(graph, distribution, states_properties)
+        return step
 
-    def load_dataset(self) -> Generator[MapStatistics, None, None]:
+    def load_dataset(self, num_processes) -> Generator[MapStatistics, None, None]:
         def get_result(map_name: MapName):
             with open(os.path.join(self.raw_files_path, map_name, "result")) as f:
                 result = f.read()
             result = tuple(map(lambda x: int(x), result.split()))
             return (result[0], -result[1], -result[2], result[3])
 
-        for map_name in tqdm.tqdm(
-            os.listdir(self.raw_files_path), desc="Dataset processing"
-        ):
-            yield MapStatistics(
-                MapName=map_name,
-                Steps=self.process_step(map_name),
-                Result=get_result(map_name),
+        def get_step_ids(map_name: str):
+            file_names = os.listdir(os.path.join(self.raw_files_path, map_name))
+            step_ids = list(
+                set(map(lambda file_name: file_name.split("_")[0], file_names))
             )
+            step_ids.remove("result")
+            return step_ids
 
-    def save_dataset_for_training(self, dataset_state_path: Path):
-        for map_stat in self.load_dataset():
+        with mp.Pool(num_processes) as p:
+            for map_name in tqdm.tqdm(
+                os.listdir(self.raw_files_path), desc="Dataset processing"
+            ):
+                map_path = os.path.join(self.raw_files_path, map_name)
+                process_steps_task = partial(self.process_step, map_path)
+                ids = get_step_ids(map_name)
+                steps = list(p.imap(process_steps_task, sorted(ids), 10))
+                yield MapStatistics(
+                    MapName=map_name,
+                    Steps=steps,
+                    Result=get_result(map_name),
+                )
+
+    def save_dataset_for_training(self, dataset_state_path: Path, num_processes=1):
+        for map_stat in self.load_dataset(num_processes):
             steps = []
             for step in map_stat.Steps:
                 step.Graph.y_true = step.StatesDistribution

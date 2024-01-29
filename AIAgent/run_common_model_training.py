@@ -287,7 +287,9 @@ def main():
 
     print(GeneralConfig.DEVICE)
     loader = ServerDataloaderHeteroVector(Path(RAW_FILES_PATH), DATASET_ROOT_PATH)
-    loader.save_dataset_for_training(DATASET_MAP_RESULTS_FILENAME)
+    loader.save_dataset_for_training(
+        DATASET_MAP_RESULTS_FILENAME, num_processes=mp.cpu_count() - 1
+    )
     ref_model_initializer = lambda: RefStateModelEncoderLastLayer(
         hidden_channels=32, out_channels=8
     )
