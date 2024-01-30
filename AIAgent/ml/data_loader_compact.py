@@ -21,7 +21,6 @@ import multiprocessing as mp
 from functools import partial
 
 
-# NUM_NODE_FEATURES = 49
 NUM_NODE_FEATURES = 6
 EXPECTED_FILENAME = "expectedResults.txt"
 GAMESTATESUFFIX = "_gameState"
@@ -67,7 +66,7 @@ class ServerDataloaderHeteroVector:
         self.processed_files_path = processed_files_path
 
     @staticmethod
-    def convert_input_to_tensor(input: GameState) -> Tuple[HeteroData, StateMap]:
+    def convert_input_to_tensor(input: GameState) -> Tuple[HeteroData, Dict[int, int]]:
         """
         Converts game env to tensors
         """
@@ -91,8 +90,8 @@ class ServerDataloaderHeteroVector:
         edges_attr_s_v = []
         edges_attr_v_s = []
 
-        state_map: StateMap = {}  # Maps real state id to its index
-        vertex_map: VertexMap = {}  # Maps real vertex id to its index
+        state_map: Dict[int, int] = {}  # Maps real state id to its index
+        vertex_map: Dict[int, int] = {}  # Maps real vertex id to its index
         vertex_index = 0
         state_index = 0
 
@@ -110,6 +109,8 @@ class ServerDataloaderHeteroVector:
                             int(v.CoveredByTest),
                             int(v.VisitedByState),
                             int(v.TouchedByState),
+                            int(v.ContainsCall),
+                            int(v.ContainsThrow),
                         ]
                     )
                 )
@@ -132,11 +133,12 @@ class ServerDataloaderHeteroVector:
                     np.array(
                         [
                             s.Position,
-                            # s.PredictedUsefulness,
                             s.PathConditionSize,
                             s.VisitedAgainVertices,
                             s.VisitedNotCoveredVerticesInZone,
                             s.VisitedNotCoveredVerticesOutOfZone,
+                            s.StepWhenMovedLastTime,
+                            s.InstructionsVisitedInCurrentBlock,
                         ]
                     )
                 )
@@ -145,8 +147,12 @@ class ServerDataloaderHeteroVector:
                     v_to = vertex_map[h.GraphVertexId]
                     edges_index_s_v_history.append(np.array([state_index, v_to]))
                     edges_index_v_s_history.append(np.array([v_to, state_index]))
-                    edges_attr_s_v.append(np.array([h.NumOfVisits]))
-                    edges_attr_v_s.append(np.array([h.NumOfVisits]))
+                    edges_attr_s_v.append(
+                        np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
+                    )
+                    edges_attr_v_s.append(
+                        np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
+                    )
                 state_index = state_index + 1
             else:
                 state_doubles += 1
@@ -154,7 +160,11 @@ class ServerDataloaderHeteroVector:
         # state and its childen edges: state -> state
         for s in game_states:
             for ch in s.Children:
-                edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
+                try:
+                    edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
+                except KeyError:
+                    print("[ERROR]: KeyError")
+                    return None, None
 
         # state position edges: vertex -> state and back
         for v in graphVertices:
@@ -164,25 +174,6 @@ class ServerDataloaderHeteroVector:
 
         data["game_vertex"].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
         data["state_vertex"].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
-        data["game_vertex_to_game_vertex"].edge_index = (
-            torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
-        )
-        data["game_vertex_to_game_vertex"].edge_attr = torch.tensor(
-            np.array(edges_attr_v_v), dtype=torch.long
-        )
-        data["game_vertex_to_game_vertex"].edge_type = torch.tensor(
-            np.array(edges_types_v_v), dtype=torch.long
-        )
-        data["state_vertex_in_game_vertex"].edge_index = (
-            torch.tensor(np.array(edges_index_s_v_in), dtype=torch.long)
-            .t()
-            .contiguous()
-        )
-        data["game_vertex_in_state_vertex"].edge_index = (
-            torch.tensor(np.array(edges_index_v_s_in), dtype=torch.long)
-            .t()
-            .contiguous()
-        )
 
         def tensor_not_empty(tensor):
             return tensor.numel() != 0
@@ -195,77 +186,55 @@ class ServerDataloaderHeteroVector:
                 else torch.empty((2, 0), dtype=torch.int64)
             )
 
-        data["state_vertex_history_game_vertex"].edge_index = null_if_empty(
+        data["game_vertex", "to", "game_vertex"].edge_index = null_if_empty(
+            torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
+        )
+
+        data["game_vertex", "to", "game_vertex"].edge_attr = torch.tensor(
+            np.array(edges_attr_v_v), dtype=torch.long
+        )
+        data["game_vertex", "to", "game_vertex"].edge_type = torch.tensor(
+            np.array(edges_types_v_v), dtype=torch.long
+        )
+        data["state_vertex", "in", "game_vertex"].edge_index = (
+            torch.tensor(np.array(edges_index_s_v_in), dtype=torch.long)
+            .t()
+            .contiguous()
+        )
+        data["game_vertex", "in", "state_vertex"].edge_index = (
+            torch.tensor(np.array(edges_index_v_s_in), dtype=torch.long)
+            .t()
+            .contiguous()
+        )
+
+        data["state_vertex", "history", "game_vertex"].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
             .t()
             .contiguous()
         )
-        data["game_vertex_history_state_vertex"].edge_index = null_if_empty(
+        data["game_vertex", "history", "state_vertex"].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_v_s_history), dtype=torch.long)
             .t()
             .contiguous()
         )
-        data["state_vertex_history_game_vertex"].edge_attr = torch.tensor(
+        data["state_vertex", "history", "game_vertex"].edge_attr = torch.tensor(
             np.array(edges_attr_s_v), dtype=torch.long
         )
-        data["game_vertex_history_state_vertex"].edge_attr = torch.tensor(
+        data["game_vertex", "history", "state_vertex"].edge_attr = torch.tensor(
             np.array(edges_attr_v_s), dtype=torch.long
         )
         # if (edges_index_s_s): #TODO: empty?
-        data["state_vertex_parent_of_state_vertex"].edge_index = null_if_empty(
+        data["state_vertex", "parent_of", "state_vertex"].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
         )
-        # print(data['state', 'parent_of', 'state'].edge_index)
-        # data['game_vertex', 'to', 'game_vertex'].edge_attr = torch.tensor(np.array(edges_attr_v_v), dtype=torch.long)
-        # data['state_vertex', 'to', 'game_vertex'].edge_attr = torch.tensor(np.array(edges_attr_s_v), dtype=torch.long)
-        # data.state_map = state_map
-        # print("Doubles", state_doubles, len(state_map))
         return data, state_map
-
-    def process_directory(self, data_dir):
-        example_dirs = next(walk(data_dir), (None, [], None))[1]
-        example_dirs.sort()
-        print(example_dirs)
-        for fldr in example_dirs:
-            fldr_path = os.path.join(data_dir, fldr)
-            graphs_to_convert = []
-            for f in os.listdir(fldr_path):
-                if GAMESTATESUFFIX in f:
-                    graphs_to_convert.append(f)
-            graphs_to_convert.sort(key=lambda x: int(x.split("_")[0]))
-            self.graph_types_and_data[fldr] = graphs_to_convert
-
-    def __process_files(self):
-        for k, v in self.graph_types_and_data.items():
-            for file in v:
-                with open(os.path.join(self.data_dir, k, file)) as f:
-                    print(os.path.join(self.data_dir, k, file))
-                    data = json.load(f)
-                    graph, state_map = self.convert_input_to_tensor(
-                        GameState.from_dict(data)
-                    )
-                    if graph is not None:
-                        # add_expected values
-                        expected = self.get_expected_value(
-                            os.path.join(
-                                self.data_dir, k, file.split("_")[0] + STATESUFFIX
-                            ),
-                            state_map,
-                        )
-                        # print(len(graph['state_vertex'].x), len(state_map), len(expected))
-                        graph.y = expected
-                        self.dataset.append(graph)
-            PIK = "./dataset_t/" + k + ".dat"
-            with open(PIK, "wb") as f:
-                pickle.dump(self.dataset, f)
-            self.dataset = []
 
     def process_step(self, map_path: Path, step_id: str) -> Step:
         def get_states_properties(
             file_path: str, state_map: StateMap
         ) -> Step.StatesProperties:
             """Get tensor for states"""
-            expected = {}
+            expected = dict()
             with open(file_path) as f:
                 data = json.load(f)
                 state_set = set()
@@ -284,6 +253,7 @@ class ServerDataloaderHeteroVector:
                             d["ExpectedWeight"],
                         ]
                         expected[sid] = np.array(values)
+                f.close()
             ordered = []
             ordered_by_index = list(
                 zip(*sorted(state_map.items(), key=lambda x: x[1]))
@@ -295,7 +265,7 @@ class ServerDataloaderHeteroVector:
         def get_states_distribution(
             file_path: str, state_map: StateMap
         ) -> Step.StatesDistribution:
-            states_distribution = torch.zeros([len(state_map.keys())])
+            states_distribution = torch.zeros([len(state_map.keys()), 1])
             with open(file_path) as f:
                 state_id = int(f.read())
             states_distribution[state_map[state_id]] = 1
@@ -346,14 +316,25 @@ class ServerDataloaderHeteroVector:
                 )
 
     def save_dataset_for_training(self, dataset_state_path: Path, num_processes=1):
+        with open(dataset_state_path, "w") as csv_file:
+            writer = csv.writer(csv_file)
+            for map_stat in self.load_dataset(num_processes):
+                steps = []
+                for step in map_stat.Steps:
+                    step.Graph.y_true = step.StatesDistribution
+                    steps.append(step.Graph)
+                torch.save(
+                    steps,
+                    os.path.join(self.processed_files_path, map_stat.MapName + ".pt"),
+                )
+                writer.writerow([map_stat.MapName, map_stat.Result])
+
+    def save_dataset_for_pretraining(self, num_processes=1):
         for map_stat in self.load_dataset(num_processes):
             steps = []
             for step in map_stat.Steps:
-                step.Graph.y_true = step.StatesDistribution
+                step.Graph.y = step.StatesProperties
                 steps.append(step.Graph)
-            torch.save(
-                steps, os.path.join(self.processed_files_path, map_stat.MapName + ".pt")
-            )
-            with open(dataset_state_path, "a") as csv_file:
-                writer = csv.writer(csv_file)
-                writer.writerow([map_stat.MapName, map_stat.Result])
+            PIK = os.path.join(self.processed_files_path, map_stat.MapName + ".dat")
+            with open(PIK, "wb") as f:
+                pickle.dump(steps, f)

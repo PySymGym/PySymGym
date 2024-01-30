@@ -148,19 +148,14 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
 
     cmwrapper = CommonModelWrapper(model)
 
-    with game_server_socket_manager() as ws:
-        all_maps = get_maps(websocket=ws, type=MapsType.TRAIN)
-        tasks = [
-            ([all_maps[i]], FullDataset("", ""), cmwrapper)
-            for i in range(len(all_maps))
-        ]
+    tasks = [([maps[i]], FullDataset("", ""), cmwrapper) for i in range(len(maps))]
 
     mp.set_start_method("spawn", force=True)
 
     all_average_results = []
     for epoch in range(config.epochs):
         data_list = dataset.get_plain_data(80)
-        data_loader = DataLoader(data_list, batch_size=config.batch_size, shuffle=True)
+        data_loader = DataLoader(data_list, batch_size=config.batch_size, shuffle=False)
         print("DataLoader size", len(data_loader))
 
         model.train()
@@ -171,16 +166,18 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
             out = model(
                 game_x=batch["game_vertex"].x,
                 state_x=batch["state_vertex"].x,
-                edge_index_v_v=batch["game_vertex_to_game_vertex"].edge_index,
-                edge_type_v_v=batch["game_vertex_to_game_vertex"].edge_type,
+                edge_index_v_v=batch["game_vertex", "to", "game_vertex"].edge_index,
+                edge_type_v_v=batch["game_vertex", "to", "game_vertex"].edge_type,
                 edge_index_history_v_s=batch[
-                    "game_vertex_history_state_vertex"
+                    "game_vertex", "history", "state_vertex"
                 ].edge_index,
                 edge_attr_history_v_s=batch[
-                    "game_vertex_history_state_vertex"
+                    "game_vertex", "history", "state_vertex"
                 ].edge_attr,
-                edge_index_in_v_s=batch["game_vertex_in_state_vertex"].edge_index,
-                edge_index_s_s=batch["state_vertex_parent_of_state_vertex"].edge_index,
+                edge_index_in_v_s=batch["game_vertex", "in", "state_vertex"].edge_index,
+                edge_index_s_s=batch[
+                    "state_vertex", "parent_of", "state_vertex"
+                ].edge_index,
             )
             y_true = batch.y_true
             loss = criterion(out, y_true)
@@ -239,18 +236,27 @@ def generate_dataset(
 ):
     global DATASET_BASE_PATH
     dataset = FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
-    best_models_dict = csv2best_models(ref_model_init=ref_model_init)
-    best_models_dict = {
-        k.replace("Method_", ""): v for k, v in best_models_dict.items()
-    }
-    play_game(
-        with_predictor=BestModelsWrapper(best_models_dict),
-        max_steps=GeneralConfig.MAX_STEPS,
-        maps=maps,
-        dataset_base_path=DATASET_BASE_PATH,
-        with_dataset=dataset,
-    )
-    dataset.save()
+
+    if generate_dataset:
+        # with game_server_socket_manager() as ws:
+        #     all_maps = get_maps(websocket=ws, type=MapsType.TRAIN)
+        # # creating new dataset
+        # best_models_dict = csv2best_models(ref_model_init=ref_model_init)
+        # play_game(
+        #     with_predictor=BestModelsWrapper(best_models_dict),
+        #     max_steps=GeneralConfig.MAX_STEPS,
+        #     maps=all_maps,
+        #     maps_type=MapsType.TRAIN,
+        #     with_dataset=dataset,
+        # )
+        loader = ServerDataloaderHeteroVector(Path(RAW_FILES_PATH), DATASET_ROOT_PATH)
+        loader.save_dataset_for_training(
+            DATASET_MAP_RESULTS_FILENAME, num_processes=mp.cpu_count() - 1
+        )
+        dataset.load()
+    else:
+        # loading existing dataset
+        dataset.load()
     return dataset
 
 
@@ -278,7 +284,7 @@ def main():
         type=bool,
         help="set this flag if dataset generation is needed",
         action=argparse.BooleanOptionalAction,
-        default=False,
+        default=True,
     )
 
     args = parser.parse_args()
@@ -286,10 +292,7 @@ def main():
     DATASET_BASE_PATH = args.datasetbasepath
 
     print(GeneralConfig.DEVICE)
-    loader = ServerDataloaderHeteroVector(Path(RAW_FILES_PATH), DATASET_ROOT_PATH)
-    loader.save_dataset_for_training(
-        DATASET_MAP_RESULTS_FILENAME, num_processes=mp.cpu_count() - 1
-    )
+
     ref_model_initializer = lambda: RefStateModelEncoderLastLayer(
         hidden_channels=32, out_channels=8
     )
@@ -299,6 +302,7 @@ def main():
         dataset = generate_dataset(maps=maps, ref_model_init=ref_model_initializer)
     else:
         dataset = get_dataset()
+        dataset.load()
 
     print(GeneralConfig.DEVICE)
 
