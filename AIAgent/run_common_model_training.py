@@ -38,6 +38,7 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2.model_modified import (
 from ml.models.StateGNNEncoderConvEdgeAttr.model_modified import (
     StateModelEncoderLastLayer as RefStateModelEncoderLastLayer,
 )
+from ml.data_loader_compact import ServerDataloaderHeteroVector
 from torch_geometric.loader import DataLoader
 from ml.data_loader_compact import ServerDataloaderHeteroVector
 import optuna
@@ -231,40 +232,25 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
     return max(all_average_results)
 
 
-def generate_dataset(
-    maps: list[GameMap], ref_model_init: t.Callable[[], torch.nn.Module]
-):
-    global DATASET_BASE_PATH
+def generate_dataset():
     dataset = FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
-
-    if generate_dataset:
-        # with game_server_socket_manager() as ws:
-        #     all_maps = get_maps(websocket=ws, type=MapsType.TRAIN)
-        # # creating new dataset
-        # best_models_dict = csv2best_models(ref_model_init=ref_model_init)
-        # play_game(
-        #     with_predictor=BestModelsWrapper(best_models_dict),
-        #     max_steps=GeneralConfig.MAX_STEPS,
-        #     maps=all_maps,
-        #     maps_type=MapsType.TRAIN,
-        #     with_dataset=dataset,
-        # )
-        loader = ServerDataloaderHeteroVector(Path(RAW_FILES_PATH), DATASET_ROOT_PATH)
-        loader.save_dataset_for_training(
-            DATASET_MAP_RESULTS_FILENAME, num_processes=mp.cpu_count() - 1
-        )
-        dataset.load()
-    else:
-        # loading existing dataset
-        dataset.load()
+    loader = ServerDataloaderHeteroVector(Path(RAW_FILES_PATH), DATASET_ROOT_PATH)
+    loader.save_dataset_for_training(
+        DATASET_MAP_RESULTS_FILENAME, num_processes=mp.cpu_count() - 1
+    )
+    dataset.load()
     return dataset
 
 
 def get_dataset():
-    return FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
+    dataset = FullDataset(DATASET_ROOT_PATH, DATASET_MAP_RESULTS_FILENAME)
+    dataset.load()
+    return dataset
 
 
 def main():
+    print(GeneralConfig.DEVICE)
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -293,16 +279,12 @@ def main():
 
     print(GeneralConfig.DEVICE)
 
-    ref_model_initializer = lambda: RefStateModelEncoderLastLayer(
-        hidden_channels=32, out_channels=8
-    )
     with open(args.datasetdescription, "r") as maps_json:
         maps = GameMap.schema().load(json.loads(maps_json.read()), many=True)
     if args.generatedataset:
-        dataset = generate_dataset(maps=maps, ref_model_init=ref_model_initializer)
+        dataset = generate_dataset()
     else:
         dataset = get_dataset()
-        dataset.load()
 
     print(GeneralConfig.DEVICE)
 

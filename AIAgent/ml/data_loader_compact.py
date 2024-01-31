@@ -235,25 +235,27 @@ class ServerDataloaderHeteroVector:
         ) -> Step.StatesProperties:
             """Get tensor for states"""
             expected = dict()
-            with open(file_path) as f:
-                data = json.load(f)
-                state_set = set()
-                for d in data:
-                    sid = d["StateId"]
-                    if sid not in state_set:
-                        state_set.add(sid)
-                        values = [
-                            d["NextInstructionIsUncoveredInZone"],
-                            d["ChildNumberNormalized"],
-                            d["VisitedVerticesInZoneNormalized"],
-                            d["Productivity"],
-                            d["DistanceToReturnNormalized"],
-                            d["DistanceToUncoveredNormalized"],
-                            d["DistanceToNotVisitedNormalized"],
-                            d["ExpectedWeight"],
-                        ]
-                        expected[sid] = np.array(values)
-                f.close()
+            f = open(
+                file_path
+            )  # without resource manager in order to escape file descriptors leaks
+            data = json.load(f)
+            state_set = set()
+            for d in data:
+                sid = d["StateId"]
+                if sid not in state_set:
+                    state_set.add(sid)
+                    values = [
+                        d["NextInstructionIsUncoveredInZone"],
+                        d["ChildNumberNormalized"],
+                        d["VisitedVerticesInZoneNormalized"],
+                        d["Productivity"],
+                        d["DistanceToReturnNormalized"],
+                        d["DistanceToUncoveredNormalized"],
+                        d["DistanceToNotVisitedNormalized"],
+                        d["ExpectedWeight"],
+                    ]
+                    expected[sid] = np.array(values)
+            f.close()
             ordered = []
             ordered_by_index = list(
                 zip(*sorted(state_map.items(), key=lambda x: x[1]))
@@ -266,20 +268,22 @@ class ServerDataloaderHeteroVector:
             file_path: str, state_map: StateMap
         ) -> Step.StatesDistribution:
             states_distribution = torch.zeros([len(state_map.keys()), 1])
-            with open(file_path) as f:
-                state_id = int(f.read())
+            f = open(file_path)
+            state_id = int(f.read())
+            f.close()
             states_distribution[state_map[state_id]] = 1
             return states_distribution
 
-        with open(os.path.join(map_path, step_id + GAMESTATESUFFIX)) as f:
-            data = json.load(f)
-            graph, state_map = self.convert_input_to_tensor(GameState.from_dict(data))
-            if graph is not None:
-                # add_expected values
-                states_properties = get_states_properties(
-                    os.path.join(map_path, step_id + STATESUFFIX),
-                    state_map,
-                )
+        f = open(os.path.join(map_path, step_id + GAMESTATESUFFIX))
+        data = json.load(f)
+        graph, state_map = self.convert_input_to_tensor(GameState.from_dict(data))
+        if graph is not None:
+            # add_expected values
+            states_properties = get_states_properties(
+                os.path.join(map_path, step_id + STATESUFFIX),
+                state_map,
+            )
+        f.close()
         distribution = get_states_distribution(
             os.path.join(map_path, step_id + MOVEDSTATESUFFIX), state_map
         )
@@ -288,8 +292,9 @@ class ServerDataloaderHeteroVector:
 
     def load_dataset(self, num_processes) -> Generator[MapStatistics, None, None]:
         def get_result(map_name: MapName):
-            with open(os.path.join(self.raw_files_path, map_name, "result")) as f:
-                result = f.read()
+            f = open(os.path.join(self.raw_files_path, map_name, "result"))
+            result = f.read()
+            f.close()
             result = tuple(map(lambda x: int(x), result.split()))
             return (result[0], -result[1], -result[2], result[3])
 
@@ -316,18 +321,19 @@ class ServerDataloaderHeteroVector:
                 )
 
     def save_dataset_for_training(self, dataset_state_path: Path, num_processes=1):
-        with open(dataset_state_path, "w") as csv_file:
-            writer = csv.writer(csv_file)
-            for map_stat in self.load_dataset(num_processes):
-                steps = []
-                for step in map_stat.Steps:
-                    step.Graph.y_true = step.StatesDistribution
-                    steps.append(step.Graph)
-                torch.save(
-                    steps,
-                    os.path.join(self.processed_files_path, map_stat.MapName + ".pt"),
-                )
-                writer.writerow([map_stat.MapName, map_stat.Result])
+        csv_file = open(dataset_state_path, "w")
+        writer = csv.writer(csv_file)
+        for map_stat in self.load_dataset(num_processes):
+            steps = []
+            for step in map_stat.Steps:
+                step.Graph.y_true = step.StatesDistribution
+                steps.append(step.Graph)
+            torch.save(
+                steps,
+                os.path.join(self.processed_files_path, map_stat.MapName + ".pt"),
+            )
+            writer.writerow([map_stat.MapName, map_stat.Result])
+        csv_file.close()
 
     def save_dataset_for_pretraining(self, num_processes=1):
         for map_stat in self.load_dataset(num_processes):
@@ -336,5 +342,6 @@ class ServerDataloaderHeteroVector:
                 step.Graph.y = step.StatesProperties
                 steps.append(step.Graph)
             PIK = os.path.join(self.processed_files_path, map_stat.MapName + ".dat")
-            with open(PIK, "wb") as f:
-                pickle.dump(steps, f)
+            f = open(PIK, "wb")
+            pickle.dump(steps, f)
+            f.close()
