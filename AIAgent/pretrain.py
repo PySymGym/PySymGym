@@ -19,7 +19,7 @@ def get_data_hetero_vector():
 
 
 if __name__ == "__main__":
-    # get_data_hetero_vector()
+    get_data_hetero_vector()
     pr = HetGNNTestTrain(
         StateModelEncoder,
         64,

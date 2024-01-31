@@ -97,7 +97,7 @@ class HetGNNTestTrain:
         model.eval()
         total_loss = 0
         number_of_states_total = 0
-        for data in tqdm.tqdm(loader, desc="Testing"):
+        for data in tqdm.tqdm(loader, desc="Test"):
             data.to(device)
             out = model(
                 data.x_dict["game_vertex"],
