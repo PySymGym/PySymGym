@@ -83,13 +83,11 @@ def append_to_file(file: Path, s: str):
 
 
 def play_game_task(task):
-    global DATASET_BASE_PATH
     maps, dataset, cmwrapper = task[0], task[1], task[2]
     result = play_game(
         with_predictor=cmwrapper,
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
-        dataset_base_path=GeneralConfig.DATASET_BASE_PATH,
         with_dataset=dataset,
     )
     return result
@@ -123,7 +121,7 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
         PRETRAINED_MODEL_PATH,
         "RGCNEdgeTypeTAG3VerticesDoubleHistory2",
         "64ch",
-        "50e",
+        "20e",
         "GNN_state_pred_het_dict",
     )
     model = get_model(
@@ -274,13 +272,17 @@ def main():
     )
 
     args = parser.parse_args()
-    global DATASET_BASE_PATH
-    DATASET_BASE_PATH = args.datasetbasepath
+
+    dataset_base_path = args.datasetbasepath
 
     print(GeneralConfig.DEVICE)
 
     with open(args.datasetdescription, "r") as maps_json:
         maps = GameMap.schema().load(json.loads(maps_json.read()), many=True)
+        for map in maps:
+            fullName = os.path.join(dataset_base_path, map.AssemblyFullName)
+            map.AssemblyFullName = fullName
+
     if args.generatedataset:
         dataset = generate_dataset()
     else:
