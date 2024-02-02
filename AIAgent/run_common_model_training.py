@@ -147,13 +147,13 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
 
     cmwrapper = CommonModelWrapper(model)
 
-    tasks = [([maps[i]], FullDataset("", ""), cmwrapper) for i in range(len(maps))]
+    tasks = [([map], FullDataset("", ""), cmwrapper) for map in maps]
 
     mp.set_start_method("spawn", force=True)
 
     all_average_results = []
     for epoch in range(config.epochs):
-        data_list = dataset.get_plain_data(80)
+        data_list = dataset.get_plain_data(map_result_threshold=80)
         data_loader = DataLoader(data_list, batch_size=config.batch_size, shuffle=False)
         print("DataLoader size", len(data_loader))
 
@@ -192,7 +192,7 @@ def train(trial: optuna.trial.Trial, dataset: FullDataset, maps: list[GameMap]):
         cmwrapper.make_copy(str(epoch + 1))
 
         with mp.Pool(GeneralConfig.SERVER_COUNT) as p:
-            result = list(p.map(play_game_task, tasks, 1))
+            result = list(p.map(play_game_task, tasks, chunksize=1))
 
             all_results = []
             for maps_result, maps_data in result:

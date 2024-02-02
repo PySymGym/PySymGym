@@ -10,7 +10,7 @@ import logging
 from ml.common_model.utils import load_dataset_state_dict
 import csv
 from torch_geometric.data import HeteroData
-from typing import TypeAlias
+from typing import TypeAlias, Dict
 
 
 MapName: TypeAlias = str
@@ -88,12 +88,14 @@ class FullDataset:
                 filtered_map_steps.append(step)
         return filtered_map_steps
 
-    def get_plain_data(self, threshold: int = 100):
+    def get_plain_data(
+        self, map_result_threshold: int = 100, steps_threshold: int = 2000
+    ):
         result = []
         for map_result, map_steps in self.maps_data.values():
-            if map_result[0] >= threshold:
-                if len(map_steps) > 2000:
-                    selected_steps = random.sample(map_steps, 2000)
+            if map_result[0] >= map_result_threshold:
+                if len(map_steps) > steps_threshold:
+                    selected_steps = random.sample(map_steps, steps_threshold)
                 else:
                     selected_steps = map_steps
                 for step in selected_steps:
@@ -128,12 +130,10 @@ class FullDataset:
         if move_to_cpu:
             for x in map_steps:
                 x.to("cpu")
-        filtered_map_steps = self.filter_map_steps(map_steps)
+        filtered_map_steps = self.remove_similar_steps(self.filter_map_steps(map_steps))
         if map_name in self.maps_data.keys():
             if self.maps_data[map_name][0] == map_result and map_result[0] == 100:
                 init_steps_num = len(self.maps_data[map_name][1])
-
-                filtered_map_steps = self.remove_similar_steps(filtered_map_steps)
                 self.merge_steps(filtered_map_steps, map_name)
                 new_steps_num = len(self.maps_data[map_name][1])
                 logging.info(
@@ -144,16 +144,14 @@ class FullDataset:
                     f"The model with result = {self.maps_data[map_name][0]} was replaced with the model with "
                     f"result = {map_result} on the map {map_name}"
                 )
-                filtered_map_steps = self.remove_similar_steps(filtered_map_steps)
                 self.maps_data[map_name] = (map_result, filtered_map_steps)
         else:
-            filtered_map_steps = self.remove_similar_steps(filtered_map_steps)
             self.maps_data[map_name] = (map_result, filtered_map_steps)
 
     def merge_steps(self, steps: list[HeteroData], map_name: str):
         merged_steps = []
 
-        def create_dict(steps_list: list[HeteroData]):
+        def create_dict(steps_list: list[HeteroData]) -> Dict[int, list[HeteroData]]:
             steps_dict = dict()
             for step in steps_list:
                 states_num = step["state_vertex"].x.shape[0]
@@ -164,7 +162,7 @@ class FullDataset:
                     steps_dict[states_num + game_v_num] = [step]
             return steps_dict
 
-        def flatten_and_sort_hetero_data(step: HeteroData):
+        def flatten_and_sort_hetero_data(step: HeteroData) -> (np.ndarray, np.ndarray):
             game_dtype = [
                 (f"g{i}", np.float32) for i in range(step["game_vertex"].x.shape[-1])
             ]
