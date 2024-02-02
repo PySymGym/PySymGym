@@ -247,8 +247,6 @@ def get_dataset():
 
 
 def main():
-    print(GeneralConfig.DEVICE)
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
