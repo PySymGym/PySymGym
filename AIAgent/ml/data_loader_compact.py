@@ -9,10 +9,6 @@ import numpy as np
 import torch
 from torch_geometric.data import HeteroData
 from collections.abc import Sequence
-from ml.common_model.paths import (
-    DATASET_MAP_RESULTS_FILENAME,
-)
-import csv
 
 from common.game import GameState
 from dataclasses import dataclass
@@ -319,21 +315,6 @@ class ServerDataloaderHeteroVector:
                     Steps=steps,
                     Result=get_result(map_name),
                 )
-
-    def save_dataset_for_training(self, dataset_state_path: Path, num_processes=1):
-        csv_file = open(dataset_state_path, "w")
-        writer = csv.writer(csv_file)
-        for map_stat in self.load_dataset(num_processes):
-            steps = []
-            for step in map_stat.Steps:
-                step.Graph.y_true = step.StatesDistribution
-                steps.append(step.Graph)
-            torch.save(
-                steps,
-                os.path.join(self.processed_files_path, map_stat.MapName + ".pt"),
-            )
-            writer.writerow([map_stat.MapName, map_stat.Result])
-        csv_file.close()
 
     def save_dataset_for_pretraining(self, num_processes=1):
         for map_stat in self.load_dataset(num_processes):
