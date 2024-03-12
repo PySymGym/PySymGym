@@ -119,18 +119,19 @@ async def run_server_instance(should_start_server: bool) -> ServerInstanceInfo:
             )
             logging.info(f"bash exec cmd: {' '.join(launch_server + [str(port)])}")
             _ = proc.stdout.readline()
-            proc_out = proc.stdout.readline()
+            proc_out = proc.stdout.readline().decode("utf-8").strip("\n")
 
             return proc, port, proc_out
 
     async with avoid_same_free_port_lock:
         proc, port, proc_out = start_server()
 
-        while FAILED_TO_INSTANTIATE_ERROR in proc_out.decode("utf-8"):
+        while FAILED_TO_INSTANTIATE_ERROR in proc_out:
             logging.warning(
                 f"{port=} was already in use, caught {proc_out}, trying new port..."
             )
             proc, port, proc_out = start_server()
+    print(proc_out)
 
     server_pid = proc.pid
     PROCS.append(server_pid)
