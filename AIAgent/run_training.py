@@ -36,10 +36,7 @@ def main():
     )
 
     parser.add_argument(
-        "--config",
-        type=str,
-        help="Path to the configuration file",
-        default="config.ini",
+        "--config", type=str, help="Path to the configuration file", required=True
     )
 
     args = parser.parse_args()
