@@ -11,3 +11,7 @@ onnxruntime==1.17.1
 psutil==5.9.0
 tabulate==0.8.10
 websocket-client==1.6.1
+dataclasses_json==0.6.3
+pandas==2.2.1
+httplib2==0.22.0
+func_timeout==4.3.5
