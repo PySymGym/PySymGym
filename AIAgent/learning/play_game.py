@@ -20,6 +20,7 @@ from ml.training.dataset import TrainingDataset
 
 TimeDuration: TypeAlias = float
 
+
 def update_game_state(game_state: GameState, delta: GameState) -> GameState:
     if game_state is None:
         return delta
@@ -27,16 +28,25 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
     updated_basic_blocks = {v.Id for v in delta.GraphVertices}
     updated_states = {s.Id for s in delta.States}
 
-    vertices = [v for v in game_state.GraphVertices if v.Id not in updated_basic_blocks] + delta.GraphVertices
+    vertices = [
+        v for v in game_state.GraphVertices if v.Id not in updated_basic_blocks
+    ] + delta.GraphVertices
 
-    edges = [e for e in game_state.Map if e.VertexFrom not in updated_basic_blocks ] + delta.Map
+    edges = [
+        e for e in game_state.Map if e.VertexFrom not in updated_basic_blocks
+    ] + delta.Map
 
     active_states = {state for v in vertices for state in v.States}
-    new_states = [s for s in game_state.States if s.Id in active_states and s.Id not in updated_states] + delta.States
+    new_states = [
+        s
+        for s in game_state.States
+        if s.Id in active_states and s.Id not in updated_states
+    ] + delta.States
     for s in new_states:
         s.Children = list(filter(lambda c: c in active_states, s.Children))
 
     return GameState(vertices, new_states, edges)
+
 
 def play_map(
     with_connector: Connector, with_predictor: Predictor, with_dataset: TrainingDataset
