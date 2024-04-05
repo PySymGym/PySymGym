@@ -8,6 +8,7 @@ import numpy as np
 import optuna
 import torch
 import tqdm
+from ml.inference import infer
 from common.game import GameMap
 from config import GeneralConfig
 from ml.training.dataloader import DataLoader
@@ -21,21 +22,6 @@ from ml.training.paths import (
 )
 from ml.training.utils import create_file
 from ml.training.validation import validate
-
-
-def forward_pass(model, batch):
-    return model(
-        game_x=batch["game_vertex"].x,
-        state_x=batch["state_vertex"].x,
-        edge_index_v_v=batch["game_vertex", "to", "game_vertex"].edge_index,
-        edge_type_v_v=batch["game_vertex", "to", "game_vertex"].edge_type,
-        edge_index_history_v_s=batch[
-            "game_vertex", "history", "state_vertex"
-        ].edge_index,
-        edge_attr_history_v_s=batch["game_vertex", "history", "state_vertex"].edge_attr,
-        edge_index_in_v_s=batch["game_vertex", "in", "state_vertex"].edge_index,
-        edge_index_s_s=batch["state_vertex", "parent_of", "state_vertex"].edge_index,
-    )
 
 
 @dataclass
@@ -89,7 +75,7 @@ def train(
         ):
             batch.to(GeneralConfig.DEVICE)
             optimizer.zero_grad()
-            out = forward_pass(model, batch)
+            out = infer(model, batch)
             loss = criterion(out, batch.y_true)
             if loss != 0:
                 loss.backward()

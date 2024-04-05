@@ -7,50 +7,13 @@ import typing as t
 import onnx
 import onnxruntime
 import torch
-from torch_geometric.data import HeteroData
-
 from common.game import GameState
 from ml.data_loader_compact import ServerDataloaderHeteroVector
-
+from ml.inference import ONNX, TORCH
+from torch_geometric.data import HeteroData
 
 # working version
 ONNX_OPSET_VERSION = 17
-
-
-class TORCH:
-    game_vertex = "game_vertex"
-    state_vertex = "state_vertex"
-    gamevertex_to_gamevertex = (
-        "game_vertex",
-        "to",
-        "game_vertex",
-    )
-    gamevertex_history_statevertex = (
-        "game_vertex",
-        "history",
-        "state_vertex",
-    )
-    gamevertex_in_statevertex = (
-        "game_vertex",
-        "in",
-        "state_vertex",
-    )
-    statevertex_parentof_statevertex = (
-        "state_vertex",
-        "parent_of",
-        "state_vertex",
-    )
-
-
-class ONNX:
-    game_vertex = "game_vertex"
-    state_vertex = "state_vertex"
-    gamevertex_to_gamevertex_index = "gamevertex_to_gamevertex_index"
-    gamevertex_to_gamevertex_type = "gamevertex_to_gamevertex_type"
-    gamevertex_history_statevertex_index = "gamevertex_history_statevertex_index"
-    gamevertex_history_statevertex_attrs = "gamevertex_history_statevertex_attrs"
-    gamevertex_in_statevertex = "gamevertex_in_statevertex"
-    statevertex_parentof_statevertex = "statevertex_parentof_statevertex"
 
 
 def load_gamestate(f: t.TextIO) -> HeteroData:
