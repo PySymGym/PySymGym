@@ -11,11 +11,7 @@ from torch_geometric.data import HeteroData
 
 from common.game import GameState
 from ml.data_loader_compact import ServerDataloaderHeteroVector
-from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2.model_modified import (
-    StateModelEncoderLastLayer,
-)
 
-from ml.models.TAGSageSimple.model_modified import StateModelEncoderLastLayer
 
 # working version
 ONNX_OPSET_VERSION = 17
