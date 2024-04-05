@@ -6,16 +6,16 @@ jobs:
   build-and-launch:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11.8'
           cache: 'pip'
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
 
       - name: Install dependencies
         working-directory: ./
