@@ -1,6 +1,6 @@
 import argparse
+import importlib
 import json
-import os
 import pathlib
 import typing as t
 
@@ -14,6 +14,11 @@ from ml.data_loader_compact import ServerDataloaderHeteroVector
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2.model_modified import (
     StateModelEncoderLastLayer,
 )
+
+from ml.models.TAGSageSimple.model_modified import StateModelEncoderLastLayer
+
+# working version
+ONNX_OPSET_VERSION = 17
 
 
 class TORCH:
@@ -129,7 +134,7 @@ def save_in_onnx(
             ONNX.statevertex_parentof_statevertex,
         ],
         output_names=["out"],
-        opset_version=17,
+        opset_version=ONNX_OPSET_VERSION,
     )
 
 
@@ -174,6 +179,29 @@ def main():
         help="Path to which ONNX model will be saved",
     )
     parser.add_argument(
+        "--import-model-fqn",
+        dest="import_model_fqn",
+        type=str,
+        required=True,
+        help="example: 'ml.models.TAGSageSimple.model_modified.StateModelEncoder'",
+    )
+    parser.add_argument(
+        "--nhidden",
+        dest="nhidden",
+        type=int,
+        required=False,
+        default=64,
+        help="Number of hidden layers",
+    )
+    parser.add_argument(
+        "--noutputs",
+        dest="noutputs",
+        type=int,
+        required=False,
+        default=8,
+        help="Number of output layers",
+    )
+    parser.add_argument(
         "--verify-on",
         dest="verification_gamestates",
         type=pathlib.Path,
@@ -186,10 +214,13 @@ def main():
     args = parser.parse_args()
 
     entrypoint(
-        args.sample_gamestate_path,
-        args.pytorch_model_path,
-        args.onnx_savepath,
-        args.verification_gamestates,
+        sample_gamestate_path=args.sample_gamestate_path,
+        pytorch_model_path=args.pytorch_model_path,
+        onnx_savepath=args.onnx_savepath,
+        import_model_fqn=args.import_model_fqn,
+        hidden_layer_num=args.nhidden,
+        out_layer_num=args.noutputs,
+        verification_gamestates=args.verification_gamestates,
     )
 
 
@@ -197,10 +228,20 @@ def entrypoint(
     sample_gamestate_path: pathlib.Path,
     pytorch_model_path: pathlib.Path,
     onnx_savepath: pathlib.Path,
+    import_model_fqn: str,
+    hidden_layer_num: int,
+    out_layer_num: int,
     verification_gamestates: list[pathlib.Path] = None,
 ):
-    torch_model = StateModelEncoderLastLayer(64, 8)
+    module, clazz = (
+        import_model_fqn[: import_model_fqn.rfind(".")],
+        import_model_fqn[import_model_fqn.rfind(".") + 1 :],
+    )
 
+    module_def = importlib.import_module(module)
+    model_def = getattr(module_def, clazz)
+
+    torch_model = model_def(hidden_layer_num, out_layer_num)
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
 
     torch_model.load_state_dict(state_dict)
@@ -212,7 +253,7 @@ def entrypoint(
     if verification_gamestates is not []:
         ort_session = onnxruntime.InferenceSession(onnx_savepath)
 
-        for idx, gamestate_path in enumerate(verification_gamestates):
+        for idx, gamestate_path in enumerate(verification_gamestates, start=1):
             with open(gamestate_path, "r") as gamestate_file:
                 gamestate = load_gamestate(gamestate_file)
 
