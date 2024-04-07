@@ -1,21 +1,18 @@
 import json
+import multiprocessing as mp
 import os.path
 import pickle
+from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
-from os import walk
-from typing import Dict, Tuple, TypeAlias, Generator
+from typing import Dict, Generator, Tuple, TypeAlias
 
 import numpy as np
 import torch
-from torch_geometric.data import HeteroData
-from collections.abc import Sequence
-
-from common.game import GameState
-from dataclasses import dataclass
 import tqdm
-import multiprocessing as mp
-from functools import partial
-
+from common.game import GameState
+from inference import GAME_VERTEX, STATE_VERTEX
+from torch_geometric.data import HeteroData
 
 NUM_NODE_FEATURES = 6
 EXPECTED_FILENAME = "expectedResults.txt"
@@ -168,8 +165,8 @@ class ServerDataloaderHeteroVector:
                 edges_index_s_v_in.append(np.array([state_map[s], vertex_map[v.Id]]))
                 edges_index_v_s_in.append(np.array([vertex_map[v.Id], state_map[s]]))
 
-        data["game_vertex"].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
-        data["state_vertex"].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
+        data[GAME_VERTEX].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
+        data[STATE_VERTEX].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
 
         def tensor_not_empty(tensor):
             return tensor.numel() != 0
@@ -182,45 +179,45 @@ class ServerDataloaderHeteroVector:
                 else torch.empty((2, 0), dtype=torch.int64)
             )
 
-        data["game_vertex", "to", "game_vertex"].edge_index = null_if_empty(
+        data[GAME_VERTEX, "to", GAME_VERTEX].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
         )
 
-        data["game_vertex", "to", "game_vertex"].edge_attr = torch.tensor(
+        data[GAME_VERTEX, "to", GAME_VERTEX].edge_attr = torch.tensor(
             np.array(edges_attr_v_v), dtype=torch.long
         )
-        data["game_vertex", "to", "game_vertex"].edge_type = torch.tensor(
+        data[GAME_VERTEX, "to", GAME_VERTEX].edge_type = torch.tensor(
             np.array(edges_types_v_v), dtype=torch.long
         )
-        data["state_vertex", "in", "game_vertex"].edge_index = (
+        data[STATE_VERTEX, "in", GAME_VERTEX].edge_index = (
             torch.tensor(np.array(edges_index_s_v_in), dtype=torch.long)
             .t()
             .contiguous()
         )
-        data["game_vertex", "in", "state_vertex"].edge_index = (
+        data[GAME_VERTEX, "in", STATE_VERTEX].edge_index = (
             torch.tensor(np.array(edges_index_v_s_in), dtype=torch.long)
             .t()
             .contiguous()
         )
 
-        data["state_vertex", "history", "game_vertex"].edge_index = null_if_empty(
+        data[STATE_VERTEX, "history", GAME_VERTEX].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
             .t()
             .contiguous()
         )
-        data["game_vertex", "history", "state_vertex"].edge_index = null_if_empty(
+        data[GAME_VERTEX, "history", STATE_VERTEX].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_v_s_history), dtype=torch.long)
             .t()
             .contiguous()
         )
-        data["state_vertex", "history", "game_vertex"].edge_attr = torch.tensor(
+        data[STATE_VERTEX, "history", GAME_VERTEX].edge_attr = torch.tensor(
             np.array(edges_attr_s_v), dtype=torch.long
         )
-        data["game_vertex", "history", "state_vertex"].edge_attr = torch.tensor(
+        data[GAME_VERTEX, "history", STATE_VERTEX].edge_attr = torch.tensor(
             np.array(edges_attr_v_s), dtype=torch.long
         )
         # if (edges_index_s_s): #TODO: empty?
-        data["state_vertex", "parent_of", "state_vertex"].edge_index = null_if_empty(
+        data[STATE_VERTEX, "parent_of", STATE_VERTEX].edge_index = null_if_empty(
             torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
         )
         return data, state_map

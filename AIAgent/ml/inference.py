@@ -1,25 +1,29 @@
+GAME_VERTEX = "game_vertex"
+STATE_VERTEX = "state_vertex"
+
+
 class TORCH:
-    game_vertex = "game_vertex"
-    state_vertex = "state_vertex"
+    game_vertex = GAME_VERTEX
+    state_vertex = STATE_VERTEX
     gamevertex_to_gamevertex = (
-        "game_vertex",
+        GAME_VERTEX,
         "to",
-        "game_vertex",
+        GAME_VERTEX,
     )
     gamevertex_history_statevertex = (
-        "game_vertex",
+        GAME_VERTEX,
         "history",
-        "state_vertex",
+        STATE_VERTEX,
     )
     gamevertex_in_statevertex = (
-        "game_vertex",
+        GAME_VERTEX,
         "in",
-        "state_vertex",
+        STATE_VERTEX,
     )
     statevertex_parentof_statevertex = (
-        "state_vertex",
+        STATE_VERTEX,
         "parent_of",
-        "state_vertex",
+        STATE_VERTEX,
     )
 
 
@@ -31,8 +35,8 @@ def underscore_join(iterable):
 
 class ONNX:
     # string values are the same as parameter names
-    game_vertex = "game_vertex"
-    state_vertex = "state_vertex"
+    game_vertex = GAME_VERTEX
+    state_vertex = STATE_VERTEX
     gamevertex_to_gamevertex_index = underscore_join(
         TORCH.gamevertex_to_gamevertex + ("index",)
     )
