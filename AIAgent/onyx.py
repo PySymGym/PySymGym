@@ -11,6 +11,7 @@ from common.game import GameState
 from ml.data_loader_compact import ServerDataloaderHeteroVector
 from ml.inference import ONNX, TORCH
 from torch_geometric.data import HeteroData
+from textwrap import dedent
 
 # working version
 ONNX_OPSET_VERSION = 17
@@ -142,7 +143,12 @@ def main():
         dest="import_model_fqn",
         type=str,
         required=True,
-        help="example: 'ml.models.TAGSageSimple.model_modified.StateModelEncoder'",
+        help=dedent(
+            """\n
+            model import fully qualified name from AIAgent/ root,
+            for example: 'ml.models.TAGSageSimple.model.StateModelEncoder'
+            """
+        ),
     )
     parser.add_argument(
         "--nhidden",
@@ -222,7 +228,9 @@ def entrypoint(
             print(f"{shorten_output(torch_out)=}")
             print(f"{shorten_output(onnx_out[0])=}")
             print(f"{idx}/{len(verification_gamestates)}")
-            assert shorten_output(torch_out) == shorten_output(onnx_out[0])
+            assert shorten_output(torch_out) == shorten_output(
+                onnx_out[0]
+            ), f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
 
 
 if __name__ == "__main__":
