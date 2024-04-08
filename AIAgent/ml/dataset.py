@@ -1,19 +1,17 @@
-import torch
-from pathlib import Path
-
-import os
-import numpy as np
-
-import tqdm
 import json
-from common.game import GameState
 import multiprocessing as mp
-from torch_geometric.data import HeteroData
-from typing import Dict, Tuple, TypeAlias, Generator
+import os
 from dataclasses import dataclass
 from functools import partial
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import concurrent
+from pathlib import Path
+from typing import Dict, Tuple, TypeAlias
+
+import numpy as np
+import torch
+import tqdm
+from common.game import GameState
+from ml.inference import TORCH
+from torch_geometric.data import HeteroData
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -285,8 +283,8 @@ def convert_input_to_tensor(
             edges_index_s_v_in.append(np.array([state_map[s], vertex_map[v.Id]]))
             edges_index_v_s_in.append(np.array([vertex_map[v.Id], state_map[s]]))
 
-    data["game_vertex"].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
-    data["state_vertex"].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
+    data[TORCH.game_vertex].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
+    data[TORCH.state_vertex].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
 
     def tensor_not_empty(tensor):
         return tensor.numel() != 0
@@ -299,39 +297,39 @@ def convert_input_to_tensor(
             else torch.empty((2, 0), dtype=torch.int64)
         )
 
-    data["game_vertex", "to", "game_vertex"].edge_index = null_if_empty(
+    data[*TORCH.gamevertex_to_gamevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
     )
-    data["game_vertex", "to", "game_vertex"].edge_attr = torch.tensor(
+    data[*TORCH.gamevertex_to_gamevertex].edge_attr = torch.tensor(
         np.array(edges_attr_v_v), dtype=torch.long
     )
-    data["game_vertex", "to", "game_vertex"].edge_type = torch.tensor(
+    data[*TORCH.gamevertex_to_gamevertex].edge_type = torch.tensor(
         np.array(edges_types_v_v), dtype=torch.long
     )
-    data["state_vertex", "in", "game_vertex"].edge_index = (
+    data[*TORCH.statevertex_in_gamevertex].edge_index = (
         torch.tensor(np.array(edges_index_s_v_in), dtype=torch.long).t().contiguous()
     )
-    data["game_vertex", "in", "state_vertex"].edge_index = (
+    data[*TORCH.gamevertex_in_statevertex].edge_index = (
         torch.tensor(np.array(edges_index_v_s_in), dtype=torch.long).t().contiguous()
     )
-    data["state_vertex", "history", "game_vertex"].edge_index = null_if_empty(
+    data[*TORCH.statevertex_history_gamevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
         .t()
         .contiguous()
     )
-    data["game_vertex", "history", "state_vertex"].edge_index = null_if_empty(
+    data[*TORCH.gamevertex_history_statevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_v_s_history), dtype=torch.long)
         .t()
         .contiguous()
     )
-    data["state_vertex", "history", "game_vertex"].edge_attr = torch.tensor(
+    data[*TORCH.statevertex_history_gamevertex].edge_attr = torch.tensor(
         np.array(edges_attr_s_v), dtype=torch.long
     )
-    data["game_vertex", "history", "state_vertex"].edge_attr = torch.tensor(
+    data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
         np.array(edges_attr_v_s), dtype=torch.long
     )
     # if (edges_index_s_s): #TODO: empty?
-    data["state_vertex", "parent_of", "state_vertex"].edge_index = null_if_empty(
+    data[*TORCH.statevertex_parentof_statevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
     )
     return data, state_map
