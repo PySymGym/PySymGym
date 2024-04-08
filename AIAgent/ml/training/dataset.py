@@ -1,20 +1,20 @@
-import torch
-from pathlib import Path
-
-import os
-import numpy as np
-import random
-
+import ast
+import glob
 import logging
 import multiprocessing as mp
-from torch_geometric.data import HeteroData, Batch
-from typing import Dict, Generator
-from ml.dataset import Dataset, Result
-import glob
-import ast
+import os
+import random
 import shutil
+from pathlib import Path
+from typing import Dict
+
+import numpy as np
+import torch
 from common.game import GameMap
 from config import GeneralConfig
+from ml.dataset import Dataset, Result
+from ml.inference import TORCH
+from torch_geometric.data import HeteroData
 
 
 class TrainingDataset(Dataset):
@@ -113,8 +113,8 @@ class TrainingDataset(Dataset):
                 )
                 if (
                     cos_d < 1e-7
-                    and step["game_vertex"]["x"].size()[0]
-                    == filtered_map_steps[-1]["game_vertex"]["x"].size()[0]
+                    and step[TORCH.game_vertex]["x"].size()[0]
+                    == filtered_map_steps[-1][TORCH.game_vertex]["x"].size()[0]
                 ):
                     step.use_for_train = np.random.choice(
                         [True, False],
@@ -193,27 +193,31 @@ class TrainingDataset(Dataset):
         def create_dict(steps_list: list[HeteroData]) -> Dict[int, list[HeteroData]]:
             steps_dict = dict()
             for step in steps_list:
-                states_num = step["state_vertex"].x.shape[0]
-                game_v_num = step["game_vertex"].x.shape[0]
+                states_num = step[TORCH.state_vertex].x.shape[0]
+                game_v_num = step[TORCH.game_vertex].x.shape[0]
                 if states_num + game_v_num in steps_dict.keys():
                     steps_dict[states_num + game_v_num].append(step)
                 else:
                     steps_dict[states_num + game_v_num] = [step]
             return steps_dict
 
-        def flatten_and_sort_hetero_data(step: HeteroData) -> (np.ndarray, np.ndarray):
+        def flatten_and_sort_hetero_data(
+            step: HeteroData,
+        ) -> tuple[np.ndarray, np.ndarray]:
             game_dtype = [
-                (f"g{i}", np.float32) for i in range(step["game_vertex"].x.shape[-1])
+                (f"g{i}", np.float32)
+                for i in range(step[TORCH.game_vertex].x.shape[-1])
             ]
             game_v = np.sort(
-                step["game_vertex"].x.cpu().numpy().astype(game_dtype),
+                step[TORCH.game_vertex].x.cpu().numpy().astype(game_dtype),
                 order=list(map(lambda x: x[0], game_dtype)),
             )
             states_dtype = [
-                (f"s{i}", np.float32) for i in range(step["state_vertex"].x.shape[-1])
+                (f"s{i}", np.float32)
+                for i in range(step[TORCH.state_vertex].x.shape[-1])
             ]
             states = np.sort(
-                step["state_vertex"].x.cpu().numpy().astype(states_dtype),
+                step[TORCH.state_vertex].x.cpu().numpy().astype(states_dtype),
                 order=list(map(lambda x: x[0], states_dtype)),
             )
             return game_v, states
