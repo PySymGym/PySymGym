@@ -12,7 +12,7 @@ from ml.inference import infer
 from common.game import GameMap
 from config import GeneralConfig
 from ml.training.dataloader import DataLoader
-from ml.training.dataset import TrainingDataset
+from ml.training.training_dataset import TrainingDataset
 from ml.training.paths import (
     LOG_PATH,
     PROCESSED_DATASET_PATH,

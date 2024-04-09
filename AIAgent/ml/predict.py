@@ -1,17 +1,17 @@
+import typing as t
 from collections import namedtuple
 
 import torch
-from torch_geometric.data import HeteroData
-
-from ml.inference import infer
 from config import GeneralConfig
+from ml.inference import infer
+from torch_geometric.data import HeteroData
 
 StateVectorMapping = namedtuple("StateVectorMapping", ["state", "vector"])
 
 
 def predict_state_with_dict(
     model: torch.nn.Module, data: HeteroData, state_map: dict[int, int]
-) -> int:
+) -> tuple[StateVectorMapping, t.Any]:
     """Gets state id from model and heterogeneous graph
     data.state_map - maps real state id to state index"""
 

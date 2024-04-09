@@ -2,10 +2,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional, TypeAlias
 
-from dataclasses_json import dataclass_json
-
 from common.game import GameMap
-from ml.model_wrappers.protocols import Named
+from common.protocols import Named
+from dataclasses_json import dataclass_json
 
 
 @dataclass_json

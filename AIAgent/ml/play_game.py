@@ -2,17 +2,17 @@ import logging
 from time import perf_counter
 from typing import TypeAlias
 
+import torch
+from ml.data_loader_compact import ServerDataloaderHeteroVector
 from common.classes import GameResult, Map2Result
 from common.game import GameMap, GameState
+from common.protocols import Predictor
 from common.utils import get_states
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
-from ml.dataset import convert_input_to_tensor
-from ml.fileop import save_model
-from ml.model_wrappers.protocols import Predictor
-from ml.training.dataset import TrainingDataset
+from ml.training.training_dataset import TrainingDataset
 
 TimeDuration: TypeAlias = float
 
@@ -57,7 +57,7 @@ def play_map(
     map_steps = []
 
     def add_single_step(input, output):
-        hetero_input, _ = convert_input_to_tensor(input)
+        hetero_input, _ = ServerDataloaderHeteroVector.convert_input_to_tensor(input)
         hetero_input["y_true"] = output
         map_steps.append(hetero_input)
 
@@ -171,11 +171,13 @@ def play_game(
             logging.warning(
                 f"<{with_predictor.name()}> timeouted on map {game_map.MapName} with {fto.timedOutAfter}s"
             )
-            save_model(
+
+            torch.save(
                 with_predictor.model(),
-                to=FeatureConfig.DUMP_BY_TIMEOUT.save_path
+                FeatureConfig.DUMP_BY_TIMEOUT.save_path
                 / f"{with_predictor.name()}.pth",
             )
+
         list_of_map2result.append(Map2Result(game_map, game_result))
 
     return list_of_map2result

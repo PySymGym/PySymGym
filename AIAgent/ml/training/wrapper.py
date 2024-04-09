@@ -1,9 +1,9 @@
 import copy
+
 import torch
 from common.game import GameState
+from common.protocols import Predictor
 from ml.data_loader_compact import ServerDataloaderHeteroVector
-from ml.model_wrappers.protocols import Predictor
-
 from ml.predict import predict_state_with_dict
 
 
@@ -14,7 +14,7 @@ class TrainingModelWrapper(Predictor):
     ) -> None:
         self._model = model
         self.model_copy = model
-        self._name = "1"
+        self._name = "TrainingModelWrapper"
 
     def name(self):
         return "Training model"

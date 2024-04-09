@@ -15,7 +15,6 @@ from ml.inference import TORCH
 from torch_geometric.data import HeteroData
 
 NUM_NODE_FEATURES = 6
-EXPECTED_FILENAME = "expectedResults.txt"
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
 MOVEDSTATESUFFIX = "_movedState"
@@ -38,16 +37,16 @@ Result: TypeAlias = tuple[CoveragePercent, TestsNumber, ErrorsNumber, StepsNumbe
 
 @dataclass(slots=True)
 class Step:
-    Graph: TypeAlias = HeteroData
-    StatesDistribution: TypeAlias = torch.tensor
-    StatesProperties: TypeAlias = torch.tensor
+    Graph: HeteroData
+    StatesDistribution: torch.Tensor
+    StatesProperties: torch.Tensor
 
 
 @dataclass(slots=True)
 class MapStatistics:
-    MapName: TypeAlias = MapName
-    Steps: TypeAlias = list[Step]
-    Result: TypeAlias = Result
+    MapName: MapName
+    Steps: list[Step]
+    Result: Result
 
 
 class ServerDataloaderHeteroVector:
@@ -59,7 +58,9 @@ class ServerDataloaderHeteroVector:
         self.processed_files_path = processed_files_path
 
     @staticmethod
-    def convert_input_to_tensor(input: GameState) -> Tuple[HeteroData, Dict[int, int]]:
+    def convert_input_to_tensor(
+        input: GameState,
+    ) -> Tuple[HeteroData, Dict[StateId, StateIndex]]:
         """
         Converts game env to tensors
         """
@@ -67,8 +68,6 @@ class ServerDataloaderHeteroVector:
         game_states = input.States
         game_edges = input.Map
         data = HeteroData()
-        nodes_vertex_set = set()
-        nodes_state_set = set()
         nodes_vertex = []
         nodes_state = []
         edges_index_v_v = []

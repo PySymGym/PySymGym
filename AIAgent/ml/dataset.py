@@ -1,17 +1,15 @@
 import json
 import multiprocessing as mp
 import os
-from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Dict, Tuple, TypeAlias
+from typing import Dict, TypeAlias
 
 import numpy as np
 import torch
 import tqdm
 from common.game import GameState
-from ml.inference import TORCH
-from torch_geometric.data import HeteroData
+from ml.data_loader_compact import MapStatistics, ServerDataloaderHeteroVector, Step
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -31,20 +29,6 @@ TestsNumber: TypeAlias = int
 ErrorsNumber: TypeAlias = int
 StepsNumber: TypeAlias = int
 Result: TypeAlias = tuple[CoveragePercent, TestsNumber, ErrorsNumber, StepsNumber]
-
-
-@dataclass(slots=True)
-class Step:
-    Graph: TypeAlias = HeteroData
-    StatesDistribution: TypeAlias = torch.tensor
-    StatesProperties: TypeAlias = torch.tensor
-
-
-@dataclass(slots=True)
-class MapStatistics:
-    MapName: TypeAlias = MapName
-    Steps: TypeAlias = list[Step]
-    Result: TypeAlias = Result
 
 
 class Dataset:
@@ -109,7 +93,9 @@ class Dataset:
         f = open(os.path.join(map_path, step_id + GAMESTATESUFFIX))
         data = json.load(f)
         f.close()
-        graph, state_map = convert_input_to_tensor(GameState.from_dict(data))
+        graph, state_map = ServerDataloaderHeteroVector.convert_input_to_tensor(
+            GameState.from_dict(data)
+        )
         if graph is not None:
             # add_expected values
             states_properties = get_states_properties(
@@ -175,161 +161,3 @@ class Dataset:
 
     def process(self):
         raise NotImplementedError
-
-
-def convert_input_to_tensor(
-    input: GameState,
-) -> Tuple[HeteroData, Dict[StateId, StateIndex]]:
-    """
-    Converts game env to tensors
-    """
-    graphVertices = input.GraphVertices
-    game_states = input.States
-    game_edges = input.Map
-    data = HeteroData()
-    nodes_vertex = []
-    nodes_state = []
-    edges_index_v_v = []
-    edges_index_s_s = []
-    edges_index_s_v_in = []
-    edges_index_v_s_in = []
-    edges_index_s_v_history = []
-    edges_index_v_s_history = []
-    edges_attr_v_v = []
-    edges_types_v_v = []
-
-    edges_attr_s_v = []
-    edges_attr_v_s = []
-
-    state_map: Dict[int, int] = {}  # Maps real state id to its index
-    vertex_map: Dict[int, int] = {}  # Maps real vertex id to its index
-    vertex_index = 0
-    state_index = 0
-
-    # vertex nodes
-    for v in graphVertices:
-        vertex_id = v.Id
-        if vertex_id not in vertex_map:
-            vertex_map[vertex_id] = vertex_index  # maintain order in tensors
-            vertex_index = vertex_index + 1
-            nodes_vertex.append(
-                np.array(
-                    [
-                        int(v.InCoverageZone),
-                        v.BasicBlockSize,
-                        int(v.CoveredByTest),
-                        int(v.VisitedByState),
-                        int(v.TouchedByState),
-                        int(v.ContainsCall),
-                        int(v.ContainsThrow),
-                    ]
-                )
-            )
-    # vertex -> vertex edges
-    for e in game_edges:
-        edges_index_v_v.append(
-            np.array([vertex_map[e.VertexFrom], vertex_map[e.VertexTo]])
-        )
-        edges_attr_v_v.append(np.array([e.Label.Token]))
-        edges_types_v_v.append(e.Label.Token)
-
-    state_doubles = 0
-
-    # state nodes
-    for s in game_states:
-        state_id = s.Id
-        if state_id not in state_map:
-            state_map[state_id] = state_index
-            nodes_state.append(
-                np.array(
-                    [
-                        s.Position,
-                        s.PathConditionSize,
-                        s.VisitedAgainVertices,
-                        s.VisitedNotCoveredVerticesInZone,
-                        s.VisitedNotCoveredVerticesOutOfZone,
-                        s.StepWhenMovedLastTime,
-                        s.InstructionsVisitedInCurrentBlock,
-                    ]
-                )
-            )
-            # history edges: state -> vertex and back
-            for h in s.History:
-                v_to = vertex_map[h.GraphVertexId]
-                edges_index_s_v_history.append(np.array([state_index, v_to]))
-                edges_index_v_s_history.append(np.array([v_to, state_index]))
-                edges_attr_s_v.append(
-                    np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
-                )
-                edges_attr_v_s.append(
-                    np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
-                )
-            state_index = state_index + 1
-        else:
-            state_doubles += 1
-
-    # state and its childen edges: state -> state
-    for s in game_states:
-        for ch in s.Children:
-            try:
-                edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
-            except KeyError:
-                print("[ERROR]: KeyError")
-                return None, None
-
-    # state position edges: vertex -> state and back
-    for v in graphVertices:
-        for s in v.States:
-            edges_index_s_v_in.append(np.array([state_map[s], vertex_map[v.Id]]))
-            edges_index_v_s_in.append(np.array([vertex_map[v.Id], state_map[s]]))
-
-    data[TORCH.game_vertex].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
-    data[TORCH.state_vertex].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
-
-    def tensor_not_empty(tensor):
-        return tensor.numel() != 0
-
-    # dumb fix
-    def null_if_empty(tensor):
-        return (
-            tensor
-            if tensor_not_empty(tensor)
-            else torch.empty((2, 0), dtype=torch.int64)
-        )
-
-    data[*TORCH.gamevertex_to_gamevertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
-    )
-    data[*TORCH.gamevertex_to_gamevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_v_v), dtype=torch.long
-    )
-    data[*TORCH.gamevertex_to_gamevertex].edge_type = torch.tensor(
-        np.array(edges_types_v_v), dtype=torch.long
-    )
-    data[*TORCH.statevertex_in_gamevertex].edge_index = (
-        torch.tensor(np.array(edges_index_s_v_in), dtype=torch.long).t().contiguous()
-    )
-    data[*TORCH.gamevertex_in_statevertex].edge_index = (
-        torch.tensor(np.array(edges_index_v_s_in), dtype=torch.long).t().contiguous()
-    )
-    data[*TORCH.statevertex_history_gamevertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
-        .t()
-        .contiguous()
-    )
-    data[*TORCH.gamevertex_history_statevertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edges_index_v_s_history), dtype=torch.long)
-        .t()
-        .contiguous()
-    )
-    data[*TORCH.statevertex_history_gamevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_s_v), dtype=torch.long
-    )
-    data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_v_s), dtype=torch.long
-    )
-    # if (edges_index_s_s): #TODO: empty?
-    data[*TORCH.statevertex_parentof_statevertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
-    )
-    return data, state_map
