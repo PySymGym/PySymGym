@@ -1,5 +1,4 @@
 import logging
-from statistics import StatisticsError
 from time import perf_counter
 from typing import TypeAlias
 
@@ -10,9 +9,6 @@ from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
-from learning.timer.resources_manager import manage_map_inference_times_array
-from learning.timer.stats import compute_statistics
-from learning.timer.utils import get_map_inference_times
 from ml.dataset import convert_input_to_tensor
 from ml.fileop import save_model
 from ml.model_wrappers.protocols import Predictor
@@ -133,31 +129,11 @@ def play_map(
     return model_result, end_time - start_time
 
 
-def play_map_with_stats(
-    with_connector: Connector, with_predictor: Predictor, with_dataset
-) -> tuple[GameResult, TimeDuration]:
-    model_result, time_duration = play_map(with_connector, with_predictor, with_dataset)
-
-    with manage_map_inference_times_array():
-        try:
-            map_inference_times = get_map_inference_times()
-            mean, std = compute_statistics(map_inference_times)
-            logging.info(
-                f"Inference stats for <{with_predictor.name()}> on {with_connector.map.MapName}: {mean=}ms, {std=}ms"
-            )
-        except StatisticsError:
-            logging.info(
-                f"<{with_predictor.name()}> on {with_connector.map.MapName}: too few samples for stats count"
-            )
-
-    return model_result, time_duration
-
-
 @func_set_timeout(FeatureConfig.DUMP_BY_TIMEOUT.timeout_sec)
 def play_map_with_timeout(
     with_connector: Connector, with_predictor: Predictor, with_dataset
 ) -> tuple[GameResult, TimeDuration]:
-    return play_map_with_stats(with_connector, with_predictor, with_dataset)
+    return play_map(with_connector, with_predictor, with_dataset)
 
 
 def play_game(
@@ -174,7 +150,7 @@ def play_game(
             play_func = (
                 play_map_with_timeout
                 if FeatureConfig.DUMP_BY_TIMEOUT.enabled
-                else play_map_with_stats
+                else play_map
             )
             with game_server_socket_manager() as ws:
                 game_result, time = play_func(

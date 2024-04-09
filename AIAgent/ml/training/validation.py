@@ -6,7 +6,7 @@ import tqdm
 from common.game import GameMap
 from config import GeneralConfig
 from epochs_statistics.tables import create_pivot_table, table_to_string
-from learning.play_game import play_game
+from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.utils import append_to_file
 from ml.training.wrapper import TrainingModelWrapper
