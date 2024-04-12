@@ -13,7 +13,7 @@ from func_timeout import FunctionTimedOut, func_set_timeout
 from learning.timer.resources_manager import manage_map_inference_times_array
 from learning.timer.stats import compute_statistics
 from learning.timer.utils import get_map_inference_times
-from ml.dataset import convert_input_to_tensor
+from ml.training.dataset import convert_input_to_tensor
 from ml.fileop import save_model
 from ml.model_wrappers.protocols import Predictor
 from ml.training.dataset import TrainingDataset
@@ -63,7 +63,7 @@ def play_map(
     def add_single_step(input, output):
         hetero_input, _ = convert_input_to_tensor(input)
         hetero_input["y_true"] = output
-        map_steps.append(hetero_input)
+        map_steps.append(hetero_input)  # noqa: F821
 
     try:
         for _ in range(with_connector.map.StepsToPlay):
@@ -128,7 +128,7 @@ def play_map(
             -model_result.steps_count,
             model_result.errors_count,
         )
-        with_dataset.update(with_connector.map.MapName, map_result, map_steps)
+        with_dataset.update_map(with_connector.map.MapName, map_result, map_steps)
     del map_steps
     return model_result, end_time - start_time
 
