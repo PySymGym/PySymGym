@@ -59,20 +59,20 @@ class TrialSettings:
 
 def objective(trial: optuna.Trial, dataset: TrainingDataset, dynamic_dataset: bool):
     config = TrialSettings(
-        lr=0.000548,  # trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=59,  # trial.suggest_int("batch_size", 8, 1800),
+        lr=0.0003994891827606452,  # trial.suggest_float("lr", 1e-7, 1e-3),
+        batch_size=109,  # trial.suggest_int("batch_size", 8, 1800),
         epochs=10,
         optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
         loss=trial.suggest_categorical("loss", [nn.KLDivLoss]),
         random_seed=937,
         num_hops_1=5,  # trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=10,  # trial.suggest_int("num_hops_2", 2, 10),
-        num_of_state_features=29,  # trial.suggest_int("num_of_state_features", 8, 64),
-        hidden_channels=111,  # trial.suggest_int("hidden_channels", 64, 128),
+        num_hops_2=4,  # trial.suggest_int("num_hops_2", 2, 10),
+        num_of_state_features=30,  # trial.suggest_int("num_of_state_features", 8, 64),
+        hidden_channels=110,  # trial.suggest_int("hidden_channels", 64, 128),
     )
     path_to_weights = os.path.join(
         TRAINED_MODELS_PATH,
-        "2024-03-19 18:24:22.647452_59_Adam_0.0005483450313043747_KLDL_5_10_29_10",
+        "2024-04-03 11:43:35.765392_109_Adam_0.0003994891827606452_KLDL_5_4_30_10",
         "10",
     )
     model = StateModelEncoder(
