@@ -32,7 +32,7 @@
       "MapName":"BinarySearch_150_DFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -40,7 +40,7 @@
       "MapName":"Switches1_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":100,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -48,7 +48,7 @@
       "MapName":"Switches1_100_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":200,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -56,7 +56,7 @@
       "MapName":"Switches1_200_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":300,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -64,7 +64,7 @@
       "MapName":"Switches1_300_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":400,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -72,7 +72,7 @@
       "MapName":"Switches1_400_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":500,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -80,7 +80,7 @@
       "MapName":"Switches1_500_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":600,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -88,7 +88,7 @@
       "MapName":"Switches1_600_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":700,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -96,7 +96,7 @@
       "MapName":"Switches1_700_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":800,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -104,7 +104,7 @@
       "MapName":"Switches1_800_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":900,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -112,7 +112,7 @@
       "MapName":"Switches1_900_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":1000,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -120,7 +120,7 @@
       "MapName":"Switches1_1000_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":1200,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -128,7 +128,7 @@
       "MapName":"Switches1_1200_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":1300,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -136,7 +136,7 @@
       "MapName":"Switches1_1300_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":1400,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -144,7 +144,7 @@
       "MapName":"Switches1_1400_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":1500,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -152,7 +152,7 @@
       "MapName":"Switches1_1500_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"DFS",
       "StepsToStart":200,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -160,7 +160,7 @@
       "MapName":"Switches1_200_DFS"
    },
    {
-      "StepsToPlay":3000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"DFS",
       "StepsToStart":400,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -168,7 +168,7 @@
       "MapName":"Switches1_400_DFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -176,7 +176,7 @@
       "MapName":"Switches2_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":100,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -184,7 +184,7 @@
       "MapName":"Switches2_100_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":200,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -192,7 +192,7 @@
       "MapName":"Switches2_200_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":400,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -200,7 +200,7 @@
       "MapName":"Switches2_400_BFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"DFS",
       "StepsToStart":200,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -208,7 +208,7 @@
       "MapName":"Switches2_200_DFS"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":5000,
       "DefaultSearcher":"DFS",
       "StepsToStart":400,
       "AssemblyFullName":"ManuallyCollected.dll",
