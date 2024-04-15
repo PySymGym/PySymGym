@@ -177,50 +177,229 @@ public class ControlFlow
         return String.Concat(numbers);
     }
 
-    public List<int> Switches3(List<string> x)
+    public List<int> Switches3(List<int> x, int i, List<string> res)
+    {        
+            if (i < x.Length - 1)
+            {
+            switch (x[i])
+            {
+                case 0:
+                    switch (x[i+1])
+                    {
+                        case 0:
+                            res.Add("zero");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 1:
+                            res.Add("one");
+                            Switches3(x, i + 2, res)
+                            break;
+                        default:
+                            Switches3(x, i + 1, res)
+                            break;
+                    }
+                    break;
+                case 1:
+                    switch (x[i+1])
+                    {
+                        case 0:
+                            res.Add("ten");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 1:
+                            res.Add("eleven");
+                            Switches3(x, i + 2, res)
+                            break;
+                        default:
+                            Switches3(x, i + 1, res)
+                            break;
+                    }
+                    break;
+                case 2:
+                    switch (x[i+1])
+                    {
+                        case 0:
+                            res.Add("twenty");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 1:
+                            res.Add("twenty-one");
+                            Switches3(x, i + 2, res)
+                            break;
+                        default:
+                            Switches3(x, i + 1, res)
+                            break;
+                    }
+                    break;
+                case 3:
+                    switch (x[i+1])
+                    {
+                        case 0:
+                            res.Add("30");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 1:
+                            res.Add("31");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 2:
+                            res.Add("32");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 3:
+                            res.Add("33");
+                            Switches3(x, i + 2, res)
+                            break;
+                        default:
+                            Switches3(x, i + 1, res)
+                            break;
+                    }
+                    break;
+                case 4:
+                    switch (x[i+1])
+                    {
+                        case 0:
+                            res.Add("40");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 1:
+                            res.Add("41");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 2:
+                            res.Add("42");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 3:
+                            res.Add("43");
+                            Switches3(x, i + 2, res)
+                            break;
+                        case 4:
+                            res.Add("44");
+                            Switches3(x, i + 2, res)
+                            break;
+                        default:                             
+                            Switches3(x, i + 1, res)
+                            break;
+                    }
+                    break;
+                case 5:
+                    res.Add("five");
+                    Switches3(x, i + 1, res)
+                    break;
+                case 6:
+                    res.Add("six");
+                    Switches3(x, i + 1, res)
+                    break;
+                case 7:
+                    res.Add("seven");
+                    Switches3(x, i + 1, res)
+                    break;
+                case 8:
+                    res.Add("eight");
+                    Switches3(x, i + 1, res)
+                    break;
+                case 9:
+                    res.Add("nine");
+                    Switches3(x, i + 1, res)
+                    break;
+                default:
+                    res.Add("unexpected");
+                    Switches3(x, i + 1, res)
+                    break;
+            }
+            }
+        }
+     
+    }
+
+    public List<string> Switches4_1(List<int> x)
     {
-        List<int> result = new List<int>();
+        List<string> result = new List<string>();
         foreach (var name in x)
         {
             switch (name)
             {
-                case "zero":
-                    result.Add(0);
+                case 0:
+                    result.Add("0");
                     break;
-                case "one":
-                    result.Add(1);
+                case 1:
+                    result.Add("1");
                     break;
-                case "two":
-                    result.Add(2);
-                    break;
-                case "three":
-                    result.Add(3);
-                    break;
-                case "four":
-                    result.Add(4);
-                    break;
-                case "five":
-                    result.Add(5);
-                    break;
-                case "six":
-                    result.Add(6);
-                    break;
-                case "seven":
-                    result.Add(7);
-                    break;
-                case "eight":
-                    result.Add(8);
-                    break;
-                case "nine":
-                    result.Add(9);
-                    break;
+                default:
+                    result.Add("-1");
+                    break;                
             }
         }
 
         return result;
     }
 
-    public List<string> Switches4(List<int> x)
+    public List<string> Switches4_2(List<int> x)
+    {
+        List<string> result = new List<string>();
+        foreach (var name in x)
+        {
+            switch (name)
+            {
+                case 0:
+                    result.Add("0");
+                    break;
+                case 1:
+                    result.Add("1");
+                    break;
+                case 2:
+                    result.Add("2");
+                    break;
+                case 3:
+                    result.Add("3");
+                    break;
+                default:
+                    result.Add("-1");
+                    break;                
+            }
+        }
+
+        return result;
+    }
+
+    public List<string> Switches4_3(List<int> x)
+    {
+        List<string> result = new List<string>();
+        foreach (var name in x)
+        {
+            switch (name)
+            {
+                case 0:
+                    result.Add("0");
+                    break;
+                case 1:
+                    result.Add("1");
+                    break;
+                case 2:
+                    result.Add("2");
+                    break;
+                case 3:
+                    result.Add("3");
+                    break;
+                case 4:
+                    result.Add("4");
+                    break;
+                case 5:
+                    result.Add("5");
+                    break;
+
+                default:
+                    result.Add("-1");
+                    break;                
+            }
+        }
+
+        return result;
+    }
+
+
+    public List<string> Switches4_4(List<int> x)
     {
         List<string> result = new List<string>();
         foreach (var name in x)
