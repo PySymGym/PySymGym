@@ -177,9 +177,9 @@ public class ControlFlow
         return String.Concat(numbers);
     }
 
-    public List<int> Switches3(List<int> x, int i, List<string> res)
+    public List<string> Switches3(List<int> x, int i, List<string> res)
     {        
-            if (i < x.Length - 1)
+            if (i < x.Count - 1)
             {
             switch (x[i])
             {
@@ -188,14 +188,14 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("zero");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("one");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res)
+                            Switches3(x, i + 1, res);
                             break;
                     }
                     break;
@@ -204,14 +204,14 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("ten");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("eleven");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res)
+                            Switches3(x, i + 1, res);
                             break;
                     }
                     break;
@@ -220,14 +220,14 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("twenty");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("twenty-one");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res)
+                            Switches3(x, i + 1, res);
                             break;
                     }
                     break;
@@ -236,22 +236,22 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("30");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("31");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 2:
                             res.Add("32");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 3:
                             res.Add("33");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res)
+                            Switches3(x, i + 1, res);
                             break;
                     }
                     break;
@@ -260,56 +260,57 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("40");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("41");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 2:
                             res.Add("42");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 3:
                             res.Add("43");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
                         case 4:
                             res.Add("44");
-                            Switches3(x, i + 2, res)
+                            Switches3(x, i + 2, res);
                             break;
-                        default:                             
-                            Switches3(x, i + 1, res)
+                        default:
+                            Switches3(x, i + 1, res);
                             break;
                     }
                     break;
                 case 5:
                     res.Add("five");
-                    Switches3(x, i + 1, res)
+                    Switches3(x, i + 1, res);
                     break;
                 case 6:
                     res.Add("six");
-                    Switches3(x, i + 1, res)
+                    Switches3(x, i + 1, res);
                     break;
                 case 7:
                     res.Add("seven");
-                    Switches3(x, i + 1, res)
+                    Switches3(x, i + 1, res);
                     break;
                 case 8:
                     res.Add("eight");
-                    Switches3(x, i + 1, res)
+                    Switches3(x, i + 1, res);
                     break;
                 case 9:
                     res.Add("nine");
-                    Switches3(x, i + 1, res)
+                    Switches3(x, i + 1, res);
                     break;
                 default:
                     res.Add("unexpected");
-                    Switches3(x, i + 1, res)
+                    Switches3(x, i + 1, res);
                     break;
             }
-            }
+            
         }
+        return res;
      
     }
 
