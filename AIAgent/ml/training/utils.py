@@ -3,6 +3,7 @@ import typing as t
 from pathlib import Path
 import numpy as np
 import torch
+from collections import defaultdict
 
 
 def euclidean_dist(y_pred, y_true):
@@ -41,3 +42,19 @@ def create_file(file: Path):
 def append_to_file(file: Path, s: str):
     with open(file, "a") as file:
         file.write(s)
+
+
+def find_unfinished_maps(log_file_path: Path):
+    server_log = open(log_file_path)
+    ports = defaultdict(list)
+    for line in reversed(list(server_log)):
+        splitted = line.split(" ")
+        status, map_name, port = splitted[0], splitted[2], splitted[4]
+        if status == "Finish":
+            ports[port].append(map_name)
+        if status == "Start":
+            try:
+                ports[port].remove(map_name)
+            except ValueError:
+                print(map_name)
+    server_log.close()
