@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import List
+from typing import Callable, List
 import joblib
 import optuna
 import torch
@@ -57,7 +57,12 @@ class TrialSettings:
     hidden_channels: int
 
 
-def objective(trial: optuna.Trial, dataset: TrainingDataset, dynamic_dataset: bool):
+def objective(
+    trial: optuna.Trial,
+    dataset: TrainingDataset,
+    dynamic_dataset: bool,
+    model_init: Callable,
+):
     config = TrialSettings(
         lr=0.0003994891827606452,  # trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=109,  # trial.suggest_int("batch_size", 8, 1800),
@@ -75,13 +80,23 @@ def objective(trial: optuna.Trial, dataset: TrainingDataset, dynamic_dataset: bo
         "2024-04-03 11:43:35.765392_109_Adam_0.0003994891827606452_KLDL_5_4_30_10",
         "10",
     )
-    model = StateModelEncoder(
-        config.hidden_channels,
-        config.num_of_state_features,
-        config.num_hops_1,
-        config.num_hops_2,
+    print(path_to_weights)
+    # model = StateModelEncoder(
+    #     config.hidden_channels,
+    #     config.num_of_state_features,
+    #     config.num_hops_1,
+    #     config.num_hops_2,
+    # )
+    # model.load_state_dict(torch.load(path_to_weights))
+
+    model = model_init(
+        **{
+            "hidden_channels": config.hidden_channels,
+            "num_of_state_features": config.num_of_state_features,
+            "num_hops_1": config.num_hops_1,
+            "num_hops_2": config.num_hops_2,
+        }
     )
-    model.load_state_dict(torch.load(path_to_weights))
     model.to(GeneralConfig.DEVICE)
 
     optimizer = config.optimizer(model.parameters(), lr=config.lr)
@@ -152,13 +167,26 @@ def main(args):
         threshold_coverage=THRESHOLD_COVERAGE,
     )
 
+    def load_weights(model: torch.nn.Module):
+        model.load_state_dict(torch.load(args.weights_path))
+        return model
+
+    if args.weights_path is None:
+        model_init = lambda **model_params: StateModelEncoder(**model_params)
+    else:
+        model_init = lambda **model_params: load_weights(
+            StateModelEncoder(**model_params)
+        )
     mp.set_start_method("spawn", force=True)
 
     sampler = optuna.samplers.TPESampler(n_startup_trials=N_STARTUP_TRIALS)
     study = optuna.create_study(sampler=sampler, direction=STUDY_DIRECTION)
 
     objective_partial = partial(
-        objective, dataset=dataset, dynamic_dataset=DYNAMIC_DATASET
+        objective,
+        dataset=dataset,
+        dynamic_dataset=DYNAMIC_DATASET,
+        model_init=model_init,
     )
 
     study.optimize(
@@ -181,6 +209,13 @@ if __name__ == "__main__":
         type=str,
         help="path to dir with explored dlls",
         required=True,
+    )
+    parser.add_argument(
+        "--weights_path",
+        type=str,
+        default=None,
+        help="path to model weights to load",
+        required=False,
     )
     args = parser.parse_args()
     main(args)
