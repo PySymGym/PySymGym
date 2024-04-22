@@ -201,9 +201,9 @@ class TrainingDataset(Dataset):
         return all_files
 
     def update_meta_data(self) -> None:
+        self.maps_results = self._get_results()
         self._processed_paths = self._get_processed_paths()
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
-        self.maps_results = self._get_results()
         if self._load_to_cpu:
             self._flattened_loaded_steps = flatten_dict(self._loaded_to_cpu)
 
@@ -241,6 +241,7 @@ class TrainingDataset(Dataset):
             result_file = open(os.path.join(map_dir, "result"), mode="x")
             result_file.write(str(map_stat.Result))
             result_file.close()
+        self.update_meta_data()
 
     def process_step(self, map_path: Path, step_id: str) -> Step:
         def get_states_distribution(

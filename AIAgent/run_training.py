@@ -75,19 +75,6 @@ def objective(
         num_of_state_features=30,  # trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=110,  # trial.suggest_int("hidden_channels", 64, 128),
     )
-    path_to_weights = os.path.join(
-        TRAINED_MODELS_PATH,
-        "2024-04-03 11:43:35.765392_109_Adam_0.0003994891827606452_KLDL_5_4_30_10",
-        "10",
-    )
-    print(path_to_weights)
-    # model = StateModelEncoder(
-    #     config.hidden_channels,
-    #     config.num_of_state_features,
-    #     config.num_hops_1,
-    #     config.num_hops_2,
-    # )
-    # model.load_state_dict(torch.load(path_to_weights))
 
     model = model_init(
         **{
