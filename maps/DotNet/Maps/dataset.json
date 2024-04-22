@@ -272,6 +272,230 @@
       "MapName":"Switches3_400_DFS"
    },
    {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_0"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":100,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_100_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_200_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":300,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_300_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_400_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_200_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_1",
+      "MapName":"Switches3_1_400_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_0"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":100,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_100_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_200_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":300,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_300_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_400_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_200_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_2",
+      "MapName":"Switches3_2_400_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_0"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":100,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_100_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_200_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":300,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_300_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_400_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_200_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches3_3",
+      "MapName":"Switches3_3_400_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_0"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":100,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_100_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_200_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":300,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_300_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_400_BFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_200_DFS"
+   },
+   {
+      "StepsToPlay":10000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches6",
+      "MapName":"Switches6_400_DFS"
+   },
+   {
       "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
@@ -321,6 +545,14 @@
    },
    {
       "StepsToPlay":5000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches4_1",
+      "MapName":"Switches4_1_400_DFS"
+   },
+   {
+      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -358,6 +590,22 @@
       "AssemblyFullName":"ManuallyCollected.dll",
       "NameOfObjectToCover":"Switches4_2",
       "MapName":"Switches4_2_400_BFS"
+   },
+   {
+      "StepsToPlay":5000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":200,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches4_2",
+      "MapName":"Switches4_2_200_DFS"
+   },
+   {
+      "StepsToPlay":5000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches4_2",
+      "MapName":"Switches4_2_400_DFS"
    },
    {
       "StepsToPlay":5000,
@@ -420,48 +668,56 @@
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_4",
-      "MapName":"Switches4_4_0"
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_0"
    },
    {
       "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":100,
       "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_4",
-      "MapName":"Switches4_4_100_BFS"
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_100_BFS"
    },
    {
       "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":200,
       "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_4",
-      "MapName":"Switches4_4_200_BFS"
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_200_BFS"
    },
    {
       "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":300,
       "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_4",
-      "MapName":"Switches4_4_300_BFS"
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_300_BFS"
    },
    {
       "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":400,
       "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_4",
-      "MapName":"Switches4_4_400_BFS"
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_400_BFS"
    },
    {
       "StepsToPlay":5000,
       "DefaultSearcher":"DFS",
       "StepsToStart":200,
       "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_4",
-      "MapName":"Switches4_4_200_DFS"
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_200_DFS"
+   },
+   {
+      "StepsToPlay":5000,
+      "DefaultSearcher":"DFS",
+      "StepsToStart":400,
+      "AssemblyFullName":"ManuallyCollected.dll",
+      "NameOfObjectToCover":"Switches4",
+      "MapName":"Switches4_400_DFS"
    },
    {
       "StepsToPlay":2000,

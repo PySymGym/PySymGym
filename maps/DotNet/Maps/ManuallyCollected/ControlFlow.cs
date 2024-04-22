@@ -177,7 +177,135 @@ public class ControlFlow
         return String.Concat(numbers);
     }
 
-    public List<string> Switches3(List<int> x, int i, List<string> res)
+    public List<int> Switches3(List<string> x)
+    {
+        List<int> result = new List<int>();
+        foreach (var name in x)
+        {
+            switch (name)
+            {
+                case "zero":
+                    result.Add(0);
+                    break;
+                case "one":
+                    result.Add(1);
+                    break;
+                case "two":
+                    result.Add(2);
+                    break;
+                case "three":
+                    result.Add(3);
+                    break;
+                case "four":
+                    result.Add(4);
+                    break;
+                case "five":
+                    result.Add(5);
+                    break;
+                case "six":
+                    result.Add(6);
+                    break;
+                case "seven":
+                    result.Add(7);
+                    break;
+                case "eight":
+                    result.Add(8);
+                    break;
+                case "nine":
+                    result.Add(9);
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+
+    public List<int> Switches3_1(List<string> x)
+    {
+        List<int> result = new List<int>();
+        foreach (var name in x)
+        {
+            switch (name)
+            {
+                case "a":
+                    result.Add(0);
+                    break;
+                case "b":
+                    result.Add(1);
+                    break;
+                default:
+                    result.Add(2);
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    public List<int> Switches3_2(List<string> x)
+    {
+        List<int> result = new List<int>();
+        foreach (var name in x)
+        {
+            switch (name)
+            {
+                case "a":
+                    result.Add(0);
+                    break;
+                case "b":
+                    result.Add(1);
+                    break;
+                case "c":
+                    result.Add(2);
+                    break;
+                case "d":
+                    result.Add(3);
+                    break;
+                case "e":
+                    result.Add(4);
+                    break;
+                default:
+                    result.Add(5);
+                    break;
+            }
+        }
+        return result;
+    }
+
+    public List<int> Switches3_3(List<string> x)
+    {
+        List<int> result = new List<int>();
+        foreach (var name in x)
+        {
+            switch (name)
+            {
+                case "a":
+                    result.Add(0);
+                    break;
+                case "b":
+                    result.Add(1);
+                    break;
+                case "c":
+                    result.Add(2);
+                    break;
+                case "d":
+                    result.Add(3);
+                    break;
+                case "e":
+                    result.Add(4);
+                    break;
+                case "f":
+                    result.Add(5);
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+
+    public List<string> Switches6(List<int> x, int i, List<string> res)
     {        
             if (i < x.Count - 1)
             {
@@ -188,14 +316,14 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("zero");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("one");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res);
+                            Switches6(x, i + 1, res);
                             break;
                     }
                     break;
@@ -204,14 +332,14 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("ten");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("eleven");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res);
+                            Switches6(x, i + 1, res);
                             break;
                     }
                     break;
@@ -220,14 +348,14 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("twenty");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("twenty-one");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res);
+                            Switches6(x, i + 1, res);
                             break;
                     }
                     break;
@@ -236,22 +364,22 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("30");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("31");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 2:
                             res.Add("32");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 3:
                             res.Add("33");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res);
+                            Switches6(x, i + 1, res);
                             break;
                     }
                     break;
@@ -260,52 +388,52 @@ public class ControlFlow
                     {
                         case 0:
                             res.Add("40");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 1:
                             res.Add("41");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 2:
                             res.Add("42");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 3:
                             res.Add("43");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         case 4:
                             res.Add("44");
-                            Switches3(x, i + 2, res);
+                            Switches6(x, i + 2, res);
                             break;
                         default:
-                            Switches3(x, i + 1, res);
+                            Switches6(x, i + 1, res);
                             break;
                     }
                     break;
                 case 5:
                     res.Add("five");
-                    Switches3(x, i + 1, res);
+                    Switches6(x, i + 1, res);
                     break;
                 case 6:
                     res.Add("six");
-                    Switches3(x, i + 1, res);
+                    Switches6(x, i + 1, res);
                     break;
                 case 7:
                     res.Add("seven");
-                    Switches3(x, i + 1, res);
+                    Switches6(x, i + 1, res);
                     break;
                 case 8:
                     res.Add("eight");
-                    Switches3(x, i + 1, res);
+                    Switches6(x, i + 1, res);
                     break;
                 case 9:
                     res.Add("nine");
-                    Switches3(x, i + 1, res);
+                    Switches6(x, i + 1, res);
                     break;
                 default:
                     res.Add("unexpected");
-                    Switches3(x, i + 1, res);
+                    Switches6(x, i + 1, res);
                     break;
             }
             
@@ -400,7 +528,7 @@ public class ControlFlow
     }
 
 
-    public List<string> Switches4_4(List<int> x)
+    public List<string> Switches4(List<int> x)
     {
         List<string> result = new List<string>();
         foreach (var name in x)
