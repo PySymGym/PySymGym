@@ -132,11 +132,13 @@ def main(args):
     STUDY_DIRECTION = "maximize"
     N_TRIALS = 100
 
-    dataset_base_path = args.datasetbasepath
+    dataset_base_path = str(Path(args.datasetbasepath).resolve())
+    dataset_description = str(Path(args.datasetdescription).resolve())
+    weighs_path = Path(args.weights_path).absolute() if args.weights_path else None
 
     print(GeneralConfig.DEVICE)
 
-    with open(args.datasetdescription, "r") as maps_json:
+    with open(dataset_description, "r") as maps_json:
         maps: List[GameMap] = GameMap.schema().load(
             json.loads(maps_json.read()), many=True
         )
@@ -155,10 +157,10 @@ def main(args):
     )
 
     def load_weights(model: torch.nn.Module):
-        model.load_state_dict(torch.load(args.weights_path))
+        model.load_state_dict(torch.load(weighs_path))
         return model
 
-    if args.weights_path is None:
+    if weighs_path is None:
         model_init = lambda **model_params: StateModelEncoder(**model_params)
     else:
         model_init = lambda **model_params: load_weights(
