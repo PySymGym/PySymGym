@@ -601,14 +601,6 @@
    },
    {
       "StepsToPlay":5000,
-      "DefaultSearcher":"DFS",
-      "StepsToStart":400,
-      "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_2",
-      "MapName":"Switches4_2_400_DFS"
-   },
-   {
-      "StepsToPlay":5000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"ManuallyCollected.dll",
@@ -654,14 +646,6 @@
       "AssemblyFullName":"ManuallyCollected.dll",
       "NameOfObjectToCover":"Switches4_3",
       "MapName":"Switches4_3_200_DFS"
-   },
-   {
-      "StepsToPlay":5000,
-      "DefaultSearcher":"DFS",
-      "StepsToStart":400,
-      "AssemblyFullName":"ManuallyCollected.dll",
-      "NameOfObjectToCover":"Switches4_3",
-      "MapName":"Switches4_3_400_DFS"
    },
    {
       "StepsToPlay":5000,
