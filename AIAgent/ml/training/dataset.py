@@ -18,7 +18,7 @@ from typing import (
     Sequence,
     Tuple,
     TypeAlias,
-    Union,
+    Optional,
 )
 from dataclasses import dataclass
 from functools import partial
@@ -50,19 +50,20 @@ TestsNumber: TypeAlias = int
 ErrorsNumber: TypeAlias = int
 StepsNumber: TypeAlias = int
 Result: TypeAlias = tuple[CoveragePercent, TestsNumber, ErrorsNumber, StepsNumber]
+StatesDistribution: TypeAlias = torch.tensor
 
 
 @dataclass
 class Step:
-    Graph: TypeAlias = HeteroData
-    StatesDistribution: TypeAlias = torch.tensor
+    graph: HeteroData
+    states_distribution: StatesDistribution
 
 
 @dataclass
 class MapStatistics:
-    MapName: TypeAlias = MapName
-    Steps: TypeAlias = list[Step]
-    Result: TypeAlias = Result
+    map_name: MapName
+    steps: list[Step]
+    result: Result
 
 
 class TrainingDataset(Dataset):
@@ -99,7 +100,7 @@ class TrainingDataset(Dataset):
         processed_dir: Path,
         maps: list[GameMap],
         train_percentage: float,
-        threshold_steps_number: Union[int, None] = None,
+        threshold_steps_number: Optional[int] = None,
         load_to_cpu: bool = False,
         threshold_coverage: int = 100,
         similar_steps_save_prob=0,
@@ -229,24 +230,25 @@ class TrainingDataset(Dataset):
 
     def process(self):
         for map_stat in self.load_raw_dataset():
-            map_dir = Path(os.path.join(self.processed_dir, map_stat.MapName))
+            map_dir = Path(os.path.join(self.processed_dir, map_stat.map_name))
             if not map_dir.exists():
                 os.makedirs(map_dir)
-            for step_id, step in enumerate(map_stat.Steps):
-                step.Graph.y_true = step.StatesDistribution
+            step: Step
+            for step_id, step in enumerate(map_stat.steps):
+                step.graph.y_true = step.states_distribution
                 torch.save(
-                    step.Graph,
+                    step.graph,
                     os.path.join(map_dir, str(step_id) + ".pt"),
                 )
             result_file = open(os.path.join(map_dir, "result"), mode="x")
-            result_file.write(str(map_stat.Result))
+            result_file.write(str(map_stat.result))
             result_file.close()
         self.update_meta_data()
 
     def process_step(self, map_path: Path, step_id: str) -> Step:
         def get_states_distribution(
             file_path: str, state_map: StateMap
-        ) -> Step.StatesDistribution:
+        ) -> StatesDistribution:
             states_distribution = torch.zeros([len(state_map.keys()), 1])
             f = open(file_path)
             state_id = int(f.read())
@@ -294,9 +296,9 @@ class TrainingDataset(Dataset):
                 steps = list(p.map(process_steps_task, sorted(ids)))
                 maps_data.append(
                     MapStatistics(
-                        MapName=map_name,
-                        Steps=steps,
-                        Result=get_result(map_name),
+                        map_name=map_name,
+                        steps=steps,
+                        result=get_result(map_name),
                     )
                 )
         return maps_data

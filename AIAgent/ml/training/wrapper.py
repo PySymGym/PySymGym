@@ -1,7 +1,7 @@
 import copy
 import torch
 from common.game import GameState
-from ml.data_loader_compact import ServerDataloaderHeteroVector
+from ml.training.dataset import convert_input_to_tensor
 from ml.model_wrappers.protocols import Predictor
 
 from ml.predict import predict_state_with_dict
@@ -27,9 +27,7 @@ class TrainingModelWrapper(Predictor):
         return self._model
 
     def predict(self, input: GameState):
-        hetero_input, state_map = ServerDataloaderHeteroVector.convert_input_to_tensor(
-            input
-        )
+        hetero_input, state_map = convert_input_to_tensor(input)
         assert self._model is not None
 
         next_step_id, nn_output = predict_state_with_dict(

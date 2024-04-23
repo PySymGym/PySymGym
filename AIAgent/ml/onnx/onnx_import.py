@@ -1,19 +1,18 @@
 import json
 
 import onnx
-import onnxruntime
 import torch
 
 from common.constants import DUMMY_INPUT_PATH
 from common.game import GameState
-from ml.data_loader_compact import ServerDataloaderHeteroVector
+from ml.training.dataset import convert_input_to_tensor
 
 
 def create_dummy_hetero_data():
     with open(DUMMY_INPUT_PATH, "r") as dummy_file:
         dummy_input = json.load(dummy_file)
     dummy_input = GameState.from_json(dummy_input)
-    hetero_data, _ = ServerDataloaderHeteroVector.convert_input_to_tensor(dummy_input)
+    hetero_data, _ = convert_input_to_tensor(dummy_input)
 
     return hetero_data
 
