@@ -51,4 +51,4 @@ jobs:
       - name: Run training
         working-directory: ./AIAgent
         run: |
-          python3 run_training.py --datasetdescription ../workflow/dataset_for_tests.json --datasetbasepath ../maps/DotNet/Maps/Root/bin/Release/net7.0
+          python3 run_training.py --datasetdescription ../workflow/dataset_for_tests.json --datasetbasepath ../maps/DotNet/Maps/Root/bin/Release/net7.0 --epochs 2 --n_trials 1 --n_startup_trials 1
