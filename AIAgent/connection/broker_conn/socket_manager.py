@@ -25,6 +25,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
             ws.connect(
                 server_instance.ws_url,
                 skip_utf8_validation=GameServerConnectorConfig.SKIP_UTF_VALIDATION,
+                header={},
             )
         if ws.connected:
             return ws
