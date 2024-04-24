@@ -221,14 +221,14 @@ if __name__ == "__main__":
         "--n_trials",
         type=int,
         default=100,
-        help="number of sampler startup trials",
+        help="number of optuna's trials",
         required=False,
     )
     parser.add_argument(
         "--n_startup_trials",
         type=int,
         default=10,
-        help="number of optuna's sampler startup trials",
+        help="number of initial trials with random sampling for optuna's TPESampler",
         required=False,
     )
     args = parser.parse_args()
