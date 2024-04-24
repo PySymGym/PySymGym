@@ -4,7 +4,7 @@ import torch.nn
 from ml.predict import predict_state_with_dict
 
 from common.game import GameState
-from ml.data_loader_compact import ServerDataloaderHeteroVector
+from ml.training.dataset import convert_input_to_tensor
 from ml.model_wrappers.protocols import Predictor
 
 
@@ -21,9 +21,7 @@ class NNWrapper(Predictor):
         return self._model
 
     def predict(self, input: GameState, map_name):
-        hetero_input, state_map = ServerDataloaderHeteroVector.convert_input_to_tensor(
-            input
-        )
+        hetero_input, state_map = convert_input_to_tensor(input)
         assert self._model is not None
 
         next_step_id = predict_state_with_dict(self._model, hetero_input, state_map)

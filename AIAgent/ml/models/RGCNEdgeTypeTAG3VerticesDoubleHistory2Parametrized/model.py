@@ -1,14 +1,15 @@
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv
+from torch.nn.functional import log_softmax
 
 
 class StateModelEncoder(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels):
+    def __init__(self, hidden_channels, num_of_state_features, num_hops_1, num_hops_2):
         super().__init__()
         self.conv1 = RGCNConv(hidden_channels, hidden_channels, 3)
-        self.conv10 = TAGConv(7, hidden_channels, 3)
-        self.conv2 = TAGConv(hidden_channels, hidden_channels, 3)
+        self.conv10 = TAGConv(7, hidden_channels, num_hops_1)
+        self.conv2 = TAGConv(hidden_channels, hidden_channels, num_hops_2)
         self.conv3 = ResGatedGraphConv(
             (hidden_channels, 7), hidden_channels, edge_dim=2
         )
@@ -16,7 +17,8 @@ class StateModelEncoder(torch.nn.Module):
         self.conv4 = SAGEConv((hidden_channels, hidden_channels), hidden_channels)
         self.conv42 = SAGEConv((hidden_channels, hidden_channels), hidden_channels)
         self.conv5 = SAGEConv(hidden_channels, hidden_channels)
-        self.lin = Linear(hidden_channels, out_channels)
+        self.lin = Linear(hidden_channels, num_of_state_features)
+        self.lin_last = Linear(num_of_state_features, 1)
 
     def forward(
         self,
@@ -64,5 +66,5 @@ class StateModelEncoder(torch.nn.Module):
             state_x,
             edge_index_s_s,
         ).relu()
-
-        return self.lin(state_x)
+        state_x = self.lin(state_x).relu()
+        return log_softmax(self.lin_last(state_x), dim=0)
