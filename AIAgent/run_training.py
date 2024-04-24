@@ -62,11 +62,12 @@ def objective(
     dataset: TrainingDataset,
     dynamic_dataset: bool,
     model_init: Callable,
+    epochs: int,
 ):
     config = TrialSettings(
         lr=0.0003994891827606452,  # trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=109,  # trial.suggest_int("batch_size", 8, 1800),
-        epochs=10,
+        epochs=epochs,
         optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
         loss=trial.suggest_categorical("loss", [nn.KLDivLoss]),
         random_seed=937,
@@ -128,15 +129,19 @@ def main(args):
     LOAD_TO_CPU = False
 
     OPTUNA_N_JOBS = 1
-    N_STARTUP_TRIALS = 10
     STUDY_DIRECTION = "maximize"
-    N_TRIALS = 100
 
-    dataset_base_path = args.datasetbasepath
+    n_epochs = args.epochs
+    n_trials = args.n_trials
+    n_startup_trials = args.n_startup_trials
+
+    dataset_base_path = str(Path(args.datasetbasepath).resolve())
+    dataset_description = str(Path(args.datasetdescription).resolve())
+    weighs_path = Path(args.weights_path).absolute() if args.weights_path else None
 
     print(GeneralConfig.DEVICE)
 
-    with open(args.datasetdescription, "r") as maps_json:
+    with open(dataset_description, "r") as maps_json:
         maps: List[GameMap] = GameMap.schema().load(
             json.loads(maps_json.read()), many=True
         )
@@ -155,10 +160,10 @@ def main(args):
     )
 
     def load_weights(model: torch.nn.Module):
-        model.load_state_dict(torch.load(args.weights_path))
+        model.load_state_dict(torch.load(weighs_path))
         return model
 
-    if args.weights_path is None:
+    if weighs_path is None:
         model_init = lambda **model_params: StateModelEncoder(**model_params)
     else:
         model_init = lambda **model_params: load_weights(
@@ -166,7 +171,7 @@ def main(args):
         )
     mp.set_start_method("spawn", force=True)
 
-    sampler = optuna.samplers.TPESampler(n_startup_trials=N_STARTUP_TRIALS)
+    sampler = optuna.samplers.TPESampler(n_startup_trials=n_startup_trials)
     study = optuna.create_study(sampler=sampler, direction=STUDY_DIRECTION)
 
     objective_partial = partial(
@@ -174,10 +179,11 @@ def main(args):
         dataset=dataset,
         dynamic_dataset=DYNAMIC_DATASET,
         model_init=model_init,
+        epochs=n_epochs,
     )
 
     study.optimize(
-        objective_partial, n_trials=N_TRIALS, gc_after_trial=True, n_jobs=OPTUNA_N_JOBS
+        objective_partial, n_trials=n_trials, gc_after_trial=True, n_jobs=OPTUNA_N_JOBS
     )
     joblib.dump(study, f"{datetime.fromtimestamp(datetime.now().timestamp())}.pkl")
 
@@ -202,6 +208,27 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="path to model weights to load",
+        required=False,
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=10,
+        help="number of epochs",
+        required=False,
+    )
+    parser.add_argument(
+        "--n_trials",
+        type=int,
+        default=100,
+        help="number of optuna's trials",
+        required=False,
+    )
+    parser.add_argument(
+        "--n_startup_trials",
+        type=int,
+        default=10,
+        help="number of initial trials with random sampling for optuna's TPESampler",
         required=False,
     )
     args = parser.parse_args()
