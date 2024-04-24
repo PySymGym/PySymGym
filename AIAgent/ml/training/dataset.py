@@ -267,14 +267,14 @@ class TrainingDataset(Dataset):
         return step
 
     def load_raw_dataset(self) -> list[MapStatistics]:
-        def get_result(map_name: MapName):
+        def get_result(map_name: MapName) -> Result:
             f = open(os.path.join(self.raw_dir, map_name, "result"))
             result = f.read()
             f.close()
             result = tuple(map(lambda x: int(x), result.split()))
             return (result[0], -result[1], -result[2], result[3])
 
-        def get_step_ids(map_name: str):
+        def get_step_ids(map_name: str) -> List[str]:
             file_names = os.listdir(os.path.join(self.raw_dir, map_name))
             step_ids = list(
                 set(map(lambda file_name: file_name.split("_")[0], file_names))
