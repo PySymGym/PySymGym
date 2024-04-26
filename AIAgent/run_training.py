@@ -55,6 +55,7 @@ class TrialSettings:
     num_hops_2: int
     num_of_state_features: int
     hidden_channels: int
+    normalization: bool
 
 
 def objective(
@@ -65,7 +66,7 @@ def objective(
     epochs: int,
 ):
     config = TrialSettings(
-        lr=0.0003994891827606452,  # trial.suggest_float("lr", 1e-7, 1e-3),
+        lr=0.0003,  # trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=109,  # trial.suggest_int("batch_size", 8, 1800),
         epochs=epochs,
         optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
@@ -75,6 +76,7 @@ def objective(
         num_hops_2=4,  # trial.suggest_int("num_hops_2", 2, 10),
         num_of_state_features=30,  # trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=110,  # trial.suggest_int("hidden_channels", 64, 128),
+        normalization=True,
     )
 
     model = model_init(
@@ -83,6 +85,7 @@ def objective(
             "num_of_state_features": config.num_of_state_features,
             "num_hops_1": config.num_hops_1,
             "num_hops_2": config.num_hops_2,
+            "normalization": config.normalization,
         }
     )
     model.to(GeneralConfig.DEVICE)

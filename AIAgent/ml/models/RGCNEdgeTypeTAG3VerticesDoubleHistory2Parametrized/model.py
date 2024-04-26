@@ -5,18 +5,33 @@ from torch.nn.functional import log_softmax
 
 
 class StateModelEncoder(torch.nn.Module):
-    def __init__(self, hidden_channels, num_of_state_features, num_hops_1, num_hops_2):
+    def __init__(
+        self,
+        hidden_channels,
+        num_of_state_features,
+        num_hops_1,
+        num_hops_2,
+        normalization: bool,
+    ):
         super().__init__()
         self.conv1 = RGCNConv(hidden_channels, hidden_channels, 3)
-        self.conv10 = TAGConv(7, hidden_channels, num_hops_1)
-        self.conv2 = TAGConv(hidden_channels, hidden_channels, num_hops_2)
+        self.conv10 = TAGConv(7, hidden_channels, num_hops_1, normalize=normalization)
+        self.conv2 = TAGConv(
+            hidden_channels, hidden_channels, num_hops_2, normalize=normalization
+        )
         self.conv3 = ResGatedGraphConv(
             (hidden_channels, 7), hidden_channels, edge_dim=2
         )
-        self.conv32 = SAGEConv((hidden_channels, hidden_channels), hidden_channels)
-        self.conv4 = SAGEConv((hidden_channels, hidden_channels), hidden_channels)
-        self.conv42 = SAGEConv((hidden_channels, hidden_channels), hidden_channels)
-        self.conv5 = SAGEConv(hidden_channels, hidden_channels)
+        self.conv32 = SAGEConv(
+            (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
+        )
+        self.conv4 = SAGEConv(
+            (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
+        )
+        self.conv42 = SAGEConv(
+            (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
+        )
+        self.conv5 = SAGEConv(hidden_channels, hidden_channels, normalize=normalization)
         self.lin = Linear(hidden_channels, num_of_state_features)
         self.lin_last = Linear(num_of_state_features, 1)
 
