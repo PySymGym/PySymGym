@@ -1,7 +1,9 @@
+import argparse
 import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 import signal
 import socket
 import subprocess
@@ -11,8 +13,9 @@ from queue import Empty, Queue
 
 import psutil
 from aiohttp import web
+import yaml
 
-from common.constants import SERVER_WORKING_DIR
+from common.classes import SVMInfo
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import ServerInstanceInfo, Undefined, WSUrl
 
@@ -28,7 +31,10 @@ FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
 avoid_same_free_port_lock = asyncio.Lock()
 
 
-def next_free_port(min_port=35001, max_port=36000):
+def next_free_port(
+    min_port=BrokerConfig.BROKER_PORT + 1,
+    max_port=BrokerConfig.BROKER_PORT + 1000,
+):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while min_port <= max_port:
         try:
@@ -46,6 +52,7 @@ async def dequeue_instance(request):
         server_info = SERVER_INSTANCES.get(block=False)
         assert server_info.pid is Undefined
         server_info = await run_server_instance(
+            request.query,
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
@@ -66,7 +73,10 @@ async def enqueue_instance(request):
     if FeatureConfig.ON_GAME_SERVER_RESTART.enabled:
         kill_server(returned_instance_info)
         returned_instance_info = ServerInstanceInfo(
-            returned_instance_info.port, returned_instance_info.ws_url, pid=Undefined
+            returned_instance_info.svm_name,
+            returned_instance_info.port,
+            returned_instance_info.ws_url,
+            pid=Undefined,
         )
 
     SERVER_INSTANCES.put(returned_instance_info)
@@ -97,31 +107,35 @@ def get_socket_url(port: int) -> WSUrl:
     return f"ws://0.0.0.0:{port}/gameServer"
 
 
-async def run_server_instance(should_start_server: bool) -> ServerInstanceInfo:
-    async with avoid_same_free_port_lock:
-        launch_server = [
-            "dotnet",
-            "VSharp.ML.GameServer.Runner.dll",
-            "--mode",
-            "server",
-            "--port",
-        ]
-        if not should_start_server:
-            return ServerInstanceInfo(0, "None", pid=Undefined)
+async def run_server_instance(
+    svm_info: SVMInfo, should_start_server: bool
+) -> ServerInstanceInfo:
+    svm_info = SVMInfo.from_dict(svm_info)
 
-        def start_server() -> tuple[subprocess.Popen[bytes], int]:
-            port = next_free_port()
-            proc = subprocess.Popen(
-                launch_server + [str(port)],
-                stdout=subprocess.PIPE,
-                start_new_session=True,
-                cwd=SERVER_WORKING_DIR,
-            )
-            logging.info(f"bash exec cmd: {' '.join(launch_server + [str(port)])}")
-            _ = proc.stdout.readline()
-            proc_out = proc.stdout.readline().decode("utf-8").strip("\n")
+    svm_name = svm_info.name
+    launch_command = svm_info.launch_command
+    launcher = lambda port: launch_command.format(port=port)
+    min_port = svm_info.min_port
+    max_port = svm_info.max_port
+    server_working_dir = svm_info.server_working_dir
 
-            return proc, port, proc_out
+    if not should_start_server:
+        return ServerInstanceInfo(svm_name, 0, "None", pid=Undefined)
+
+    def start_server() -> tuple[subprocess.Popen[bytes], int, str]:
+        port = next_free_port(min_port, max_port)
+        launch_server = launcher(port)
+        proc = subprocess.Popen(
+            launch_server.split(),
+            stdout=subprocess.PIPE,
+            start_new_session=True,
+            cwd=Path(server_working_dir).absolute(),
+        )
+        logging.info("bash exec cmd: " + launch_server)
+        _ = proc.stdout.readline()
+        proc_out = proc.stdout.readline().decode("utf-8").strip("\n")
+
+        return proc, port, proc_out
 
     async with avoid_same_free_port_lock:
         proc, port, proc_out = start_server()
@@ -135,23 +149,26 @@ async def run_server_instance(should_start_server: bool) -> ServerInstanceInfo:
 
     server_pid = proc.pid
     PROCS.append(server_pid)
-    logging.info(
-        f"running new instance on {port=} with {server_pid=}:"
-        + " ".join(launch_server + [str(port)])
-    )
+    launch_server = launcher(port)
+    logging.info(f"running new instance on {port=} with {server_pid=}:" + launch_server)
 
     ws_url = get_socket_url(port)
-    return ServerInstanceInfo(port, ws_url, server_pid)
+    return ServerInstanceInfo(svm_name, port, ws_url, server_pid)
 
 
-async def run_servers(num_inst: int) -> list[ServerInstanceInfo]:
+async def run_servers(svms_info: list[SVMInfo]) -> list[ServerInstanceInfo]:
     servers_start_tasks = []
+    svms_info_sep = []
+    for svm_info in svms_info:
+        count = svm_info.count
+        svm_info.count = 1
+        svms_info_sep.extend(count * [svm_info])
 
-    async def run():
-        server_info = await run_server_instance(should_start_server=False)
+    async def run(svm_info: SVMInfo):
+        server_info = await run_server_instance(svm_info, should_start_server=False)
         servers_start_tasks.append(server_info)
 
-    await asyncio.gather(*[run() for _ in range(num_inst)])
+    await asyncio.gather(*[run(svm_info) for svm_info in svms_info_sep])
 
     return servers_start_tasks
 
@@ -182,10 +199,10 @@ def kill_process(pid: int):
 
 
 @contextmanager
-def server_manager(server_queue: Queue[ServerInstanceInfo]):
+def server_manager(server_queue: Queue[ServerInstanceInfo], svms_info: list[SVMInfo]):
     global PROCS
 
-    servers_info = asyncio.run(run_servers(GeneralConfig.SERVER_COUNT))
+    servers_info = asyncio.run(run_servers(svms_info))
 
     for server_info in servers_info:
         server_queue.put(server_info)
@@ -205,7 +222,25 @@ def main():
     PROCS = []
     RESULTS = []
 
-    with server_manager(SERVER_INSTANCES):
+    parser = argparse.ArgumentParser(
+        description="Launch servers using configuration from a .yml file."
+    )
+
+    parser.add_argument(
+        "--config", type=str, help="Path to the configuration file", required=True
+    )
+
+    args = parser.parse_args()
+    config = args.config
+
+    with open(config, "r") as file:
+        svms_info_config = yaml.safe_load(file)
+
+    svms_info = list(
+        map(lambda svm_info: SVMInfo.from_dict(svm_info["SVMConfig"]), svms_info_config)
+    )
+
+    with server_manager(SERVER_INSTANCES, svms_info):
         app = web.Application()
         app.add_routes(routes)
         web.run_app(app, port=BrokerConfig.BROKER_PORT)

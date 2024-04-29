@@ -1,4 +1,9 @@
 from dataclasses import dataclass
+from typing import TypeAlias
+
+
+EpochNumber: TypeAlias = int
+SVMName: TypeAlias = str
 
 
 @dataclass(slots=True)
