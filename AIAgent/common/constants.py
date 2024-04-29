@@ -46,7 +46,3 @@ DUMMY_INPUT_PATH = Path("ml/onnx/dummy_input.json")
 BEST_MODEL_ONNX_SAVE_PATH = Path("ml/onnx/StateModelEncoder.onnx")
 TEMP_EPOCH_INFERENCE_TIMES_DIR = Path(".epoch_inference_times/")
 BASE_NN_OUT_FEATURES_NUM = 8
-
-SERVER_WORKING_DIR = Path(
-    "../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0"
-).absolute()

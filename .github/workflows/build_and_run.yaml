@@ -9,7 +9,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11.8'
+          python-version: "3.11.8"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,10 +45,10 @@ jobs:
       - name: Launch application
         working-directory: ./AIAgent
         run: |
-          python3 launch_servers.py &
+          python3 launch_servers.py --config ../workflow/config_for_tests.yml &
           echo "Waiting for server to start..." && sleep 10
 
       - name: Run training
         working-directory: ./AIAgent
         run: |
-          python3 run_training.py --datasetdescription ../workflow/dataset_for_tests.json --datasetbasepath ../maps/DotNet/Maps/Root/bin/Release/net7.0 --epochs 2 --n_trials 1 --n_startup_trials 1
+          python3 run_training.py --config ../workflow/config_for_tests.yml
