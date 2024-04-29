@@ -231,7 +231,8 @@ def main(args):
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
     with StatisticsManager() as manager:
-        statistics_collector = manager.StatisticsCollector(  # shared object
+        # shared object
+        statistics_collector = manager.StatisticsCollector(
             training_count, results_table_path
         )
         with ProcessPoolExecutor(
