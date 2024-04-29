@@ -25,6 +25,17 @@ class BrokerConfig:
     BROKER_PORT = 35000
 
 
+class TrainingConfig:
+    DYNAMIC_DATASET = True
+    TRAIN_PERCENTAGE = 1
+    THRESHOLD_COVERAGE = 100
+    THRESHOLD_STEPS_NUMBER = None
+    LOAD_TO_CPU = False
+
+    OPTUNA_N_JOBS = 1
+    STUDY_DIRECTION = "maximize"
+
+
 @dataclass(slots=True, frozen=True)
 class DumpByTimeoutFeature:
     enabled: bool

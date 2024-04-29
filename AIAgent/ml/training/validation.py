@@ -1,25 +1,26 @@
+from functools import partial
 import multiprocessing as mp
-import os
-from pathlib import Path
 from typing import Callable
+from multiprocessing.managers import AutoProxy
 
 import numpy as np
 import torch
 import tqdm
 import os
+from common.classes import SVMInfo
 from config import GeneralConfig
-from epochs_statistics.tables import create_pivot_table, table_to_string
+from epochs_statistics.tables import create_pivot_table
+from epochs_statistics.classes import StatisticsCollector
 from learning.play_game import play_game
 from ml.training.dataset import TrainingDataset
-from ml.training.paths import TRAINING_RESULTS_PATH
-from ml.training.utils import append_to_file
 from ml.training.wrapper import TrainingModelWrapper
 from torch_geometric.loader import DataLoader
 
 
-def play_game_task(task):
+def play_game_task(svm_info: SVMInfo, task):
     maps, dataset, wrapper = task[0], task[1], task[2]
     result = play_game(
+        svm_info=svm_info,
         with_predictor=wrapper,
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
@@ -30,15 +31,15 @@ def play_game_task(task):
 
 
 def validate_coverage(
+    svm_info: SVMInfo,
+    statistics_collector: "AutoProxy[StatisticsCollector]",
     model: torch.nn.Module,
     epoch: int,
     dataset: TrainingDataset,
-    run_name: str,
     progress_bar_colour: str = "#ed95ce",
 ):
     """
-    Evaluate model using symbolic execution engine. It runs in parallel and processes
-    number is equal to a constant SERVER_COUNT from GeneralConfig.
+    Evaluate model using symbolic execution engine. It runs in parallel.
 
     Parameters
     ----------
@@ -48,17 +49,16 @@ def validate_coverage(
         Epoch number to write result.
     dataset : TrainingDataset
         Dataset object for validation.
-    run_name : str
-        Unique run name to save result.
     progress_bar_colour : str
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
-    tasks = [([map], dataset, wrapper) for map in dataset.maps]
-    with mp.Pool(GeneralConfig.SERVER_COUNT) as p:
+    tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
+    server_count = svm_info.count
+    with mp.Pool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
-            p.imap_unordered(play_game_task, tasks, chunksize=1),
+            p.imap_unordered(partial(play_game_task, svm_info), tasks, chunksize=1),
             desc="validation",
             total=len(tasks),
             ncols=100,
@@ -85,18 +85,11 @@ def validate_coverage(
             )
         )
     )
-
     table, _, _ = create_pivot_table(
-        {wrapper: sorted(all_results, key=lambda x: x.map.MapName)}
+        svm_info.name,
+        {wrapper: sorted(all_results, key=lambda x: x.map.MapName)},
     )
-    table = table_to_string(table)
-    results_table_path = Path(os.path.join(TRAINING_RESULTS_PATH, run_name + ".log"))
-    append_to_file(
-        results_table_path,
-        f"Epoch#{epoch}" + " Average coverage: " + str(average_result) + "\n",
-    )
-    append_to_file(results_table_path, table + "\n")
-
+    statistics_collector.update_results(epoch, svm_info.name, average_result, table)
     return average_result
 
 

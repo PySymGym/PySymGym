@@ -43,7 +43,7 @@ def create_stats(
 
 
 def create_pivot_table(
-    model_map_results_mapping: AgentResultsOnGameMaps, sort: bool = True
+    svm_name: str, model_map_results_mapping: AgentResultsOnGameMaps, sort: bool = True
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     map_results_with_models = invert_mapping_mrgm_gmmr(model_map_results_mapping)
     euc_dists2full_cov, avs, medians, intervals = create_stats(
@@ -56,9 +56,10 @@ def create_pivot_table(
     )
 
     for mapName, mutable2result_list in map_results_with_models.items():
+        name = f"{svm_name} : {mapName}"
         for mutable2result in mutable2result_list:
-            name_results_dict[mapName].append(convert_to_view_model(mutable2result))
-            epoch_percents_dict[mapName].append(
+            name_results_dict[name].append(convert_to_view_model(mutable2result))
+            epoch_percents_dict[name].append(
                 str(
                     (
                         mutable2result.game_result.actual_coverage_percent,
