@@ -20,16 +20,6 @@ def predict_state_with_dict(
 
     with torch.no_grad():
         out = infer(model, data)
-        # out = model(
-        #     data.x_dict["game_vertex"],
-        #     data.x_dict["state_vertex"],
-        #     data.edge_index_dict["game_vertex", "to", "game_vertex"],
-        #     data["game_vertex", "to", "game_vertex"].edge_type,
-        #     data["game_vertex", "history", "state_vertex"].edge_index,
-        #     data["game_vertex", "history", "state_vertex"].edge_attr,
-        #     data["game_vertex", "in", "state_vertex"].edge_index,
-        #     data["state_vertex", "parent_of", "state_vertex"].edge_index,
-        # )
 
     remapped = []
 

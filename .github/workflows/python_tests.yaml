@@ -1,0 +1,26 @@
+name: Run python tests
+
+on: [pull_request]
+
+jobs:
+  build-and-launch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11.8"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: ./AIAgent
+        run: |
+          pytest tests -sv

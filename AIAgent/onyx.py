@@ -18,12 +18,8 @@ from ml.training.dataset import convert_input_to_tensor
 ONNX_OPSET_VERSION = 17
 
 
-def load_gamestate(f: t.TextIO) -> HeteroData:
-    # load game state + convert in to HeteroData
-    file_json = GameState.from_dict(json.load(f))
-    hetero_data, _ = convert_input_to_tensor(file_json)
-
-    return hetero_data
+def load_gamestate(f: t.TextIO) -> GameState:
+    return GameState.from_dict(json.load(f))
 
 
 def create_model_input(
@@ -63,12 +59,11 @@ def create_torch_input(hetero_data: HeteroData):
 
 def save_in_onnx(
     model: torch.nn.Module,
-    sample_input: pathlib.Path,
+    sample_input: HeteroData,
     save_path: pathlib.Path,
-    verbose: bool = True,
+    verbose: bool = False,
 ):
-    with open(sample_input, "r") as gamestate_file:
-        gamestate = load_gamestate(gamestate_file)
+    gamestate = sample_input
     torch.onnx.export(
         model=model,
         args=create_torch_input(gamestate),
@@ -171,24 +166,25 @@ def main():
         "normalization": True,
     }
 
+    with open(args.sample_gamestate_path, "r") as gamestate_file:
+        sample_gamestate = load_gamestate(gamestate_file)
+
+    veification_gamestates: list[HeteroData] = []
+    for gamestate_path in args.verification_gamestates:
+        with open(gamestate_path, "r") as gamestate_file:
+            veification_gamestates.append(load_gamestate(gamestate_file))
+
     entrypoint(
-        sample_gamestate_path=args.sample_gamestate_path,
+        sample_gamestate=sample_gamestate,
         pytorch_model_path=args.pytorch_model_path,
         onnx_savepath=args.onnx_savepath,
-        import_model_fqn=args.import_model_fqn,
+        model_def=resolve_import_model(args.import_model_fqn),
         model_kwargs=model_kwargs,
-        verification_gamestates=args.verification_gamestates,
+        verification_gamestates=veification_gamestates,
     )
 
 
-def entrypoint(
-    sample_gamestate_path: pathlib.Path,
-    pytorch_model_path: pathlib.Path,
-    onnx_savepath: pathlib.Path,
-    import_model_fqn: str,
-    model_kwargs: dict[str, t.Any],
-    verification_gamestates: list[pathlib.Path] = None,
-):
+def resolve_import_model(import_model_fqn: str) -> t.Type[torch.nn.Module]:
     module, clazz = (
         import_model_fqn[: import_model_fqn.rfind(".")],
         import_model_fqn[import_model_fqn.rfind(".") + 1 :],
@@ -197,29 +193,40 @@ def entrypoint(
     module_def = importlib.import_module(module)
     model_def = getattr(module_def, clazz)
 
-    torch_model = model_def(**model_kwargs)
+    return model_def
 
-    with open(sample_gamestate_path, "r") as gamestate_file:
-        gamestate = load_gamestate(gamestate_file)
-    torch_run(torch_model, gamestate)
+
+def entrypoint(
+    sample_gamestate: GameState,
+    pytorch_model_path: pathlib.Path,
+    onnx_savepath: pathlib.Path,
+    model_def: t.Type[torch.nn.Module],
+    model_kwargs: dict[str, t.Any],
+    verification_gamestates: list[GameState] = None,
+):
+    torch_model = model_def(**model_kwargs)
+    hetero_sample_gamestate, _ = convert_input_to_tensor(sample_gamestate)
+
+    torch_run(torch_model, hetero_sample_gamestate)
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
 
     torch_model.load_state_dict(state_dict)
 
-    save_in_onnx(torch_model, sample_gamestate_path, onnx_savepath)
+    save_in_onnx(torch_model, hetero_sample_gamestate, onnx_savepath)
     model_onnx = onnx.load(onnx_savepath)
     onnx.checker.check_model(model_onnx)
 
     if verification_gamestates is not []:
         ort_session = onnxruntime.InferenceSession(onnx_savepath)
 
-        for idx, gamestate_path in enumerate(verification_gamestates, start=1):
-            with open(gamestate_path, "r") as gamestate_file:
-                gamestate = load_gamestate(gamestate_file)
+        for idx, verification_gamestate in enumerate(verification_gamestates, start=1):
+            hetero_verification_gamestate, _ = convert_input_to_tensor(
+                verification_gamestate
+            )
+            torch_out = torch_run(torch_model, hetero_verification_gamestate)
+            onnx_out = onnx_run(ort_session, hetero_verification_gamestate)
 
-            torch_out = torch_run(torch_model, gamestate)
-            onnx_out = onnx_run(ort_session, gamestate)
-
+            print(len(verification_gamestate.States))
             print(f"{shorten_output(torch_out)=}")
             print(f"{shorten_output(onnx_out[0])=}")
             print(f"{idx}/{len(verification_gamestates)}")
