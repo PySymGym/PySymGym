@@ -21,16 +21,9 @@ class TestONNXConversion:
         init_game_state: GameState = game_states_fixture[0]
         verification_game_states: list[GameState] = game_states_fixture[1:]
 
-        with open("tests/resources/model_kwargs.yaml", "r") as file:
+        with open(Path("tests/resources/model_kwargs.yaml"), "r") as file:
             model_kwargs = yaml.safe_load(file)
 
-        model_kwargs = {
-            "hidden_channels": 110,
-            "num_of_state_features": 30,
-            "num_hops_1": 5,
-            "num_hops_2": 4,
-            "normalization": True,
-        }
         mock_model_path = tmp_path / "real_random_model.pt"
         torch.save(
             obj=RealStateModelEncoder(**model_kwargs).state_dict(), f=mock_model_path
