@@ -1,36 +1,37 @@
-from collections import defaultdict
-import torch
-from pathlib import Path
+import ast
+import glob
+import json
+import logging
+import multiprocessing as mp
 import os
 import os.path as osp
-import numpy as np
-import tqdm
-import json
-from common.game import GameState
-import multiprocessing as mp
-from torch_geometric.data import HeteroData, Dataset
+import random
+import shutil
+from collections import defaultdict
+from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
 from typing import (
     Any,
     DefaultDict,
     Dict,
     List,
     Literal,
+    Optional,
     Sequence,
     Tuple,
     TypeAlias,
-    Optional,
 )
-from dataclasses import dataclass
-from functools import partial
-import glob
-import random
-from common.game import GameMap
-import ast
-from torch.utils.data import random_split
-import logging
-import shutil
-from config import GeneralConfig
 
+import numpy as np
+import torch
+import tqdm
+from torch.utils.data import random_split
+from torch_geometric.data import Dataset, HeteroData
+
+from common.game import GameMap, GameState
+from config import GeneralConfig
+from ml.inference import TORCH
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -344,8 +345,8 @@ class TrainingDataset(Dataset):
                 )
                 if (
                     cos_d < 1e-7
-                    and step["game_vertex"]["x"].size()[0]
-                    == filtered_map_steps[-1]["game_vertex"]["x"].size()[0]
+                    and step[TORCH.game_vertex]["x"].size()[0]
+                    == filtered_map_steps[-1][TORCH.game_vertex]["x"].size()[0]
                 ):
                     step.use_for_train = np.random.choice(
                         [True, False],
@@ -429,8 +430,8 @@ class TrainingDataset(Dataset):
         ) -> DefaultDict[int, list[HeteroData]]:
             steps_dict = defaultdict(list)
             for step in steps_list:
-                states_num = step["state_vertex"].x.shape[0]
-                game_v_num = step["game_vertex"].x.shape[0]
+                states_num = step[TORCH.state_vertex].x.shape[0]
+                game_v_num = step[TORCH.game_vertex].x.shape[0]
                 steps_dict[states_num + game_v_num].append(step)
             return steps_dict
 
@@ -438,17 +439,19 @@ class TrainingDataset(Dataset):
             step: HeteroData,
         ) -> Tuple[np.ndarray, np.ndarray]:
             game_dtype = [
-                (f"g{i}", np.float32) for i in range(step["game_vertex"].x.shape[-1])
+                (f"g{i}", np.float32)
+                for i in range(step[TORCH.game_vertex].x.shape[-1])
             ]
             game_v = np.sort(
-                step["game_vertex"].x.cpu().numpy().astype(game_dtype),
+                step[TORCH.game_vertex].x.cpu().numpy().astype(game_dtype),
                 order=list(map(lambda x: x[0], game_dtype)),
             )
             states_dtype = [
-                (f"s{i}", np.float32) for i in range(step["state_vertex"].x.shape[-1])
+                (f"s{i}", np.float32)
+                for i in range(step[TORCH.state_vertex].x.shape[-1])
             ]
             states = np.sort(
-                step["state_vertex"].x.cpu().numpy().astype(states_dtype),
+                step[TORCH.state_vertex].x.cpu().numpy().astype(states_dtype),
                 order=list(map(lambda x: x[0], states_dtype)),
             )
             return game_v, states
@@ -605,8 +608,8 @@ def convert_input_to_tensor(
             edges_index_s_v_in.append(np.array([state_map[s], vertex_map[v.Id]]))
             edges_index_v_s_in.append(np.array([vertex_map[v.Id], state_map[s]]))
 
-    data["game_vertex"].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
-    data["state_vertex"].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
+    data[TORCH.game_vertex].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
+    data[TORCH.state_vertex].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
 
     def tensor_not_empty(tensor):
         return tensor.numel() != 0
@@ -619,39 +622,39 @@ def convert_input_to_tensor(
             else torch.empty((2, 0), dtype=torch.int64)
         )
 
-    data["game_vertex", "to", "game_vertex"].edge_index = null_if_empty(
+    data[*TORCH.gamevertex_to_gamevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
     )
-    data["game_vertex", "to", "game_vertex"].edge_attr = torch.tensor(
+    data[*TORCH.gamevertex_to_gamevertex].edge_attr = torch.tensor(
         np.array(edges_attr_v_v), dtype=torch.long
     )
-    data["game_vertex", "to", "game_vertex"].edge_type = torch.tensor(
+    data[*TORCH.gamevertex_to_gamevertex].edge_type = torch.tensor(
         np.array(edges_types_v_v), dtype=torch.long
     )
-    data["state_vertex", "in", "game_vertex"].edge_index = (
+    data[*TORCH.statevertex_in_gamevertex].edge_index = (
         torch.tensor(np.array(edges_index_s_v_in), dtype=torch.long).t().contiguous()
     )
-    data["game_vertex", "in", "state_vertex"].edge_index = (
+    data[*TORCH.gamevertex_in_statevertex].edge_index = (
         torch.tensor(np.array(edges_index_v_s_in), dtype=torch.long).t().contiguous()
     )
-    data["state_vertex", "history", "game_vertex"].edge_index = null_if_empty(
+    data[*TORCH.statevertex_history_gamevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_s_v_history), dtype=torch.long)
         .t()
         .contiguous()
     )
-    data["game_vertex", "history", "state_vertex"].edge_index = null_if_empty(
+    data[*TORCH.gamevertex_history_statevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_v_s_history), dtype=torch.long)
         .t()
         .contiguous()
     )
-    data["state_vertex", "history", "game_vertex"].edge_attr = torch.tensor(
+    data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
         np.array(edges_attr_s_v), dtype=torch.long
     )
-    data["game_vertex", "history", "state_vertex"].edge_attr = torch.tensor(
+    data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
         np.array(edges_attr_v_s), dtype=torch.long
     )
     # if (edges_index_s_s): #TODO: empty?
-    data["state_vertex", "parent_of", "state_vertex"].edge_index = null_if_empty(
+    data[*TORCH.statevertex_parentof_statevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
     )
     return data, state_map

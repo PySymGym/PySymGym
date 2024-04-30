@@ -4,9 +4,11 @@ from random import shuffle
 
 import torch
 import torch.nn.functional as F
-from torch_geometric.loader import DataLoader
 import tqdm
+from torch_geometric.loader import DataLoader
+
 from config import GeneralConfig
+from ml.inference import infer
 
 BALANCE_DATASET = False
 
@@ -77,16 +79,17 @@ class HetGNNTestTrain:
         ):  # Iterate in batches over the training dataset.
             data = data.to(device)
             optimizer.zero_grad()  # Clear gradients.
-            out = model(
-                data.x_dict["game_vertex"],
-                data.x_dict["state_vertex"],
-                data.edge_index_dict["game_vertex", "to", "game_vertex"],
-                data["game_vertex", "to", "game_vertex"].edge_type,
-                data["game_vertex", "history", "state_vertex"].edge_index,
-                data["game_vertex", "history", "state_vertex"].edge_attr,
-                data["game_vertex", "in", "state_vertex"].edge_index,
-                data["state_vertex", "parent_of", "state_vertex"].edge_index,
-            )
+            out = infer(model, data)
+            # out = model(
+            #     data.x_dict["game_vertex"],
+            #     data.x_dict["state_vertex"],
+            #     data.edge_index_dict["game_vertex", "to", "game_vertex"],
+            #     data["game_vertex", "to", "game_vertex"].edge_type,
+            #     data["game_vertex", "history", "state_vertex"].edge_index,
+            #     data["game_vertex", "history", "state_vertex"].edge_attr,
+            #     data["game_vertex", "in", "state_vertex"].edge_index,
+            #     data["state_vertex", "parent_of", "state_vertex"].edge_index,
+            # )
             target = data.y
             loss = F.mse_loss(out, target)
             loss.backward()  # Derive gradients.
@@ -99,16 +102,17 @@ class HetGNNTestTrain:
         number_of_states_total = 0
         for data in tqdm.tqdm(loader, desc="Test"):
             data.to(device)
-            out = model(
-                data.x_dict["game_vertex"],
-                data.x_dict["state_vertex"],
-                data["game_vertex", "to", "game_vertex"].edge_index,
-                data["game_vertex", "to", "game_vertex"].edge_type,
-                data["game_vertex", "history", "state_vertex"].edge_index,
-                data["game_vertex", "history", "state_vertex"].edge_attr,
-                data["game_vertex", "in", "state_vertex"].edge_index,
-                data["state_vertex", "parent_of", "state_vertex"].edge_index,
-            )
+            out = infer(model, data)
+            # out = model(
+            #     data.x_dict["game_vertex"],
+            #     data.x_dict["state_vertex"],
+            #     data["game_vertex", "to", "game_vertex"].edge_index,
+            #     data["game_vertex", "to", "game_vertex"].edge_type,
+            #     data["game_vertex", "history", "state_vertex"].edge_index,
+            #     data["game_vertex", "history", "state_vertex"].edge_attr,
+            #     data["game_vertex", "in", "state_vertex"].edge_index,
+            #     data["state_vertex", "parent_of", "state_vertex"].edge_index,
+            # )
             target = data.y
             for i, x in enumerate(out):
                 loss = F.mse_loss(x, target[i])
