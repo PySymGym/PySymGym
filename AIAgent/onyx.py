@@ -8,10 +8,12 @@ from textwrap import dedent
 import onnx
 import onnxruntime
 import torch
+import yaml
+from torch_geometric.data import HeteroData
+
 from common.game import GameState
 from ml.inference import ONNX, TORCH
 from ml.training.dataset import convert_input_to_tensor
-from torch_geometric.data import HeteroData
 
 # working version
 ONNX_OPSET_VERSION = 17
@@ -157,13 +159,8 @@ def main():
 
     args = parser.parse_args()
 
-    model_kwargs = {
-        "hidden_channels": 110,
-        "num_of_state_features": 30,
-        "num_hops_1": 5,
-        "num_hops_2": 4,
-        "normalization": True,
-    }
+    with open("model_kwargs.yaml", "r") as file:
+        model_kwargs = yaml.safe_load(file)
 
     with open(args.sample_gamestate_path, "r") as gamestate_file:
         sample_gamestate = load_gamestate(gamestate_file)
