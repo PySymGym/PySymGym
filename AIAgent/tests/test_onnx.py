@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 import torch
+import yaml
 
 from common.game import GameState
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
@@ -19,6 +20,9 @@ class TestONNXConversion:
     ):
         init_game_state: GameState = game_states_fixture[0]
         verification_game_states: list[GameState] = game_states_fixture[1:]
+
+        with open("tests/resources/model_kwargs.yaml", "r") as file:
+            model_kwargs = yaml.safe_load(file)
 
         model_kwargs = {
             "hidden_channels": 110,
