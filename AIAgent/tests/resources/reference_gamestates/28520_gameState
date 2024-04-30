@@ -1,0 +1,826 @@
+{
+    "GraphVertices": [
+        {
+            "Id": 0,
+            "InCoverageZone": true,
+            "BasicBlockSize": 4,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": true,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 3,
+            "InCoverageZone": true,
+            "BasicBlockSize": 4,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": true,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 6,
+            "InCoverageZone": true,
+            "BasicBlockSize": 29,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": [
+                1360
+            ]
+        },
+        {
+            "Id": 7,
+            "InCoverageZone": true,
+            "BasicBlockSize": 7,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": true,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": [
+                1356
+            ]
+        },
+        {
+            "Id": 9,
+            "InCoverageZone": true,
+            "BasicBlockSize": 2,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 8,
+            "InCoverageZone": true,
+            "BasicBlockSize": 5,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 4,
+            "InCoverageZone": true,
+            "BasicBlockSize": 16,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": true,
+            "ContainsThrow": true,
+            "States": [
+                1358,
+                1357,
+                1355
+            ]
+        },
+        {
+            "Id": 5,
+            "InCoverageZone": true,
+            "BasicBlockSize": 5,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": true,
+            "ContainsThrow": true,
+            "States": [
+                1359
+            ]
+        },
+        {
+            "Id": 1,
+            "InCoverageZone": true,
+            "BasicBlockSize": 14,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": true,
+            "ContainsThrow": true,
+            "States": [
+                1351
+            ]
+        },
+        {
+            "Id": 2,
+            "InCoverageZone": true,
+            "BasicBlockSize": 1,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": true,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 10,
+            "InCoverageZone": false,
+            "BasicBlockSize": 9,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": [
+                1353
+            ]
+        },
+        {
+            "Id": 11,
+            "InCoverageZone": false,
+            "BasicBlockSize": 5,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 16,
+            "InCoverageZone": false,
+            "BasicBlockSize": 1,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 12,
+            "InCoverageZone": false,
+            "BasicBlockSize": 3,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": [
+                1349
+            ]
+        },
+        {
+            "Id": 13,
+            "InCoverageZone": false,
+            "BasicBlockSize": 1,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": []
+        },
+        {
+            "Id": 15,
+            "InCoverageZone": false,
+            "BasicBlockSize": 32,
+            "CoveredByTest": false,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": false,
+            "States": []
+        },
+        {
+            "Id": 14,
+            "InCoverageZone": false,
+            "BasicBlockSize": 1,
+            "CoveredByTest": true,
+            "VisitedByState": false,
+            "TouchedByState": false,
+            "ContainsCall": false,
+            "ContainsThrow": true,
+            "States": []
+        }
+    ],
+    "States": [
+        {
+            "Id": 1360,
+            "Position": 1,
+            "PathConditionSize": 7,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 239,
+            "InstructionsVisitedInCurrentBlock": 68,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 155
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 211
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 218
+                },
+                {
+                    "GraphVertexId": 5,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 85
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 239
+                }
+            ],
+            "Children": []
+        },
+        {
+            "Id": 1356,
+            "Position": 3,
+            "PathConditionSize": 7,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 192,
+            "InstructionsVisitedInCurrentBlock": 68,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 4
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 12
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 69
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 120
+                },
+                {
+                    "GraphVertexId": 8,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 55
+                },
+                {
+                    "GraphVertexId": 7,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 145
+                }
+            ],
+            "Children": [
+                1357
+            ]
+        },
+        {
+            "Id": 1358,
+            "Position": 16,
+            "PathConditionSize": 6,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 213,
+            "InstructionsVisitedInCurrentBlock": 65,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 4
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 12
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 193
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 29
+                },
+                {
+                    "GraphVertexId": 7,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 54
+                },
+                {
+                    "GraphVertexId": 10,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 124
+                },
+                {
+                    "GraphVertexId": 16,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 170
+                },
+                {
+                    "GraphVertexId": 12,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 171
+                },
+                {
+                    "GraphVertexId": 13,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 175
+                },
+                {
+                    "GraphVertexId": 14,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 177
+                },
+                {
+                    "GraphVertexId": 9,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 179
+                },
+                {
+                    "GraphVertexId": 8,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 183
+                }
+            ],
+            "Children": []
+        },
+        {
+            "Id": 1357,
+            "Position": 12,
+            "PathConditionSize": 7,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 219,
+            "InstructionsVisitedInCurrentBlock": 77,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 4
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 12
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 156
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 120
+                },
+                {
+                    "GraphVertexId": 8,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 146
+                }
+            ],
+            "Children": []
+        },
+        {
+            "Id": 1355,
+            "Position": 8,
+            "PathConditionSize": 7,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 237,
+            "InstructionsVisitedInCurrentBlock": 67,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 45
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 63
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 208
+                },
+                {
+                    "GraphVertexId": 5,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 28
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 86
+                },
+                {
+                    "GraphVertexId": 8,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 117
+                }
+            ],
+            "Children": []
+        },
+        {
+            "Id": 1359,
+            "Position": 1,
+            "PathConditionSize": 7,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 238,
+            "InstructionsVisitedInCurrentBlock": 68,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 155
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 211
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 218
+                },
+                {
+                    "GraphVertexId": 5,
+                    "NumOfVisits": 3,
+                    "StepWhenVisitedLastTime": 238
+                }
+            ],
+            "Children": [
+                1360
+            ]
+        },
+        {
+            "Id": 1351,
+            "Position": 10,
+            "PathConditionSize": 6,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 235,
+            "InstructionsVisitedInCurrentBlock": 59,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 151
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 12
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 69
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 29
+                },
+                {
+                    "GraphVertexId": 8,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 55
+                },
+                {
+                    "GraphVertexId": 5,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 119
+                }
+            ],
+            "Children": [
+                1356
+            ]
+        },
+        {
+            "Id": 1353,
+            "Position": 8,
+            "PathConditionSize": 7,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 223,
+            "InstructionsVisitedInCurrentBlock": 69,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 45
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 63
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 2,
+                    "StepWhenVisitedLastTime": 68
+                },
+                {
+                    "GraphVertexId": 5,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 28
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 86
+                },
+                {
+                    "GraphVertexId": 7,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 116
+                },
+                {
+                    "GraphVertexId": 10,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 194
+                }
+            ],
+            "Children": [
+                1355
+            ]
+        },
+        {
+            "Id": 1349,
+            "Position": 2,
+            "PathConditionSize": 6,
+            "VisitedAgainVertices": 0,
+            "VisitedNotCoveredVerticesInZone": 0,
+            "VisitedNotCoveredVerticesOutOfZone": 0,
+            "StepWhenMovedLastTime": 240,
+            "InstructionsVisitedInCurrentBlock": 51,
+            "History": [
+                {
+                    "GraphVertexId": 0,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 0
+                },
+                {
+                    "GraphVertexId": 1,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 4
+                },
+                {
+                    "GraphVertexId": 3,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 12
+                },
+                {
+                    "GraphVertexId": 4,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 16
+                },
+                {
+                    "GraphVertexId": 6,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 29
+                },
+                {
+                    "GraphVertexId": 7,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 54
+                },
+                {
+                    "GraphVertexId": 10,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 124
+                },
+                {
+                    "GraphVertexId": 11,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 169
+                },
+                {
+                    "GraphVertexId": 12,
+                    "NumOfVisits": 1,
+                    "StepWhenVisitedLastTime": 221
+                }
+            ],
+            "Children": [
+                1351,
+                1358
+            ]
+        }
+    ],
+    "Map": [
+        {
+            "VertexFrom": 0,
+            "VertexTo": 1,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 3,
+            "VertexTo": 4,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 6,
+            "VertexTo": 7,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 6,
+            "VertexTo": 8,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 7,
+            "VertexTo": 10,
+            "Label": {
+                "Token": 1
+            }
+        },
+        {
+            "VertexFrom": 9,
+            "VertexTo": 8,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 8,
+            "VertexTo": 4,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 4,
+            "VertexTo": 5,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 4,
+            "VertexTo": 6,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 5,
+            "VertexTo": 1,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 1,
+            "VertexTo": 2,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 1,
+            "VertexTo": 3,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 10,
+            "VertexTo": 11,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 10,
+            "VertexTo": 16,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 11,
+            "VertexTo": 12,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 16,
+            "VertexTo": 12,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 12,
+            "VertexTo": 13,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 12,
+            "VertexTo": 15,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 13,
+            "VertexTo": 14,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 15,
+            "VertexTo": 14,
+            "Label": {
+                "Token": 0
+            }
+        },
+        {
+            "VertexFrom": 14,
+            "VertexTo": 9,
+            "Label": {
+                "Token": 2
+            }
+        }
+    ]
+}
