@@ -1,43 +1,42 @@
 import argparse
-from concurrent.futures import ProcessPoolExecutor
 import json
 import logging
+import multiprocessing as mp
 import os
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
+from multiprocessing.managers import AutoProxy
 from pathlib import Path
 from typing import Callable, List
+
 import joblib
-import optuna
 import numpy as np
-from dataclasses import dataclass
-from torch import nn
+import optuna
 import torch
-from torch_geometric.loader import DataLoader
-from multiprocessing.managers import AutoProxy
-import multiprocessing as mp
 import yaml
+from torch import nn
+from torch_geometric.loader import DataLoader
 
 from common.classes import SVMInfo
 from common.game import GameMap
 from config import GeneralConfig, TrainingConfig
-from ml.training.dataset import TrainingDataset
-from ml.training.paths import (
-    PROCESSED_DATASET_PATH,
-    TRAINING_RESULTS_PATH,
-    RAW_DATASET_PATH,
-    LOG_PATH,
-    TRAINED_MODELS_PATH,
-)
 from epochs_statistics.classes import StatisticsCollector, StatisticsManager
-from ml.training.utils import create_folders_if_necessary
-from ml.training.training import train
-from ml.training.validation import validate_coverage
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
-from ml.training.utils import create_file
-
+from ml.training.dataset import TrainingDataset
+from ml.training.paths import (
+    LOG_PATH,
+    PROCESSED_DATASET_PATH,
+    RAW_DATASET_PATH,
+    TRAINED_MODELS_PATH,
+    TRAINING_RESULTS_PATH,
+)
+from ml.training.training import train
+from ml.training.utils import create_file, create_folders_if_necessary
+from ml.training.validation import validate_coverage
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -154,15 +153,10 @@ def objective(
         normalization=True,
     )
 
-    model = model_init(
-        **{
-            "hidden_channels": config.hidden_channels,
-            "num_of_state_features": config.num_of_state_features,
-            "num_hops_1": config.num_hops_1,
-            "num_hops_2": config.num_hops_2,
-            "normalization": config.normalization,
-        }
-    )
+    with open("model_kwargs.yaml", "r") as file:
+        model_kwargs = yaml.safe_load(file)
+
+    model = model_init(**model_kwargs)
     model.to(GeneralConfig.DEVICE)
 
     optimizer = config.optimizer(model.parameters(), lr=config.lr)
