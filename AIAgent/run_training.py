@@ -153,10 +153,13 @@ def objective(
         normalization=True,
     )
 
-    with open("model_kwargs.yaml", "r") as file:
-        model_kwargs = yaml.safe_load(file)
-
-    model = model_init(**model_kwargs)
+    model = model_init(
+        hidden_channels=config.hidden_channels,
+        num_of_state_features=config.num_of_state_features,
+        num_hops_1=config.num_hops_1,
+        num_hops_2=config.num_hops_2,
+        normalization=config.normalization,
+    )
     model.to(GeneralConfig.DEVICE)
 
     optimizer = config.optimizer(model.parameters(), lr=config.lr)
