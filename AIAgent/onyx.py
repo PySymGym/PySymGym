@@ -148,6 +148,13 @@ def main():
         ),
     )
     parser.add_argument(
+        "--model-kwargs",
+        dest="model_kwargs",
+        type=pathlib.Path,
+        required=True,
+        help="Path to model kwargs",
+    )
+    parser.add_argument(
         "--verify-on",
         dest="verification_gamestates",
         type=pathlib.Path,
@@ -159,7 +166,7 @@ def main():
 
     args = parser.parse_args()
 
-    with open("model_kwargs.yaml", "r") as file:
+    with open(args.model_kwargs, "r") as file:
         model_kwargs = yaml.safe_load(file)
 
     with open(args.sample_gamestate_path, "r") as gamestate_file:
