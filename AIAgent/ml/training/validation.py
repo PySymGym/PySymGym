@@ -6,7 +6,7 @@ from multiprocessing.managers import AutoProxy
 import numpy as np
 import torch
 import tqdm
-import os
+from ml.inference import infer
 from common.classes import SVMInfo
 from config import GeneralConfig
 from epochs_statistics.tables import create_pivot_table
@@ -106,22 +106,23 @@ def validate_loss(
         dataloader, desc="test", ncols=100, colour=progress_bar_colour
     ):
         batch.to(GeneralConfig.DEVICE)
-        out = model(
-            game_x=batch["game_vertex"].x,
-            state_x=batch["state_vertex"].x,
-            edge_index_v_v=batch["game_vertex", "to", "game_vertex"].edge_index,
-            edge_type_v_v=batch["game_vertex", "to", "game_vertex"].edge_type,
-            edge_index_history_v_s=batch[
-                "game_vertex", "history", "state_vertex"
-            ].edge_index,
-            edge_attr_history_v_s=batch[
-                "game_vertex", "history", "state_vertex"
-            ].edge_attr,
-            edge_index_in_v_s=batch["game_vertex", "in", "state_vertex"].edge_index,
-            edge_index_s_s=batch[
-                "state_vertex", "parent_of", "state_vertex"
-            ].edge_index,
-        )
+        out = infer(model, batch)
+        # out = model(
+        #     game_x=batch["game_vertex"].x,
+        #     state_x=batch["state_vertex"].x,
+        #     edge_index_v_v=batch["game_vertex", "to", "game_vertex"].edge_index,
+        #     edge_type_v_v=batch["game_vertex", "to", "game_vertex"].edge_type,
+        #     edge_index_history_v_s=batch[
+        #         "game_vertex", "history", "state_vertex"
+        #     ].edge_index,
+        #     edge_attr_history_v_s=batch[
+        #         "game_vertex", "history", "state_vertex"
+        #     ].edge_attr,
+        #     edge_index_in_v_s=batch["game_vertex", "in", "state_vertex"].edge_index,
+        #     edge_index_s_s=batch[
+        #         "state_vertex", "parent_of", "state_vertex"
+        #     ].edge_index,
+        # )
         loss: torch.Tensor = criterion(out, batch.y_true)
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)

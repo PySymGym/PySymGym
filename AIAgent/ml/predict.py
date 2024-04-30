@@ -4,6 +4,7 @@ import torch
 from torch_geometric.data import HeteroData
 
 from config import GeneralConfig
+from ml.inference import infer
 
 StateVectorMapping = namedtuple("StateVectorMapping", ["state", "vector"])
 
@@ -18,16 +19,17 @@ def predict_state_with_dict(
     reversed_state_map = {v: k for k, v in state_map.items()}
 
     with torch.no_grad():
-        out = model(
-            data.x_dict["game_vertex"],
-            data.x_dict["state_vertex"],
-            data.edge_index_dict["game_vertex", "to", "game_vertex"],
-            data["game_vertex", "to", "game_vertex"].edge_type,
-            data["game_vertex", "history", "state_vertex"].edge_index,
-            data["game_vertex", "history", "state_vertex"].edge_attr,
-            data["game_vertex", "in", "state_vertex"].edge_index,
-            data["state_vertex", "parent_of", "state_vertex"].edge_index,
-        )
+        out = infer(model, data)
+        # out = model(
+        #     data.x_dict["game_vertex"],
+        #     data.x_dict["state_vertex"],
+        #     data.edge_index_dict["game_vertex", "to", "game_vertex"],
+        #     data["game_vertex", "to", "game_vertex"].edge_type,
+        #     data["game_vertex", "history", "state_vertex"].edge_index,
+        #     data["game_vertex", "history", "state_vertex"].edge_attr,
+        #     data["game_vertex", "in", "state_vertex"].edge_index,
+        #     data["state_vertex", "parent_of", "state_vertex"].edge_index,
+        # )
 
     remapped = []
 
@@ -54,7 +56,7 @@ def predict_state_single_out(
         out = model.forward(data.x_dict, data.edge_index_dict, data.edge_attr_dict)
 
     remapped = []
-    if type(out) is dict:
+    if isinstance(out, dict):
         out = out["state_vertex"]
     for index, vector in enumerate(out):
         state_vector_mapping = StateVectorMapping(
