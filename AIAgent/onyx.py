@@ -152,7 +152,7 @@ def main():
         dest="model_kwargs",
         type=pathlib.Path,
         required=True,
-        help="Path to model kwargs",
+        help="Path to .yaml-file with model kwargs",
     )
     parser.add_argument(
         "--verify-on",
