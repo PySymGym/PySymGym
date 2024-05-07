@@ -20,7 +20,6 @@ def _read_configs(dir) -> list[Path]:
 
 
 class TestONNXConversion:
-
     @pytest.mark.parametrize(
         "config", _read_configs("tests/resources/model_configurations")
     )
