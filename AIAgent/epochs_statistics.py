@@ -1,12 +1,15 @@
-from dataclasses import dataclass
 import multiprocessing as mp
+from dataclasses import dataclass
 from multiprocessing.managers import BaseManager
 from pathlib import Path
-import pandas as pd
 from statistics import mean
+from typing import TypeAlias
+
 import natsort
-from epochs_statistics.tables import table_to_string
-from epochs_statistics.common import EpochNumber, SVMName
+import pandas as pd
+
+EpochNumber: TypeAlias = int
+SVMName: TypeAlias = str
 
 
 def sort_dict(d):
@@ -113,6 +116,10 @@ class StatisticsCollector:
         with open(self._file, "w") as f:
             f.write(SVMS_info)
             f.write(epochs_results)
+
+
+def table_to_string(table: pd.DataFrame):
+    return table.to_markdown(tablefmt="psql")
 
 
 class StatisticsManager(BaseManager):
