@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 import torch
 import yaml
-
 from common.game import GameState
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder as RealStateModelEncoder,
@@ -14,14 +13,24 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
 from onyx import entrypoint
 
 
+def _read_configs(dir) -> list[Path]:
+    return [
+        Path(dir) / file for file in os.listdir(Path(dir)) if file.endswith(".yaml")
+    ]
+
+
 class TestONNXConversion:
+
+    @pytest.mark.parametrize(
+        "config", _read_configs("tests/resources/model_configurations")
+    )
     def test_onnx_conversion_successful_on_real_randomized_model(
-        self, tmp_path, game_states_fixture
+        self, tmp_path, game_states_fixture, config
     ):
         init_game_state: GameState = game_states_fixture[0]
         verification_game_states: list[GameState] = game_states_fixture[1:]
 
-        with open(Path("tests/resources/model_kwargs.yaml"), "r") as file:
+        with open(config) as file:
             model_kwargs = yaml.safe_load(file)
 
         mock_model_path = tmp_path / "real_random_model.pt"
@@ -41,11 +50,11 @@ class TestONNXConversion:
 
     @pytest.fixture
     def game_states_fixture(request):
-        game_states_path = Path("tests/resources/reference_gamestates")
+        game_states_path = Path("../resources/reference_gamestates")
         json_files = [
             game_states_path / file
             for file in os.listdir(game_states_path)
-            if file.endswith("_gameState")
+            if file.endswith(".json")
         ]
         return [_load_gamestate(it) for it in json_files]
 
