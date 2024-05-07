@@ -37,11 +37,6 @@ class WebsocketSourceLinks:
     POST_WS = f"http://0.0.0.0:{BrokerConfig.BROKER_PORT}/post_ws"
 
 
-class ResultsHandlerLinks:
-    POST_RES = f"http://0.0.0.0:{BrokerConfig.BROKER_PORT}/send_res"
-    GET_RES = f"http://0.0.0.0:{BrokerConfig.BROKER_PORT}/recv_res"
-
-
 DUMMY_INPUT_PATH = Path("ml/onnx/dummy_input.json")
 BEST_MODEL_ONNX_SAVE_PATH = Path("ml/onnx/StateModelEncoder.onnx")
 TEMP_EPOCH_INFERENCE_TIMES_DIR = Path(".epoch_inference_times/")
