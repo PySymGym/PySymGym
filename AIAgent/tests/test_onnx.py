@@ -50,7 +50,7 @@ class TestONNXConversion:
 
     @pytest.fixture
     def game_states_fixture(request):
-        game_states_path = Path("../resources/reference_gamestates")
+        game_states_path = Path("../resources/onnx/reference_gamestates")
         json_files = [
             game_states_path / file
             for file in os.listdir(game_states_path)
