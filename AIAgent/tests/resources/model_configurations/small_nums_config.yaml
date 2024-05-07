@@ -1,5 +1,5 @@
-hidden_channels: 64
-num_of_state_features: 32
+hidden_channels: 4
+num_of_state_features: 2
 num_hops_1: 1
 num_hops_2: 2
 normalization: true
