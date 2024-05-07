@@ -32,7 +32,23 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 
 ## Usage
 
+### Run training
 ...
+
+### ONNX conversion
+
+To use ONNX conversion tool, locate `onyx.py` script in `AIAgent/` directory. Then run the following command:
+
+```bash
+onyx.py --sample-gamestate <game_state0.json> \
+    --pytorch-model <model>.pt \
+    --savepath <converted_model_save_path>.onnx \
+    --import-model-fqn <model.module.fqn.Model> \
+    --model-kwargs <yaml_with_model_args.yml> \
+    [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
+```
+
+model_kwargs yaml file, *verification* game_states and *sample* game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
 
 ## Linting tools
 
