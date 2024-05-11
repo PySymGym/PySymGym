@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./resources/logo.png" width="256">
+</p>
+
 # PySymGym
 Python infrastructure to train paths selectors for symbolic execution engines.
 
