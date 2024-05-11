@@ -9,9 +9,7 @@ import torch
 import tqdm
 from common.classes import SVMInfo
 from config import GeneralConfig
-from epochs_statistics.classes import StatisticsCollector
-from epochs_statistics.tables import create_pivot_table
-from ml.inference import infer
+from epochs_statistics import StatisticsCollector
 from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
@@ -86,31 +84,10 @@ def validate_coverage(
             )
         )
     )
-    # table, _, _ = create_pivot_table(
-    #     svm_info.name,
-    #     {wrapper: sorted(all_results, key=lambda x: x.map.MapName)},
-    # )
-    new_table = convert_to_des(all_results)
-    # table.to_csv("TARGET_PD.csv")
-    new_table.to_csv("NEW_PD.csv")
-    # assert False
-    statistics_collector.update_results(epoch, svm_info.name, average_result, new_table)
+    statistics_collector.update_results(
+        epoch, svm_info.name, average_result, all_results
+    )
     return average_result
-
-
-import pandas as pd
-
-
-def convert_to_des(map2result_list):
-    result_list = []
-    for map2result in map2result_list:
-        map_name = map2result.map.MapName
-        game_result_str = map2result.game_result.printable(verbose=True)
-        result_list.append((map_name, game_result_str))
-
-    df = pd.DataFrame(result_list, columns=["MapName", "GameResult"])
-
-    return df
 
 
 def validate_loss(

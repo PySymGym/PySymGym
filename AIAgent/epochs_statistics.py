@@ -7,6 +7,7 @@ from typing import TypeAlias
 
 import natsort
 import pandas as pd
+from common.classes import Map2Result
 
 EpochNumber: TypeAlias = int
 SVMName: TypeAlias = str
@@ -67,10 +68,12 @@ class StatisticsCollector:
         epoch: EpochNumber,
         SVM_name: SVMName,
         average_result: float,
-        df: pd.DataFrame,
+        map2results_list: list[Map2Result],
     ):
         results = self._sessions_info.get(epoch, {})
-        results[SVM_name] = StatsWithTable(average_result, df)
+        results[SVM_name] = StatsWithTable(
+            average_result, convert_to_df(map2results_list)
+        )
         self._sessions_info[epoch] = sort_dict(results)
         self._update_file()
 
@@ -106,7 +109,7 @@ class StatisticsCollector:
                     )
                 )
             )
-            epochs_results += table_to_string(df) + "\n"
+            epochs_results += df.to_markdown(tablefmt="psql") + "\n"
         return epochs_results
 
     def _update_file(self):
@@ -118,8 +121,18 @@ class StatisticsCollector:
             f.write(epochs_results)
 
 
-def table_to_string(table: pd.DataFrame):
-    return table.to_markdown(tablefmt="psql")
+def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
+    maps = []
+    results = []
+    for map2result in map2result_list:
+        map_name = map2result.map.MapName
+        game_result_str = map2result.game_result.printable(verbose=True)
+        maps.append(map_name)
+        results.append(game_result_str)
+
+    df = pd.DataFrame(results, columns=["GameResult"], index=maps).T
+
+    return df
 
 
 class StatisticsManager(BaseManager):
