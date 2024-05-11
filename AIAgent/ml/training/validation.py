@@ -1,5 +1,4 @@
 import multiprocessing as mp
-import os
 from functools import partial
 from multiprocessing.managers import AutoProxy
 from typing import Callable
@@ -10,6 +9,7 @@ import tqdm
 from common.classes import SVMInfo
 from config import GeneralConfig
 from epochs_statistics import StatisticsCollector
+from ml.inference import infer
 from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper

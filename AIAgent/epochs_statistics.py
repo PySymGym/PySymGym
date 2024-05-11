@@ -72,7 +72,7 @@ class StatisticsCollector:
     ):
         results = self._sessions_info.get(epoch, {})
         results[SVM_name] = StatsWithTable(
-            average_result, convert_to_df(map2results_list)
+            average_result, convert_to_df(SVM_name, map2results_list)
         )
         self._sessions_info[epoch] = sort_dict(results)
         self._update_file()
@@ -121,16 +121,16 @@ class StatisticsCollector:
             f.write(epochs_results)
 
 
-def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
+def convert_to_df(svm_name: SVMName, map2result_list: list[Map2Result]) -> pd.DataFrame:
     maps = []
     results = []
     for map2result in map2result_list:
         map_name = map2result.map.MapName
         game_result_str = map2result.game_result.printable(verbose=True)
-        maps.append(map_name)
+        maps.append(f"{svm_name} : {map_name}")
         results.append(game_result_str)
 
-    df = pd.DataFrame(results, columns=["GameResult"], index=maps).T
+    df = pd.DataFrame(results, columns=["Game result"], index=maps).T
 
     return df
 
