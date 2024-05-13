@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         working-directory: ./
         run: |
-          pip install -r requirements.txt
+          pip install poetry && poetry install
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
@@ -46,10 +46,10 @@ jobs:
       - name: Launch application
         working-directory: ./AIAgent
         run: |
-          python3 launch_servers.py --config ../workflow/config_for_tests.yml &
+          poetry run python3 launch_servers.py --config ../workflow/config_for_tests.yml &
           echo "Waiting for server to start..." && sleep 10
 
       - name: Run training
         working-directory: ./AIAgent
         run: |
-          python3 run_training.py --config ../workflow/config_for_tests.yml
+          poetry run python3 run_training.py --config ../workflow/config_for_tests.yml
