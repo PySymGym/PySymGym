@@ -17,9 +17,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install poetry && poetry install
 
       - name: Run tests
         working-directory: ./AIAgent
         run: |
-          pytest tests -sv
+          poetry run pytest tests -sv
