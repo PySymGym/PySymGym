@@ -4,9 +4,8 @@ from urllib.parse import urlencode
 
 import httplib2
 from common.classes import SVMInfo
-from common.constants import WebsocketSourceLinks
-
-from .classes import ServerInstanceInfo
+from config import WebsocketSourceLinks
+from connection.broker_conn.classes import ServerInstanceInfo
 
 
 def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:

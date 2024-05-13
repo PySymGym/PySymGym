@@ -24,16 +24,16 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
 from ml.training.dataset import TrainingDataset
-from ml.training.paths import (
+from ml.training.training import train
+from ml.training.utils import create_file, create_folders_if_necessary
+from ml.training.validation import validate_coverage
+from paths import (
     LOG_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     TRAINED_MODELS_PATH,
     TRAINING_RESULTS_PATH,
 )
-from ml.training.training import train
-from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation import validate_coverage
 from torch import nn
 from torch_geometric.loader import DataLoader
 

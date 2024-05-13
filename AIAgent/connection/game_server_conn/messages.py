@@ -6,9 +6,8 @@ from typing import Optional
 
 from common.game import GameMap, GameState, Reward
 from config import FeatureConfig
+from connection.game_server_conn.unsafe_json import obj_from_dict
 from dataclasses_json import config, dataclass_json
-
-from .unsafe_json import obj_from_dict
 
 
 class ClientMessageType(str, Enum):
@@ -47,9 +46,9 @@ class ClientMessage:
     MessageType: str = field(init=False)
     MessageBody: ClientMessageBody = field(
         metadata=config(
-            encoder=lambda x: x.to_json()
-            if issubclass(type(x), ClientMessageBody)
-            else json.dumps(x)
+            encoder=lambda x: (
+                x.to_json() if issubclass(type(x), ClientMessageBody) else json.dumps(x)
+            )
         )
     )
 

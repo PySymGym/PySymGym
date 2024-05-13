@@ -4,16 +4,18 @@ from typing import TypeAlias
 
 from common.classes import GameResult, Map2Result, SVMInfo
 from common.game import GameMap, GameState
-from common.utils import get_states
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
-from ml.fileop import save_model
 from ml.protocols import Predictor
 from ml.training.dataset import TrainingDataset, convert_input_to_tensor
 
 TimeDuration: TypeAlias = float
+
+
+def get_states(game_state: GameState) -> set[int]:
+    return {s.Id for s in game_state.States}
 
 
 def update_game_state(game_state: GameState, delta: GameState) -> GameState:
@@ -171,10 +173,8 @@ def play_game(
             logging.warning(
                 f"<{with_predictor.name()}> timeouted on map {game_map.MapName} with {fto.timedOutAfter}s"
             )
-            save_model(
-                with_predictor.model(),
-                to=FeatureConfig.DUMP_BY_TIMEOUT.save_path
-                / f"{with_predictor.name()}.pth",
+            FeatureConfig.DUMP_BY_TIMEOUT.save_model(
+                with_predictor.model(), with_name=f"{with_predictor.name()}"
             )
         list_of_map2result.append(Map2Result(game_map, game_result))
 
