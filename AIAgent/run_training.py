@@ -16,13 +16,10 @@ import numpy as np
 import optuna
 import torch
 import yaml
-from torch import nn
-from torch_geometric.loader import DataLoader
-
 from common.classes import SVMInfo
 from common.game import GameMap
 from config import GeneralConfig, TrainingConfig
-from epochs_statistics.classes import StatisticsCollector, StatisticsManager
+from epochs_statistics import StatisticsCollector, StatisticsManager
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
@@ -37,6 +34,8 @@ from ml.training.paths import (
 from ml.training.training import train
 from ml.training.utils import create_file, create_folders_if_necessary
 from ml.training.validation import validate_coverage
+from torch import nn
+from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
