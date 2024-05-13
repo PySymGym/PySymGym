@@ -10,4 +10,4 @@ jobs:
       - uses: psf/black@stable
         with:
           version: "24.4.2"
-          python-version: "3.11.8"
+          options: "--target-version py311"

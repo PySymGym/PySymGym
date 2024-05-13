@@ -389,11 +389,11 @@ class TrainingDataset(Dataset):
                 num_of_steps_to_merge = len(filtered_map_steps)
                 filtered_map_steps = self._merge_steps(filtered_map_steps, map_name)
                 new_steps_num = len(filtered_map_steps)
-                if (init_steps_num < new_steps_num):
+                if init_steps_num < new_steps_num:
                     logging.info(
                         f"Steps on map {map_name} were merged with current steps with result {map_result}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
                     )
-                else: 
+                else:
                     logging.info(
                         f"Existing results reproduced on map {map_name} with result {map_result}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
                     )
