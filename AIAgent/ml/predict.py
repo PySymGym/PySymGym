@@ -1,10 +1,9 @@
 from collections import namedtuple
 
 import torch
-from torch_geometric.data import HeteroData
-
 from config import GeneralConfig
 from ml.inference import infer
+from torch_geometric.data import HeteroData
 
 StateVectorMapping = namedtuple("StateVectorMapping", ["state", "vector"])
 
@@ -31,28 +30,3 @@ def predict_state_with_dict(
         remapped.append(state_vector_mapping)
 
     return max(remapped, key=lambda mapping: sum(mapping.vector)).state, out
-
-
-def predict_state_single_out(
-    model: torch.nn.Module, data: HeteroData, state_map: dict[int, int]
-) -> int:
-    """Gets state id from model and heterogeneous graph
-    data.state_map - maps real state id to state index"""
-
-    data.to(GeneralConfig.DEVICE)
-    reversed_state_map = {v: k for k, v in state_map.items()}
-
-    with torch.no_grad():
-        out = model.forward(data.x_dict, data.edge_index_dict, data.edge_attr_dict)
-
-    remapped = []
-    if isinstance(out, dict):
-        out = out["state_vertex"]
-    for index, vector in enumerate(out):
-        state_vector_mapping = StateVectorMapping(
-            state=reversed_state_map[index],
-            vector=(vector.detach().cpu().numpy()).tolist(),
-        )
-        remapped.append(state_vector_mapping)
-
-    return max(remapped, key=lambda mapping: sum(mapping.vector)).state

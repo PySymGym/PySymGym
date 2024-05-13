@@ -1,17 +1,16 @@
-from functools import partial
 import multiprocessing as mp
-from typing import Callable
+from functools import partial
 from multiprocessing.managers import AutoProxy
+from typing import Callable
 
 import numpy as np
 import torch
 import tqdm
-from ml.inference import infer
 from common.classes import SVMInfo
 from config import GeneralConfig
-from epochs_statistics.tables import create_pivot_table
-from epochs_statistics.classes import StatisticsCollector
-from learning.play_game import play_game
+from epochs_statistics import StatisticsCollector
+from ml.inference import infer
+from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from torch_geometric.loader import DataLoader
@@ -85,11 +84,9 @@ def validate_coverage(
             )
         )
     )
-    table, _, _ = create_pivot_table(
-        svm_info.name,
-        {wrapper: sorted(all_results, key=lambda x: x.map.MapName)},
+    statistics_collector.update_results(
+        epoch, svm_info.name, average_result, all_results
     )
-    statistics_collector.update_results(epoch, svm_info.name, average_result, table)
     return average_result
 
 
