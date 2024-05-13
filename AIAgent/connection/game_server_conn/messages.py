@@ -47,9 +47,9 @@ class ClientMessage:
     MessageType: str = field(init=False)
     MessageBody: ClientMessageBody = field(
         metadata=config(
-            encoder=lambda x: x.to_json()
-            if issubclass(type(x), ClientMessageBody)
-            else json.dumps(x)
+            encoder=lambda x: (
+                x.to_json() if issubclass(type(x), ClientMessageBody) else json.dumps(x)
+            )
         )
     )
 
