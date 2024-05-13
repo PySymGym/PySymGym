@@ -6,7 +6,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: psf/black@stable
         with:
-          version: "23.12.1"
+          version: "24.4.2"
+          options: "--target-version py311"
