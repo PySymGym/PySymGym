@@ -3,12 +3,10 @@ import time
 from contextlib import contextmanager, suppress
 
 import websocket
-
 from common.classes import SVMInfo
 from config import GameServerConnectorConfig
 from connection.broker_conn.classes import ServerInstanceInfo
-
-from .requests import acquire_instance, return_instance
+from connection.broker_conn.requests import acquire_instance, return_instance
 
 
 def wait_for_connection(server_instance: ServerInstanceInfo):
