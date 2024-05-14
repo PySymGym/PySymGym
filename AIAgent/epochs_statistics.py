@@ -1,6 +1,5 @@
 import multiprocessing as mp
 from dataclasses import dataclass
-from multiprocessing.managers import BaseManager
 from pathlib import Path
 from statistics import mean
 from typing import TypeAlias
@@ -133,10 +132,3 @@ def convert_to_df(svm_name: SVMName, map2result_list: list[Map2Result]) -> pd.Da
     df = pd.DataFrame(results, columns=["Game result"], index=maps).T
 
     return df
-
-
-class StatisticsManager(BaseManager):
-    pass
-
-
-StatisticsManager.register("StatisticsCollector", StatisticsCollector)

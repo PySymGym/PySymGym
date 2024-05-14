@@ -7,7 +7,6 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
-from multiprocessing.managers import AutoProxy
 from pathlib import Path
 from typing import Callable, List
 
@@ -19,7 +18,7 @@ import yaml
 from common.classes import SVMInfo
 from common.game import GameMap
 from config import GeneralConfig, TrainingConfig
-from epochs_statistics import StatisticsCollector, StatisticsManager
+from epochs_statistics import StatisticsCollector
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
@@ -65,7 +64,7 @@ class TrialSettings:
 
 def run_training(
     svm_info: SVMInfo,
-    statistics_collector: "AutoProxy[StatisticsCollector]",
+    statistics_collector: StatisticsCollector,
     dataset_base_path: Path,
     dataset_description: Path,
     n_startup_trials: int,
@@ -131,7 +130,7 @@ def run_training(
 def objective(
     trial: optuna.Trial,
     svm_info: SVMInfo,
-    statistics_collector: "AutoProxy[StatisticsCollector]",
+    statistics_collector: StatisticsCollector,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
     model_init: Callable,
@@ -223,58 +222,50 @@ def main(config: str):
 
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
-    with StatisticsManager() as manager:
-        # shared object
-        statistics_collector = manager.StatisticsCollector(
-            training_count, results_table_path
+    statistics_collector = StatisticsCollector(training_count, results_table_path)
+    for training_parameters in trainings_parameters:
+        svm_info = SVMInfo.from_dict(training_parameters["SVMConfig"])
+        dataset_base_path = str(
+            Path(
+                training_parameters["DatasetConfig"][
+                    "dataset_base_path"
+                ]  # path to dir with explored dlls
+            ).resolve()
         )
-        with ProcessPoolExecutor(
-            max_workers=training_count,
-        ) as executor:
-            for training_parameters in trainings_parameters:
-                svm_info = SVMInfo.from_dict(training_parameters["SVMConfig"])
-                dataset_base_path = str(
-                    Path(
-                        training_parameters["DatasetConfig"][
-                            "dataset_base_path"
-                        ]  # path to dir with explored dlls
-                    ).resolve()
-                )
-                dataset_description = str(
-                    Path(
-                        training_parameters["DatasetConfig"][
-                            "dataset_description"
-                        ]  # full paths to JSON-file with dataset description
-                    ).resolve()
-                )
-                n_startup_trials = int(
-                    training_parameters["OptunaConfig"][
-                        "n_startup_trials"
-                    ]  # number of initial trials with random sampling for optuna's TPESampler
-                )
-                n_trials = int(
-                    training_parameters["OptunaConfig"]["n_trials"]
-                )  # number of optuna's trials
-                num_epochs = int(
-                    training_parameters["TrainConfig"]["epochs"]
-                )  # number of epochs
-                path_to_weights = training_parameters["TrainConfig"].get(
-                    "path_to_weights", None
-                )  # path to model weights to load
-                if path_to_weights is not None:
-                    path_to_weights = Path(path_to_weights).absolute()
-                executor.submit(
-                    run_training,
-                    svm_info=svm_info,
-                    statistics_collector=statistics_collector,
-                    dataset_base_path=dataset_base_path,
-                    dataset_description=dataset_description,
-                    n_startup_trials=n_startup_trials,
-                    n_trials=n_trials,
-                    num_epochs=num_epochs,
-                    path_to_weights=path_to_weights,
-                    run_name=run_name,
-                )
+        dataset_description = str(
+            Path(
+                training_parameters["DatasetConfig"][
+                    "dataset_description"
+                ]  # full paths to JSON-file with dataset description
+            ).resolve()
+        )
+        n_startup_trials = int(
+            training_parameters["OptunaConfig"][
+                "n_startup_trials"
+            ]  # number of initial trials with random sampling for optuna's TPESampler
+        )
+        n_trials = int(
+            training_parameters["OptunaConfig"]["n_trials"]
+        )  # number of optuna's trials
+        num_epochs = int(
+            training_parameters["TrainConfig"]["epochs"]
+        )  # number of epochs
+        path_to_weights = training_parameters["TrainConfig"].get(
+            "path_to_weights", None
+        )  # path to model weights to load
+        if not path_to_weights is None:
+            path_to_weights = Path(path_to_weights).absolute()
+        run_training(
+            svm_info=svm_info,
+            statistics_collector=statistics_collector,
+            dataset_base_path=dataset_base_path,
+            dataset_description=dataset_description,
+            n_startup_trials=n_startup_trials,
+            n_trials=n_trials,
+            num_epochs=num_epochs,
+            path_to_weights=path_to_weights,
+            run_name=run_name,
+        )
 
 
 if __name__ == "__main__":
