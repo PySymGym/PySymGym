@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from shutil import rmtree
 
 import torch
 
@@ -14,6 +14,11 @@ class GeneralConfig:
 
 class BrokerConfig:
     BROKER_PORT = 35000
+
+
+class WebsocketSourceLinks:
+    GET_WS = f"http://0.0.0.0:{BrokerConfig.BROKER_PORT}/get_ws"
+    POST_WS = f"http://0.0.0.0:{BrokerConfig.BROKER_PORT}/post_ws"
 
 
 class TrainingConfig:
@@ -33,11 +38,11 @@ class DumpByTimeoutFeature:
     timeout_sec: int
     save_path: Path
 
-    def create_save_path_if_not_exists(self):
-        if self.enabled:
-            if self.save_path.exists():
-                rmtree(self.save_path)
-            self.save_path.mkdir()
+    def save_model(self, model: torch.nn.Module, with_name: str):
+        self.save_path.mkdir(exist_ok=True)
+        timestamp = datetime.fromtimestamp(datetime.now().timestamp())
+
+        torch.save(model.state_dict(), self.save_path / f"{with_name}_{timestamp}.pt")
 
 
 @dataclass(slots=True, frozen=True)
