@@ -11,17 +11,20 @@ jobs:
         with:
           submodules: true
       
+      - name: Install poetry
+        run: |
+          pip install poetry
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.8"
-          cache: 'pip'
-          cache: 'poetry'
+          cache: "poetry"
 
       - name: Install dependencies
         working-directory: ./
         run: |
-          pip install poetry && poetry install
+          poetry install
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
