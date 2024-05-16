@@ -8,15 +8,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      
       - name: Install poetry
-        run: pip install poetry
-
+        run: |
+          pip install poetry
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.8"
-          cache: 'poetry'
+          cache: "poetry" 
 
       - name: Install dependencies
         run: |
