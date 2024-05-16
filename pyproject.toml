@@ -3,8 +3,9 @@ name = "pysymgym"
 version = "0.1.0"
 description = "Python infrastructure to train paths selectors for symbolic execution engines."
 authors = ["Your Name <you@example.com>"]
-license = "MIT"
+license = "LICENSE"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -27,7 +28,6 @@ httplib2 = "^0.22.0"
 func-timeout = "^4.3.5"
 natsort = "^8.4.0"
 pytest = "^8.2.0"
-
 
 [tool.poetry.group.linters.dependencies]
 black = "^24.4.2"

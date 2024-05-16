@@ -8,16 +8,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
+      - name: Install poetry
+        run: pip install poetry
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11.8"
-          cache: 'pip'
+          cache: 'poetry'
 
       - name: Install dependencies
         run: |
-          pip install poetry && poetry install
+          poetry install
 
       - name: Run tests
         working-directory: ./AIAgent
