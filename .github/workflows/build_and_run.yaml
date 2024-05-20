@@ -1,6 +1,6 @@
 name: Build and Launch C# Project + Run training
 
-on: [pull_request]
+on: [pull_request, push]
 
 jobs:
   build-and-launch:
@@ -10,11 +10,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
-      
+
       - name: Install poetry
         run: |
-          pip install poetry
-      
+          pipx install poetry
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -24,7 +24,8 @@ jobs:
       - name: Install dependencies
         working-directory: ./
         run: |
-          poetry install
+          poetry --ansi install
+          poetry add --group dev poethepoet
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
@@ -48,12 +49,10 @@ jobs:
           mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
 
       - name: Launch application
-        working-directory: ./AIAgent
         run: |
-          poetry run python3 launch_servers.py --config ../workflow/config_for_tests.yml &
+          poetry --ansi run poe launch_servers --config ../workflow/config_for_tests.yml &
           echo "Waiting for server to start..." && sleep 10
 
       - name: Run training
-        working-directory: ./AIAgent
         run: |
-          poetry run python3 run_training.py --config ../workflow/config_for_tests.yml
+          poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
