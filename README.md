@@ -73,7 +73,12 @@ model_kwargs yaml file, *verification* game_states and *sample* game_state (use 
 
 ## Linting tools
 
-Install [black](https://github.com/psf/black) code formatter by running following command in repo root to check your codestyle before committing:
+Install [ruff](https://docs.astral.sh/ruff/) linter and code formatter by running following command in repo root to check your codestyle before committing:
 ```sh
-pip install pre-commit && pre-commit install
+pip install ruff
+
+# to autofix all linting problems, run
+ruff format
 ```
+
+**Or** [integrate](https://docs.astral.sh/ruff/integrations/#vs-code-official) it with your favorite code editor (for example, [VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff))

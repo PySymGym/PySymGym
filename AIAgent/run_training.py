@@ -261,7 +261,7 @@ def main(config: str):
                 path_to_weights = training_parameters["TrainConfig"].get(
                     "path_to_weights", None
                 )  # path to model weights to load
-                if not path_to_weights is None:
+                if path_to_weights is not None:
                     path_to_weights = Path(path_to_weights).absolute()
                 executor.submit(
                     run_training,

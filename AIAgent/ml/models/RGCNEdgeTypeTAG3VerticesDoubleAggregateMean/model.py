@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Linear
-from torch_geometric.nn import TAGConv, SAGEConv, GraphConv, RGCNConv, HeteroConv
+from torch_geometric.nn import TAGConv, SAGEConv, GraphConv, RGCNConv
 from torch_geometric.nn.conv.hetero_conv import group
 
 
