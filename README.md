@@ -38,7 +38,23 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 ## Usage
 
 ### Run training
-...
+```bash
+# setup
+dotnet build VSharp.ML.GameServer.Runner -c Release
+
+# generate training dataset
+dotnet VSharp.ML.GameServer.Runner.dll --mode generator ...
+mkdir report && mv .../SerializedEpisodes/ report/
+
+# cd into source dir
+cd AIAgent
+
+# launch broker
+potery run python3 launch_servers.py --config train_config.yaml &
+
+# launch training
+poetry run python3 run_training.py --config train_config.yaml
+```
 
 ### ONNX conversion
 
