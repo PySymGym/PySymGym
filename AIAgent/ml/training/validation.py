@@ -6,7 +6,8 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-from common.classes import SVMInfo
+from connection.broker_conn.classes import SVMInfo
+from epochs_statistics import StatisticsCollector
 from config import GeneralConfig
 from epochs_statistics import StatisticsCollector
 from ml.inference import infer
@@ -16,10 +17,9 @@ from ml.training.wrapper import TrainingModelWrapper
 from torch_geometric.loader import DataLoader
 
 
-def play_game_task(svm_info: SVMInfo, task):
+def play_game_task(task):
     maps, dataset, wrapper = task[0], task[1], task[2]
     result = play_game(
-        svm_info=svm_info,
         with_predictor=wrapper,
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
@@ -31,7 +31,7 @@ def play_game_task(svm_info: SVMInfo, task):
 
 def validate_coverage(
     svm_info: SVMInfo,
-    statistics_collector: "AutoProxy[StatisticsCollector]",
+    statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
     epoch: int,
     dataset: TrainingDataset,
@@ -54,10 +54,11 @@ def validate_coverage(
     wrapper = TrainingModelWrapper(model)
     tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
     server_count = svm_info.count
+
     with ThreadPool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
-            p.imap_unordered(partial(play_game_task, svm_info), tasks, chunksize=1),
+            p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
             total=len(tasks),
             ncols=100,

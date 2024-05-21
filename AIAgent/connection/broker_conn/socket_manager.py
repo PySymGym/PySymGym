@@ -3,9 +3,8 @@ import time
 from contextlib import contextmanager, suppress
 
 import websocket
-from common.classes import SVMInfo
 from config import GameServerConnectorConfig
-from connection.broker_conn.classes import ServerInstanceInfo
+from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
 
 

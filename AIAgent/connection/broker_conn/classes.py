@@ -18,5 +18,16 @@ class ServerInstanceInfo:
     pid: int | Undefined
 
 
+@dataclass_json
+@dataclass
+class SVMInfo:
+    name: str
+    count: int
+    launch_command: str
+    min_port: int
+    max_port: int
+    server_working_dir: str
+
+
 def custom_encoder_if_disable_message_checks() -> Callable | None:
     return asdict if FeatureConfig.DISABLE_MESSAGE_CHECKS else None

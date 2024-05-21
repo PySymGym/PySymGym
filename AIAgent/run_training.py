@@ -14,7 +14,7 @@ import numpy as np
 import optuna
 import torch
 import yaml
-from common.classes import SVMInfo
+from connection.broker_conn.classes import SVMInfo
 from common.game import GameMap
 from config import GeneralConfig, TrainingConfig
 from epochs_statistics import StatisticsCollector
@@ -70,7 +70,7 @@ def run_training(
     n_trials: int,
     num_epochs: int,
     path_to_weights: str,
-    logfile_name: str,
+    logfile_base_name: str,
 ):
     with open(dataset_description, "r") as maps_json:
         maps: List[GameMap] = GameMap.schema().load(
@@ -79,6 +79,7 @@ def run_training(
         for _map in maps:
             fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
             _map.AssemblyFullName = fullName
+            _map.SVMInfo = svm_info
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
@@ -105,7 +106,7 @@ def run_training(
     study = optuna.create_study(
         sampler=sampler, direction=TrainingConfig.STUDY_DIRECTION
     )
-    run_name = f"{logfile_name}_{dataset.svm_info.name}"
+    run_name = f"{logfile_base_name}_{svm_info.name}"
 
     objective_partial = partial(
         objective,
@@ -222,45 +223,44 @@ def main(config: str):
     training_count = len(trainings_parameters)
 
     timestamp = datetime.now().timestamp()
-    logfile_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
-    results_table_path = os.path.join(TRAINING_RESULTS_PATH, logfile_name + ".log")
+    logfile_base_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
+    results_table_path = os.path.join(TRAINING_RESULTS_PATH, logfile_base_name + ".log")
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
     statistics_collector = StatisticsCollector(training_count, results_table_path)
-    for training_parameters in trainings_parameters:
-        svm_info = SVMInfo.from_dict(training_parameters["SVMConfig"])
-        dataset_base_path = str(
-            Path(
-                training_parameters["DatasetConfig"][
-                    "dataset_base_path"
-                ]  # path to dir with explored dlls
-            ).resolve()
-        )
-        dataset_description = str(
-            Path(
-                training_parameters["DatasetConfig"][
-                    "dataset_description"
-                ]  # full paths to JSON-file with dataset description
-            ).resolve()
-        )
-        n_startup_trials = int(
-            training_parameters["OptunaConfig"][
-                "n_startup_trials"
-            ]  # number of initial trials with random sampling for optuna's TPESampler
-        )
-        n_trials = int(
-            training_parameters["OptunaConfig"]["n_trials"]
-        )  # number of optuna's trials
-        num_epochs = int(
-            training_parameters["TrainConfig"]["epochs"]
-        )  # number of epochs
-        path_to_weights = training_parameters["TrainConfig"].get(
-            "path_to_weights", None
-        )  # path to model weights to load
-        if not path_to_weights is None:
-            path_to_weights = Path(path_to_weights).absolute()
+
+    dataset_base_path = str(
+        Path(
+            trainings_parameters["DatasetConfig"][
+                "dataset_base_path"
+            ]  # path to dir with explored dlls
+        ).resolve()
+    )
+    dataset_description = str(
+        Path(
+            trainings_parameters["DatasetConfig"][
+                "dataset_description"
+            ]  # full paths to JSON-file with dataset description
+        ).resolve()
+    )
+    n_startup_trials = int(
+        trainings_parameters["OptunaConfig"][
+            "n_startup_trials"
+        ]  # number of initial trials with random sampling for optuna's TPESampler
+    )
+    n_trials = int(
+        trainings_parameters["OptunaConfig"]["n_trials"]
+    )  # number of optuna's trials
+    num_epochs = int(trainings_parameters["TrainConfig"]["epochs"])  # number of epochs
+    path_to_weights = trainings_parameters["TrainConfig"].get(
+        "path_to_weights", None
+    )  # path to model weights to load
+    if not path_to_weights is None:
+        path_to_weights = Path(path_to_weights).absolute()
+    for training_parameters in trainings_parameters["SVMConfigs"]:
+        svm_info = SVMInfo.from_dict(training_parameters)
         run_training(
             svm_info=svm_info,
             statistics_collector=statistics_collector,
@@ -270,7 +270,7 @@ def main(config: str):
             n_trials=n_trials,
             num_epochs=num_epochs,
             path_to_weights=path_to_weights,
-            logfile_name=logfile_name,
+            logfile_base_name=logfile_base_name,
         )
 
 

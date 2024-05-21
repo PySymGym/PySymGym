@@ -2,8 +2,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional, TypeAlias
 
-from common.game import GameMap
 from dataclasses_json import dataclass_json
+from common.game import GameMap
 from ml.protocols import Named
 
 
@@ -50,14 +50,3 @@ class Map2Result:
 
 GameMapsModelResults: TypeAlias = defaultdict[GameMap, list[Agent2Result]]
 AgentResultsOnGameMaps: TypeAlias = defaultdict[Named, list[Map2Result]]
-
-
-@dataclass_json
-@dataclass
-class SVMInfo:
-    name: str
-    count: int
-    launch_command: str
-    min_port: int
-    max_port: int
-    server_working_dir: str

@@ -15,9 +15,8 @@ import psutil
 from aiohttp import web
 import yaml
 
-from common.classes import SVMInfo
 from config import BrokerConfig, FeatureConfig, GeneralConfig
-from connection.broker_conn.classes import ServerInstanceInfo, Undefined, WSUrl
+from connection.broker_conn.classes import SVMInfo, ServerInstanceInfo, Undefined, WSUrl
 
 routes = web.RouteTableDef()
 logging.basicConfig(

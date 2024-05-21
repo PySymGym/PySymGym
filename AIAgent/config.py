@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -30,6 +30,7 @@ class TrainingConfig:
 
     OPTUNA_N_JOBS = 1
     STUDY_DIRECTION = "maximize"
+    StatisticsCollector = field(default=None)
 
 
 @dataclass(slots=True, frozen=True)
