@@ -1,4 +1,4 @@
-import multiprocessing as mp
+from multiprocessing.pool import ThreadPool
 from functools import partial
 from multiprocessing.managers import AutoProxy
 from typing import Callable
@@ -54,7 +54,7 @@ def validate_coverage(
     wrapper = TrainingModelWrapper(model)
     tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
     server_count = svm_info.count
-    with mp.Pool(server_count) as p:
+    with ThreadPool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
             p.imap_unordered(partial(play_game_task, svm_info), tasks, chunksize=1),

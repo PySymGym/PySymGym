@@ -3,7 +3,6 @@ import json
 import logging
 import multiprocessing as mp
 import os
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
@@ -118,13 +117,16 @@ def run_training(
         epochs=num_epochs,
         run_name=run_name,
     )
-
-    study.optimize(
-        objective_partial,
-        n_trials=n_trials,
-        gc_after_trial=True,
-        n_jobs=TrainingConfig.OPTUNA_N_JOBS,
-    )
+    try:
+        study.optimize(
+            objective_partial,
+            n_trials=n_trials,
+            gc_after_trial=True,
+            n_jobs=TrainingConfig.OPTUNA_N_JOBS,
+        )
+    except RuntimeError:  # TODO: Replace it with a self-created exception
+        logging.error(f"Fail to train with {svm_info.name}")
+        return
     joblib.dump(
         study,
         f"{run_name}.pkl",
