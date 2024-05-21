@@ -1,6 +1,9 @@
 [submodule "GameServers/VSharp"]
 	path = GameServers/VSharp
 	url = https://github.com/gsvgit/VSharp.git
+[submodule "GameServers/usvm"]
+	path = GameServers/usvm
+	url = https://github.com/Parzival-05/usvm.git
 [submodule "maps/DotNet/Maps/LiteDB"]
 	path = maps/DotNet/Maps/LiteDB
 	url = https://github.com/mbdavid/LiteDB.git
