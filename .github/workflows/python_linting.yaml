@@ -1,6 +1,6 @@
 name: Python linting
 
-on: [pull_request]
+on: [push]
 
 jobs:
   lint:
