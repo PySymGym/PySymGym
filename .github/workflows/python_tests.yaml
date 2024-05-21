@@ -11,7 +11,7 @@ jobs:
 
       - name: Install poetry
         run: |
-          pipx --ansi install poetry
+          pipx install poetry
 
       - name: Set up Python
         uses: actions/setup-python@v5
