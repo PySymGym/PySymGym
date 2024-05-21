@@ -71,7 +71,7 @@ def run_training(
     n_trials: int,
     num_epochs: int,
     path_to_weights: str,
-    run_name: str,
+    logfile_name: str,
 ):
     with open(dataset_description, "r") as maps_json:
         maps: List[GameMap] = GameMap.schema().load(
@@ -106,6 +106,7 @@ def run_training(
     study = optuna.create_study(
         sampler=sampler, direction=TrainingConfig.STUDY_DIRECTION
     )
+    run_name = f"{logfile_name}_{dataset.svm_info.name}"
 
     objective_partial = partial(
         objective,
@@ -124,7 +125,10 @@ def run_training(
         gc_after_trial=True,
         n_jobs=TrainingConfig.OPTUNA_N_JOBS,
     )
-    joblib.dump(study, f"{datetime.fromtimestamp(datetime.now().timestamp())}.pkl")
+    joblib.dump(
+        study,
+        f"{run_name}.pkl",
+    )
 
 
 def objective(
@@ -173,7 +177,7 @@ def objective(
     )
 
     run_name = (
-        f"{run_name}_{svm_info.name}_"
+        f"{run_name}_"
         f"_{config.batch_size}_{config.lr}_{config.num_hops_1}_{config.num_hops_2}"
         f"_{config.num_of_state_features}_{config.epochs}"
     )
@@ -216,8 +220,8 @@ def main(config: str):
     training_count = len(trainings_parameters)
 
     timestamp = datetime.now().timestamp()
-    run_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
-    results_table_path = os.path.join(TRAINING_RESULTS_PATH, run_name + ".log")
+    logfile_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
+    results_table_path = os.path.join(TRAINING_RESULTS_PATH, logfile_name + ".log")
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)
@@ -264,7 +268,7 @@ def main(config: str):
             n_trials=n_trials,
             num_epochs=num_epochs,
             path_to_weights=path_to_weights,
-            run_name=run_name,
+            logfile_name=logfile_name,
         )
 
 
