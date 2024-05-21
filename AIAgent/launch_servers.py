@@ -225,7 +225,10 @@ def main(config: str):
         svms_info_config = yaml.safe_load(file)
 
     svms_info = list(
-        map(lambda svm_info: SVMInfo.from_dict(svm_info["SVMConfig"]), svms_info_config)
+        map(
+            lambda svm_info: SVMInfo.from_dict(svm_info["SVMConfig"]),
+            svms_info_config["SVMConfigs"],
+        )
     )
 
     with server_manager(SERVER_INSTANCES, svms_info):

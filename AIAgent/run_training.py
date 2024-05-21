@@ -231,20 +231,6 @@ def main(config: str):
     print(GeneralConfig.DEVICE)
     statistics_collector = StatisticsCollector(training_count, results_table_path)
 
-    dataset_base_path = str(
-        Path(
-            trainings_parameters["DatasetConfig"][
-                "dataset_base_path"
-            ]  # path to dir with explored dlls
-        ).resolve()
-    )
-    dataset_description = str(
-        Path(
-            trainings_parameters["DatasetConfig"][
-                "dataset_description"
-            ]  # full paths to JSON-file with dataset description
-        ).resolve()
-    )
     n_startup_trials = int(
         trainings_parameters["OptunaConfig"][
             "n_startup_trials"
@@ -259,8 +245,23 @@ def main(config: str):
     )  # path to model weights to load
     if not path_to_weights is None:
         path_to_weights = Path(path_to_weights).absolute()
+
+    datasets_of_platforms: dict[str, dict[str, str]] = {}
+    for platform in trainings_parameters["Platforms"]:
+        datasets_of_platforms[platform["name"]] = platform["DatasetConfig"]
+
     for training_parameters in trainings_parameters["SVMConfigs"]:
-        svm_info = SVMInfo.from_dict(training_parameters)
+        svm_info = SVMInfo.from_dict(training_parameters["SVMConfig"])
+        platform = datasets_of_platforms[training_parameters["platform_name"]]
+
+        resolve_path = lambda path: str(Path(path).resolve())
+        dataset_base_path = resolve_path(
+            platform["dataset_base_path"]
+        )  # path to dir with explored dlls
+        dataset_description = resolve_path(
+            platform["dataset_description"]
+        )  # full paths to JSON-file with dataset description
+
         run_training(
             svm_info=svm_info,
             statistics_collector=statistics_collector,
