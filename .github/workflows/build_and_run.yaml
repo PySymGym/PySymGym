@@ -56,3 +56,13 @@ jobs:
       - name: Run training
         run: |
           poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
+  
+      - name: Sanity check
+        working-directory: ./AIAgent
+        run: |
+            if ls *.pkl 1> /dev/null 2>&1; then
+                echo "PKL files found."
+            else
+                echo "No PKL files found."
+                exit 1
+            fi

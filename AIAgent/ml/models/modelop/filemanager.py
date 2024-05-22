@@ -16,8 +16,7 @@ class PathSelectorNNProtocol(t.Protocol):
         edge_attr_history_v_s,
         edge_index_in_v_s,
         edge_index_s_s,
-    ) -> Tensor:
-        ...
+    ) -> Tensor: ...
 
 
 def save_model(model: torch.nn.Module, /, **initargs):

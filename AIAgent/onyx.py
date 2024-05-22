@@ -233,8 +233,8 @@ def entrypoint(
             print(f"{shorten_output(torch_out)=}")
             print(f"{shorten_output(onnx_out[0])=}")
             print(f"{idx}/{len(verification_gamestates)}")
-            assert shorten_output(torch_out) == shorten_output(
-                onnx_out[0]
+            assert (
+                shorten_output(torch_out) == shorten_output(onnx_out[0])
             ), f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
 
 

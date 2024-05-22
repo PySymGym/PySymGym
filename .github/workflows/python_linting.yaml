@@ -6,8 +6,12 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: psf/black@stable
+      - name: 'Run ruff linter: format'
+        uses: chartboost/ruff-action@v1
         with:
-          version: "24.4.2"
-          options: "--target-version py311"
+          args: 'format --check'
+
+      - name: 'Run ruff linter: check'
+        uses: chartboost/ruff-action@v1
+        with:
+          args: 'check'
