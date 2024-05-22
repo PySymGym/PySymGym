@@ -214,24 +214,13 @@ def server_manager(server_queue: Queue[ServerInstanceInfo], svms_info: list[SVMI
         PROCS = []
 
 
-def main():
+def main(config: str):
     global SERVER_INSTANCES, PROCS, RESULTS
 
     # Queue[ServerInstanceInfo]
     SERVER_INSTANCES = Queue()
     PROCS = []
     RESULTS = []
-
-    parser = argparse.ArgumentParser(
-        description="Launch servers using configuration from a .yml file."
-    )
-
-    parser.add_argument(
-        "--config", type=str, help="Path to the configuration file", required=True
-    )
-
-    args = parser.parse_args()
-    config = args.config
 
     with open(config, "r") as file:
         svms_info_config = yaml.safe_load(file)
@@ -247,4 +236,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Launch servers using configuration from a .yml file."
+    )
+
+    parser.add_argument(
+        "--config", type=str, help="Path to the configuration file", required=True
+    )
+
+    args = parser.parse_args()
+    config = args.config
+    main(config)

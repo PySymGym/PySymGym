@@ -1,6 +1,6 @@
 name: Run python tests
 
-on: [pull_request]
+on: [push]
 
 jobs:
   build-and-launch:
@@ -8,20 +8,21 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Install poetry
         run: |
-          pip install poetry
-      
+          pipx install poetry
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.8"
-          cache: "poetry" 
+          cache: "poetry"
 
       - name: Install dependencies
         run: |
           poetry install
+          poetry add --group dev poethepoet
 
       - name: Run tests
         working-directory: ./AIAgent
