@@ -210,10 +210,7 @@ def objective(
     return result
 
 
-def main(args):
-    args = parser.parse_args()
-    config = args.config
-
+def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
 
@@ -289,4 +286,5 @@ if __name__ == "__main__":
         "--config", type=str, help="Path to the configuration file", required=True
     )
     args = parser.parse_args()
-    main(args)
+    config = args.config
+    main(config)
