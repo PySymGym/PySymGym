@@ -43,6 +43,9 @@ black = "^24.4.2"
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
+[tool.ruff]
+exclude = ["maps/DotNet", "GameServers"]
+
 [tool.poe.tasks.launch_servers]
 script = "launch_servers:main"
 cwd = "./AIAgent"
