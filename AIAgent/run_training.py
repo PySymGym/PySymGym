@@ -107,16 +107,17 @@ def run_training(
         sampler=sampler, direction=TrainingConfig.STUDY_DIRECTION
     )
     run_name = f"{logfile_base_name}_{svm_info.name}"
+    statistics_collector.register_new_training_session(svm_info.name)
 
     objective_partial = partial(
         objective,
-        svm_info=svm_info,
         statistics_collector=statistics_collector,
         dataset=dataset,
         dynamic_dataset=TrainingConfig.DYNAMIC_DATASET,
         model_init=model_init,
         epochs=num_epochs,
         run_name=run_name,
+        server_count=svm_info.count,
     )
     try:
         study.optimize(
@@ -127,6 +128,7 @@ def run_training(
         )
     except RuntimeError:  # TODO: Replace it with a self-created exception
         logging.error(f"Fail to train with {svm_info.name}")
+        statistics_collector.fail()
         return
     joblib.dump(
         study,
@@ -136,13 +138,13 @@ def run_training(
 
 def objective(
     trial: optuna.Trial,
-    svm_info: SVMInfo,
     statistics_collector: StatisticsCollector,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
     model_init: Callable,
     epochs: int,
     run_name: str,
+    server_count: int = 1,
 ):
     config = TrialSettings(
         lr=0.0003,  # trial.suggest_float("lr", 1e-7, 1e-3),
@@ -169,14 +171,13 @@ def objective(
 
     optimizer = config.optimizer(model.parameters(), lr=config.lr)
     criterion = config.loss()
-    statistics_collector.register_training_session(
-        svm_info.name,
-        config.batch_size,
-        config.lr,
-        config.num_hops_1,
-        config.num_hops_2,
-        config.num_of_state_features,
-        config.epochs,
+    statistics_collector.start_training_session(
+        batch_size=config.batch_size,
+        lr=config.lr,
+        num_hops_1=config.num_hops_1,
+        num_hops_2=config.num_hops_2,
+        num_of_state_features=config.num_of_state_features,
+        epochs=config.epochs,
     )
 
     run_name = (
@@ -205,14 +206,14 @@ def objective(
         model.eval()
         dataset.switch_to("val")
         result = validate_coverage(
-            svm_info=svm_info,
             statistics_collector=statistics_collector,
             model=model,
-            epoch=epoch,
             dataset=dataset,
+            server_count=server_count,
         )
         if dynamic_dataset:
             dataset.update_meta_data()
+    statistics_collector.finish()
     return result
 
 

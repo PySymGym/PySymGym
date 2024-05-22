@@ -30,12 +30,11 @@ def play_game_task(task):
 
 
 def validate_coverage(
-    svm_info: SVMInfo,
     statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
-    epoch: int,
     dataset: TrainingDataset,
     progress_bar_colour: str = "#ed95ce",
+    server_count: int = 1,
 ):
     """
     Evaluate model using symbolic execution engine. It runs in parallel.
@@ -44,8 +43,6 @@ def validate_coverage(
     ----------
     model : torch.nn.Module
         Model to evaluate
-    epoch : int
-        Epoch number to write result.
     dataset : TrainingDataset
         Dataset object for validation.
     progress_bar_colour : str
@@ -53,7 +50,6 @@ def validate_coverage(
     """
     wrapper = TrainingModelWrapper(model)
     tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
-    server_count = svm_info.count
 
     with ThreadPool(server_count) as p:
         all_results = []
@@ -85,9 +81,7 @@ def validate_coverage(
             )
         )
     )
-    statistics_collector.update_results(
-        epoch, svm_info.name, average_result, all_results
-    )
+    statistics_collector.update_results(average_result, all_results)
     return average_result
 
 
