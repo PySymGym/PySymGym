@@ -1,4 +1,4 @@
-from multiprocessing.pool import ThreadPool
+import multiprocessing as mp
 from functools import partial
 from multiprocessing.managers import AutoProxy
 from typing import Callable
@@ -29,6 +29,13 @@ def play_game_task(task):
     return result
 
 
+def play_game_task_exn_catcher(task):
+    try:
+        return play_game_task(task)
+    except Exception as e:
+        return e
+
+
 def validate_coverage(
     statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
@@ -50,17 +57,23 @@ def validate_coverage(
     """
     wrapper = TrainingModelWrapper(model)
     tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
+    error = None
 
-    with ThreadPool(server_count) as p:
+    with mp.Pool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
-            p.imap_unordered(play_game_task, tasks, chunksize=1),
+            p.imap_unordered(play_game_task_exn_catcher, tasks, chunksize=1),
             desc="validation",
             total=len(tasks),
             ncols=100,
             colour=progress_bar_colour,
         ):
-            all_results.extend(result)
+            if isinstance(result, Exception):
+                error = result  # it is not possible to raise an exception here or to terminate pool due to the pool hanging
+            else:
+                all_results.extend(result)
+    if isinstance(error, Exception):
+        raise error
 
     print(
         "Average dataset state result",
