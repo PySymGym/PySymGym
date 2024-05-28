@@ -20,13 +20,21 @@ class ServerInstanceInfo:
 
 @dataclass_json
 @dataclass
-class SVMInfo:
+class SingleSVMInfo:
     name: str
-    count: int
     launch_command: str
     min_port: int
     max_port: int
     server_working_dir: str
+
+
+@dataclass_json
+@dataclass
+class SVMInfo(SingleSVMInfo):
+    count: int
+
+    def create_single_server_svm_info(self) -> SingleSVMInfo:
+        return SingleSVMInfo.from_dict(self.__dict__)
 
 
 def custom_encoder_if_disable_message_checks() -> Callable | None:

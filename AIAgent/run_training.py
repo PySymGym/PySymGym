@@ -79,7 +79,7 @@ def run_training(
         for _map in maps:
             fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
             _map.AssemblyFullName = fullName
-            _map.SVMInfo = svm_info
+            _map.SVMInfo = svm_info.create_single_server_svm_info()
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,

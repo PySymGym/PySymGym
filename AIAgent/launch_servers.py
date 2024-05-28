@@ -16,7 +16,13 @@ from aiohttp import web
 import yaml
 
 from config import BrokerConfig, FeatureConfig, GeneralConfig
-from connection.broker_conn.classes import SVMInfo, ServerInstanceInfo, Undefined, WSUrl
+from connection.broker_conn.classes import (
+    SVMInfo,
+    ServerInstanceInfo,
+    SingleSVMInfo,
+    Undefined,
+    WSUrl,
+)
 
 routes = web.RouteTableDef()
 logging.basicConfig(
@@ -107,13 +113,16 @@ def get_socket_url(port: int) -> WSUrl:
 
 
 async def run_server_instance(
-    svm_info: SVMInfo, should_start_server: bool
+    svm_info: SingleSVMInfo, should_start_server: bool
 ) -> ServerInstanceInfo:
-    svm_info = SVMInfo.from_dict(svm_info)
+    svm_info = SingleSVMInfo.from_dict(svm_info)
 
     svm_name = svm_info.name
     launch_command = svm_info.launch_command
-    launcher = lambda port: launch_command.format(port=port)
+
+    def launcher(port):
+        return launch_command.format(port=port)
+
     min_port = svm_info.min_port
     max_port = svm_info.max_port
     server_working_dir = svm_info.server_working_dir
@@ -160,10 +169,10 @@ async def run_servers(svms_info: list[SVMInfo]) -> list[ServerInstanceInfo]:
     svms_info_sep = []
     for svm_info in svms_info:
         count = svm_info.count
-        svm_info.count = 1
-        svms_info_sep.extend(count * [svm_info])
+        single_svm_info = svm_info.create_single_server_svm_info()
+        svms_info_sep.extend(count * [single_svm_info])
 
-    async def run(svm_info: SVMInfo):
+    async def run(svm_info: SingleSVMInfo):
         server_info = await run_server_instance(svm_info, should_start_server=False)
         servers_start_tasks.append(server_info)
 
