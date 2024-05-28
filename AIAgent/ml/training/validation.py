@@ -1,15 +1,12 @@
 import multiprocessing as mp
-from functools import partial
-from multiprocessing.managers import AutoProxy
+from functools import wraps
 from typing import Callable
 
 import numpy as np
 import torch
 import tqdm
-from connection.broker_conn.classes import SVMInfo
 from epochs_statistics import StatisticsCollector
 from config import GeneralConfig
-from epochs_statistics import StatisticsCollector
 from ml.inference import infer
 from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
@@ -17,6 +14,18 @@ from ml.training.wrapper import TrainingModelWrapper
 from torch_geometric.loader import DataLoader
 
 
+def catch_return_exception(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return e
+
+    return wrapper
+
+
+@catch_return_exception
 def play_game_task(task):
     maps, dataset, wrapper = task[0], task[1], task[2]
     result = play_game(
@@ -29,29 +38,26 @@ def play_game_task(task):
     return result
 
 
-def play_game_task_exn_catcher(task):
-    try:
-        return play_game_task(task)
-    except Exception as e:
-        return e
-
-
 def validate_coverage(
     statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
     dataset: TrainingDataset,
+    server_count: int,
     progress_bar_colour: str = "#ed95ce",
-    server_count: int = 1,
 ):
     """
     Evaluate model using symbolic execution engine. It runs in parallel.
 
     Parameters
     ----------
+    statistics_collector: StatisticsCollector
+        Collects statistics of training session.
     model : torch.nn.Module
         Model to evaluate
     dataset : TrainingDataset
         Dataset object for validation.
+    server_count: int
+        The number of game servers running in parallel.
     progress_bar_colour : str
         Your favorite colour for progress bar.
     """
@@ -62,7 +68,7 @@ def validate_coverage(
     with mp.Pool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
-            p.imap_unordered(play_game_task_exn_catcher, tasks, chunksize=1),
+            p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
             total=len(tasks),
             ncols=100,
