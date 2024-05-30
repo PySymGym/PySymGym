@@ -1,16 +1,6 @@
-# Howto:
+# Usage
 
-## Installation
-
-```bash
-python3 -m venv .env
-source .env/bin/activate
-pip install -r requirements.txt
-```
-
-## Usage
-
-### Run
+## `runstrat` tool
 
 Docs:
 
@@ -55,7 +45,7 @@ python3 runstrat.py \
     -as prebuilt/powershell-osx-arm64 prebuilt/powershell.csv
 ```
 
-### Comparison
+## `compstrat` tool
 
 Docs:
 ```bash
