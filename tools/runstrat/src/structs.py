@@ -24,12 +24,6 @@ DLL: t.TypeAlias = str
 
 
 @attrs.define(frozen=True, slots=True)
-class ClassMethodsMapping:
-    clazz: Class
-    methods: list[Method]
-
-
-@attrs.define(frozen=True, slots=True)
 class PrebuiltConfig:
     dll_dir: str
     dlls: dict

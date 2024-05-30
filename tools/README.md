@@ -1,5 +1,7 @@
 # Usage
 
+Prerequisites: cd into tools' directory
+
 ## `runstrat` tool
 
 Docs:
