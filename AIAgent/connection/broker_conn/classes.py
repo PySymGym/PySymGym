@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable, TypeAlias
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from config import FeatureConfig
 from connection.game_server_conn.unsafe_json import asdict
@@ -18,8 +19,7 @@ class ServerInstanceInfo:
     pid: int | Undefined
 
 
-@dataclass_json
-@dataclass
+@pydantic_dataclass
 class SingleSVMInfo:
     name: str
     launch_command: str
@@ -27,14 +27,16 @@ class SingleSVMInfo:
     max_port: int
     server_working_dir: str
 
+    def to_dict(self):  # GameMap class requires the to_dict method for all its fields
+        return self.__dict__
 
-@dataclass_json
-@dataclass
+
+@pydantic_dataclass
 class SVMInfo(SingleSVMInfo):
     count: int
 
-    def create_single_server_svm_info(self) -> SingleSVMInfo:
-        return SingleSVMInfo.from_dict(self.__dict__)
+    def create_single_svm_info(self) -> SingleSVMInfo:
+        return SingleSVMInfo(**self.__dict__)
 
 
 def custom_encoder_if_disable_message_checks() -> Callable | None:

@@ -15,6 +15,7 @@ import psutil
 from aiohttp import web
 import yaml
 
+from common.classes import Config
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import (
     SVMInfo,
@@ -57,7 +58,7 @@ async def dequeue_instance(request):
         server_info = SERVER_INSTANCES.get(block=False)
         assert server_info.pid is Undefined
         server_info = await run_server_instance(
-            request.query,
+            SingleSVMInfo(**request.query),
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
@@ -115,8 +116,6 @@ def get_socket_url(port: int) -> WSUrl:
 async def run_server_instance(
     svm_info: SingleSVMInfo, should_start_server: bool
 ) -> ServerInstanceInfo:
-    svm_info = SingleSVMInfo.from_dict(svm_info)
-
     svm_name = svm_info.name
     launch_command = svm_info.launch_command
 
@@ -169,7 +168,7 @@ async def run_servers(svms_info: list[SVMInfo]) -> list[ServerInstanceInfo]:
     svms_info_sep = []
     for svm_info in svms_info:
         count = svm_info.count
-        single_svm_info = svm_info.create_single_server_svm_info()
+        single_svm_info = svm_info.create_single_svm_info()
         svms_info_sep.extend(count * [single_svm_info])
 
     async def run(svm_info: SingleSVMInfo):
@@ -231,12 +230,13 @@ def main(config: str):
     RESULTS = []
 
     with open(config, "r") as file:
-        svms_info_config = yaml.safe_load(file)
+        trainings_parameters = yaml.safe_load(file)
+    config: Config = Config(**trainings_parameters)
 
     svms_info = list(
         map(
-            lambda svm_info: SVMInfo.from_dict(svm_info["SVMConfig"]),
-            svms_info_config["SVMConfigs"],
+            lambda svm_config: svm_config.SVMInfo,
+            config.SVMConfigs,
         )
     )
 

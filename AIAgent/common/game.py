@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from dataclasses_json import config, dataclass_json
-from connection.broker_conn.classes import SVMInfo as SVMInfoT
+from connection.broker_conn.classes import SingleSVMInfo
 
 
 @dataclass_json
@@ -74,7 +74,9 @@ class GameMap:
     NameOfObjectToCover: str
     DefaultSearcher: str
     MapName: str
-    SVMInfo: SVMInfoT = field(default=None, metadata=config(exclude=lambda x: True))
+    SVMInfo: SingleSVMInfo = field(
+        default=None, metadata=config(exclude=lambda x: True)
+    )
 
 
 @dataclass_json

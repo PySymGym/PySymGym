@@ -23,7 +23,6 @@ class TrainingParams:
     num_hops_1: int
     num_hops_2: int
     num_of_state_features: int
-    epochs: int
 
 
 @dataclass
@@ -64,6 +63,7 @@ class StatisticsCollector:
         self._file = file
 
         self._svms_info: dict[SVMName, Optional[TrainingParams]] = {}
+        self._epochs: dict[SVMName, Optional[EpochNumber]] = {}
         self._sessions_info: dict[EpochNumber, dict[SVMName, StatsWithTable]] = {}
         self._status: dict[SVMName, Status] = {}
 
@@ -72,6 +72,7 @@ class StatisticsCollector:
     def register_new_training_session(self, svm_name: SVMName):
         self._running = svm_name
         self._svms_info[svm_name] = None
+        self._epochs[svm_name] = None
         self._svms_info = sort_dict(self._svms_info)
         self._update_file()
 
@@ -85,15 +86,11 @@ class StatisticsCollector:
         epochs: int,
     ):
         svm_name = self._running
+        self._epochs[svm_name] = epochs
         self._status[svm_name] = Status(SVMStatus.RUNNING, 0)
 
         self._svms_info[svm_name] = TrainingParams(
-            batch_size,
-            lr,
-            num_hops_1,
-            num_hops_2,
-            num_of_state_features,
-            epochs,
+            batch_size, lr, num_hops_1, num_hops_2, num_of_state_features
         )
         self._update_file()
 
@@ -128,6 +125,7 @@ class StatisticsCollector:
     def _get_training_info(self) -> str:
         def svm_info_line(svm_info):
             svm_name, training_params = svm_info[0], svm_info[1]
+            epochs = self._epochs[svm_name]
             status: Optional[Status] = self._status.get(svm_name, None)
             if status is None:
                 return ""
@@ -135,12 +133,12 @@ class StatisticsCollector:
             svm_info_line = (
                 f"{svm_name} : "
                 f"{str(status)}, "
+                f"epochs={epochs}, "
                 f"batch_size={training_params.batch_size}, "
                 f"lr={training_params.lr}, "
                 f"num_hops_1={training_params.num_hops_1}, "
                 f"num_hops_2={training_params.num_hops_2}, "
-                f"num_of_state_features={training_params.num_of_state_features}, "
-                f"epochs={training_params.epochs}\n"
+                f"num_of_state_features={training_params.num_of_state_features}\n"
             )
             return svm_info_line
 

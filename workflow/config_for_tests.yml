@@ -1,5 +1,5 @@
 SVMConfigs:
-  - SVMConfig:
+  - SVMInfo:
       name: VSharp
       count: 1
       launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
@@ -7,6 +7,7 @@ SVMConfigs:
       max_port: 36000
       server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
     platform_name: dotnet
+    epochs: 2
 Platforms:
   - name: dotnet
     DatasetConfig:
@@ -15,5 +16,3 @@ Platforms:
 OptunaConfig:
   n_startup_trials: 1
   n_trials: 1
-TrainConfig:
-  epochs: 2
