@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 import joblib
 import numpy as np
@@ -89,7 +89,7 @@ def run_training(
     datasets_of_platforms: dict[PlatformName, DatasetConfig],
     n_startup_trials: int,
     n_trials: int,
-    path_to_weights: str,
+    path_to_weights: Optional[Path],
     logfile_base_name: str,
     statistics_collector: StatisticsCollector,
 ):

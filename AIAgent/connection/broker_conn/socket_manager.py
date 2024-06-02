@@ -4,7 +4,7 @@ from contextlib import contextmanager, suppress
 
 import websocket
 from config import GameServerConnectorConfig
-from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
+from connection.broker_conn.classes import ServerInstanceInfo, SingleSVMInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
 
 
@@ -37,7 +37,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
 
 
 @contextmanager
-def game_server_socket_manager(svm_info: SVMInfo):
+def game_server_socket_manager(svm_info: SingleSVMInfo):
     server_instance = acquire_instance(svm_info)
 
     socket = wait_for_connection(server_instance)

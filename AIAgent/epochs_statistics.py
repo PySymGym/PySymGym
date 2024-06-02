@@ -59,7 +59,7 @@ class StatisticsCollector:
         svm_count: int,
         file: Path,
     ):
-        self._SVM_count: int = svm_count
+        self._svm_count: int = svm_count
         self._file = file
 
         self._svms_info: dict[SVMName, Optional[TrainingParams]] = {}
@@ -67,7 +67,7 @@ class StatisticsCollector:
         self._sessions_info: dict[EpochNumber, dict[SVMName, StatsWithTable]] = {}
         self._status: dict[SVMName, Status] = {}
 
-        self._running: SVMName | None = None
+        self._running: Optional[SVMName] = None
 
     def register_new_training_session(self, svm_name: SVMName):
         self._running = svm_name
