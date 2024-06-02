@@ -179,7 +179,7 @@ def objective(
     epochs: int,
     epochs_info: EpochsInfo,
     model_saver: Callable,
-    server_count: int = 1,
+    server_count: int,
 ):
     config = TrialSettings(
         lr=0.0003,  # trial.suggest_float("lr", 1e-7, 1e-3),
