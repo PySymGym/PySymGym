@@ -56,10 +56,8 @@ class Status:
 class StatisticsCollector:
     def __init__(
         self,
-        svm_count: int,
         file: Path,
     ):
-        self._svm_count: int = svm_count
         self._file = file
 
         self._svms_info: dict[SVMName, Optional[TrainingParams]] = {}

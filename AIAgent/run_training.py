@@ -248,7 +248,6 @@ def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
     config: Config = Config(**trainings_parameters)
-    svms_count = len(config.SVMConfigs)
 
     timestamp = datetime.now().timestamp()
     logfile_base_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
@@ -257,7 +256,7 @@ def main(config: str):
 
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
-    statistics_collector = StatisticsCollector(svms_count, results_table_path)
+    statistics_collector = StatisticsCollector(results_table_path)
 
     n_startup_trials = config.OptunaConfig.n_startup_trials
     n_trials = config.OptunaConfig.n_trials
