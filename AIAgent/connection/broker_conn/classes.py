@@ -19,7 +19,7 @@ class ServerInstanceInfo:
     pid: int | Undefined
 
 
-@pydantic_dataclass
+@pydantic_dataclass(config=dict(extra="ignore"))
 class SingleSVMInfo:
     name: str
     launch_command: str
