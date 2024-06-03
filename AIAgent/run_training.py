@@ -61,6 +61,7 @@ class TrialSettings:
     normalization: bool
 
 
+@dataclass
 class EpochsInfo:
     total_epochs: int = 0
 
