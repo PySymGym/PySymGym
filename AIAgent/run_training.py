@@ -69,7 +69,9 @@ class EpochsInfo:
         self.total_epochs += 1
 
 
-def model_saver(epochs_info: EpochsInfo, svm_name: str, dir: Path, model: object):
+def model_saver(
+    epochs_info: EpochsInfo, svm_name: str, dir: Path, model: torch.nn.Module
+):
     """
     Use it to save your torch model with some info in the following format: "{`total_epochs` + `epoch`}_{`svm_name`}" in `dir` directory
 
@@ -77,12 +79,12 @@ def model_saver(epochs_info: EpochsInfo, svm_name: str, dir: Path, model: object
     ----------
     :param EpochsInfo `epochs_info`: EpochsInfo's instance
     :param str `svm_name`: name of svm
-    :param object `model`: model to save
+    :param torch.nn.Module `model`: model to save
     :param Path `dir`: directory
 
     """
     path_to_model = os.path.join(dir, f"{epochs_info.total_epochs}_{svm_name}")
-    torch.save(model, Path(path_to_model))
+    torch.save(model.state_dict(), Path(path_to_model))
 
 
 def run_training(
@@ -228,7 +230,7 @@ def objective(
             criterion=criterion,
         )
         torch.cuda.empty_cache()
-        model_saver(model=model.state_dict())
+        model_saver(model=model)
 
         model.eval()
         dataset.switch_to("val")
