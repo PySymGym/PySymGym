@@ -119,13 +119,19 @@ class Comparator:
                 return left < right
             return left > right
 
+        comparison_datasource_description = "datasource: "
         match config.datasource:
             case DataSourceType.OUTER_JOIN:
                 dataframe = self.inner_df
+                comparison_datasource_description += "all methods (outer join)"
             case DataSourceType.INNER_JOIN_DF:
                 dataframe = self.inner_df
+                comparison_datasource_description += (
+                    "methods, completed by both strats (inner join)"
+                )
             case DataSourceType.INNER_JOIN_COVERAGE_EQ_DF:
                 dataframe = self.inner_coverage_eq
+                comparison_datasource_description += "methods, completed by both strats with equal coverage (inner join, cov1 == cov2)"
 
         strat1_win = dataframe.loc[
             left_win_comparison(
@@ -180,7 +186,7 @@ class Comparator:
         )
         plt.xlabel(
             f"{self.strat2.name} {config.by_column}, {config.metric}\n\n"
-            f"{config.by_column} comparison on the same methods, {scale}\n"
+            f"{config.by_column} {comparison_datasource_description}, {scale}\n"
             f"{self.strat1.name} ({self.strat1.color.name}) won: {len(strat1_win)}, "
             f"{self.strat2.name} ({self.strat2.color.name}) won: {len(strat2_win)}, eq ({self.eq_color.name}): {len(eq)}"
         )

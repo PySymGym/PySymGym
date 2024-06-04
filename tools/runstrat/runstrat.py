@@ -34,6 +34,7 @@ class Args:
     strategy: BasePSStrategy
     timeout: int
     pysymgym_path: pathlib.Path
+    savedir: pathlib.Path
     assembly_infos: list[tuple[pathlib.Path, pathlib.Path]]
 
 
@@ -130,25 +131,30 @@ def main():
         "-mp",
         "--model-path",
         type=pathlib.Path,
-        dest="model_path",
         required=False,
         help="Absolute path to AI model if AI strategy is selected",
     )
     parser.add_argument(
-        "-t", "--timeout", type=int, required=True, help="V# runner timeout"
+        "-t", "--timeout", type=int, required=True, help="V# runner timeout (s)"
     )
     parser.add_argument(
         "-ps",
-        "--pysymgym-path",
         type=pathlib.Path,
         dest="pysymgym_path",
+        required=False,
         help="Absolute path to PySymGym",
+    )
+    parser.add_argument(
+        "-sd",
+        "--savedir",
+        type=pathlib.Path,
+        required=False,
+        help="Path to save results to. Default is current directory.",
     )
     parser.add_argument(
         "-as",
         "--assembly-infos",
         type=pathlib.Path,
-        dest="assembly_infos",
         action="append",
         nargs=2,
         metavar=("dlls-path", "launch-info-path"),
@@ -157,16 +163,13 @@ def main():
 
     args = parser.parse_args()
 
-    default_model_path = pathlib.Path(
-        args.pysymgym_path / "GameServers/VSharp/VSharp.Explorer/models/model.onnx"
-    ).resolve()
+    default_savedir = args.savedir or pathlib.Path(".")
     entrypoint(
         Args(
-            strategy=BasePSStrategy.parse(
-                args.strategy, model_path=args.model_path or default_model_path
-            ),
+            strategy=BasePSStrategy.parse(args.strategy, model_path=args.model_path),
             timeout=args.timeout,
             pysymgym_path=args.pysymgym_path,
+            savedir=default_savedir,
             assembly_infos=args.assembly_infos,
         )
     )
