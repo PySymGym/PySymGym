@@ -74,3 +74,17 @@ ruff format
 ```
 
 **Or** [integrate](https://docs.astral.sh/ruff/integrations/#vs-code-official) it with your favorite code editor (for example, [VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff))
+
+## Project description
+
+### Dataset structure
+
+<p align="center">
+  <img src="./resources/dataset.jpg" width="80%">
+</p>
+
+### Results
+
+<div align="center">
+  <img src="./resources/coverage.svg" width="46.11%"> <img src="./resources/tests_eq_coverage.svg" width="46%">
+</div>
