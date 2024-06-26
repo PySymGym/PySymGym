@@ -62,7 +62,6 @@ AgentResultsOnGameMaps: TypeAlias = defaultdict[Named, list[Map2Result]]
 @pydantic_dataclass
 class SVMConfig:
     platform_name: PlatformName
-    epochs: int
     SVMInfo: SVMInfo
 
 
@@ -87,6 +86,18 @@ class Platform:
 class OptunaConfig:
     n_startup_trials: int  # number of optuna's trials
     n_trials: int  # number of optuna's trials
+    n_jobs: int
+    study_direction: str
+
+
+@pydantic_dataclass
+class TrainingConfig:
+    dynamic_dataset: bool
+    train_percentage: float
+    threshold_coverage: int
+    load_to_cpu: bool
+    epochs: int
+    threshold_steps_number: Optional[int] = Field(default=None)
 
 
 @pydantic_dataclass
@@ -94,6 +105,7 @@ class Config:
     SVMConfigs: list[SVMConfig]
     Platforms: list[Platform]
     OptunaConfig: OptunaConfig
+    TrainingConfig: TrainingConfig
     path_to_weights: Optional[Path] = Field(default=None)
 
     @field_validator("path_to_weights", mode="before")

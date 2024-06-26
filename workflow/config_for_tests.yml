@@ -7,7 +7,6 @@ SVMConfigs:
       max_port: 36000
       server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
     platform_name: dotnet
-    epochs: 2
 Platforms:
   - name: dotnet
     DatasetConfig:
@@ -16,3 +15,11 @@ Platforms:
 OptunaConfig:
   n_startup_trials: 1
   n_trials: 1
+  n_jobs: 1
+  study_direction: 'maximize'
+TrainingConfig:
+  dynamic_dataset: True
+  train_percentage: 1
+  threshold_coverage: 100
+  load_to_cpu: False
+  epochs: 2

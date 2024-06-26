@@ -14,9 +14,16 @@ import numpy as np
 import optuna
 import torch
 import yaml
-from common.classes import Config, DatasetConfig, PlatformName, SVMConfig
+from common.classes import (
+    Config,
+    DatasetConfig,
+    PlatformName,
+    SVMConfig,
+    OptunaConfig,
+    TrainingConfig,
+)
 from common.game import GameMap
-from config import GeneralConfig, TrainingConfig
+from config import GeneralConfig
 from epochs_statistics import StatisticsCollector
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
@@ -69,29 +76,26 @@ class EpochsInfo:
         self.total_epochs += 1
 
 
-def model_saver(
-    epochs_info: EpochsInfo, svm_name: str, dir: Path, model: torch.nn.Module
-):
+def model_saver(epochs_info: EpochsInfo, dir: Path, model: torch.nn.Module):
     """
     Use it to save your torch model with some info in the following format: "{`total_epochs` + `epoch`}_{`svm_name`}" in `dir` directory
 
     Parameters
     ----------
     :param EpochsInfo `epochs_info`: EpochsInfo's instance
-    :param str `svm_name`: name of svm
     :param torch.nn.Module `model`: model to save
     :param Path `dir`: directory
 
     """
-    path_to_model = os.path.join(dir, f"{epochs_info.total_epochs}_{svm_name}")
+    path_to_model = os.path.join(dir, f"{epochs_info.total_epochs}")
     torch.save(model.state_dict(), Path(path_to_model))
 
 
 def run_training(
     svm_configs: list[SVMConfig],
     datasets_of_platforms: dict[PlatformName, DatasetConfig],
-    n_startup_trials: int,
-    n_trials: int,
+    optuna_config: OptunaConfig,
+    training_config: TrainingConfig,
     path_to_weights: Optional[Path],
     logfile_base_name: str,
     statistics_collector: StatisticsCollector,
@@ -99,74 +103,71 @@ def run_training(
     models_path = os.path.join(TRAINED_MODELS_PATH, logfile_base_name)
     os.makedirs(models_path)
 
-    sampler = optuna.samplers.TPESampler(n_startup_trials=n_startup_trials)
+    sampler = optuna.samplers.TPESampler(
+        n_startup_trials=optuna_config.n_startup_trials
+    )
     study = optuna.create_study(
-        sampler=sampler, direction=TrainingConfig.STUDY_DIRECTION
+        sampler=sampler, direction=optuna_config.study_direction
     )
     epochs_info = EpochsInfo()
+
+    maps: List[GameMap] = list()
+    server_count = 0
     for svm_config in svm_configs:
         svm_info = svm_config.SVMInfo
         dataset_config = datasets_of_platforms[svm_config.platform_name]
         dataset_base_path = dataset_config.dataset_base_path
         dataset_description = dataset_config.dataset_description
-
         with open(dataset_description, "r") as maps_json:
-            maps: List[GameMap] = GameMap.schema().load(
-                json.loads(maps_json.read()), many=True
-            )
+            maps.extend(GameMap.schema().load(json.loads(maps_json.read()), many=True))
             for _map in maps:
                 fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
                 _map.AssemblyFullName = fullName
                 _map.SVMInfo = svm_info.create_single_svm_info()
-
-        dataset = TrainingDataset(
-            RAW_DATASET_PATH,
-            PROCESSED_DATASET_PATH,
-            maps,
-            train_percentage=TrainingConfig.TRAIN_PERCENTAGE,
-            threshold_steps_number=TrainingConfig.THRESHOLD_STEPS_NUMBER,
-            load_to_cpu=TrainingConfig.LOAD_TO_CPU,
-            threshold_coverage=TrainingConfig.THRESHOLD_COVERAGE,
-        )
-
-        def load_weights(model: torch.nn.Module):
-            model.load_state_dict(torch.load(path_to_weights))
-            return model
-
-        def model_init(**model_params):
-            state_model_encoder = StateModelEncoder(**model_params)
-            if path_to_weights is None:
-                return state_model_encoder
-            return load_weights(state_model_encoder)
-
         statistics_collector.register_new_training_session(svm_info.name)
+        server_count += svm_info.count
 
-        objective_partial = partial(
-            objective,
-            statistics_collector=statistics_collector,
-            dataset=dataset,
-            dynamic_dataset=TrainingConfig.DYNAMIC_DATASET,
-            model_init=model_init,
-            epochs=svm_config.epochs,
+    dataset = TrainingDataset(
+        RAW_DATASET_PATH,
+        PROCESSED_DATASET_PATH,
+        maps,
+        train_percentage=training_config.train_percentage,
+        threshold_steps_number=training_config.threshold_steps_number,
+        load_to_cpu=training_config.load_to_cpu,
+        threshold_coverage=training_config.threshold_coverage,
+    )
+
+    def load_weights(model: torch.nn.Module):
+        model.load_state_dict(torch.load(path_to_weights))
+        return model
+
+    def model_init(**model_params):
+        state_model_encoder = StateModelEncoder(**model_params)
+        if path_to_weights is None:
+            return state_model_encoder
+        return load_weights(state_model_encoder)
+
+    objective_partial = partial(
+        objective,
+        statistics_collector=statistics_collector,
+        dataset=dataset,
+        dynamic_dataset=training_config.dynamic_dataset,
+        model_init=model_init,
+        epochs=training_config.epochs,
+        epochs_info=epochs_info,
+        model_saver=partial(
+            model_saver,
             epochs_info=epochs_info,
-            model_saver=partial(
-                model_saver,
-                epochs_info=epochs_info,
-                svm_name=svm_info.name,
-                dir=models_path,
-            ),
-            server_count=svm_info.count,
-        )
-        try:
-            study.optimize(
-                objective_partial,
-                n_trials=n_trials,
-                gc_after_trial=True,
-                n_jobs=TrainingConfig.OPTUNA_N_JOBS,
-            )
-        except RuntimeError:
-            logging.error(f"Fail to train with {svm_info.name}")
-            statistics_collector.fail()
+            dir=models_path,
+        ),
+        server_count=server_count,
+    )
+    study.optimize(
+        objective_partial,
+        n_trials=optuna_config.n_trials,
+        gc_after_trial=True,
+        n_jobs=optuna_config.n_jobs,
+    )
     joblib.dump(
         study,
         f"{logfile_base_name}.pkl",
@@ -251,7 +252,6 @@ def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
     config: Config = Config(**trainings_parameters)
-
     timestamp = datetime.now().timestamp()
     logfile_base_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
     results_table_path = os.path.join(TRAINING_RESULTS_PATH, logfile_base_name + ".log")
@@ -261,8 +261,6 @@ def main(config: str):
     print(GeneralConfig.DEVICE)
     statistics_collector = StatisticsCollector(results_table_path)
 
-    n_startup_trials = config.OptunaConfig.n_startup_trials
-    n_trials = config.OptunaConfig.n_trials
     path_to_weights = config.path_to_weights
     if path_to_weights is not None:
         path_to_weights = Path(path_to_weights).absolute()
@@ -274,8 +272,8 @@ def main(config: str):
     run_training(
         svm_configs=config.SVMConfigs,
         datasets_of_platforms=datasets_of_platforms,
-        n_startup_trials=n_startup_trials,
-        n_trials=n_trials,
+        optuna_config=config.OptunaConfig,
+        training_config=config.TrainingConfig,
         path_to_weights=path_to_weights,
         logfile_base_name=logfile_base_name,
         statistics_collector=statistics_collector,
