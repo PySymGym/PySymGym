@@ -23,3 +23,4 @@ TrainingConfig:
   threshold_coverage: 100
   load_to_cpu: False
   epochs: 2
+  
