@@ -9,7 +9,7 @@ from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
 from ml.protocols import Predictor
-from ml.training.dataset import TrainingDataset, convert_input_to_tensor
+from ml.training.dataset import Result, TrainingDataset, convert_input_to_tensor
 
 TimeDuration: TypeAlias = float
 
@@ -119,11 +119,11 @@ def play_map(
         actual_coverage_percent=actual_coverage,
     )
     if with_dataset is not None:
-        map_result = (
-            model_result.actual_coverage_percent,
-            -model_result.tests_count,
-            -model_result.steps_count,
-            model_result.errors_count,
+        map_result = Result(
+            CoveragePercent=model_result.actual_coverage_percent,
+            NegativeTestsNumber=-model_result.tests_count,
+            NegativeStepsNumber=-model_result.steps_count,
+            ErrorsNumber=model_result.errors_count,
         )
         with_dataset.update_map(with_connector.map.MapName, map_result, map_steps)
     del map_steps
