@@ -34,6 +34,7 @@ from ml.training.utils import create_file, create_folders_if_necessary
 from ml.training.validation import validate_coverage
 from paths import (
     LOG_PATH,
+    OPTUNA_STUDIES_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     TRAINED_MODELS_PATH,
@@ -50,7 +51,9 @@ logging.basicConfig(
 )
 
 
-create_folders_if_necessary([TRAINING_RESULTS_PATH, PROCESSED_DATASET_PATH])
+create_folders_if_necessary(
+    [TRAINING_RESULTS_PATH, PROCESSED_DATASET_PATH, OPTUNA_STUDIES_PATH]
+)
 
 
 @dataclass
@@ -170,7 +173,7 @@ def run_training(
     )
     joblib.dump(
         study,
-        f"{logfile_base_name}.pkl",
+        os.path.join(OPTUNA_STUDIES_PATH, f"{logfile_base_name}.pkl"),
     )
 
 
