@@ -114,7 +114,7 @@ def run_training(
     )
     epochs_info = EpochsInfo()
 
-    maps: List[GameMap] = list()
+    maps: list[GameMap] = list()
     server_count = 0
     for svm_config in svm_configs:
         svm_info = svm_config.SVMInfo
@@ -165,12 +165,17 @@ def run_training(
         ),
         server_count=server_count,
     )
-    study.optimize(
-        objective_partial,
-        n_trials=optuna_config.n_trials,
-        gc_after_trial=True,
-        n_jobs=optuna_config.n_jobs,
-    )
+    try:
+        study.optimize(
+            objective_partial,
+            n_trials=optuna_config.n_trials,
+            gc_after_trial=True,
+            n_jobs=optuna_config.n_jobs,
+        )
+    except RuntimeError:
+        logging.error("Fail to train")
+        statistics_collector.fail()
+
     joblib.dump(
         study,
         os.path.join(OPTUNA_STUDIES_PATH, f"{logfile_base_name}.pkl"),
