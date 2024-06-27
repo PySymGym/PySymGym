@@ -60,7 +60,7 @@ jobs:
       - name: Sanity check
         working-directory: ./AIAgent
         run: |
-            if ls *.pkl 1> /dev/null 2>&1; then
+            if ls report/optuna_studies/*.pkl 1> /dev/null 2>&1; then
                 echo "PKL files found."
             else
                 echo "No PKL files found."
