@@ -1,4 +1,4 @@
-name: Build and Launch C# Project + Run training
+name: Build SVM-s and maps + Run training
 
 on: [push, pull_request]
 
