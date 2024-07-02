@@ -3,7 +3,7 @@
       "StepsToPlay":4000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
-      "AssemblyFullName":"ManuallyCollected.dll",
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BubbleSort.sort",
       "MapName":"Java.BubbleSort.sort_0"
    },
@@ -11,7 +11,7 @@
       "StepsToPlay":4000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
-      "AssemblyFullName":"ManuallyCollected.dll",
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BubbleSort.sortSimple",
       "MapName":"Java.BubbleSort.sortSimple_0"
    },
@@ -19,7 +19,7 @@
       "StepsToPlay":4000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
-      "AssemblyFullName":"ManuallyCollected.dll",
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BinarySearch.search",
       "MapName":"Java.BinarySearch.search_0"
    },
@@ -27,7 +27,7 @@
       "StepsToPlay":4000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
-      "AssemblyFullName":"ManuallyCollected.dll",
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BinarySearch.searchLowerBound",
       "MapName":"Java.BinarySearch.searchLowerBound_0"
    },
@@ -35,8 +35,41 @@
       "StepsToPlay":4000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
-      "AssemblyFullName":"ManuallyCollected.dll",
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BinarySearch.searchUpperBound",
       "MapName":"Java.BinarySearch.searchUpperBound_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.InsertionSort.sort",
+      "MapName":"Java.InsertionSort.sort_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.InsertionSort.sortBySwap",
+      "MapName":"Java.InsertionSort.sortBySwap_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.InsertionSort.sortSimple",
+      "MapName":"Java.InsertionSort.sortSimple_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.QuickSort.main",
+      "MapName":"Java.QuickSort.main"
    }
+   
 ]
