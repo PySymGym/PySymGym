@@ -69,7 +69,54 @@
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.QuickSort.main",
-      "MapName":"Java.QuickSort.main"
+      "MapName":"Java.QuickSort.main_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.graphs.algorithms.ConnectedComponentsComputation.splitFormulasByComponent",
+      "MapName":"Java.ConnectedComponentsComputation.splitFormulasByComponent_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.IncWBO.search",
+      "MapName":"Java.IncWBO.search_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.IncWBO.relaxCore",
+      "MapName":"Java.IncWBO.relaxCore_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.LinearSU.bmoSearch",
+      "MapName":"Java.IncWBO.bmoSearch_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.sat.GlucoseSyrup.addClause",
+      "MapName":"Java.IncWBO.addClause_0"
+   },
+   {
+      "StepsToPlay":4000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":0,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.sat.GlucoseSyrup.solve",
+      "MapName":"Java.IncWBO.solve_0"
    }
-   
 ]

@@ -27,8 +27,8 @@ jobs:
           poetry --ansi install
           poetry add --group dev poethepoet
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+      - name: Setup Java
+        uses: actions/setup-java@v4
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
@@ -40,10 +40,15 @@ jobs:
         run: |
           dotnet build Root -c Release
 
-      - name: Build Java game maps
+      - name: Build manually collected Java game maps
         working-directory: ./maps/Java/Maps
         run: |
           ./gradlew build
+
+      - name: Build Java game maps from LogicNG
+        working-directory: ./maps/Java/Maps/LogicNG
+        run: |
+          mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true
 
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0

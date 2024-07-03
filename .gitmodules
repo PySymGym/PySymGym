@@ -19,3 +19,6 @@
 [submodule "maps/DotNet/Maps/rd"]
 	path = maps/DotNet/Maps/rd
 	url = https://github.com/JetBrains/rd.git
+[submodule "maps/Java/Maps/LogicNG"]
+	path = maps/Java/Maps/LogicNG
+	url = https://github.com/logic-ng/LogicNG.git
