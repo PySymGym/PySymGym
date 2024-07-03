@@ -53,6 +53,11 @@ jobs:
         run: |
           mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true
 
+      - name: Build Java game maps from jflex
+        working-directory: ./maps/Java/Maps/jflex
+        run: |
+          mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true -Dfmt.skip
+
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
         run: |

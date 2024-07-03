@@ -22,3 +22,6 @@
 [submodule "maps/Java/Maps/LogicNG"]
 	path = maps/Java/Maps/LogicNG
 	url = https://github.com/logic-ng/LogicNG.git
+[submodule "maps/Java/Maps/jflex"]
+	path = maps/Java/Maps/jflex
+	url = https://github.com/jflex-de/jflex.git
