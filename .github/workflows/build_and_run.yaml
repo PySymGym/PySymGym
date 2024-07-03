@@ -32,6 +32,9 @@ jobs:
         with:
           distribution: 'oracle'
           java-version: '21'
+          cache: |
+            'gradle'
+            'maven'
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
