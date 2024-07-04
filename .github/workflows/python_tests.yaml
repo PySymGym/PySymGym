@@ -24,7 +24,12 @@ jobs:
           poetry install
           poetry add --group dev poethepoet
 
-      - name: Run tests
+      - name: Run main repo tests
         working-directory: ./AIAgent
+        run: |
+          poetry run pytest tests -sv
+      
+      - name: Run compstrat tool tests
+        working-directory: ./tools/compstrat
         run: |
           poetry run pytest tests -sv

@@ -1,0 +1,9 @@
+method,tests,errors,coverage,total_time_sec,timeouted
+BinarySearch,7,1,100.0,0,False
+Switches1,30,0,100.0,3,False
+Switches2,12,0,100.0,97,False
+Switches3,24,3,94.0,120,True
+Switches4,12,3,100.0,0,False
+Switches5,5,5,100.0,0,False
+NestedFors,2,0,100.0,0,False
+SearchKMP,4,3,100.0,1,False
