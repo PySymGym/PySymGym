@@ -52,6 +52,16 @@ def next_free_port(
     raise IOError("no free ports")
 
 
+async def wait_for_port(port, timeout=10):
+    start_time = time.time()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while time.time() - start_time < timeout:
+        if sock.connect_ex(("", port)) == 0:
+            return True
+        await asyncio.sleep(0.1)
+    return False
+
+
 @routes.get("/get_ws")
 async def dequeue_instance(request):
     try:
@@ -139,20 +149,11 @@ async def run_server_instance(
             cwd=Path(server_working_dir).absolute(),
         )
         logging.info("bash exec cmd: " + launch_server)
-        _ = proc.stdout.readline()
-        proc_out = proc.stdout.readline().decode("utf-8").strip("\n")
-
-        return proc, port, proc_out
+        return proc, port
 
     async with avoid_same_free_port_lock:
-        proc, port, proc_out = start_server()
-
-        while FAILED_TO_INSTANTIATE_ERROR in proc_out:
-            logging.warning(
-                f"{port=} was already in use, caught {proc_out}, trying new port..."
-            )
-            proc, port, proc_out = start_server()
-    print(proc_out)
+        proc, port = start_server()
+        await wait_for_port(port)
 
     server_pid = proc.pid
     PROCS.append(server_pid)
