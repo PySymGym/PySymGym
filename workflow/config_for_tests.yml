@@ -1,22 +1,22 @@
-SVMConfigs:
-  - SVMInfo:
+Platforms:
+  - name: dotnet
+    DatasetConfigs:
+      - dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
+        dataset_description: ../workflow/dataset_for_tests.json
+    SVMInfo:
       name: VSharp
       count: 1
       launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
       min_port: 35000
       max_port: 36000
-      server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
-    platform_name: dotnet
-Platforms:
-  - name: dotnet
-    DatasetConfig:
-      dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
-      dataset_description: ../workflow/dataset_for_tests.json
+      server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0   
+
 OptunaConfig:
   n_startup_trials: 1
   n_trials: 1
   n_jobs: 1
   study_direction: 'maximize'
+
 TrainingConfig:
   dynamic_dataset: True
   train_percentage: 1

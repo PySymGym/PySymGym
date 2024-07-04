@@ -235,8 +235,8 @@ def main(config: str):
 
     svms_info = list(
         map(
-            lambda svm_config: svm_config.SVMInfo,
-            config.SVMConfigs,
+            lambda platform: platform.SVMInfo,
+            config.Platforms,
         )
     )
 

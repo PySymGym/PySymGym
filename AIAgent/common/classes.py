@@ -60,12 +60,6 @@ AgentResultsOnGameMaps: TypeAlias = defaultdict[Named, list[Map2Result]]
 
 
 @pydantic_dataclass
-class SVMConfig:
-    platform_name: PlatformName
-    SVMInfo: SVMInfo
-
-
-@pydantic_dataclass
 class DatasetConfig:
     dataset_base_path: Path  # path to dir with explored dlls
     dataset_description: Path  # full paths to JSON-file with dataset description
@@ -79,7 +73,8 @@ class DatasetConfig:
 @pydantic_dataclass
 class Platform:
     name: PlatformName
-    DatasetConfig: DatasetConfig
+    DatasetConfigs: list[DatasetConfig]
+    SVMInfo: SVMInfo
 
 
 @pydantic_dataclass
@@ -102,7 +97,6 @@ class TrainingConfig:
 
 @pydantic_dataclass
 class Config:
-    SVMConfigs: list[SVMConfig]
     Platforms: list[Platform]
     OptunaConfig: OptunaConfig
     TrainingConfig: TrainingConfig

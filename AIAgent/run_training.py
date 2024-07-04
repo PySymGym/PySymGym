@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import joblib
 import numpy as np
@@ -16,9 +16,7 @@ import torch
 import yaml
 from common.classes import (
     Config,
-    DatasetConfig,
-    PlatformName,
-    SVMConfig,
+    Platform,
     OptunaConfig,
     TrainingConfig,
 )
@@ -95,8 +93,9 @@ def model_saver(epochs_info: EpochsInfo, dir: Path, model: torch.nn.Module):
 
 
 def run_training(
-    svm_configs: list[SVMConfig],
-    datasets_of_platforms: dict[PlatformName, DatasetConfig],
+    # svm_configs: list[SVMConfig],
+    # datasets_of_platforms: dict[PlatformName, DatasetConfig],
+    platforms_config: list[Platform],
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     path_to_weights: Optional[Path],
@@ -116,20 +115,20 @@ def run_training(
 
     maps: list[GameMap] = list()
     server_count = 0
-    for svm_config in svm_configs:
-        svm_info = svm_config.SVMInfo
-        dataset_config = datasets_of_platforms[svm_config.platform_name]
-        dataset_base_path = dataset_config.dataset_base_path
-        dataset_description = dataset_config.dataset_description
-        with open(dataset_description, "r") as maps_json:
-            single_svm_maps: list[GameMap] = GameMap.schema().load(
-                json.loads(maps_json.read()), many=True
-            )
-        for _map in single_svm_maps:
-            fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
-            _map.AssemblyFullName = fullName
-            _map.SVMInfo = svm_info.create_single_svm_info()
-        maps.extend(single_svm_maps)
+    for platform in platforms_config:
+        svm_info = platform.SVMInfo
+        for dataset_config in platform.DatasetConfigs:
+            dataset_base_path = dataset_config.dataset_base_path
+            dataset_description = dataset_config.dataset_description
+            with open(dataset_description, "r") as maps_json:
+                single_json_maps: list[GameMap] = GameMap.schema().load(
+                    json.loads(maps_json.read()), many=True
+                )
+            for _map in single_json_maps:
+                fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
+                _map.AssemblyFullName = fullName
+                _map.SVMInfo = svm_info.create_single_svm_info()
+            maps.extend(single_json_maps)
         statistics_collector.register_new_training_session(svm_info.name)
         server_count += svm_info.count
 
@@ -276,13 +275,8 @@ def main(config: str):
     if path_to_weights is not None:
         path_to_weights = Path(path_to_weights).absolute()
 
-    datasets_of_platforms: dict[PlatformName, DatasetConfig] = {}
-    for platform in config.Platforms:
-        datasets_of_platforms[platform.name] = platform.DatasetConfig
-
     run_training(
-        svm_configs=config.SVMConfigs,
-        datasets_of_platforms=datasets_of_platforms,
+        platforms_config=config.Platforms,
         optuna_config=config.OptunaConfig,
         training_config=config.TrainingConfig,
         path_to_weights=path_to_weights,
