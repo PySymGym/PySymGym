@@ -122,11 +122,14 @@ def run_training(
         dataset_base_path = dataset_config.dataset_base_path
         dataset_description = dataset_config.dataset_description
         with open(dataset_description, "r") as maps_json:
-            maps.extend(GameMap.schema().load(json.loads(maps_json.read()), many=True))
-            for _map in maps:
-                fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
-                _map.AssemblyFullName = fullName
-                _map.SVMInfo = svm_info.create_single_svm_info()
+            single_svm_maps: list[GameMap] = GameMap.schema().load(
+                json.loads(maps_json.read()), many=True
+            )
+        for _map in single_svm_maps:
+            fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
+            _map.AssemblyFullName = fullName
+            _map.SVMInfo = svm_info.create_single_svm_info()
+        maps.extend(single_svm_maps)
         statistics_collector.register_new_training_session(svm_info.name)
         server_count += svm_info.count
 
