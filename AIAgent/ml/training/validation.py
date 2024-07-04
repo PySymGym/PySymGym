@@ -27,7 +27,8 @@ def catch_return_exception(func):
 
 @catch_return_exception
 def play_game_task(task):
-    maps, dataset, wrapper = task[0], task[1], task[2]
+    maps, dataset, wrapper = task
+
     result = play_game(
         with_predictor=wrapper,
         max_steps=GeneralConfig.MAX_STEPS,
