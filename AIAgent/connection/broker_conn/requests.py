@@ -4,12 +4,12 @@ from urllib.parse import urlencode
 
 import httplib2
 from config import WebsocketSourceLinks
-from connection.broker_conn.classes import ServerInstanceInfo, SingleSVMInfo
+from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
 
 
-def acquire_instance(svm_info: SingleSVMInfo) -> ServerInstanceInfo:
+def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:
     response, content = httplib2.Http().request(
-        WebsocketSourceLinks.GET_WS + "?" + urlencode(SingleSVMInfo.to_dict(svm_info))
+        WebsocketSourceLinks.GET_WS + "?" + urlencode(SVMInfo.to_dict(svm_info))
     )
     if response.status != 200:
         logging.error(f"{response.status} with {content=} on acquire_instance call")
