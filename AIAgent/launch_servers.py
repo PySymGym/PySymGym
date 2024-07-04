@@ -15,12 +15,11 @@ import psutil
 from aiohttp import web
 import yaml
 
-from common.classes import Config
+from common.config import Config
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import (
     SVMInfo,
     ServerInstanceInfo,
-    SingleSVMInfo,
     Undefined,
     WSUrl,
 )
@@ -68,7 +67,7 @@ async def dequeue_instance(request):
         server_info = SERVER_INSTANCES.get(block=False)
         assert server_info.pid is Undefined
         server_info = await run_server_instance(
-            SingleSVMInfo(**request.query),
+            SVMInfo(**request.query),
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
@@ -124,13 +123,12 @@ def get_socket_url(port: int) -> WSUrl:
 
 
 async def run_server_instance(
-    svm_info: SingleSVMInfo, should_start_server: bool
+    svm_info: SVMInfo, should_start_server: bool
 ) -> ServerInstanceInfo:
     svm_name = svm_info.name
-    launch_command = svm_info.launch_command
 
-    def launcher(port):
-        return launch_command.format(port=port)
+    def launcher(port: int) -> str:
+        return svm_info.launch_command.format(port=port)
 
     min_port = svm_info.min_port
     max_port = svm_info.max_port
@@ -164,19 +162,14 @@ async def run_server_instance(
     return ServerInstanceInfo(svm_name, port, ws_url, server_pid)
 
 
-async def run_servers(svms_info: list[SVMInfo]) -> list[ServerInstanceInfo]:
+async def run_servers(count: int) -> list[ServerInstanceInfo]:
     servers_start_tasks = []
-    svms_info_sep = []
-    for svm_info in svms_info:
-        count = svm_info.count
-        single_svm_info = svm_info.create_single_svm_info()
-        svms_info_sep.extend(count * [single_svm_info])
 
-    async def run(svm_info: SingleSVMInfo):
-        server_info = await run_server_instance(svm_info, should_start_server=False)
+    async def run():
+        server_info = ServerInstanceInfo("_", 0, "None", pid=Undefined)
         servers_start_tasks.append(server_info)
 
-    await asyncio.gather(*[run(svm_info) for svm_info in svms_info_sep])
+    await asyncio.gather(*[run() for _ in range(count)])
 
     return servers_start_tasks
 
@@ -207,10 +200,10 @@ def kill_process(pid: int):
 
 
 @contextmanager
-def server_manager(server_queue: Queue[ServerInstanceInfo], svms_info: list[SVMInfo]):
+def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
     global PROCS
 
-    servers_info = asyncio.run(run_servers(svms_info))
+    servers_info = asyncio.run(run_servers(server_count))
 
     for server_info in servers_info:
         server_queue.put(server_info)
@@ -233,15 +226,9 @@ def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
     config: Config = Config(**trainings_parameters)
+    server_count = config.ServersConfig.count
 
-    svms_info = list(
-        map(
-            lambda platform: platform.SVMInfo,
-            config.Platforms,
-        )
-    )
-
-    with server_manager(SERVER_INSTANCES, svms_info):
+    with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()
         app.add_routes(routes)
         web.run_app(app, port=BrokerConfig.BROKER_PORT)
