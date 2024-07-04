@@ -14,10 +14,10 @@ import numpy as np
 import optuna
 import torch
 import yaml
-from common.classes import (
+from common.config import (
     Config,
-    Platform,
     OptunaConfig,
+    ServersConfig,
     TrainingConfig,
 )
 from common.game import GameMap
@@ -69,31 +69,8 @@ class TrialSettings:
     normalization: bool
 
 
-@dataclass
-class EpochsInfo:
-    total_epochs: int = 0
-
-    def next(self):
-        self.total_epochs += 1
-
-
-def model_saver(epochs_info: EpochsInfo, dir: Path, model: torch.nn.Module):
-    """
-    Use it to save your torch model with some info in the following format: "{`total_epochs` + `epoch`}_{`svm_name`}" in `dir` directory
-
-    Parameters
-    ----------
-    :param EpochsInfo `epochs_info`: EpochsInfo's instance
-    :param torch.nn.Module `model`: model to save
-    :param Path `dir`: directory
-
-    """
-    path_to_model = os.path.join(dir, f"{epochs_info.total_epochs}")
-    torch.save(model.state_dict(), Path(path_to_model))
-
-
 def run_training(
-    platforms_config: list[Platform],
+    servers_config: ServersConfig,
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     path_to_weights: Optional[Path],
@@ -109,26 +86,23 @@ def run_training(
     study = optuna.create_study(
         sampler=sampler, direction=optuna_config.study_direction
     )
-    epochs_info = EpochsInfo()
 
     maps: list[GameMap] = list()
-    server_count = 0
-    for platform in platforms_config:
-        svm_info = platform.SVMInfo
-        for dataset_config in platform.DatasetConfigs:
-            dataset_base_path = dataset_config.dataset_base_path
-            dataset_description = dataset_config.dataset_description
-            with open(dataset_description, "r") as maps_json:
-                single_json_maps: list[GameMap] = GameMap.schema().load(
-                    json.loads(maps_json.read()), many=True
-                )
-            for _map in single_json_maps:
-                fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
-                _map.AssemblyFullName = fullName
-                _map.SVMInfo = svm_info.create_single_svm_info()
-            maps.extend(single_json_maps)
-        statistics_collector.register_new_training_session(svm_info.name)
-        server_count += svm_info.count
+    for platform in servers_config.Platforms:
+        svms_info = platform.SVMSInfo
+        for svm_info in svms_info:
+            for dataset_config in platform.DatasetConfigs:
+                dataset_base_path = dataset_config.dataset_base_path
+                dataset_description = dataset_config.dataset_description
+                with open(dataset_description, "r") as maps_json:
+                    single_json_maps: list[GameMap] = GameMap.schema().load(
+                        json.loads(maps_json.read()), many=True
+                    )
+                for _map in single_json_maps:
+                    fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
+                    _map.AssemblyFullName = fullName
+                    _map.SVMInfo = svm_info
+                maps.extend(single_json_maps)
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
@@ -157,24 +131,15 @@ def run_training(
         dynamic_dataset=training_config.dynamic_dataset,
         model_init=model_init,
         epochs=training_config.epochs,
-        epochs_info=epochs_info,
-        model_saver=partial(
-            model_saver,
-            epochs_info=epochs_info,
-            dir=models_path,
-        ),
-        server_count=server_count,
+        models_path=models_path,
+        server_count=servers_config.count,
     )
-    try:
-        study.optimize(
-            objective_partial,
-            n_trials=optuna_config.n_trials,
-            gc_after_trial=True,
-            n_jobs=optuna_config.n_jobs,
-        )
-    except RuntimeError:
-        logging.error("Fail to train")
-        statistics_collector.fail()
+    study.optimize(
+        objective_partial,
+        n_trials=optuna_config.n_trials,
+        gc_after_trial=True,
+        n_jobs=optuna_config.n_jobs,
+    )
 
     joblib.dump(
         study,
@@ -189,8 +154,7 @@ def objective(
     dynamic_dataset: bool,
     model_init: Callable,
     epochs: int,
-    epochs_info: EpochsInfo,
-    model_saver: Callable,
+    models_path: str,
     server_count: int,
 ):
     config = TrialSettings(
@@ -228,7 +192,7 @@ def objective(
     )
 
     np.random.seed(config.random_seed)
-    for _ in range(config.epochs):
+    for epoch in range(config.epochs):
         dataset.switch_to("train")
         train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
         model.train()
@@ -239,7 +203,8 @@ def objective(
             criterion=criterion,
         )
         torch.cuda.empty_cache()
-        model_saver(model=model)
+        path_to_model = os.path.join(models_path, str(epoch + 1))
+        torch.save(model.state_dict(), Path(path_to_model))
 
         model.eval()
         dataset.switch_to("val")
@@ -249,10 +214,12 @@ def objective(
             dataset=dataset,
             server_count=server_count,
         )
+        failed_maps = statistics_collector.get_failed_maps()
+        dataset.maps = [
+            _map for _map in dataset.maps if _map not in failed_maps
+        ]  # delete failed maps
         if dynamic_dataset:
             dataset.update_meta_data()
-        epochs_info.next()
-    statistics_collector.finish()
     return result
 
 
@@ -274,7 +241,7 @@ def main(config: str):
         path_to_weights = Path(path_to_weights).absolute()
 
     run_training(
-        platforms_config=config.Platforms,
+        servers_config=config.ServersConfig,
         optuna_config=config.OptunaConfig,
         training_config=config.TrainingConfig,
         path_to_weights=path_to_weights,

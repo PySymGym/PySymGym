@@ -22,7 +22,7 @@ class WebsocketSourceLinks:
 
 
 @dataclass(slots=True, frozen=True)
-class DumpByTimeoutFeature:
+class SaveIfFailOrTimeout:
     enabled: bool
     timeout_sec: int
     save_path: Path
@@ -44,7 +44,7 @@ class OnGameServerRestartFeature:
 class FeatureConfig:
     VERBOSE_TABLES = True
     DISABLE_MESSAGE_CHECKS = True
-    DUMP_BY_TIMEOUT = DumpByTimeoutFeature(
+    SAVE_IF_FAIL_OR_TIMEOUT = SaveIfFailOrTimeout(
         enabled=True, timeout_sec=1800, save_path=Path("./report/timeouted_agents/")
     )
     ON_GAME_SERVER_RESTART = OnGameServerRestartFeature(
@@ -56,8 +56,8 @@ class GameServerConnectorConfig:
     CREATE_CONNECTION_TIMEOUT_SEC = 1
     WAIT_FOR_SOCKET_RECONNECTION_MAX_RETRIES = 10 * 60
     RESPONCE_TIMEOUT_SEC = (
-        FeatureConfig.DUMP_BY_TIMEOUT.timeout_sec + 1
-        if FeatureConfig.DUMP_BY_TIMEOUT.enabled
+        FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.timeout_sec + 1
+        if FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.enabled
         else 1000
     )
     SKIP_UTF_VALIDATION = True
