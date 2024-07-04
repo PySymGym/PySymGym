@@ -10,6 +10,14 @@
    {
       "StepsToPlay": 400,
       "DefaultSearcher": "BFS",
+      "StepsToStart": 50,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BubbleSort.sort",
+      "MapName":"Java.BubbleSort.sort_0"
+   },
+   {
+      "StepsToPlay": 400,
+      "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BinarySearch.search",
