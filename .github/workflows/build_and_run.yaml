@@ -39,7 +39,7 @@ jobs:
         run: |
           dotnet build VSharp.ML.GameServer.Runner -c Release
 
-        - name: Build usvm game server
+      - name: Build usvm game server
         working-directory: ./GameServers/usvm/
         run: |
           ./gradlew build --no-daemon
