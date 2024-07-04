@@ -1,9 +1,8 @@
-import multiprocessing as mp
 from dataclasses import dataclass
-from multiprocessing.managers import BaseManager
+from enum import Enum
 from pathlib import Path
 from statistics import mean
-from typing import TypeAlias
+from typing import Optional, TypeAlias
 
 import natsort
 import pandas as pd
@@ -24,7 +23,6 @@ class TrainingParams:
     num_hops_1: int
     num_hops_2: int
     num_of_state_features: int
-    epochs: int
 
 
 @dataclass
@@ -33,23 +31,51 @@ class StatsWithTable:
     df: pd.DataFrame
 
 
-class StatisticsCollector:
-    _lock = mp.Lock()
+class SVMStatus(Enum):
+    RUNNING = "running"
+    FAILED = "failed"
+    FINISHED = "finished"
 
+
+@dataclass
+class Status:
+    """
+    status : SVMStatus.RUNNING | SVMStatus.FAILED | SVMStatus.FINISHED
+    """
+
+    status: SVMStatus
+    epoch: int
+
+    def __str__(self) -> str:
+        result: str = f"status={self.status.value}"
+        if self.status == SVMStatus.FAILED:
+            result += f", on epoch = {self.epoch}"
+        return result
+
+
+class StatisticsCollector:
     def __init__(
         self,
-        SVM_count: int,
         file: Path,
     ):
-        self._SVM_count: int = SVM_count
         self._file = file
 
-        self._SVMS_info: dict[SVMName, TrainingParams] = {}
+        self._svms_info: dict[SVMName, Optional[TrainingParams]] = {}
+        self._epochs: dict[SVMName, Optional[EpochNumber]] = {}
         self._sessions_info: dict[EpochNumber, dict[SVMName, StatsWithTable]] = {}
+        self._status: dict[SVMName, Status] = {}
 
-    def register_training_session(
+        self._running: Optional[SVMName] = None
+
+    def register_new_training_session(self, svm_name: SVMName):
+        self._running = svm_name
+        self._svms_info[svm_name] = None
+        self._epochs[svm_name] = None
+        self._svms_info = sort_dict(self._svms_info)
+        self._update_file()
+
+    def start_training_session(
         self,
-        SVM_name: SVMName,
         batch_size: int,
         lr: float,
         num_hops_1: int,
@@ -57,38 +83,64 @@ class StatisticsCollector:
         num_of_state_features: int,
         epochs: int,
     ):
-        self._SVMS_info[SVM_name] = TrainingParams(
-            batch_size, lr, num_hops_1, num_hops_2, num_of_state_features, epochs
+        svm_name = self._running
+        self._epochs[svm_name] = epochs
+        self._status[svm_name] = Status(SVMStatus.RUNNING, 0)
+
+        self._svms_info[svm_name] = TrainingParams(
+            batch_size, lr, num_hops_1, num_hops_2, num_of_state_features
         )
-        self._SVMS_info = sort_dict(self._SVMS_info)
+        self._update_file()
+
+    def fail(self):
+        svm_name = self._running
+        self._status[svm_name].status = SVMStatus.FAILED
+        self._running = None
+        self._update_file()
+
+    def finish(self):
+        svm_name = self._running
+        self._status[svm_name].status = SVMStatus.FINISHED
+        self._running = None
         self._update_file()
 
     def update_results(
         self,
-        epoch: EpochNumber,
-        SVM_name: SVMName,
         average_result: float,
         map2results_list: list[Map2Result],
     ):
+        svm_name = self._running
+        epoch = self._status[svm_name].epoch
+
         results = self._sessions_info.get(epoch, {})
-        results[SVM_name] = StatsWithTable(
-            average_result, convert_to_df(SVM_name, map2results_list)
+        results[svm_name] = StatsWithTable(
+            average_result, convert_to_df(map2results_list)
         )
         self._sessions_info[epoch] = sort_dict(results)
+        self._status[svm_name].epoch += 1
         self._update_file()
 
-    def _get_SVMS_info(self) -> str:
-        svm_info_line = lambda svm_info: (
-            f"{svm_info[0]} : "
-            f"batch_size={svm_info[1].batch_size}, "
-            f"lr={svm_info[1].lr}, "
-            f"num_hops_1={svm_info[1].num_hops_1}, "
-            f"num_hops_2={svm_info[1].num_hops_2}, "
-            f"num_of_state_features={svm_info[1].num_of_state_features}, "
-            f"epochs={svm_info[1].epochs}\n"
-        )
+    def _get_training_info(self) -> str:
+        def svm_info_line(svm_info):
+            svm_name, training_params = svm_info[0], svm_info[1]
+            epochs = self._epochs[svm_name]
+            status: Optional[Status] = self._status.get(svm_name, None)
+            if status is None:
+                return ""
 
-        return "".join(list(map(svm_info_line, self._SVMS_info.items())))
+            svm_info_line = (
+                f"{svm_name} : "
+                f"{str(status)}, "
+                f"epochs={epochs}, "
+                f"batch_size={training_params.batch_size}, "
+                f"lr={training_params.lr}, "
+                f"num_hops_1={training_params.num_hops_1}, "
+                f"num_hops_2={training_params.num_hops_2}, "
+                f"num_of_state_features={training_params.num_of_state_features}\n"
+            )
+            return svm_info_line
+
+        return "".join(list(map(svm_info_line, self._svms_info.items())))
 
     def _get_epochs_results(self) -> str:
         epochs_results = str()
@@ -113,30 +165,23 @@ class StatisticsCollector:
         return epochs_results
 
     def _update_file(self):
-        with self._lock:
-            SVMS_info = self._get_SVMS_info()
-            epochs_results = self._get_epochs_results()
+        svms_info = self._get_training_info()
+        epochs_results = self._get_epochs_results()
         with open(self._file, "w") as f:
-            f.write(SVMS_info)
+            f.write(svms_info)
             f.write(epochs_results)
 
 
-def convert_to_df(svm_name: SVMName, map2result_list: list[Map2Result]) -> pd.DataFrame:
+def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
     maps = []
     results = []
     for map2result in map2result_list:
-        map_name = map2result.map.MapName
+        _map = map2result.map
+        map_name = _map.MapName
         game_result_str = map2result.game_result.printable(verbose=True)
-        maps.append(f"{svm_name} : {map_name}")
+        maps.append(f"{_map.SVMInfo.name} : {map_name}")
         results.append(game_result_str)
 
     df = pd.DataFrame(results, columns=["Game result"], index=maps).T
 
     return df
-
-
-class StatisticsManager(BaseManager):
-    pass
-
-
-StatisticsManager.register("StatisticsCollector", StatisticsCollector)
