@@ -17,7 +17,7 @@ from torch_geometric.loader import DataLoader
 
 
 def play_game_task(svm_info: SVMInfo, task):
-    maps, dataset, wrapper = task[0], task[1], task[2]
+    maps, dataset, wrapper = task
     result = play_game(
         svm_info=svm_info,
         with_predictor=wrapper,
