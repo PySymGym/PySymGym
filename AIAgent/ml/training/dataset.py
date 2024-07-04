@@ -7,7 +7,7 @@ import os
 import os.path as osp
 import random
 import shutil
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -46,11 +46,15 @@ VertexIndex: TypeAlias = int
 VertexMap: TypeAlias = Dict[VertexId, VertexIndex]
 
 MapName: TypeAlias = str
-CoveragePercent: TypeAlias = int
-TestsNumber: TypeAlias = int
-ErrorsNumber: TypeAlias = int
-StepsNumber: TypeAlias = int
-Result: TypeAlias = tuple[CoveragePercent, TestsNumber, ErrorsNumber, StepsNumber]
+Result = namedtuple(
+    "Result",
+    [
+        "coverage_percent",
+        "negative_tests_number",
+        "negative_steps_number",
+        "errors_number",
+    ],
+)
 StatesDistribution: TypeAlias = torch.tensor
 
 
@@ -58,13 +62,6 @@ StatesDistribution: TypeAlias = torch.tensor
 class Step:
     graph: HeteroData
     states_distribution: StatesDistribution
-
-
-@dataclass
-class MapStatistics:
-    map_name: MapName
-    steps: list[Step]
-    result: Result
 
 
 class TrainingDataset(Dataset):
@@ -119,7 +116,6 @@ class TrainingDataset(Dataset):
         self.similar_steps_save_prob = similar_steps_save_prob
         self._progress_bar_colour = progress_bar_colour
         self._processed_paths = self._get_processed_paths()
-
         self._load_to_cpu = load_to_cpu
         if self._load_to_cpu:
             self._loaded_to_cpu = self._load_steps()
@@ -152,7 +148,6 @@ class TrainingDataset(Dataset):
             step = torch.load(
                 self.processed_paths[idx], map_location=GeneralConfig.DEVICE
             )
-        del step.use_for_train
         return step
 
     def switch_to(self, mode: Literal["train", "val"]) -> None:
@@ -184,7 +179,10 @@ class TrainingDataset(Dataset):
         all_files = []
         for map_name in os.listdir(self.processed_dir):
             if map_name in self.maps_results:
-                if self.maps_results[map_name][0] >= self.threshold_coverage:
+                if (
+                    self.maps_results[map_name].coverage_percent
+                    >= self.threshold_coverage
+                ):
                     all_steps_paths = [
                         file_path
                         for file_path in glob.glob(
@@ -224,29 +222,66 @@ class TrainingDataset(Dataset):
             )
             if path_to_map_steps.exists():
                 result_file = open(path_to_map_steps)
-                result = ast.literal_eval(result_file.read())
+                result = Result(*ast.literal_eval(result_file.read()))
                 results[_map.MapName] = result
                 result_file.close()
         return results
 
     def process(self):
-        for map_stat in self.load_raw_dataset():
-            map_dir = Path(os.path.join(self.processed_dir, map_stat.map_name))
-            if not map_dir.exists():
-                os.makedirs(map_dir)
-            step: Step
-            for step_id, step in enumerate(map_stat.steps):
-                step.graph.y_true = step.states_distribution
-                torch.save(
-                    step.graph,
-                    os.path.join(map_dir, str(step_id) + ".pt"),
+        def process_result(map_name: MapName) -> Result:
+            f = open(os.path.join(self.raw_dir, map_name, "result"))
+            result = f.read()
+            f.close()
+            result = tuple(map(lambda x: int(x), result.split()))
+            return Result(
+                coverage_percent=result[0],
+                negative_tests_number=-result[1],
+                negative_steps_number=-result[2],
+                errors_number=result[3],
+            )
+
+        def get_step_raw_ids(map_name: str) -> List[str]:
+            file_names = os.listdir(os.path.join(self.raw_dir, map_name))
+            step_ids = list(
+                set(map(lambda file_name: file_name.split("_")[0], file_names))
+            )
+            step_ids.remove("result")
+            return step_ids
+
+        with mp.Pool(self.n_jobs) as p:
+            for map_name in tqdm.tqdm(
+                os.listdir(self.raw_dir),
+                desc="Dataset processing",
+                ncols=100,
+                colour=self._progress_bar_colour,
+            ):
+                raw_map_path = Path(self.raw_dir / map_name)
+                processed_map_path = Path(self.processed_dir / map_name)
+                if not processed_map_path.exists():
+                    os.makedirs(processed_map_path)
+
+                process_and_save_step_task = partial(
+                    self.process_and_save_step, raw_map_path, processed_map_path
                 )
-            result_file = open(os.path.join(map_dir, "result"), mode="x")
-            result_file.write(str(map_stat.result))
-            result_file.close()
+                raw_ids = get_step_raw_ids(map_name)
+                tasks = list(
+                    (raw_step_id, processed_step_id)
+                    for processed_step_id, raw_step_id in enumerate(sorted(raw_ids))
+                )
+                is_successfull: list[bool] = list(
+                    p.map(process_and_save_step_task, tasks)
+                )
+                if len(is_successfull) != len(raw_ids):
+                    logging.warning(f"Processing of map {map_name} failed somewhere.")
+                result = process_result(map_name)
+                result_file = open(os.path.join(processed_map_path, "result"), mode="x")
+                result_file.write(str(tuple(result)))
+                result_file.close()
         self.update_meta_data()
 
-    def process_step(self, map_path: Path, step_id: str) -> Step:
+    def process_and_save_step(
+        self, raw_map_path: Path, processed_map_path: Path, ids: tuple[str, int]
+    ) -> bool:
         def get_states_distribution(
             file_path: str, state_map: StateMap
         ) -> StatesDistribution:
@@ -257,52 +292,21 @@ class TrainingDataset(Dataset):
             states_distribution[state_map[state_id]] = 1
             return states_distribution
 
-        f = open(os.path.join(map_path, step_id + GAMESTATESUFFIX))
+        raw_step_id, processed_step_id = ids
+        f = open(os.path.join(raw_map_path, raw_step_id + GAMESTATESUFFIX))
         data = json.load(f)
         f.close()
         graph, state_map = convert_input_to_tensor(GameState.from_dict(data))
         distribution = get_states_distribution(
-            os.path.join(map_path, step_id + MOVEDSTATESUFFIX), state_map
+            os.path.join(raw_map_path, raw_step_id + MOVEDSTATESUFFIX), state_map
         )
         step = Step(graph, distribution)
-        return step
-
-    def load_raw_dataset(self) -> list[MapStatistics]:
-        def get_result(map_name: MapName) -> Result:
-            f = open(os.path.join(self.raw_dir, map_name, "result"))
-            result = f.read()
-            f.close()
-            result = tuple(map(lambda x: int(x), result.split()))
-            return (result[0], -result[1], -result[2], result[3])
-
-        def get_step_ids(map_name: str) -> List[str]:
-            file_names = os.listdir(os.path.join(self.raw_dir, map_name))
-            step_ids = list(
-                set(map(lambda file_name: file_name.split("_")[0], file_names))
-            )
-            step_ids.remove("result")
-            return step_ids
-
-        maps_data = []
-        with mp.Pool(self.n_jobs) as p:
-            for map_name in tqdm.tqdm(
-                os.listdir(self.raw_dir),
-                desc="Dataset processing",
-                ncols=100,
-                colour=self._progress_bar_colour,
-            ):
-                map_path = os.path.join(self.raw_dir, map_name)
-                process_steps_task = partial(self.process_step, map_path)
-                ids = get_step_ids(map_name)
-                steps = list(p.map(process_steps_task, sorted(ids)))
-                maps_data.append(
-                    MapStatistics(
-                        map_name=map_name,
-                        steps=steps,
-                        result=get_result(map_name),
-                    )
-                )
-        return maps_data
+        step.graph.y_true = step.states_distribution
+        torch.save(
+            step.graph,
+            os.path.join(processed_map_path, str(processed_step_id) + ".pt"),
+        )
+        return True
 
     def _load_steps(self):
         def get_map_name_from_path(path: Path):
@@ -319,7 +323,7 @@ class TrainingDataset(Dataset):
             steps[map_name].append(torch.load(step_path, map_location="cpu"))
         return steps
 
-    def filter_map_steps(self, map_steps) -> list[HeteroData]:
+    def filter_map_steps(self, map_steps: list[HeteroData]) -> list[HeteroData]:
         filtered_map_steps = []
         for step in map_steps:
             if step["y_true"].size()[0] != 1 and not step["y_true"].isnan().any():
@@ -329,37 +333,43 @@ class TrainingDataset(Dataset):
                 filtered_map_steps.append(step)
         return filtered_map_steps
 
-    def remove_similar_steps(self, map_steps):
-        filtered_map_steps = []
-        for step in map_steps:
-            if (
-                len(filtered_map_steps) != 0
-                and step["y_true"].size() == filtered_map_steps[-1]["y_true"].size()
-            ):
-                cos_d = 1 - torch.sum(
-                    (step["y_true"] / torch.linalg.vector_norm(step["y_true"]))
-                    * (
-                        filtered_map_steps[-1]["y_true"]
-                        / torch.linalg.vector_norm(filtered_map_steps[-1]["y_true"])
-                    )
+    def remove_similar_steps(self, map_steps: list[HeteroData]) -> list[HeteroData]:
+        def states_num_and_distributions_are_equal(
+            step1: HeteroData, step2: HeteroData
+        ):
+            if step1["y_true"].size()[0] == step2["y_true"].size()[0]:
+                cos_d = 1 - torch.nn.functional.cosine_similarity(
+                    step1["y_true"], step2["y_true"], dim=0
                 )
-                if (
-                    cos_d < 1e-7
-                    and step[TORCH.game_vertex]["x"].size()[0]
-                    == filtered_map_steps[-1][TORCH.game_vertex]["x"].size()[0]
-                ):
-                    step.use_for_train = np.random.choice(
-                        [True, False],
-                        p=[
-                            self.similar_steps_save_prob,
-                            1 - self.similar_steps_save_prob,
-                        ],
-                    )
-                else:
-                    step.use_for_train = True
+                return cos_d < 1e-7
             else:
-                step.use_for_train = True
-            filtered_map_steps.append(step)
+                return False
+
+        def game_vertices_num_is_equal(step1: HeteroData, step2: HeteroData):
+            return (
+                step1[TORCH.game_vertex]["x"].size()[0]
+                == step2[TORCH.game_vertex]["x"].size()[0]
+            )
+
+        def save_similar_step():
+            return np.random.choice(
+                [True, False],
+                p=[
+                    self.similar_steps_save_prob,
+                    1 - self.similar_steps_save_prob,
+                ],
+            )
+
+        filtered_map_steps = [map_steps[0]]
+        for step in map_steps[1:]:
+            previous_step = filtered_map_steps[-1]
+            if states_num_and_distributions_are_equal(
+                step, previous_step
+            ) and game_vertices_num_is_equal(step, previous_step):
+                if save_similar_step():
+                    filtered_map_steps.append(step)
+            else:
+                filtered_map_steps.append(step)
         return filtered_map_steps
 
     def _get_map_steps(self, map_name) -> list[HeteroData]:
@@ -382,7 +392,10 @@ class TrainingDataset(Dataset):
     ):
         filtered_map_steps = self.remove_similar_steps(self.filter_map_steps(map_steps))
         if map_name in self.maps_results.keys():
-            if self.maps_results[map_name] == map_result and map_result[0] == 100:
+            if (
+                self.maps_results[map_name] == map_result
+                and map_result.coverage_percent == 100
+            ):
                 init_steps_num = (
                     len(os.listdir(os.path.join(self.processed_dir, map_name))) - 1
                 )
@@ -422,7 +435,7 @@ class TrainingDataset(Dataset):
             for idx, step in enumerate(steps):
                 torch.save(step, os.path.join(path_to_map_steps, str(idx) + ".pt"))
         result_file = open(os.path.join(path_to_map_steps, "result"), mode="x")
-        result_file.write(str(map_result))
+        result_file.write(str(tuple(map_result)))
         result_file.close()
         if self._load_to_cpu:
             self._loaded_to_cpu[map_name] = steps
@@ -514,25 +527,16 @@ def convert_input_to_tensor(
     Converts game env to tensors
     """
     graphVertices = input.GraphVertices
-    game_states = input.States
-    game_edges = input.Map
+    game_states, game_edges = input.States, input.Map
     data = HeteroData()
-    nodes_vertex = []
-    nodes_state = []
-    edges_index_v_v = []
-    edges_index_s_s = []
-    edges_index_s_v_in = []
-    edges_index_v_s_in = []
-    edges_index_s_v_history = []
-    edges_index_v_s_history = []
-    edges_attr_v_v = []
-    edges_types_v_v = []
+    nodes_vertex, edges_index_v_v, edges_attr_v_v, edges_types_v_v = [], [], [], []
+    nodes_state, edges_index_s_s = [], []
+    edges_index_s_v_in, edges_index_v_s_in = [], []
+    edges_index_s_v_history, edges_index_v_s_history = [], []
+    edges_attr_s_v, edges_attr_v_s = [], []
 
-    edges_attr_s_v = []
-    edges_attr_v_s = []
-
-    state_map: Dict[int, int] = {}  # Maps real state id to its index
-    vertex_map: Dict[int, int] = {}  # Maps real vertex id to its index
+    state_map: Dict[StateId, StateIndex] = dict()
+    vertex_map: Dict[VertexId, VertexIndex] = dict()
     vertex_index = 0
     state_index = 0
 
