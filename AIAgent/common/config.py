@@ -39,6 +39,7 @@ class OptunaConfig:
     n_trials: int  # number of optuna's trials
     n_jobs: int
     study_direction: str
+    path_to_study: Optional[Path] = Field(default=None)
 
 
 @pydantic_dataclass

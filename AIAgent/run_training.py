@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import joblib
 import numpy as np
@@ -83,9 +83,6 @@ def run_training(
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
     )
-    study = optuna.create_study(
-        sampler=sampler, direction=optuna_config.study_direction
-    )
 
     maps: list[GameMap] = list()
     for platform in servers_config.platforms:
@@ -114,11 +111,11 @@ def run_training(
         threshold_coverage=training_config.threshold_coverage,
     )
 
-    def load_weights(model: torch.nn.Module):
+    def load_weights(model: nn.Module):
         model.load_state_dict(torch.load(path_to_weights))
         return model
 
-    def model_init(**model_params):
+    def model_init(**model_params) -> nn.Module:
         state_model_encoder = StateModelEncoder(**model_params)
         if path_to_weights is None:
             return state_model_encoder
@@ -134,17 +131,31 @@ def run_training(
         models_path=models_path,
         server_count=servers_config.count,
     )
-    study.optimize(
-        objective_partial,
-        n_trials=optuna_config.n_trials,
-        gc_after_trial=True,
-        n_jobs=optuna_config.n_jobs,
-    )
+    try:
+        if optuna_config.path_to_study is None:
 
-    joblib.dump(
-        study,
-        os.path.join(OPTUNA_STUDIES_PATH, f"{logfile_base_name}.pkl"),
-    )
+            def save_study(study, _):
+                joblib.dump(
+                    study,
+                    os.path.join(OPTUNA_STUDIES_PATH, f"{logfile_base_name}.pkl"),
+                )
+
+            study = optuna.create_study(
+                sampler=sampler, direction=optuna_config.study_direction
+            )
+            study.optimize(
+                objective_partial,
+                n_trials=optuna_config.n_trials,
+                gc_after_trial=True,
+                n_jobs=optuna_config.n_jobs,
+                callbacks=[save_study],
+            )
+        else:
+            study: optuna.Study = joblib.load(optuna_config.path_to_study)
+            objective_partial(study.best_trial)
+    except RuntimeError:
+        logging.error("Fail to train")
+        statistics_collector.fail()
 
 
 def objective(
@@ -152,22 +163,22 @@ def objective(
     statistics_collector: StatisticsCollector,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
-    model_init: Callable,
+    model_init: Callable[[Any], nn.Module],
     epochs: int,
     models_path: str,
     server_count: int,
 ):
     config = TrialSettings(
-        lr=0.0003,  # trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=109,  # trial.suggest_int("batch_size", 8, 1800),
+        lr=trial.suggest_float("lr", 1e-7, 1e-3),
+        batch_size=trial.suggest_int("batch_size", 8, 1800),
         epochs=epochs,
         optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
         loss=trial.suggest_categorical("loss", [nn.KLDivLoss]),
         random_seed=937,
-        num_hops_1=5,  # trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=4,  # trial.suggest_int("num_hops_2", 2, 10),
-        num_of_state_features=30,  # trial.suggest_int("num_of_state_features", 8, 64),
-        hidden_channels=110,  # trial.suggest_int("hidden_channels", 64, 128),
+        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
+        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
+        num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
+        hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
     )
 
@@ -225,8 +236,7 @@ def objective(
 
 def main(config: str):
     with open(config, "r") as file:
-        trainings_parameters = yaml.safe_load(file)
-    config: Config = Config(**trainings_parameters)
+        config: Config = Config(**yaml.safe_load(file))
     timestamp = datetime.now().timestamp()
     logfile_base_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
     results_table_path = os.path.join(TRAINING_RESULTS_PATH, logfile_base_name + ".log")
@@ -234,8 +244,8 @@ def main(config: str):
 
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
-    statistics_collector = StatisticsCollector(results_table_path)
 
+    statistics_collector = StatisticsCollector(results_table_path)
     path_to_weights = config.path_to_weights
     if path_to_weights is not None:
         path_to_weights = Path(path_to_weights).absolute()
