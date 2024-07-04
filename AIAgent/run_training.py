@@ -93,8 +93,6 @@ def model_saver(epochs_info: EpochsInfo, dir: Path, model: torch.nn.Module):
 
 
 def run_training(
-    # svm_configs: list[SVMConfig],
-    # datasets_of_platforms: dict[PlatformName, DatasetConfig],
     platforms_config: list[Platform],
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
