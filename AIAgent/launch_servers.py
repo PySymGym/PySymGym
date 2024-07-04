@@ -15,9 +15,15 @@ import psutil
 from aiohttp import web
 import yaml
 
-from common.classes import SVMInfo
+from common.classes import Config
 from config import BrokerConfig, FeatureConfig, GeneralConfig
-from connection.broker_conn.classes import ServerInstanceInfo, Undefined, WSUrl
+from connection.broker_conn.classes import (
+    SVMInfo,
+    ServerInstanceInfo,
+    SingleSVMInfo,
+    Undefined,
+    WSUrl,
+)
 
 routes = web.RouteTableDef()
 logging.basicConfig(
@@ -46,13 +52,23 @@ def next_free_port(
     raise IOError("no free ports")
 
 
+async def wait_for_port(port, timeout=10):
+    start_time = time.time()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while time.time() - start_time < timeout:
+        if sock.connect_ex(("", port)) == 0:
+            return True
+        await asyncio.sleep(0.1)
+    return False
+
+
 @routes.get("/get_ws")
 async def dequeue_instance(request):
     try:
         server_info = SERVER_INSTANCES.get(block=False)
         assert server_info.pid is Undefined
         server_info = await run_server_instance(
-            request.query,
+            SingleSVMInfo(**request.query),
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
@@ -108,13 +124,14 @@ def get_socket_url(port: int) -> WSUrl:
 
 
 async def run_server_instance(
-    svm_info: SVMInfo, should_start_server: bool
+    svm_info: SingleSVMInfo, should_start_server: bool
 ) -> ServerInstanceInfo:
-    svm_info = SVMInfo.from_dict(svm_info)
-
     svm_name = svm_info.name
     launch_command = svm_info.launch_command
-    launcher = lambda port: launch_command.format(port=port)
+
+    def launcher(port):
+        return launch_command.format(port=port)
+
     min_port = svm_info.min_port
     max_port = svm_info.max_port
     server_working_dir = svm_info.server_working_dir
@@ -132,20 +149,11 @@ async def run_server_instance(
             cwd=Path(server_working_dir).absolute(),
         )
         logging.info("bash exec cmd: " + launch_server)
-        _ = proc.stdout.readline()
-        proc_out = proc.stdout.readline().decode("utf-8").strip("\n")
-
-        return proc, port, proc_out
+        return proc, port
 
     async with avoid_same_free_port_lock:
-        proc, port, proc_out = start_server()
-
-        while FAILED_TO_INSTANTIATE_ERROR in proc_out:
-            logging.warning(
-                f"{port=} was already in use, caught {proc_out}, trying new port..."
-            )
-            proc, port, proc_out = start_server()
-    print(proc_out)
+        proc, port = start_server()
+        await wait_for_port(port)
 
     server_pid = proc.pid
     PROCS.append(server_pid)
@@ -161,10 +169,10 @@ async def run_servers(svms_info: list[SVMInfo]) -> list[ServerInstanceInfo]:
     svms_info_sep = []
     for svm_info in svms_info:
         count = svm_info.count
-        svm_info.count = 1
-        svms_info_sep.extend(count * [svm_info])
+        single_svm_info = svm_info.create_single_svm_info()
+        svms_info_sep.extend(count * [single_svm_info])
 
-    async def run(svm_info: SVMInfo):
+    async def run(svm_info: SingleSVMInfo):
         server_info = await run_server_instance(svm_info, should_start_server=False)
         servers_start_tasks.append(server_info)
 
@@ -223,10 +231,14 @@ def main(config: str):
     RESULTS = []
 
     with open(config, "r") as file:
-        svms_info_config = yaml.safe_load(file)
+        trainings_parameters = yaml.safe_load(file)
+    config: Config = Config(**trainings_parameters)
 
     svms_info = list(
-        map(lambda svm_info: SVMInfo.from_dict(svm_info["SVMConfig"]), svms_info_config)
+        map(
+            lambda platform: platform.SVMInfo,
+            config.Platforms,
+        )
     )
 
     with server_manager(SERVER_INSTANCES, svms_info):

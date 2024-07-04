@@ -2,7 +2,7 @@ import logging
 from time import perf_counter
 from typing import TypeAlias
 
-from common.classes import GameResult, Map2Result, SVMInfo
+from common.classes import GameResult, Map2Result
 from common.game import GameMap, GameState
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
@@ -138,7 +138,6 @@ def play_map_with_timeout(
 
 
 def play_game(
-    svm_info: SVMInfo,
     with_predictor: Predictor,
     max_steps: int,
     maps: list[GameMap],
@@ -154,7 +153,7 @@ def play_game(
                 if FeatureConfig.DUMP_BY_TIMEOUT.enabled
                 else play_map
             )
-            with game_server_socket_manager(svm_info) as ws:
+            with game_server_socket_manager(game_map.SVMInfo) as ws:
                 game_result, time = play_func(
                     with_connector=Connector(ws, game_map, max_steps),
                     with_predictor=with_predictor,

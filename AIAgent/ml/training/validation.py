@@ -1,14 +1,12 @@
 import multiprocessing as mp
-from functools import partial
-from multiprocessing.managers import AutoProxy
+from functools import wraps
 from typing import Callable
 
 import numpy as np
 import torch
 import tqdm
-from common.classes import SVMInfo
-from config import GeneralConfig
 from epochs_statistics import StatisticsCollector
+from config import GeneralConfig
 from ml.inference import infer
 from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
@@ -16,10 +14,22 @@ from ml.training.wrapper import TrainingModelWrapper
 from torch_geometric.loader import DataLoader
 
 
-def play_game_task(svm_info: SVMInfo, task):
+def catch_return_exception(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return e
+
+    return wrapper
+
+
+@catch_return_exception
+def play_game_task(task):
     maps, dataset, wrapper = task
+
     result = play_game(
-        svm_info=svm_info,
         with_predictor=wrapper,
         max_steps=GeneralConfig.MAX_STEPS,
         maps=maps,
@@ -30,11 +40,10 @@ def play_game_task(svm_info: SVMInfo, task):
 
 
 def validate_coverage(
-    svm_info: SVMInfo,
-    statistics_collector: "AutoProxy[StatisticsCollector]",
+    statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
-    epoch: int,
     dataset: TrainingDataset,
+    server_count: int,
     progress_bar_colour: str = "#ed95ce",
 ):
     """
@@ -42,28 +51,36 @@ def validate_coverage(
 
     Parameters
     ----------
+    statistics_collector: StatisticsCollector
+        Collects statistics of training session.
     model : torch.nn.Module
         Model to evaluate
-    epoch : int
-        Epoch number to write result.
     dataset : TrainingDataset
         Dataset object for validation.
+    server_count: int
+        The number of game servers running in parallel.
     progress_bar_colour : str
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
     tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
-    server_count = svm_info.count
+    error = None
+
     with mp.Pool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
-            p.imap_unordered(partial(play_game_task, svm_info), tasks, chunksize=1),
+            p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
             total=len(tasks),
             ncols=100,
             colour=progress_bar_colour,
         ):
-            all_results.extend(result)
+            if isinstance(result, Exception):
+                error = result  # it is not possible to raise an exception here or to terminate pool due to the pool hanging
+            else:
+                all_results.extend(result)
+    if isinstance(error, Exception):
+        raise error
 
     print(
         "Average dataset state result",
@@ -84,9 +101,7 @@ def validate_coverage(
             )
         )
     )
-    statistics_collector.update_results(
-        epoch, svm_info.name, average_result, all_results
-    )
+    statistics_collector.update_results(average_result, all_results)
     return average_result
 
 
