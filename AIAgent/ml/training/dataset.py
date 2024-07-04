@@ -48,7 +48,12 @@ VertexMap: TypeAlias = Dict[VertexId, VertexIndex]
 MapName: TypeAlias = str
 Result = namedtuple(
     "Result",
-    ["CoveragePercent", "NegativeTestsNumber", "NegativeStepsNumber", "ErrorsNumber"],
+    [
+        "coverage_percent",
+        "negative_tests_number",
+        "negative_steps_number",
+        "errors_number",
+    ],
 )
 StatesDistribution: TypeAlias = torch.tensor
 
@@ -175,7 +180,7 @@ class TrainingDataset(Dataset):
         for map_name in os.listdir(self.processed_dir):
             if map_name in self.maps_results:
                 if (
-                    self.maps_results[map_name].CoveragePercent
+                    self.maps_results[map_name].coverage_percent
                     >= self.threshold_coverage
                 ):
                     all_steps_paths = [
@@ -229,10 +234,10 @@ class TrainingDataset(Dataset):
             f.close()
             result = tuple(map(lambda x: int(x), result.split()))
             return Result(
-                CoveragePercent=result[0],
-                NegativeTestsNumber=-result[1],
-                NegativeStepsNumber=-result[2],
-                ErrorsNumber=result[3],
+                coverage_percent=result[0],
+                negative_tests_number=-result[1],
+                negative_steps_number=-result[2],
+                errors_number=result[3],
             )
 
         def get_step_raw_ids(map_name: str) -> List[str]:
@@ -250,8 +255,8 @@ class TrainingDataset(Dataset):
                 ncols=100,
                 colour=self._progress_bar_colour,
             ):
-                raw_map_path = Path(os.path.join(self.raw_dir, map_name))
-                processed_map_path = Path(os.path.join(self.processed_dir, map_name))
+                raw_map_path = Path(self.raw_dir / map_name)
+                processed_map_path = Path(self.processed_dir / map_name)
                 if not processed_map_path.exists():
                     os.makedirs(processed_map_path)
 
@@ -276,7 +281,7 @@ class TrainingDataset(Dataset):
 
     def process_and_save_step(
         self, raw_map_path: Path, processed_map_path: Path, ids: tuple[str, int]
-    ) -> Step:
+    ) -> bool:
         def get_states_distribution(
             file_path: str, state_map: StateMap
         ) -> StatesDistribution:
@@ -389,7 +394,7 @@ class TrainingDataset(Dataset):
         if map_name in self.maps_results.keys():
             if (
                 self.maps_results[map_name] == map_result
-                and map_result.CoveragePercent == 100
+                and map_result.coverage_percent == 100
             ):
                 init_steps_num = (
                     len(os.listdir(os.path.join(self.processed_dir, map_name))) - 1

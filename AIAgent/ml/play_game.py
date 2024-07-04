@@ -120,10 +120,10 @@ def play_map(
     )
     if with_dataset is not None:
         map_result = Result(
-            CoveragePercent=model_result.actual_coverage_percent,
-            NegativeTestsNumber=-model_result.tests_count,
-            NegativeStepsNumber=-model_result.steps_count,
-            ErrorsNumber=model_result.errors_count,
+            coverage_percent=model_result.actual_coverage_percent,
+            negative_tests_number=-model_result.tests_count,
+            negative_steps_number=-model_result.steps_count,
+            errors_number=model_result.errors_count,
         )
         with_dataset.update_map(with_connector.map.MapName, map_result, map_steps)
     del map_steps
