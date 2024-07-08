@@ -13,7 +13,7 @@
       "StepsToStart": 50,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
       "NameOfObjectToCover":"maps.manuallycollected.BubbleSort.sort",
-      "MapName":"Java.BubbleSort.sort_0"
+      "MapName":"Java.BubbleSort.sort_50_BFS"
    },
    {
       "StepsToPlay": 400,
