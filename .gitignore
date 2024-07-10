@@ -165,3 +165,7 @@ cython_debug/
 *report/
 
 .mono/
+
+*.user
+
+*.jar
