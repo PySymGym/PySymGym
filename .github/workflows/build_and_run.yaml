@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build-and-launch:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
