@@ -1,27 +1,26 @@
-Platforms:
-  - name: dotnet
-    DatasetConfigs:
-      - dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
-        dataset_description: ../workflow/dataset_for_tests_net.json
-    SVMInfo:
-      name: VSharp
-      count: 1
-      launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
-      min_port: 35000
-      max_port: 35050
-      server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
-
-  - name: java
-    DatasetConfigs:
-      - dataset_base_path: ../maps/Java/Maps/
-        dataset_description: ../workflow/dataset_for_tests_java.json
-    SVMInfo:
-      name: usvm
-      count: 1
-      launch_command: java -jar app.jar --mode server --port {port}
-      min_port: 35100
-      max_port: 35150
-      server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/
+ServersConfig:
+  Platforms:
+    - name: dotnet
+      DatasetConfigs:
+        - dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
+          dataset_description: ../workflow/dataset_for_tests_net.json
+      SVMSInfo:
+        - name: VSharp
+          launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
+          min_port: 35000
+          max_port: 35050
+          server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+    - name: java
+      DatasetConfigs:
+        - dataset_base_path: ../maps/Java/Maps/
+          dataset_description: ../workflow/dataset_for_tests_java.json
+      SVMSInfo:
+        - name: usvm
+          launch_command: java -jar app.jar --mode server --port {port}
+          min_port: 35100
+          max_port: 35150
+          server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/
+  count: 1
 OptunaConfig:
   n_startup_trials: 1
   n_trials: 1
