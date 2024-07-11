@@ -61,4 +61,4 @@ class Config:
     @field_validator("path_to_weights", mode="before")
     @classmethod
     def transform(cls, input: Optional[str]) -> Optional[Path]:
-        return Path(input).absolute() if input is not None else None
+        return Path(input).resolve() if input is not None else None
