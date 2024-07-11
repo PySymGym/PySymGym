@@ -21,14 +21,14 @@ class DatasetConfig:
 @pydantic_dataclass
 class Platform:
     name: PlatformName
-    DatasetConfigs: list[DatasetConfig]
-    SVMSInfo: list[SVMInfo]
+    dataset_configs: list[DatasetConfig] = Field(alias="DatasetConfigs")
+    svms_info: list[SVMInfo] = Field(alias="SVMSInfo")
 
 
 @pydantic_dataclass
 class ServersConfig:
-    Platforms: list[Platform]
     count: int
+    platforms: list[Platform] = Field(alias="Platforms")
 
 
 @pydantic_dataclass
@@ -53,9 +53,9 @@ class TrainingConfig:
 
 @pydantic_dataclass
 class Config:
-    ServersConfig: ServersConfig
-    OptunaConfig: OptunaConfig
-    TrainingConfig: TrainingConfig
+    servers_config: ServersConfig = Field(alias="ServersConfig")
+    optuna_config: OptunaConfig = Field(alias="OptunaConfig")
+    training_config: TrainingConfig = Field(alias="TrainingConfig")
     path_to_weights: Optional[Path] = Field(default=None)
 
     @field_validator("path_to_weights", mode="before")

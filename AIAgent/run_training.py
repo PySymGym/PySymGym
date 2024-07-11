@@ -88,10 +88,10 @@ def run_training(
     )
 
     maps: list[GameMap] = list()
-    for platform in servers_config.Platforms:
-        svms_info = platform.SVMSInfo
+    for platform in servers_config.platforms:
+        svms_info = platform.svms_info
         for svm_info in svms_info:
-            for dataset_config in platform.DatasetConfigs:
+            for dataset_config in platform.dataset_configs:
                 dataset_base_path = dataset_config.dataset_base_path
                 dataset_description = dataset_config.dataset_description
                 with open(dataset_description, "r") as maps_json:
@@ -241,9 +241,9 @@ def main(config: str):
         path_to_weights = Path(path_to_weights).absolute()
 
     run_training(
-        servers_config=config.ServersConfig,
-        optuna_config=config.OptunaConfig,
-        training_config=config.TrainingConfig,
+        servers_config=config.servers_config,
+        optuna_config=config.optuna_config,
+        training_config=config.training_config,
         path_to_weights=path_to_weights,
         logfile_base_name=logfile_base_name,
         statistics_collector=statistics_collector,

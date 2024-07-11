@@ -226,7 +226,7 @@ def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
     config: Config = Config(**trainings_parameters)
-    server_count = config.ServersConfig.count
+    server_count = config.servers_config.count
 
     with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()
