@@ -5,7 +5,7 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-from common.errors import GameError
+from common.errors import GamesError
 from epochs_statistics import StatisticsCollector
 from config import GeneralConfig
 from ml.inference import infer
@@ -65,7 +65,6 @@ def validate_coverage(
     """
     wrapper = TrainingModelWrapper(model)
     tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
-    error: Exception | None = None
     with mp.Pool(server_count) as p:
         all_results = []
         for result in tqdm.tqdm(
@@ -75,16 +74,10 @@ def validate_coverage(
             ncols=100,
             colour=progress_bar_colour,
         ):
-            if isinstance(result, GameError):
+            if isinstance(result, GamesError):
                 statistics_collector.fail(result.maps)
-            elif isinstance(
-                result, Exception  # that means that error is not handled
-            ):  # it is not possible to raise an exception here or to terminate pool due to the pool hanging
-                error = result
             else:
                 all_results.extend(result)
-    if isinstance(error, Exception):
-        raise error
     print(
         "Average dataset state result",
         np.average(

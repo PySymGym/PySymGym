@@ -1,8 +1,9 @@
 import logging
 from time import perf_counter
+import traceback
 from typing import TypeAlias
 
-from common.errors import GameError
+from common.errors import GamesError
 from common.classes import GameResult, Map2Result
 from common.game import GameMap, GameState
 from config import FeatureConfig
@@ -145,7 +146,7 @@ def play_game(
     with_dataset: TrainingDataset,
 ):
     list_of_map2result: list[Map2Result] = []
-    list_of_failed_maps_with_msgs: list[tuple[str, GameError]] = []
+    list_of_failed_maps_with_errors: list[tuple[GameMap, Exception]] = []
     for game_map in maps:
         logging.info(f"<{with_predictor.name()}> is playing {game_map.MapName}")
         try:
@@ -166,21 +167,18 @@ def play_game(
                 f"actual coverage: {game_result.actual_coverage_percent:.2f}"
             )
             list_of_map2result.append(Map2Result(game_map, game_result))
-        except (FunctionTimedOut, RuntimeError) as e:
-            if isinstance(e, FunctionTimedOut):
-                log_message = f"<{with_predictor.name()}> timeouted on map {game_map.MapName} with {e.timedOutAfter}s"
+        except (FunctionTimedOut, Exception) as error:
+            if isinstance(error, FunctionTimedOut):
+                log_message = f"<{with_predictor.name()}> timeouted on map {game_map.MapName} with {error.timedOutAfter}s"
             else:
-                log_message = f"<{with_predictor.name()}> failed on map {game_map.MapName}: {str(e)}"
+                log_message = f"<{with_predictor.name()}> failed on map {game_map.MapName}:\n{traceback.format_exc()}"
             logging.warning(log_message)
-            list_of_failed_maps_with_msgs.append((str(e), game_map))
-    if list_of_failed_maps_with_msgs:
+            list_of_failed_maps_with_errors.append((game_map, error))
+    if list_of_failed_maps_with_errors:
         FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
             with_predictor.model(), with_name=f"{with_predictor.name()}"
         )
-        msgs_concat = "\n".join(
-            map(lambda pair: pair[0], list_of_failed_maps_with_msgs)
-        )
-        raise GameError(
-            msgs_concat, list(map(lambda pair: pair[1], list_of_failed_maps_with_msgs))
-        )
+        failed_maps, errors = list(zip(*list_of_failed_maps_with_errors))
+        raise GamesError(errors, failed_maps)
+
     return list_of_map2result
