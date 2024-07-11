@@ -72,7 +72,7 @@
       "MapName":"Java.QuickSort.main_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":10000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
