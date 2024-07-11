@@ -14,6 +14,7 @@ import numpy as np
 import optuna
 import torch
 import yaml
+from ml.training.early_stopping import EarlyStopping
 from common.config import (
     Config,
     OptunaConfig,
@@ -132,7 +133,7 @@ def run_training(
         server_count=servers_config.count,
     )
     try:
-        if optuna_config.path_to_study is None:
+        if optuna_config.path_to_study is None and path_to_weights is None:
 
             def save_study(study, _):
                 joblib.dump(
@@ -180,6 +181,11 @@ def objective(
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
+        early_stopping_state_len=5,
+        tolerance=0.01,
+    )
+    early_stopping = EarlyStopping(
+        state_len=config.early_stopping_state_len, tolerance=config.tolerance
     )
 
     model = model_init(
@@ -231,6 +237,11 @@ def objective(
         ]  # delete failed maps
         if dynamic_dataset:
             dataset.update_meta_data()
+        epochs_info.next()
+        if not early_stopping.is_continue(result):
+            break
+        
+    statistics_collector.finish()
     return result
 
 

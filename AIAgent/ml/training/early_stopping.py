@@ -12,4 +12,6 @@ class EarlyStopping:
         if abs((sum(self._state) / self._state_len) - state_value) < self._tolerance:
             return False
         else:
+            self._state.pop(0)
+            self._state.append(state_value)
             return True
