@@ -3,7 +3,7 @@ from time import perf_counter
 import traceback
 from typing import TypeAlias
 
-from common.errors import GamesError
+from common.errors import GameErrors
 from common.classes import GameResult, Map2Result
 from common.game import GameMap, GameState
 from config import FeatureConfig
@@ -179,6 +179,6 @@ def play_game(
             with_predictor.model(), with_name=f"{with_predictor.name()}"
         )
         failed_maps, errors = list(zip(*list_of_failed_maps_with_errors))
-        raise GamesError(errors, failed_maps)
+        raise GameErrors(errors, failed_maps)
 
     return list_of_map2result

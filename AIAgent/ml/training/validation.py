@@ -5,7 +5,7 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-from common.errors import GamesError
+from common.errors import GameErrors
 from epochs_statistics import StatisticsCollector
 from config import GeneralConfig
 from ml.inference import infer
@@ -74,7 +74,7 @@ def validate_coverage(
             ncols=100,
             colour=progress_bar_colour,
         ):
-            if isinstance(result, GamesError):
+            if isinstance(result, GameErrors):
                 statistics_collector.fail(result.maps)
             else:
                 all_results.extend(result)
