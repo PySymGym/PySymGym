@@ -38,7 +38,7 @@ from paths import (
 )
 from ml.training.train import train
 from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation import validate_coverage
+from ml.training.validation import validate_coverage, validate_loss
 from torch import nn
 from torch_geometric.loader import DataLoader
 
@@ -68,6 +68,8 @@ class TrialSettings:
     num_of_state_features: int
     hidden_channels: int
     normalization: bool
+    early_stopping_state_len: int
+    tolerance: float
 
 
 def run_training(
@@ -134,7 +136,6 @@ def run_training(
     )
     try:
         if optuna_config.path_to_study is None and path_to_weights is None:
-
             def save_study(study, _):
                 joblib.dump(
                     study,
@@ -225,23 +226,19 @@ def objective(
 
         model.eval()
         dataset.switch_to("val")
-        result = validate_coverage(
-            statistics_collector=statistics_collector,
-            model=model,
-            dataset=dataset,
-            server_count=server_count,
-        )
-        failed_maps = statistics_collector.get_failed_maps()
-        dataset.maps = [
-            _map for _map in dataset.maps if _map not in failed_maps
-        ]  # delete failed maps
+        # result = validate_coverage(
+        #     statistics_collector=statistics_collector,
+        #     model=model,
+        #     dataset=dataset,
+        #     server_count=server_count,
+        # )
+        result = validate_loss(model, epoch, dataset, criterion)
         if dynamic_dataset:
             dataset.update_meta_data()
-        epochs_info.next()
         if not early_stopping.is_continue(result):
+            print(f"Training was stopped on {epoch} epoch.")
             break
-        
-    statistics_collector.finish()
+
     return result
 
 
