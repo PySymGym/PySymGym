@@ -63,3 +63,16 @@ class Config:
     @classmethod
     def transform(cls, input: Optional[str]) -> Optional[Path]:
         return Path(input).resolve() if input is not None else None
+
+    @field_validator("optuna_config", mode="before")
+    @classmethod
+    def check_if_both_none(cls, optuna_config: OptunaConfig):
+        if (
+            cls.path_to_weights is None
+            and optuna_config.path_to_study is None
+            or cls.path_to_weights is not None
+            and optuna_config.path_to_study is not None
+        ):
+            return optuna_config
+        else:
+            raise ValueError("Path to optuna study and path to weights can be either None or not None at the same time.")
