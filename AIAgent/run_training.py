@@ -3,24 +3,26 @@ import json
 import logging
 import multiprocessing as mp
 import os
-import mlflow
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 import joblib
+import mlflow
 import numpy as np
 import optuna
 import torch
 import yaml
-from ml.training.early_stopping import EarlyStopping
 from common.config import (
     Config,
     OptunaConfig,
     ServersConfig,
     TrainingConfig,
+    ValidationConfig,
+    ValidationWithLoss,
+    ValidationWithSVMs,
 )
 from common.game import GameMap
 from config import GeneralConfig
@@ -28,6 +30,10 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
 from ml.training.dataset import TrainingDataset
+from ml.training.early_stopping import EarlyStopping
+from ml.training.train import train
+from ml.training.utils import create_file, create_folders_if_necessary
+from ml.training.validation import validate_coverage, validate_loss
 from paths import (
     LOG_PATH,
     OPTUNA_STUDIES_PATH,
@@ -36,12 +42,8 @@ from paths import (
     TRAINED_MODELS_PATH,
     TRAINING_RESULTS_PATH,
 )
-from ml.training.train import train
-from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation import validate_coverage, validate_loss
 from torch import nn
 from torch_geometric.loader import DataLoader
-from common.config import ValidationWithLoss, ValidationWithSVMs, ValidationConfig
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -61,8 +63,6 @@ class TrialSettings:
     lr: float
     epochs: int
     batch_size: int
-    optimizer: torch.optim.Optimizer
-    loss: any
     random_seed: int
     num_hops_1: int
     num_hops_2: int
@@ -173,10 +173,6 @@ def objective(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 8, 1800),
         epochs=epochs,
-        optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
-        loss=trial.suggest_categorical(
-            "loss", [lambda: nn.KLDivLoss(reduction="batchmean")]
-        ),
         random_seed=937,
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
         num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
@@ -198,8 +194,8 @@ def objective(
     )
     model.to(GeneralConfig.DEVICE)
 
-    optimizer = config.optimizer(model.parameters(), lr=config.lr)
-    criterion = config.loss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+    criterion = nn.KLDivLoss(reduction="batchmean")
 
     if isinstance(val_config.validation, ValidationWithLoss):
         def validate(model, dataset):
