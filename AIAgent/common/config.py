@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from pydantic import Field, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
@@ -27,16 +27,13 @@ class Platform:
 
 @pydantic_dataclass
 class ServersConfig:
-    count: int
     platforms: list[Platform] = Field(alias="Platforms")
 
 
 @pydantic_dataclass
 class OptunaConfig:
-    n_startup_trials: (
-        int  # number of initial trials with random sampling for optuna's TPESampler
-    )
-    n_trials: int  # number of optuna's trials
+    n_startup_trials: int
+    n_trials: int
     n_jobs: int
     study_direction: str
     path_to_study: Optional[Path] = Field(default=None)
@@ -53,10 +50,35 @@ class TrainingConfig:
 
 
 @pydantic_dataclass
+class ValidationWithLoss:
+    val_type: Literal["loss"]
+    batch_size: int
+
+
+@pydantic_dataclass
+class ValidationWithSVMs:
+    val_type: Literal["svms"]
+    servers_count: int
+
+
+@pydantic_dataclass
+class ValidationConfig:
+    validation: Union[ValidationWithLoss, ValidationWithSVMs] = Field(discriminator="val_type")
+
+
+@pydantic_dataclass
+class MLFlowConfig:
+    experiment_name: str
+    tracking_uri: Optional[str] = Field(default=None)
+
+
+@pydantic_dataclass
 class Config:
     servers_config: ServersConfig = Field(alias="ServersConfig")
     optuna_config: OptunaConfig = Field(alias="OptunaConfig")
     training_config: TrainingConfig = Field(alias="TrainingConfig")
+    validation_config: ValidationConfig = Field(alias="ValidationConfig")
+    mlflow_config: MLFlowConfig = Field(alias="MLFlowConfig")
     path_to_weights: Optional[Path] = Field(default=None)
 
     @field_validator("path_to_weights", mode="before")
@@ -75,4 +97,6 @@ class Config:
         ):
             return optuna_config
         else:
-            raise ValueError("Path to optuna study and path to weights can be either None or not None at the same time.")
+            raise ValueError(
+                "Path to optuna study and path to weights can be either None or not None at the same time."
+            )

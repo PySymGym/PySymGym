@@ -3,7 +3,8 @@ import json
 import logging
 import multiprocessing as mp
 import os
-from dataclasses import dataclass
+import mlflow
+from dataclasses import dataclass, asdict
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -23,7 +24,6 @@ from common.config import (
 )
 from common.game import GameMap
 from config import GeneralConfig
-from epochs_statistics import StatisticsCollector
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
@@ -41,6 +41,7 @@ from ml.training.utils import create_file, create_folders_if_necessary
 from ml.training.validation import validate_coverage, validate_loss
 from torch import nn
 from torch_geometric.loader import DataLoader
+from common.config import ValidationWithLoss, ValidationWithSVMs, ValidationConfig
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -76,9 +77,9 @@ def run_training(
     servers_config: ServersConfig,
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
+    validation_config: ValidationConfig,
     path_to_weights: Optional[Path],
     logfile_base_name: str,
-    statistics_collector: StatisticsCollector,
 ):
     models_path = os.path.join(TRAINED_MODELS_PATH, logfile_base_name)
     os.makedirs(models_path)
@@ -126,16 +127,16 @@ def run_training(
 
     objective_partial = partial(
         objective,
-        statistics_collector=statistics_collector,
         dataset=dataset,
         dynamic_dataset=training_config.dynamic_dataset,
         model_init=model_init,
         epochs=training_config.epochs,
         models_path=models_path,
-        server_count=servers_config.count,
+        val_config=validation_config,
     )
     try:
         if optuna_config.path_to_study is None and path_to_weights is None:
+
             def save_study(study, _):
                 joblib.dump(
                     study,
@@ -157,25 +158,25 @@ def run_training(
             objective_partial(study.best_trial)
     except RuntimeError:
         logging.error("Fail to train")
-        statistics_collector.fail()
 
 
 def objective(
     trial: optuna.Trial,
-    statistics_collector: StatisticsCollector,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
     model_init: Callable[[Any], nn.Module],
     epochs: int,
     models_path: str,
-    server_count: int,
+    val_config: ValidationConfig,
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 8, 1800),
         epochs=epochs,
         optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
-        loss=trial.suggest_categorical("loss", [lambda: nn.KLDivLoss(reduction="batchmean")]),
+        loss=trial.suggest_categorical(
+            "loss", [lambda: nn.KLDivLoss(reduction="batchmean")]
+        ),
         random_seed=937,
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
         num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
@@ -188,7 +189,6 @@ def objective(
     early_stopping = EarlyStopping(
         state_len=config.early_stopping_state_len, tolerance=config.tolerance
     )
-
     model = model_init(
         hidden_channels=config.hidden_channels,
         num_of_state_features=config.num_of_state_features,
@@ -200,44 +200,39 @@ def objective(
 
     optimizer = config.optimizer(model.parameters(), lr=config.lr)
     criterion = config.loss()
-    statistics_collector.start_training_session(
-        batch_size=config.batch_size,
-        lr=config.lr,
-        num_hops_1=config.num_hops_1,
-        num_hops_2=config.num_hops_2,
-        num_of_state_features=config.num_of_state_features,
-        epochs=config.epochs,
-    )
+
+    if isinstance(val_config.validation, ValidationWithLoss):
+        def validate(model, dataset):
+            return validate_loss(model, dataset, criterion, val_config.validation.batch_size)
+    elif isinstance(val_config.validation, ValidationWithSVMs):
+        def validate(model, dataset):
+            return validate_coverage(model, dataset, val_config.validation.servers_count)
 
     np.random.seed(config.random_seed)
-    for epoch in range(config.epochs):
-        dataset.switch_to("train")
-        train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
-        model.train()
-        train(
-            dataloader=train_dataloader,
-            model=model,
-            optimizer=optimizer,
-            criterion=criterion,
-        )
-        torch.cuda.empty_cache()
-        path_to_model = os.path.join(models_path, str(epoch + 1))
-        torch.save(model.state_dict(), Path(path_to_model))
+    with mlflow.start_run():
+        mlflow.log_params(asdict(config))
+        for epoch in range(config.epochs):
+            dataset.switch_to("train")
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
+            model.train()
+            train(
+                dataloader=train_dataloader,
+                model=model,
+                optimizer=optimizer,
+                criterion=criterion,
+            )
+            torch.cuda.empty_cache()
+            path_to_model = os.path.join(models_path, str(epoch + 1))
+            torch.save(model.state_dict(), Path(path_to_model))
 
-        model.eval()
-        dataset.switch_to("val")
-        # result = validate_coverage(
-        #     statistics_collector=statistics_collector,
-        #     model=model,
-        #     dataset=dataset,
-        #     server_count=server_count,
-        # )
-        result = validate_loss(model, epoch, dataset, criterion)
-        if dynamic_dataset:
-            dataset.update_meta_data()
-        if not early_stopping.is_continue(result):
-            print(f"Training was stopped on {epoch} epoch.")
-            break
+            model.eval()
+            dataset.switch_to("val")
+            result = validate(model, dataset)
+            if dynamic_dataset:
+                dataset.update_meta_data()
+            if not early_stopping.is_continue(result):
+                print(f"Training was stopped on {epoch} epoch.")
+                break
 
     return result
 
@@ -247,13 +242,16 @@ def main(config: str):
         config: Config = Config(**yaml.safe_load(file))
     timestamp = datetime.now().timestamp()
     logfile_base_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
-    results_table_path = os.path.join(TRAINING_RESULTS_PATH, logfile_base_name + ".log")
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
 
-    statistics_collector = StatisticsCollector(results_table_path)
+    mlflow_config = config.mlflow_config
+    if mlflow_config.tracking_uri is not None:
+        mlflow.set_tracking_uri(uri=mlflow_config.tracking_uri)
+    mlflow.set_experiment(mlflow_config.experiment_name)
+
     path_to_weights = config.path_to_weights
     if path_to_weights is not None:
         path_to_weights = Path(path_to_weights).absolute()
@@ -262,9 +260,9 @@ def main(config: str):
         servers_config=config.servers_config,
         optuna_config=config.optuna_config,
         training_config=config.training_config,
+        validation_config=config.validation_config,
         path_to_weights=path_to_weights,
         logfile_base_name=logfile_base_name,
-        statistics_collector=statistics_collector,
     )
 
 

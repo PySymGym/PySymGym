@@ -5,6 +5,7 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
+import mlflow
 from common.errors import GameErrors
 from epochs_statistics import StatisticsCollector
 from config import GeneralConfig
@@ -41,7 +42,6 @@ def play_game_task(task):
 
 
 def validate_coverage(
-    statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
     dataset: TrainingDataset,
     server_count: int,
@@ -75,7 +75,7 @@ def validate_coverage(
             colour=progress_bar_colour,
         ):
             if isinstance(result, GameErrors):
-                statistics_collector.fail(result.maps)
+                print("statistics_collector.fail(result.maps)")
             else:
                 all_results.extend(result)
     print(
@@ -97,19 +97,18 @@ def validate_coverage(
             )
         )
     )
-    statistics_collector.update_results(average_result, all_results)
     return average_result
 
 
 def validate_loss(
     model: torch.nn.Module,
-    epoch: int,
     dataset: TrainingDataset,
     criterion: Callable,
+    batch_size: int,
     progress_bar_colour: str = "#975cdb",
 ):
     epoch_loss = []
-    dataloader = DataLoader(dataset, batch_size=2000)
+    dataloader = DataLoader(dataset, batch_size=batch_size)
     for batch in tqdm.tqdm(
         dataloader, desc="test", ncols=100, colour=progress_bar_colour
     ):
@@ -118,5 +117,6 @@ def validate_loss(
         loss: torch.Tensor = criterion(out, batch.y_true)
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
-    print(f"Epoch {epoch}: {result}")
+    metric_name = str(criterion).replace("(", "_").replace(")", "_")
+    mlflow.log_metric(metric_name, result)
     return result
