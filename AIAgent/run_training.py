@@ -235,8 +235,6 @@ def objective(
 def main(config: str):
     with open(config, "r") as file:
         config: Config = Config(**yaml.safe_load(file))
-    timestamp = datetime.now().timestamp()
-    logfile_base_name = f"{datetime.fromtimestamp(timestamp)}_Adam_KLDL"
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)
@@ -257,7 +255,6 @@ def main(config: str):
         training_config=config.training_config,
         validation_config=config.validation_config,
         path_to_weights=path_to_weights,
-        logfile_base_name=logfile_base_name,
     )
 
 
