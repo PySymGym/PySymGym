@@ -198,11 +198,11 @@ def objective(
     criterion = nn.KLDivLoss(reduction="batchmean")
 
     if isinstance(val_config.validation, ValidationWithLoss):
-        def validate(model, dataset):
-            return validate_loss(model, dataset, criterion, val_config.validation.batch_size)
+        def validate(model, dataset, epoch):
+            return validate_loss(model, dataset, epoch, criterion, val_config.validation.batch_size)
     elif isinstance(val_config.validation, ValidationWithSVMs):
-        def validate(model, dataset):
-            return validate_coverage(model, dataset, val_config.validation.servers_count)
+        def validate(model, dataset, epoch):
+            return validate_coverage(model, dataset, epoch, val_config.validation.servers_count)
 
     np.random.seed(config.random_seed)
     with mlflow.start_run():
@@ -223,7 +223,7 @@ def objective(
 
             model.eval()
             dataset.switch_to("val")
-            result = validate(model, dataset)
+            result = validate(model, dataset, epoch)
             if dynamic_dataset:
                 dataset.update_meta_data()
             if not early_stopping.is_continue(result):

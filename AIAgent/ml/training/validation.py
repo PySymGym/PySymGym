@@ -44,6 +44,7 @@ def play_game_task(task):
 def validate_coverage(
     model: torch.nn.Module,
     dataset: TrainingDataset,
+    epoch: int,
     server_count: int,
     progress_bar_colour: str = "#ed95ce",
 ):
@@ -103,6 +104,7 @@ def validate_coverage(
 def validate_loss(
     model: torch.nn.Module,
     dataset: TrainingDataset,
+    epoch: int,
     criterion: Callable,
     batch_size: int,
     progress_bar_colour: str = "#975cdb",
@@ -118,5 +120,5 @@ def validate_loss(
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
     metric_name = str(criterion).replace("(", "_").replace(")", "_")
-    mlflow.log_metric(metric_name, result)
+    mlflow.log_metric(metric_name, result, step=epoch)
     return result
