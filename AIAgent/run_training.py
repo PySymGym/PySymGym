@@ -36,11 +36,11 @@ from ml.training.utils import create_file, create_folders_if_necessary
 from ml.training.validation import validate_coverage, validate_loss
 from paths import (
     LOG_PATH,
-    OPTUNA_STUDIES_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
-    TRAINED_MODELS_PATH,
     TRAINING_RESULTS_PATH,
+    CURRENT_MODEL_PATH,
+    CURRENT_STUDY_PATH,
 )
 from torch import nn
 from torch_geometric.loader import DataLoader
@@ -53,9 +53,7 @@ logging.basicConfig(
 )
 
 
-create_folders_if_necessary(
-    [TRAINING_RESULTS_PATH, PROCESSED_DATASET_PATH, OPTUNA_STUDIES_PATH]
-)
+create_folders_if_necessary([TRAINING_RESULTS_PATH, PROCESSED_DATASET_PATH])
 
 
 @dataclass
@@ -79,11 +77,7 @@ def run_training(
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     path_to_weights: Optional[Path],
-    logfile_base_name: str,
 ):
-    models_path = os.path.join(TRAINED_MODELS_PATH, logfile_base_name)
-    os.makedirs(models_path)
-
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
     )
@@ -131,7 +125,6 @@ def run_training(
         dynamic_dataset=training_config.dynamic_dataset,
         model_init=model_init,
         epochs=training_config.epochs,
-        models_path=models_path,
         val_config=validation_config,
     )
     try:
@@ -140,8 +133,10 @@ def run_training(
             def save_study(study, _):
                 joblib.dump(
                     study,
-                    os.path.join(OPTUNA_STUDIES_PATH, f"{logfile_base_name}.pkl"),
+                    CURRENT_STUDY_PATH,
                 )
+                with mlflow.start_run(mlflow.last_active_run().info.run_id):
+                    mlflow.log_artifact(CURRENT_STUDY_PATH)
 
             study = optuna.create_study(
                 sampler=sampler, direction=optuna_config.study_direction
@@ -166,7 +161,6 @@ def objective(
     dynamic_dataset: bool,
     model_init: Callable[[Any], nn.Module],
     epochs: int,
-    models_path: str,
     val_config: ValidationConfig,
 ):
     config = TrialSettings(
@@ -198,11 +192,17 @@ def objective(
     criterion = nn.KLDivLoss(reduction="batchmean")
 
     if isinstance(val_config.validation, ValidationWithLoss):
+
         def validate(model, dataset, epoch):
-            return validate_loss(model, dataset, epoch, criterion, val_config.validation.batch_size)
+            return validate_loss(
+                model, dataset, epoch, criterion, val_config.validation.batch_size
+            )
     elif isinstance(val_config.validation, ValidationWithSVMs):
+
         def validate(model, dataset, epoch):
-            return validate_coverage(model, dataset, epoch, val_config.validation.servers_count)
+            return validate_coverage(
+                model, dataset, epoch, val_config.validation.servers_count
+            )
 
     np.random.seed(config.random_seed)
     with mlflow.start_run():
@@ -218,8 +218,8 @@ def objective(
                 criterion=criterion,
             )
             torch.cuda.empty_cache()
-            path_to_model = os.path.join(models_path, str(epoch + 1))
-            torch.save(model.state_dict(), Path(path_to_model))
+            torch.save(model.state_dict(), CURRENT_MODEL_PATH)
+            mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
             model.eval()
             dataset.switch_to("val")
@@ -229,7 +229,6 @@ def objective(
             if not early_stopping.is_continue(result):
                 print(f"Training was stopped on {epoch} epoch.")
                 break
-
     return result
 
 
