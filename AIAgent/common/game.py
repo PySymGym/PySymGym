@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 from dataclasses_json import config, dataclass_json
 from connection.broker_conn.classes import SVMInfo as SVMInfoT
 
@@ -74,7 +75,7 @@ class GameMap:
     NameOfObjectToCover: str
     DefaultSearcher: str
     MapName: str
-    SVMInfo: SVMInfoT = field(default=None, metadata=config(exclude=lambda x: True))
+    SVMInfo: Optional[SVMInfoT] = field(default=None, metadata=config(exclude=lambda x: True))
 
 
 @dataclass_json
