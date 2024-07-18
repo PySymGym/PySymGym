@@ -64,7 +64,7 @@ class Config:
     def transform(cls, input: Optional[str]) -> Optional[Path]:
         return Path(input).resolve() if input is not None else None
 
-    @field_validator("optuna_config", mode="before")
+    @field_validator("optuna_config", mode="after")
     @classmethod
     def check_if_both_none(cls, optuna_config: OptunaConfig):
         if (

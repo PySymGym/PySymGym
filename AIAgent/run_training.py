@@ -175,7 +175,7 @@ def objective(
         batch_size=trial.suggest_int("batch_size", 8, 1800),
         epochs=epochs,
         optimizer=trial.suggest_categorical("optimizer", [torch.optim.Adam]),
-        loss=trial.suggest_categorical("loss", [nn.KLDivLoss]),
+        loss=trial.suggest_categorical("loss", [lambda: nn.KLDivLoss(reduction="batchmean")]),
         random_seed=937,
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
         num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
@@ -183,7 +183,7 @@ def objective(
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
         early_stopping_state_len=5,
-        tolerance=0.01,
+        tolerance=0.0001,
     )
     early_stopping = EarlyStopping(
         state_len=config.early_stopping_state_len, tolerance=config.tolerance
