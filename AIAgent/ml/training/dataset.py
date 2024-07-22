@@ -29,7 +29,7 @@ import tqdm
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
 
-from common.game import GameMap, GameState
+from common.game import GameState, GameMap2SVM
 from config import GeneralConfig
 from ml.inference import TORCH
 
@@ -96,7 +96,7 @@ class TrainingDataset(Dataset):
         self,
         raw_dir: Path,
         processed_dir: Path,
-        maps: list[GameMap],
+        maps: list[GameMap2SVM],
         train_percentage: float,
         threshold_steps_number: Optional[int] = None,
         load_to_cpu: bool = False,

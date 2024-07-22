@@ -22,7 +22,7 @@ from common.config import (
     ValidationWithLoss,
     ValidationWithSVMs,
 )
-from common.game import GameMap
+from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
@@ -80,7 +80,7 @@ def run_training(
         n_startup_trials=optuna_config.n_startup_trials
     )
 
-    maps: list[GameMap] = list()
+    maps: list[GameMap2SVM] = list()
     for platform in platforms_config:
         svms_info = platform.svms_info
         for svm_info in svms_info:
@@ -91,11 +91,12 @@ def run_training(
                     single_json_maps: list[GameMap] = GameMap.schema().load(
                         json.loads(maps_json.read()), many=True
                     )
+                single_json_maps_with_svms: list[GameMap2SVM] = list()
                 for _map in single_json_maps:
                     fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
                     _map.AssemblyFullName = fullName
-                    _map.SVMInfo = svm_info
-                maps.extend(single_json_maps)
+                    single_json_maps_with_svms.append(GameMap2SVM(_map, svm_info))
+                maps.extend(single_json_maps_with_svms)
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,

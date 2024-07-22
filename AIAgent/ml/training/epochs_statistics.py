@@ -7,7 +7,7 @@ from typing import TypeAlias
 import natsort
 import pandas as pd
 from common.typealias import SVMName
-from common.game import GameMap
+from common.game import GameMap, GameMap2SVM
 from common.classes import Map2Result
 
 EpochNumber: TypeAlias = int
@@ -26,7 +26,7 @@ class StatsWithTable:
 class Status:
     def __init__(self):
         self.epoch: EpochNumber = 0
-        self.failed_maps: list[GameMap] = []
+        self.failed_maps: list[GameMap2SVM] = []
         self.count_of_failed_maps: int = 0
 
     def __str__(self) -> str:
@@ -57,11 +57,11 @@ class StatisticsCollector:
         return wrapper
 
     @update_file
-    def fail(self, game_maps: list[GameMap]):
-        for game_map in game_maps:
-            svm_name = game_map.SVMInfo.name
+    def fail(self, game_maps: list[GameMap2SVM]):
+        for game_map2svm in game_maps:
+            svm_name = game_map2svm.SVMInfo.name
             svm_status: Status = self._svms_status.get(svm_name, Status())
-            svm_status.failed_maps.append(game_map)
+            svm_status.failed_maps.append(game_map2svm)
             svm_status.count_of_failed_maps += 1
             self._svms_status[svm_name] = svm_status
 
@@ -69,13 +69,13 @@ class StatisticsCollector:
         for svm_status in self._svms_status.values():
             svm_status.failed_maps.clear()
 
-    def get_failed_maps(self) -> list[GameMap]:
+    def get_failed_maps(self) -> list[GameMap2SVM]:
         """
         Returns failed maps on total epoch.
 
         NB: The list of failed maps is cleared after each request.
         """
-        total_failed_maps: list[GameMap] = []
+        total_failed_maps: list[GameMap2SVM] = []
         for svm_status in self._svms_status.values():
             total_failed_maps.extend(svm_status.failed_maps)
         self.__clear_failed_maps()
@@ -139,7 +139,7 @@ def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
     results = []
     for map2result in map2result_list:
         _map = map2result.map
-        map_name = _map.MapName
+        map_name = _map.GameMap.MapName
         game_result_str = map2result.game_result.printable(verbose=True)
         maps.append(f"{_map.SVMInfo.name} : {map_name}")
         results.append(game_result_str)
