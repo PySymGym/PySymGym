@@ -5,7 +5,6 @@ import multiprocessing as mp
 import os
 from dataclasses import asdict, dataclass
 from functools import partial
-from pathlib import Path
 from typing import Any, Callable, Optional
 
 import joblib
@@ -37,9 +36,9 @@ from paths import (
     LOG_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
-    TRAINING_RESULTS_PATH,
     CURRENT_MODEL_PATH,
     CURRENT_STUDY_PATH,
+    REPORT_PATH,
 )
 from torch import nn
 from torch_geometric.loader import DataLoader
@@ -52,7 +51,7 @@ logging.basicConfig(
 )
 
 
-create_folders_if_necessary([TRAINING_RESULTS_PATH, PROCESSED_DATASET_PATH])
+create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
 @dataclass
@@ -75,7 +74,7 @@ def run_training(
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
-    path_to_weights: Optional[Path],
+    weights_uri: Optional[str],
 ):
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
@@ -109,12 +108,15 @@ def run_training(
     )
 
     def load_weights(model: nn.Module):
-        model.load_state_dict(torch.load(path_to_weights))
+        downloaded_artifact_path = mlflow.artifacts.download_artifacts(
+            artifact_uri=weights_uri, dst_path=REPORT_PATH
+        )
+        model.load_state_dict(torch.load(downloaded_artifact_path))
         return model
 
     def model_init(**model_params) -> nn.Module:
         state_model_encoder = StateModelEncoder(**model_params)
-        if path_to_weights is None:
+        if weights_uri is None:
             return state_model_encoder
         return load_weights(state_model_encoder)
 
@@ -127,7 +129,7 @@ def run_training(
         val_config=validation_config,
     )
     try:
-        if optuna_config.path_to_study is None and path_to_weights is None:
+        if optuna_config.study_uri is None and weights_uri is None:
 
             def save_study(study, _):
                 joblib.dump(
@@ -148,7 +150,10 @@ def run_training(
                 callbacks=[save_study],
             )
         else:
-            study: optuna.Study = joblib.load(optuna_config.path_to_study)
+            downloaded_artifact_path = mlflow.artifacts.download_artifacts(
+                optuna_config.study_uri, dst_path=str(REPORT_PATH)
+            )
+            study: optuna.Study = joblib.load(downloaded_artifact_path)
             objective_partial(study.best_trial)
     except RuntimeError:
         logging.error("Fail to train")
@@ -246,19 +251,16 @@ def main(config_path: str):
     mlflow_config = config.mlflow_config
     if mlflow_config.tracking_uri is not None:
         mlflow.set_tracking_uri(uri=mlflow_config.tracking_uri)
-    experiment = mlflow.set_experiment(mlflow_config.experiment_name)
-    mlflow.log_artifact(config_path, artifact_path=experiment.artifact_location)
-
-    path_to_weights = config.path_to_weights
-    if path_to_weights is not None:
-        path_to_weights = Path(path_to_weights).absolute()
+    mlflow.set_experiment(mlflow_config.experiment_name)
+    mlflow.set_experiment_tags(asdict(config))
+    weights_uri = config.weights_uri
 
     run_training(
         platforms_config=config.platforms_config,
         optuna_config=config.optuna_config,
         training_config=config.training_config,
         validation_config=config.validation_config,
-        path_to_weights=path_to_weights,
+        weights_uri=weights_uri,
     )
 
 
