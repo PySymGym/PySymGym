@@ -67,7 +67,7 @@ def validate_coverage(
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
-    tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
+    tasks = [([game_map2svm], dataset, wrapper) for game_map2svm in dataset.maps]
     statistics_collector = StatisticsCollector(CURRENT_TABLE_PATH)
     with mp.Pool(server_count) as p:
         all_results: list[Map2Result] = list()

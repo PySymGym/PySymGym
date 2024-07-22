@@ -5,7 +5,7 @@ from typing import TypeAlias
 
 from common.errors import GameErrors
 from common.classes import GameResult, Map2Result
-from common.game import GameMap, GameState
+from common.game import GameMap, GameState, GameMap2SVM
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
@@ -142,38 +142,38 @@ def play_map_with_timeout(
 def play_game(
     with_predictor: Predictor,
     max_steps: int,
-    maps: list[GameMap],
+    maps: list[GameMap2SVM],
     with_dataset: TrainingDataset,
 ):
     list_of_map2result: list[Map2Result] = []
     list_of_failed_maps_with_errors: list[tuple[GameMap, Exception]] = []
-    for game_map in maps:
-        logging.info(f"<{with_predictor.name()}> is playing {game_map.MapName}")
+    for game_map2svm in maps:
+        logging.info(f"<{with_predictor.name()}> is playing {game_map2svm.GameMap.MapName}")
         try:
             play_func = (
                 play_map_with_timeout
                 if FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.enabled
                 else play_map
             )
-            with game_server_socket_manager(game_map.SVMInfo) as ws:
+            with game_server_socket_manager(game_map2svm.SVMInfo) as ws:
                 game_result, time = play_func(
-                    with_connector=Connector(ws, game_map, max_steps),
+                    with_connector=Connector(ws, game_map2svm.GameMap, max_steps),
                     with_predictor=with_predictor,
                     with_dataset=with_dataset,
                 )
             logging.info(
-                f"<{with_predictor.name()}> finished map {game_map.MapName} "
+                f"<{with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
                 f"in {game_result.steps_count} steps, {time} seconds, "
                 f"actual coverage: {game_result.actual_coverage_percent:.2f}"
             )
-            list_of_map2result.append(Map2Result(game_map, game_result))
+            list_of_map2result.append(Map2Result(game_map2svm.GameMap, game_result))
         except (FunctionTimedOut, Exception) as error:
             if isinstance(error, FunctionTimedOut):
-                log_message = f"<{with_predictor.name()}> timeouted on map {game_map.MapName} with {error.timedOutAfter}s"
+                log_message = f"<{with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
             else:
-                log_message = f"<{with_predictor.name()}> failed on map {game_map.MapName}:\n{traceback.format_exc()}"
+                log_message = f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n{traceback.format_exc()}"
             logging.warning(log_message)
-            list_of_failed_maps_with_errors.append((game_map, error))
+            list_of_failed_maps_with_errors.append((game_map2svm.GameMap, error))
     if list_of_failed_maps_with_errors:
         FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
             with_predictor.model(), with_name=f"{with_predictor.name()}"
