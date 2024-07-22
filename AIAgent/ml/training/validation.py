@@ -110,7 +110,7 @@ def validate_loss(
     progress_bar_colour: str = "#975cdb",
 ):
     epoch_loss = []
-    dataloader = DataLoader(dataset, batch_size=batch_size)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     for batch in tqdm.tqdm(
         dataloader, desc="test", ncols=100, colour=progress_bar_colour
     ):

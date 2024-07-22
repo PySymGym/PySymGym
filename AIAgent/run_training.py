@@ -165,7 +165,7 @@ def objective(
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 1800),
+        batch_size=trial.suggest_int("batch_size", 8, 800),
         epochs=epochs,
         random_seed=937,
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
@@ -229,6 +229,7 @@ def objective(
             if not early_stopping.is_continue(result):
                 print(f"Training was stopped on {epoch} epoch.")
                 break
+            torch.cuda.empty_cache()
     return result
 
 
