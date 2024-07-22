@@ -240,8 +240,8 @@ def objective(
     return result
 
 
-def main(config_path: str):
-    with open(config_path, "r") as file:
+def main(config: str):
+    with open(config, "r") as file:
         config: Config = Config(**yaml.safe_load(file))
     create_file(LOG_PATH)
 
