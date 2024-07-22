@@ -26,11 +26,6 @@ class Platform:
 
 
 @pydantic_dataclass
-class ServersConfig:
-    platforms: list[Platform] = Field(alias="Platforms")
-
-
-@pydantic_dataclass
 class OptunaConfig:
     n_startup_trials: int
     n_trials: int
@@ -74,7 +69,7 @@ class MLFlowConfig:
 
 @pydantic_dataclass
 class Config:
-    servers_config: ServersConfig = Field(alias="ServersConfig")
+    platforms_config: list[Platform] = Field(alias="PlatformsConfig")
     optuna_config: OptunaConfig = Field(alias="OptunaConfig")
     training_config: TrainingConfig = Field(alias="TrainingConfig")
     validation_config: ValidationConfig = Field(alias="ValidationConfig")

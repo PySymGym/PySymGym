@@ -4,7 +4,6 @@ import logging
 import multiprocessing as mp
 import os
 from dataclasses import asdict, dataclass
-from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -18,7 +17,7 @@ import yaml
 from common.config import (
     Config,
     OptunaConfig,
-    ServersConfig,
+    Platform,
     TrainingConfig,
     ValidationConfig,
     ValidationWithLoss,
@@ -72,7 +71,7 @@ class TrialSettings:
 
 
 def run_training(
-    servers_config: ServersConfig,
+    platforms_config: list[Platform],
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
@@ -83,7 +82,7 @@ def run_training(
     )
 
     maps: list[GameMap] = list()
-    for platform in servers_config.platforms:
+    for platform in platforms_config:
         svms_info = platform.svms_info
         for svm_info in svms_info:
             for dataset_config in platform.dataset_configs:
@@ -199,10 +198,13 @@ def objective(
             )
     elif isinstance(val_config.validation, ValidationWithSVMs):
 
-        def validate(model, dataset, epoch):
-            return validate_coverage(
+        def validate(model, dataset: TrainingDataset, epoch):
+            result, failed_maps = validate_coverage(
                 model, dataset, epoch, val_config.validation.servers_count
             )
+            for _map in failed_maps:
+                dataset.maps.remove(_map)
+            return result
 
     np.random.seed(config.random_seed)
     with mlflow.start_run():
@@ -233,8 +235,8 @@ def objective(
     return result
 
 
-def main(config: str):
-    with open(config, "r") as file:
+def main(config_path: str):
+    with open(config_path, "r") as file:
         config: Config = Config(**yaml.safe_load(file))
     create_file(LOG_PATH)
 
@@ -244,14 +246,15 @@ def main(config: str):
     mlflow_config = config.mlflow_config
     if mlflow_config.tracking_uri is not None:
         mlflow.set_tracking_uri(uri=mlflow_config.tracking_uri)
-    mlflow.set_experiment(mlflow_config.experiment_name)
+    experiment = mlflow.set_experiment(mlflow_config.experiment_name)
+    mlflow.log_artifact(config_path, artifact_path=experiment.artifact_location)
 
     path_to_weights = config.path_to_weights
     if path_to_weights is not None:
         path_to_weights = Path(path_to_weights).absolute()
 
     run_training(
-        servers_config=config.servers_config,
+        platforms_config=config.platforms_config,
         optuna_config=config.optuna_config,
         training_config=config.training_config,
         validation_config=config.validation_config,
