@@ -18,23 +18,12 @@ def sort_dict(d):
 
 
 @dataclass
-class TrainingParams:
-    batch_size: int
-    lr: float
-    num_hops_1: int
-    num_hops_2: int
-    num_of_state_features: int
-    epochs: int
-
-
-@dataclass
 class StatsWithTable:
     avg: float
     df: pd.DataFrame
 
 
 class Status:
-
     def __init__(self):
         self.epoch: EpochNumber = 0
         self.failed_maps: list[GameMap] = []
@@ -66,20 +55,6 @@ class StatisticsCollector:
             return res
 
         return wrapper
-
-    @update_file
-    def start_training_session(
-        self,
-        batch_size: int,
-        lr: float,
-        num_hops_1: int,
-        num_hops_2: int,
-        num_of_state_features: int,
-        epochs: int,
-    ):
-        self._training_params: TrainingParams = TrainingParams(
-            batch_size, lr, num_hops_1, num_hops_2, num_of_state_features, epochs
-        )
 
     @update_file
     def fail(self, game_maps: list[GameMap]):
@@ -131,37 +106,16 @@ class StatisticsCollector:
             svm_status.epoch = self._epoch_number
             self._svms_status[svm_name] = svm_status
 
-    def __get_training_info(self) -> str:
-        def get_svms_info():
-            info = ""
-            for svm_name, status in self._svms_status.items():
-                info += f"{svm_name}: {str(status)}\n"
-            return info
-
-        def get_training_params_info():
-            training_params = self._training_params
-            training_params_info = (
-                f"epochs={training_params.epochs}, "
-                f"batch_size={training_params.batch_size}, "
-                f"lr={training_params.lr}, "
-                f"num_hops_1={training_params.num_hops_1}, "
-                f"num_hops_2={training_params.num_hops_2}, "
-                f"num_of_state_features={training_params.num_of_state_features}"
-            )
-            return training_params_info
-
-        return f"{get_training_params_info()}\n{get_svms_info()}"
-
     def __get_epochs_results(self) -> str:
         epochs_results = str()
-        for epoch, v in self._epochs_info.items():
+        for _, v in self._epochs_info.items():
             avgs = list(map(lambda statsWithTable: statsWithTable.avg, v.values()))
             avg_common = mean(avgs)
             epoch_results = list(
                 map(lambda statsWithTable: statsWithTable.df, v.values())
             )
             df = pd.concat(epoch_results, axis=1)
-            epochs_results += f"Epoch#{epoch} Average coverage: {str(avg_common)}\n"
+            epochs_results += f"Average coverage: {str(avg_common)}\n"
             names_and_averages = zip(v.keys(), avgs)
             epochs_results += "".join(
                 list(
@@ -175,10 +129,8 @@ class StatisticsCollector:
         return epochs_results
 
     def __update_file(self):
-        svms_info = self.__get_training_info()
         epochs_results = self.__get_epochs_results()
         with open(self._file, "w") as f:
-            f.write(svms_info)
             f.write(epochs_results)
 
 
