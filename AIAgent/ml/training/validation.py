@@ -7,8 +7,8 @@ import torch
 import tqdm
 import mlflow
 from ml.training.epochs_statistics import StatisticsCollector
-from common.classes import Map2Result
-from common.errors import GameErrors
+from common.classes import Map2Result, GameMap2SVM
+from common.errors import GameError
 from config import GeneralConfig
 from ml.inference import infer
 from ml.play_game import play_game
@@ -30,13 +30,14 @@ def catch_return_exception(func):
 
 
 @catch_return_exception
-def play_game_task(task):
-    maps, dataset, wrapper = task
-
+def play_game_task(
+    task: tuple[GameMap2SVM, TrainingDataset, TrainingModelWrapper],
+) -> Map2Result:
+    game_map2svm, dataset, wrapper = task
     result = play_game(
         with_predictor=wrapper,
         max_steps=GeneralConfig.MAX_STEPS,
-        maps=maps,
+        game_map2svm=game_map2svm,
         with_dataset=dataset,
     )
     torch.cuda.empty_cache()
@@ -67,7 +68,7 @@ def validate_coverage(
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
-    tasks = [([game_map2svm], dataset, wrapper) for game_map2svm in dataset.maps]
+    tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in dataset.maps]
     statistics_collector = StatisticsCollector(CURRENT_TABLE_PATH)
     with mp.Pool(server_count) as p:
         all_results: list[Map2Result] = list()
@@ -78,10 +79,10 @@ def validate_coverage(
             ncols=100,
             colour=progress_bar_colour,
         ):
-            if isinstance(result, GameErrors):
-                statistics_collector.fail(result.maps)
+            if isinstance(result, GameError):
+                statistics_collector.fail(result._map)
             else:
-                all_results.extend(result)
+                all_results.append(result)
 
     def avg_coverage(results, path_to_coverage: str) -> int:
         coverage = np.average(
@@ -90,7 +91,7 @@ def validate_coverage(
         return coverage
 
     average_result = avg_coverage(
-        list(map(lambda map2result: map2result.game_result, result)),
+        list(map(lambda map2result: map2result.game_result, all_results)),
         "actual_coverage_percent",
     )
     statistics_collector.update_results(average_result, all_results)

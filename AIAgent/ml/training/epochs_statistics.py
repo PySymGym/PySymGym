@@ -57,13 +57,12 @@ class StatisticsCollector:
         return wrapper
 
     @update_file
-    def fail(self, game_maps: list[GameMap2SVM]):
-        for game_map2svm in game_maps:
-            svm_name = game_map2svm.SVMInfo.name
-            svm_status: Status = self._svms_status.get(svm_name, Status())
-            svm_status.failed_maps.append(game_map2svm)
-            svm_status.count_of_failed_maps += 1
-            self._svms_status[svm_name] = svm_status
+    def fail(self, game_map2svm: GameMap2SVM):
+        svm_name = game_map2svm.SVMInfo.name
+        svm_status: Status = self._svms_status.get(svm_name, Status())
+        svm_status.failed_maps.append(game_map2svm)
+        svm_status.count_of_failed_maps += 1
+        self._svms_status[svm_name] = svm_status
 
     def __clear_failed_maps(self):
         for svm_status in self._svms_status.values():
