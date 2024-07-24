@@ -8,7 +8,6 @@ import tqdm
 import mlflow
 from ml.training.epochs_statistics import StatisticsCollector
 from common.classes import Map2Result, GameMap2SVM
-from common.errors import GameError
 from config import GeneralConfig
 from ml.inference import infer
 from ml.play_game import play_game
@@ -79,8 +78,8 @@ def validate_coverage(
             ncols=100,
             colour=progress_bar_colour,
         ):
-            if isinstance(result, GameError):
-                statistics_collector.fail(result._map)
+            if result.game_result is None:
+                statistics_collector.fail(result.map)
             else:
                 all_results.append(result)
 

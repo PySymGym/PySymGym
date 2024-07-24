@@ -45,7 +45,7 @@ class Agent2Result:
 @dataclass
 class Map2Result:
     map: GameMap2SVM
-    game_result: GameResult
+    game_result: Optional[GameResult]
 
 
 GameMapsModelResults: TypeAlias = defaultdict[GameMap, list[Agent2Result]]
