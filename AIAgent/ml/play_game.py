@@ -8,6 +8,7 @@ from common.classes import GameResult, Map2Result
 from common.game import GameState, GameMap2SVM
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
+from connection.broker_conn.errors import ProcessKilledError
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
 from ml.protocols import Predictor
@@ -165,14 +166,19 @@ def play_game(
         )
         map2result = Map2Result(game_map2svm, game_result)
     except (FunctionTimedOut, Exception) as error:
+        need_to_save = True
         if isinstance(error, FunctionTimedOut):
             log_message = f"<{with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
+        elif isinstance(error, ProcessKilledError):
+            log_message = f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}: process suddenly disappeared"
+            need_to_save = False
         else:
             log_message = f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n{traceback.format_exc()}"
         logging.warning(log_message)
-        FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
-            with_predictor.model(), with_name=f"{with_predictor.name()}"
-        )
+        if need_to_save:
+            FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
+                with_predictor.model(), with_name=f"{with_predictor.name()}"
+            )
         raise GameError(game_map2svm, error)
 
     return map2result

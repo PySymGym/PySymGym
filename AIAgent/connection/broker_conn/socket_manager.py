@@ -2,10 +2,12 @@ import logging
 import time
 from contextlib import contextmanager, suppress
 
+import psutil
 import websocket
 from config import GameServerConnectorConfig
 from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
+from connection.broker_conn.errors import ProcessKilledError
 
 
 def wait_for_connection(server_instance: ServerInstanceInfo):
@@ -26,6 +28,8 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
             )
         if ws.connected:
             return ws
+        if not psutil.pid_exists(server_instance.pid):
+            raise ProcessKilledError()
         time.sleep(GameServerConnectorConfig.CREATE_CONNECTION_TIMEOUT_SEC)
         logging.info(
             f"Try connecting to {server_instance.ws_url}, {retries_left} attempts left; {server_instance}"
@@ -39,12 +43,12 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
 @contextmanager
 def game_server_socket_manager(svm_info: SVMInfo):
     server_instance = acquire_instance(svm_info)
-
-    socket = wait_for_connection(server_instance)
-
     try:
-        socket.settimeout(GameServerConnectorConfig.RESPONCE_TIMEOUT_SEC)
-        yield socket
+        socket = wait_for_connection(server_instance)
+        try:
+            socket.settimeout(GameServerConnectorConfig.RESPONCE_TIMEOUT_SEC)
+            yield socket
+        finally:
+            socket.close()
     finally:
-        socket.close()
         return_instance(server_instance)

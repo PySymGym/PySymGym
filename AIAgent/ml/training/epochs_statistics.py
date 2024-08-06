@@ -6,8 +6,10 @@ from typing import TypeAlias
 
 import natsort
 import pandas as pd
+from connection.broker_conn.errors import ProcessKilledError
+from common.errors import GameError
 from common.typealias import SVMName
-from common.game import GameMap, GameMap2SVM
+from common.game import GameMap2SVM
 from common.classes import Map2Result
 
 EpochNumber: TypeAlias = int
@@ -57,7 +59,10 @@ class StatisticsCollector:
         return wrapper
 
     @update_file
-    def fail(self, game_map2svm: GameMap2SVM):
+    def fail(self, game_error: GameError):
+        if isinstance(game_error._error, ProcessKilledError):
+            return  # just ignoring
+        game_map2svm = game_error._map
         svm_name = game_map2svm.SVMInfo.name
         svm_status: Status = self._svms_status.get(svm_name, Status())
         svm_status.failed_maps.append(game_map2svm)

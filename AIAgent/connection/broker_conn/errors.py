@@ -1,0 +1,2 @@
+class ProcessKilledError(Exception):
+    pass

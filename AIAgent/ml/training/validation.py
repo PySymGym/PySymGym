@@ -80,7 +80,7 @@ def validate_coverage(
             colour=progress_bar_colour,
         ):
             if isinstance(result, GameError):
-                statistics_collector.fail(result._map)
+                statistics_collector.fail(result)
             else:
                 all_results.append(result)
 
