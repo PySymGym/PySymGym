@@ -29,7 +29,7 @@ import tqdm
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
 
-from common.game import GameMap, GameState
+from common.game import GameState, GameMap2SVM
 from config import GeneralConfig
 from ml.inference import TORCH
 
@@ -96,7 +96,7 @@ class TrainingDataset(Dataset):
         self,
         raw_dir: Path,
         processed_dir: Path,
-        maps: list[GameMap],
+        maps: list[GameMap2SVM],
         train_percentage: float,
         threshold_steps_number: Optional[int] = None,
         load_to_cpu: bool = False,
@@ -148,6 +148,10 @@ class TrainingDataset(Dataset):
             step = torch.load(
                 self.processed_paths[idx], map_location=GeneralConfig.DEVICE
             )
+        if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
+            del step[TORCH.statevertex_history_gamevertex].edge_attr
+        if hasattr(step, 'use_for_train'):
+            del step.use_for_train
         return step
 
     def switch_to(self, mode: Literal["train", "val"]) -> None:
@@ -197,7 +201,6 @@ class TrainingDataset(Dataset):
                         all_files.extend(
                             random.sample(all_steps_paths, self.threshold_steps_number)
                         )
-
         return all_files
 
     def update_meta_data(self) -> None:
@@ -216,14 +219,14 @@ class TrainingDataset(Dataset):
 
     def _get_results(self) -> Dict[str, Result]:
         results = dict()
-        for _map in self.maps:
+        for map_name in os.listdir(self.processed_dir):
             path_to_map_steps = Path(
-                os.path.join(self.processed_dir, _map.MapName, "result")
+                os.path.join(self.processed_dir, map_name, "result")
             )
             if path_to_map_steps.exists():
                 result_file = open(path_to_map_steps)
                 result = Result(*ast.literal_eval(result_file.read()))
-                results[_map.MapName] = result
+                results[map_name] = result
                 result_file.close()
         return results
 
@@ -404,18 +407,18 @@ class TrainingDataset(Dataset):
                 new_steps_num = len(filtered_map_steps)
                 if init_steps_num < new_steps_num:
                     logging.info(
-                        f"Steps on map {map_name} were merged with current steps with result {map_result}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
+                        f"Steps on map {map_name} were merged with current steps with result {tuple(map_result)}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
                     )
                 else:
                     logging.info(
-                        f"Existing results reproduced on map {map_name} with result {map_result}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
+                        f"Existing results reproduced on map {map_name} with result {tuple(map_result)}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
                     )
                 self.maps_results[map_name] = map_result
                 self._save_steps(map_name, filtered_map_steps, map_result)
             if self.maps_results[map_name] < map_result:
                 logging.info(
-                    f"The model with result = {self.maps_results[map_name]} was replaced with the model with "
-                    f"result = {map_result} on the map {map_name}"
+                    f"The model with result = {tuple(self.maps_results[map_name])} was replaced with the model with "
+                    f"result = {tuple(map_result)} on the map {map_name}"
                 )
                 self.maps_results[map_name] = map_result
                 self._save_steps(map_name, filtered_map_steps, map_result)

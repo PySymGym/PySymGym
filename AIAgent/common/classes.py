@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from typing import Optional, TypeAlias
 
-from common.game import GameMap
+from common.game import GameMap, GameMap2SVM
 from ml.protocols import Named
 
 
@@ -44,7 +44,7 @@ class Agent2Result:
 @dataclass_json
 @dataclass
 class Map2Result:
-    map: GameMap
+    map: GameMap2SVM
     game_result: GameResult
 
 
