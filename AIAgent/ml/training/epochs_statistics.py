@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from statistics import mean
 from typing import TypeAlias
 
 import natsort
+import numpy as np
 import pandas as pd
 from connection.broker_conn.errors import ProcessKilledError
 from common.errors import GameError
@@ -45,9 +45,15 @@ class StatisticsCollector:
     ):
         self._file = file
 
-        self._epochs_info: dict[EpochNumber, dict[SVMName, StatsWithTable]] = {}
-        self._epoch_number: EpochNumber = 0
+        self._svms_info: dict[SVMName, StatsWithTable] = {}
         self._svms_status: dict[SVMName, Status] = {}
+
+    @staticmethod
+    def avg_by_attr(results, path_to_coverage: str) -> int:
+        coverage = np.average(
+            list(map(lambda result: getattr(result, path_to_coverage), results))
+        )
+        return coverage
 
     def update_file(func):
         @wraps(func)
@@ -75,7 +81,7 @@ class StatisticsCollector:
 
     def get_failed_maps(self) -> list[GameMap2SVM]:
         """
-        Returns failed maps on total epoch.
+        Returns failed maps.
 
         NB: The list of failed maps is cleared after each request.
         """
@@ -88,54 +94,69 @@ class StatisticsCollector:
     @update_file
     def update_results(
         self,
-        average_result: float,
         map2results_list: list[Map2Result],
     ):
-        epoch_info = self._epochs_info.get(self._epoch_number, {})
-        svms_and_map2results_lists: dict[SVMName, list[Map2Result]] = dict()
-        for map2result in map2results_list:
-            svm_name = map2result.map.SVMInfo.name
-            map2results_list_of_svm = svms_and_map2results_lists.get(svm_name, [])
-            map2results_list_of_svm.append(map2result)
-            svms_and_map2results_lists[svm_name] = map2results_list_of_svm
-        for svm_name, map2results_list in svms_and_map2results_lists.items():
-            epoch_info[svm_name] = StatsWithTable(
-                average_result, convert_to_df(map2results_list)
-            )
-        self._epochs_info[self._epoch_number] = sort_dict(epoch_info)
+        def generate_dict_with_svms_result() -> dict[SVMName, list[Map2Result]]:
+            svms_and_map2results_lists: dict[SVMName, list[Map2Result]] = dict()
+            for map2result in map2results_list:
+                svm_name = map2result.map.SVMInfo.name
+                map2results_list_of_svm = svms_and_map2results_lists.get(svm_name, [])
+                map2results_list_of_svm.append(map2result)
+                svms_and_map2results_lists[svm_name] = map2results_list_of_svm
+            return svms_and_map2results_lists
 
-        self._epoch_number += 1
-        for svm_name in svms_and_map2results_lists:
-            svm_status = self._svms_status.get(svm_name, Status())
-            svm_status.epoch = self._epoch_number
-            self._svms_status[svm_name] = svm_status
+        def generate_svms_info(svms_and_map2results: dict[SVMName, list[Map2Result]]):
+            svms_info: dict[SVMName, list[StatsWithTable]] = dict()
+            for svm_name, map2results_list in svms_and_map2results.items():
+                svms_info[svm_name] = StatsWithTable(
+                    StatisticsCollector.avg_by_attr(
+                        list(
+                            map(
+                                lambda map2result: map2result.game_result,
+                                map2results_list,
+                            )
+                        ),
+                        "actual_coverage_percent",
+                    ),
+                    convert_to_df(map2results_list),
+                )
+            return svms_info
 
-    def __get_epochs_results(self) -> str:
-        epochs_results = str()
-        for _, v in self._epochs_info.items():
-            avgs = list(map(lambda statsWithTable: statsWithTable.avg, v.values()))
-            avg_common = mean(avgs)
-            epoch_results = list(
-                map(lambda statsWithTable: statsWithTable.df, v.values())
-            )
-            df = pd.concat(epoch_results, axis=1)
-            epochs_results += f"Average coverage: {str(avg_common)}\n"
-            names_and_averages = zip(v.keys(), avgs)
-            epochs_results += "".join(
+        svms_and_map2results_lists = generate_dict_with_svms_result()
+        svms_info = generate_svms_info(svms_and_map2results_lists)
+
+        self._svms_info = sort_dict(svms_info)
+
+    def __get_results(self) -> str:
+        svms_info = self._svms_info.items()
+        _, svms_stats_with_table = list(zip(*svms_info))
+
+        avg_coverage = StatisticsCollector.avg_by_attr(svms_stats_with_table, "avg")
+        df_concat = pd.concat(
+            list(
+                map(lambda stats_with_table: stats_with_table.df, svms_stats_with_table)
+            ),
+            axis=1,
+        )
+
+        results = (
+            f"Average coverage: {str(avg_coverage)}\n"
+            + "".join(
                 list(
                     map(
-                        lambda pair: f"Average coverage of {pair[0]} = {pair[1]}\n",
-                        names_and_averages,
+                        lambda pair: f"Average coverage of {pair[0]} = {pair[1].avg}\n",
+                        svms_info,
                     )
                 )
             )
-            epochs_results += df.to_markdown(tablefmt="psql") + "\n"
-        return epochs_results
+            + df_concat.to_markdown(tablefmt="psql")
+        )
+        return results
 
     def __update_file(self):
-        epochs_results = self.__get_epochs_results()
+        results = self.__get_results()
         with open(self._file, "w") as f:
-            f.write(epochs_results)
+            f.write(results)
 
 
 def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
