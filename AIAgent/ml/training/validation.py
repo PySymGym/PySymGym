@@ -5,14 +5,17 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-from common.errors import GameErrors
-from epochs_statistics import StatisticsCollector
+import mlflow
+from ml.training.epochs_statistics import StatisticsCollector
+from common.classes import Map2Result, GameMap2SVM
+from common.errors import GameError
 from config import GeneralConfig
 from ml.inference import infer
 from ml.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from torch_geometric.loader import DataLoader
+from paths import CURRENT_TABLE_PATH
 
 
 def catch_return_exception(func):
@@ -27,13 +30,14 @@ def catch_return_exception(func):
 
 
 @catch_return_exception
-def play_game_task(task):
-    maps, dataset, wrapper = task
-
+def play_game_task(
+    task: tuple[GameMap2SVM, TrainingDataset, TrainingModelWrapper],
+) -> Map2Result:
+    game_map2svm, dataset, wrapper = task
     result = play_game(
         with_predictor=wrapper,
         max_steps=GeneralConfig.MAX_STEPS,
-        maps=maps,
+        game_map2svm=game_map2svm,
         with_dataset=dataset,
     )
     torch.cuda.empty_cache()
@@ -41,9 +45,9 @@ def play_game_task(task):
 
 
 def validate_coverage(
-    statistics_collector: StatisticsCollector,
     model: torch.nn.Module,
     dataset: TrainingDataset,
+    epoch: int,
     server_count: int,
     progress_bar_colour: str = "#ed95ce",
 ):
@@ -52,21 +56,22 @@ def validate_coverage(
 
     Parameters
     ----------
-    statistics_collector: StatisticsCollector
-        Collects statistics of training session.
     model : torch.nn.Module
-        Model to evaluate
+        Model to evaluate.
     dataset : TrainingDataset
         Dataset object for validation.
+    epoch : int
+        Epoch's number.
     server_count: int
         The number of game servers running in parallel.
     progress_bar_colour : str
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
-    tasks = [([game_map], dataset, wrapper) for game_map in dataset.maps]
+    tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in dataset.maps]
+    statistics_collector = StatisticsCollector(CURRENT_TABLE_PATH)
     with mp.Pool(server_count) as p:
-        all_results = []
+        all_results: list[Map2Result] = list()
         for result in tqdm.tqdm(
             p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
@@ -74,42 +79,46 @@ def validate_coverage(
             ncols=100,
             colour=progress_bar_colour,
         ):
-            if isinstance(result, GameErrors):
-                statistics_collector.fail(result.maps)
+            if isinstance(result, GameError):
+                statistics_collector.fail(result._map)
             else:
-                all_results.extend(result)
-    print(
-        "Average dataset state result",
-        np.average(
-            list(
-                map(
-                    lambda dataset_map_result: dataset_map_result[0],
-                    dataset.maps_results.values(),
-                )
-            )
-        ),
-    )
-    average_result = np.average(
-        list(
-            map(
-                lambda map_result: map_result.game_result.actual_coverage_percent,
-                all_results,
-            )
+                all_results.append(result)
+
+    def avg_coverage(results, path_to_coverage: str) -> int:
+        coverage = np.average(
+            list(map(lambda result: getattr(result, path_to_coverage), results))
         )
+        return coverage
+
+    average_result = avg_coverage(
+        list(map(lambda map2result: map2result.game_result, all_results)),
+        "actual_coverage_percent",
     )
     statistics_collector.update_results(average_result, all_results)
-    return average_result
+    mlflow.log_metrics(
+        {
+            "average_dataset_state_result": avg_coverage(
+                dataset.maps_results.values(), "coverage_percent"
+            ),
+            "average_result": average_result,
+        },
+        step=epoch,
+    )
+    mlflow.log_artifact(CURRENT_TABLE_PATH, str(epoch))
+
+    return average_result, statistics_collector.get_failed_maps()
 
 
 def validate_loss(
     model: torch.nn.Module,
-    epoch: int,
     dataset: TrainingDataset,
+    epoch: int,
     criterion: Callable,
+    batch_size: int,
     progress_bar_colour: str = "#975cdb",
 ):
     epoch_loss = []
-    dataloader = DataLoader(dataset, 1)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     for batch in tqdm.tqdm(
         dataloader, desc="test", ncols=100, colour=progress_bar_colour
     ):
@@ -118,5 +127,6 @@ def validate_loss(
         loss: torch.Tensor = criterion(out, batch.y_true)
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
-    print(f"Epoch {epoch}: {result}")
+    metric_name = str(criterion).replace("(", "_").replace(")", "_")
+    mlflow.log_metric(metric_name, result, step=epoch)
     return result

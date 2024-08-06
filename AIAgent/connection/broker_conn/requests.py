@@ -12,7 +12,9 @@ def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:
         WebsocketSourceLinks.GET_WS + "?" + urlencode(SVMInfo.to_dict(svm_info))
     )
     if response.status != 200:
-        logging.error(f"{response.status} with {content=} on acquire_instance call")
+        logging.error(
+            f"{response.status} with {content=} on acquire_instance call for {svm_info}"
+        )
         raise RuntimeError(f"Not ok response: {response}, {content}")
     acquired_instance = ServerInstanceInfo.from_json(
         json.loads(content.decode("utf-8"))

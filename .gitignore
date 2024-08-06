@@ -169,3 +169,7 @@ cython_debug/
 *.user
 
 *.jar
+
+# MLFlow
+*mlartifacts/
+*mlruns/

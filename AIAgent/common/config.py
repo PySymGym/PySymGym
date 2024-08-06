@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional, Union
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 from connection.broker_conn.classes import SVMInfo
 from common.typealias import PlatformName
@@ -26,19 +26,12 @@ class Platform:
 
 
 @pydantic_dataclass
-class ServersConfig:
-    count: int
-    platforms: list[Platform] = Field(alias="Platforms")
-
-
-@pydantic_dataclass
 class OptunaConfig:
-    n_startup_trials: (
-        int  # number of initial trials with random sampling for optuna's TPESampler
-    )
-    n_trials: int  # number of optuna's trials
+    n_startup_trials: int
+    n_trials: int
     n_jobs: int
     study_direction: str
+    study_uri: Optional[str] = Field(default=None)
 
 
 @pydantic_dataclass
@@ -52,13 +45,48 @@ class TrainingConfig:
 
 
 @pydantic_dataclass
+class ValidationWithLoss:
+    val_type: Literal["loss"]
+    batch_size: int
+
+
+@pydantic_dataclass
+class ValidationWithSVMs:
+    val_type: Literal["svms"]
+    servers_count: int
+
+
+@pydantic_dataclass
+class ValidationConfig:
+    validation: Union[ValidationWithLoss, ValidationWithSVMs] = Field(
+        discriminator="val_type"
+    )
+
+
+@pydantic_dataclass
+class MLFlowConfig:
+    experiment_name: str
+    tracking_uri: Optional[str] = Field(default=None)
+
+
+@pydantic_dataclass
 class Config:
-    servers_config: ServersConfig = Field(alias="ServersConfig")
+    platforms_config: list[Platform] = Field(alias="PlatformsConfig")
     optuna_config: OptunaConfig = Field(alias="OptunaConfig")
     training_config: TrainingConfig = Field(alias="TrainingConfig")
-    path_to_weights: Optional[Path] = Field(default=None)
+    validation_config: ValidationConfig = Field(alias="ValidationConfig")
+    mlflow_config: MLFlowConfig = Field(alias="MLFlowConfig")
+    weights_uri: Optional[str] = Field(default=None)
 
-    @field_validator("path_to_weights", mode="before")
+    @field_validator("weights_uri", mode="after")
     @classmethod
-    def transform(cls, input: Optional[str]) -> Optional[Path]:
-        return Path(input).resolve() if input is not None else None
+    def check_if_both_none(cls, weights_uri: str, val_info: ValidationInfo):
+        study_uri = val_info.data["optuna_config"].study_uri
+        if (weights_uri is None and study_uri is None) or (
+            weights_uri is not None and study_uri is not None
+        ):
+            return weights_uri
+        else:
+            raise ValueError(
+                "Optuna study's URI and weights URI can be either None or not None at the same time."
+            )
