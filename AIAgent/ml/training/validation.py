@@ -84,20 +84,15 @@ def validate_coverage(
             else:
                 all_results.append(result)
 
-    def avg_coverage(results, path_to_coverage: str) -> int:
-        coverage = np.average(
-            list(map(lambda result: getattr(result, path_to_coverage), results))
-        )
-        return coverage
+    statistics_collector.update_results(all_results)
 
-    average_result = avg_coverage(
+    average_result = StatisticsCollector.avg_by_attr(
         list(map(lambda map2result: map2result.game_result, all_results)),
         "actual_coverage_percent",
     )
-    statistics_collector.update_results(average_result, all_results)
     mlflow.log_metrics(
         {
-            "average_dataset_state_result": avg_coverage(
+            "average_dataset_state_result": StatisticsCollector.avg_by_attr(
                 dataset.maps_results.values(), "coverage_percent"
             ),
             "average_result": average_result,
