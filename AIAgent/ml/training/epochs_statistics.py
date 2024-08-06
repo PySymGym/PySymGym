@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import wraps
+import multiprocessing
 from pathlib import Path
 from typing import TypeAlias
 
@@ -30,6 +31,7 @@ class Status:
         self.epoch: EpochNumber = 0
         self.failed_maps: list[GameMap2SVM] = []
         self.count_of_failed_maps: int = 0
+        self.lock = multiprocessing.Lock()
 
     def __str__(self) -> str:
         result = (
@@ -70,10 +72,11 @@ class StatisticsCollector:
             return  # just ignoring
         game_map2svm = game_error._map
         svm_name = game_map2svm.SVMInfo.name
-        svm_status: Status = self._svms_status.get(svm_name, Status())
-        svm_status.failed_maps.append(game_map2svm)
-        svm_status.count_of_failed_maps += 1
-        self._svms_status[svm_name] = svm_status
+        with self.lock:
+            svm_status: Status = self._svms_status.get(svm_name, Status())
+            svm_status.failed_maps.append(game_map2svm)
+            svm_status.count_of_failed_maps += 1
+            self._svms_status[svm_name] = svm_status
 
     def __clear_failed_maps(self):
         for svm_status in self._svms_status.values():
