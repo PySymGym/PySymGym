@@ -7,8 +7,6 @@ from typing import TypeAlias
 import natsort
 import numpy as np
 import pandas as pd
-from connection.broker_conn.errors import ProcessKilledError
-from common.errors import GameError
 from common.typealias import SVMName
 from common.game import GameMap2SVM
 from common.classes import Map2Result
@@ -31,7 +29,6 @@ class Status:
         self.epoch: EpochNumber = 0
         self.failed_maps: list[GameMap2SVM] = []
         self.count_of_failed_maps: int = 0
-        self.lock = multiprocessing.Lock()
 
     def __str__(self) -> str:
         result = (
@@ -46,6 +43,7 @@ class StatisticsCollector:
         file: Path,
     ):
         self._file = file
+        self.lock = multiprocessing.Lock()
 
         self._svms_info: dict[SVMName, StatsWithTable] = {}
         self._svms_status: dict[SVMName, Status] = {}
@@ -66,15 +64,11 @@ class StatisticsCollector:
 
         return wrapper
 
-    @update_file
-    def fail(self, game_error: GameError):
-        if isinstance(game_error._error, ProcessKilledError):
-            return  # just ignoring
-        game_map2svm = game_error._map
-        svm_name = game_map2svm.SVMInfo.name
+    def fail(self, game_map: GameMap2SVM):
+        svm_name = game_map.SVMInfo.name
         with self.lock:
             svm_status: Status = self._svms_status.get(svm_name, Status())
-            svm_status.failed_maps.append(game_map2svm)
+            svm_status.failed_maps.append(game_map)
             svm_status.count_of_failed_maps += 1
             self._svms_status[svm_name] = svm_status
 

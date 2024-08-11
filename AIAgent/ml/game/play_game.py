@@ -3,16 +3,18 @@ from time import perf_counter
 import traceback
 from typing import TypeAlias
 
-from common.errors import GameError
 from common.classes import GameResult, Map2Result
 from common.game import GameState, GameMap2SVM
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
-from connection.broker_conn.errors import ProcessKilledError
+from connection.errors_connection import (
+    ProcessStoppedError,
+)
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
 from ml.protocols import Predictor
 from ml.training.dataset import Result, TrainingDataset, convert_input_to_tensor
+from ml.game.errors_game import GameError
 
 TimeDuration: TypeAlias = float
 
@@ -169,7 +171,7 @@ def play_game(
         need_to_save = True
         if isinstance(error, FunctionTimedOut):
             log_message = f"<{with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
-        elif isinstance(error, ProcessKilledError):
+        elif isinstance(error, ProcessStoppedError):
             log_message = f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}: process suddenly disappeared"
             need_to_save = False
         else:
