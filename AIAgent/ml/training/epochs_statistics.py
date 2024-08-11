@@ -28,7 +28,7 @@ class FailedMaps(list[GameMap2SVM]):
     lock = multiprocessing.Lock()
 
     def __str__(self) -> str:
-        result = f"count of failed maps={len(self)}"
+        result = f"count of failed maps = {len(self)}"
         return result
 
 
@@ -137,7 +137,7 @@ class StatisticsCollector:
             + "".join(
                 list(
                     map(
-                        lambda pair: f"Average coverage of {pair[0]} = {pair[1].avg}\n",
+                        lambda svm_name_and_stats_pair: f"Average coverage of {svm_name_and_stats_pair[0]} = {svm_name_and_stats_pair[1].avg}, {self._failed_maps_dict.get(svm_name_and_stats_pair[0], FailedMaps())}\n",
                         svms_stats,
                     )
                 )
