@@ -7,7 +7,14 @@ import websocket
 from config import GameServerConnectorConfig
 from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
-from connection.broker_conn.errors import ProcessKilledError
+from connection.errors_connection import ProcessStoppedError
+
+
+@contextmanager
+def process_running(pid):
+    if not psutil.pid_exists(pid):
+        raise ProcessStoppedError
+    yield
 
 
 def wait_for_connection(server_instance: ServerInstanceInfo):
@@ -20,7 +27,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
             ConnectionRefusedError,
             ConnectionResetError,
             websocket.WebSocketTimeoutException,
-        ):
+        ), process_running(server_instance.pid):
             ws.settimeout(GameServerConnectorConfig.CREATE_CONNECTION_TIMEOUT_SEC)
             ws.connect(
                 server_instance.ws_url,
@@ -28,8 +35,6 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
             )
         if ws.connected:
             return ws
-        if not psutil.pid_exists(server_instance.pid):
-            raise ProcessKilledError()
         time.sleep(GameServerConnectorConfig.CREATE_CONNECTION_TIMEOUT_SEC)
         logging.info(
             f"Try connecting to {server_instance.ws_url}, {retries_left} attempts left; {server_instance}"

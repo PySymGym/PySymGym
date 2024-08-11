@@ -6,14 +6,14 @@ import numpy as np
 import torch
 import tqdm
 import mlflow
-from ml.training.epochs_statistics import StatisticsCollector
 from common.classes import Map2Result, GameMap2SVM
-from common.errors import GameError
 from config import GeneralConfig
+from ml.game.errors_game import GameError
 from ml.inference import infer
-from ml.play_game import play_game
+from ml.game.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
+from ml.training.epochs_statistics import StatisticsCollector
 from torch_geometric.loader import DataLoader
 from paths import CURRENT_TABLE_PATH
 
@@ -80,7 +80,7 @@ def validate_coverage(
             colour=progress_bar_colour,
         ):
             if isinstance(result, GameError):
-                statistics_collector.fail(result)
+                result.handle_error(statistics_collector)
             else:
                 all_results.append(result)
 
