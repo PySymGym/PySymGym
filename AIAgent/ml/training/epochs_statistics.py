@@ -24,16 +24,11 @@ class StatsWithTable:
     df: pd.DataFrame
 
 
-class Status:
-    def __init__(self):
-        self.epoch: EpochNumber = 0
-        self.failed_maps: list[GameMap2SVM] = []
-        self.count_of_failed_maps: int = 0
+class FailedMaps(list[GameMap2SVM]):
+    lock = multiprocessing.Lock()
 
     def __str__(self) -> str:
-        result = (
-            f"count of failed maps={self.count_of_failed_maps}, on epoch = {self.epoch}"
-        )
+        result = f"count of failed maps={len(self)}"
         return result
 
 
@@ -45,8 +40,8 @@ class StatisticsCollector:
         self._file = file
         self.lock = multiprocessing.Lock()
 
-        self._svms_info: dict[SVMName, StatsWithTable] = {}
-        self._svms_status: dict[SVMName, Status] = {}
+        self._svms_stats_dict: dict[SVMName, StatsWithTable] = {}
+        self._failed_maps_dict: dict[SVMName, FailedMaps] = {}
 
     @staticmethod
     def avg_by_attr(results, path_to_coverage: str) -> int:
@@ -67,14 +62,13 @@ class StatisticsCollector:
     def fail(self, game_map: GameMap2SVM):
         svm_name = game_map.SVMInfo.name
         with self.lock:
-            svm_status: Status = self._svms_status.get(svm_name, Status())
-            svm_status.failed_maps.append(game_map)
-            svm_status.count_of_failed_maps += 1
-            self._svms_status[svm_name] = svm_status
+            failed_maps = self._failed_maps_dict.setdefault(svm_name, FailedMaps())
+        with failed_maps.lock:
+            failed_maps.append(game_map)
 
     def __clear_failed_maps(self):
-        for svm_status in self._svms_status.values():
-            svm_status.failed_maps.clear()
+        for failed_maps in self._failed_maps_dict.values():
+            failed_maps.clear()
 
     def get_failed_maps(self) -> list[GameMap2SVM]:
         """
@@ -83,8 +77,8 @@ class StatisticsCollector:
         NB: The list of failed maps is cleared after each request.
         """
         total_failed_maps: list[GameMap2SVM] = []
-        for svm_status in self._svms_status.values():
-            total_failed_maps.extend(svm_status.failed_maps)
+        for failed_maps in self._failed_maps_dict.values():
+            total_failed_maps.extend(failed_maps)
         self.__clear_failed_maps()
         return total_failed_maps
 
@@ -93,19 +87,21 @@ class StatisticsCollector:
         self,
         map2results_list: list[Map2Result],
     ):
-        def generate_dict_with_svms_result() -> dict[SVMName, list[Map2Result]]:
-            svms_and_map2results_lists: dict[SVMName, list[Map2Result]] = dict()
+        def generate_svms_results_dict() -> dict[SVMName, list[Map2Result]]:
+            map2results_dict: dict[SVMName, list[Map2Result]] = dict()
             for map2result in map2results_list:
                 svm_name = map2result.map.SVMInfo.name
-                map2results_list_of_svm = svms_and_map2results_lists.get(svm_name, [])
+                map2results_list_of_svm = map2results_dict.get(svm_name, [])
                 map2results_list_of_svm.append(map2result)
-                svms_and_map2results_lists[svm_name] = map2results_list_of_svm
-            return svms_and_map2results_lists
+                map2results_dict[svm_name] = map2results_list_of_svm
+            return map2results_dict
 
-        def generate_svms_info(svms_and_map2results: dict[SVMName, list[Map2Result]]):
-            svms_info: dict[SVMName, list[StatsWithTable]] = dict()
+        def generate_svms_stats_dict(
+            svms_and_map2results: dict[SVMName, list[Map2Result]]
+        ):
+            svms_stats_dict: dict[SVMName, list[StatsWithTable]] = dict()
             for svm_name, map2results_list in svms_and_map2results.items():
-                svms_info[svm_name] = StatsWithTable(
+                svms_stats_dict[svm_name] = StatsWithTable(
                     StatisticsCollector.avg_by_attr(
                         list(
                             map(
@@ -117,16 +113,16 @@ class StatisticsCollector:
                     ),
                     convert_to_df(map2results_list),
                 )
-            return svms_info
+            return svms_stats_dict
 
-        svms_and_map2results_lists = generate_dict_with_svms_result()
-        svms_info = generate_svms_info(svms_and_map2results_lists)
+        svms_and_map2results_lists = generate_svms_results_dict()
+        svms_stats_dict = generate_svms_stats_dict(svms_and_map2results_lists)
 
-        self._svms_info = sort_dict(svms_info)
+        self._svms_stats_dict = sort_dict(svms_stats_dict)
 
     def __get_results(self) -> str:
-        svms_info = self._svms_info.items()
-        _, svms_stats_with_table = list(zip(*svms_info))
+        svms_stats = self._svms_stats_dict.items()
+        _, svms_stats_with_table = list(zip(*svms_stats))
 
         avg_coverage = StatisticsCollector.avg_by_attr(svms_stats_with_table, "avg")
         df_concat = pd.concat(
@@ -142,7 +138,7 @@ class StatisticsCollector:
                 list(
                     map(
                         lambda pair: f"Average coverage of {pair[0]} = {pair[1].avg}\n",
-                        svms_info,
+                        svms_stats,
                     )
                 )
             )
