@@ -1,16 +1,22 @@
-class GameInterruptedError(Exception):
+from abc import ABC, abstractmethod
+
+
+class GameInterruptedError(Exception, ABC):
     """Game was unexpectedly interrupted due to external reasons"""
 
-    pass
+    @property
+    @abstractmethod
+    def desc(self):
+        pass
 
 
 class ProcessStoppedError(GameInterruptedError):
     """SVM's process unexpectedly stopped"""
 
-    pass
+    desc = "SVM's process unexpectedly stopped"
 
 
 class ConnectionLostError(GameInterruptedError):
     """Connection to SVM was lost"""
 
-    pass
+    desc = "Connection to SVM was lost"

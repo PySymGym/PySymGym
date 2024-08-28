@@ -6,7 +6,7 @@ from typing import TypeAlias
 from common.classes import GameResult, Map2Result
 from common.game import GameState, GameMap2SVM
 from config import FeatureConfig
-from connection.errors_connection import ProcessStoppedError
+from connection.errors_connection import GameInterruptedError
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
@@ -171,8 +171,8 @@ def play_game(
 
         if isinstance(error, FunctionTimedOut):
             log_message = f"<{name_of_predictor}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
-        elif isinstance(error, ProcessStoppedError):
-            log_message = f"<{name_of_predictor}> failed on map {game_map2svm.GameMap.MapName}: process suddenly disappeared"
+        elif isinstance(error, GameInterruptedError):
+            log_message = f"<{name_of_predictor}> failed on map {game_map2svm.GameMap.MapName} with {error.__class__.__name__}: {error.desc}"
             need_to_save = False
         else:
             log_message = (
@@ -189,5 +189,5 @@ def play_game(
             FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
                 with_predictor.model(), with_name=name_of_predictor
             )
-        raise GameError(game_map2svm=game_map2svm, error=error)
+        raise GameError(game_map2svm=game_map2svm, error_name=error.__class__.__name__)
     return map2result
