@@ -3,8 +3,8 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
-def inheritors(cls: T):
-    subclasses: T = set()
+def inheritors(cls: T) -> set[T]:
+    subclasses: set[T] = set()
     work = [cls]
     while work:
         parent = work.pop()
