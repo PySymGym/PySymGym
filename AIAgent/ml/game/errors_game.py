@@ -1,3 +1,4 @@
+from func_timeout import FunctionTimedOut
 from connection.errors_connection import GameInterruptedError
 from common.utils import inheritors
 from common.game import GameMap2SVM
@@ -17,4 +18,5 @@ class GameError(Exception):
 
     def need_to_save_map(self):
         gie_inheritors = inheritors(GameInterruptedError)
-        return self._error_name in map(lambda it: it.__name__, gie_inheritors)
+        need_to_save_classes = list(gie_inheritors) + [FunctionTimedOut]
+        return self._error_name in map(lambda it: it.__name__, need_to_save_classes)
