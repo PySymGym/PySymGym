@@ -80,7 +80,9 @@ def validate_coverage(
             colour=progress_bar_colour,
         ):
             if isinstance(result, GameError):
-                result.handle_error(statistics_collector)
+                need_to_save_map: bool = result.need_to_save_map()
+                if not need_to_save_map:
+                    statistics_collector.fail(result._map)
             else:
                 all_results.append(result)
 

@@ -1,4 +1,3 @@
-from ml.training.epochs_statistics import StatisticsCollector
 from connection.errors_connection import GameInterruptedError
 from common.utils import inheritors
 from common.game import GameMap2SVM
@@ -16,8 +15,6 @@ class GameError(Exception):
 
         super().__init__(game_map2svm, error_name)
 
-    def handle_error(self, statistics_collector: StatisticsCollector):
+    def need_to_save_map(self):
         gie_inheritors = inheritors(GameInterruptedError)
-        if self._error_name in map(lambda it: it.__name__, gie_inheritors):
-            return
-        statistics_collector.fail(self._map)
+        return self._error_name in map(lambda it: it.__name__, gie_inheritors)
