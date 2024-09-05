@@ -28,10 +28,10 @@ jobs:
           poetry add --group dev poethepoet
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3.5.0
         with:
-          distribution: 'oracle'
-          java-version: '21'
+          distribution: 'zulu'
+          java-version: '11'
           cache: 'maven'
 
       - name: Build V# game server
