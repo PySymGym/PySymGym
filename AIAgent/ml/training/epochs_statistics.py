@@ -115,16 +115,27 @@ class StatisticsCollector:
                 )
             return svms_stats_dict
 
+        def calc_avg():
+            return avg_by_attr(
+                list(
+                    map(
+                        lambda map2result: map2result.game_result,
+                        map2results_list,
+                    )
+                ),
+                "actual_coverage_percent",
+            )
+
         svms_and_map2results_lists = generate_svms_results_dict()
         svms_stats_dict = generate_svms_stats_dict(svms_and_map2results_lists)
 
         self._svms_stats_dict = sort_dict(svms_stats_dict)
+        self.avg_coverage = calc_avg()
 
     def __get_results(self) -> str:
         svms_stats = self._svms_stats_dict.items()
         _, svms_stats_with_table = list(zip(*svms_stats))
 
-        avg_coverage = avg_by_attr(svms_stats_with_table, "avg")
         df_concat = pd.concat(
             list(
                 map(lambda stats_with_table: stats_with_table.df, svms_stats_with_table)
@@ -133,7 +144,7 @@ class StatisticsCollector:
         )
 
         results = (
-            f"Average coverage: {str(avg_coverage)}\n"
+            f"Average coverage: {str(self.avg_coverage)}\n"
             + "".join(
                 list(
                     map(
