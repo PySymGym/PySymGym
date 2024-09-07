@@ -13,7 +13,7 @@ from ml.inference import infer
 from ml.game.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
-from ml.training.epochs_statistics import StatisticsCollector
+from ml.training.epochs_statistics import StatisticsCollector, avg_by_attr
 from torch_geometric.loader import DataLoader
 from paths import CURRENT_TABLE_PATH
 
@@ -88,13 +88,13 @@ def validate_coverage(
 
     statistics_collector.update_results(all_results)
 
-    average_result = StatisticsCollector.avg_by_attr(
+    average_result = avg_by_attr(
         list(map(lambda map2result: map2result.game_result, all_results)),
         "actual_coverage_percent",
     )
     mlflow.log_metrics(
         {
-            "average_dataset_state_result": StatisticsCollector.avg_by_attr(
+            "average_dataset_state_result": avg_by_attr(
                 dataset.maps_results.values(), "coverage_percent"
             ),
             "average_result": average_result,

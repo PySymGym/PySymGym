@@ -18,6 +18,13 @@ def sort_dict(d):
     return dict(natsort.natsorted(d.items()))
 
 
+def avg_by_attr(results, path_to_coverage: str) -> int:
+    coverage = np.average(
+        list(map(lambda result: getattr(result, path_to_coverage), results))
+    )
+    return coverage
+
+
 @dataclass
 class StatsWithTable:
     avg: float
@@ -42,13 +49,6 @@ class StatisticsCollector:
 
         self._svms_stats_dict: dict[SVMName, StatsWithTable] = {}
         self._failed_maps_dict: dict[SVMName, FailedMaps] = {}
-
-    @staticmethod
-    def avg_by_attr(results, path_to_coverage: str) -> int:
-        coverage = np.average(
-            list(map(lambda result: getattr(result, path_to_coverage), results))
-        )
-        return coverage
 
     def update_file(func):
         @wraps(func)
@@ -102,7 +102,7 @@ class StatisticsCollector:
             svms_stats_dict: dict[SVMName, list[StatsWithTable]] = dict()
             for svm_name, map2results_list in svms_and_map2results.items():
                 svms_stats_dict[svm_name] = StatsWithTable(
-                    StatisticsCollector.avg_by_attr(
+                    avg_by_attr(
                         list(
                             map(
                                 lambda map2result: map2result.game_result,
@@ -124,7 +124,7 @@ class StatisticsCollector:
         svms_stats = self._svms_stats_dict.items()
         _, svms_stats_with_table = list(zip(*svms_stats))
 
-        avg_coverage = StatisticsCollector.avg_by_attr(svms_stats_with_table, "avg")
+        avg_coverage = avg_by_attr(svms_stats_with_table, "avg")
         df_concat = pd.concat(
             list(
                 map(lambda stats_with_table: stats_with_table.df, svms_stats_with_table)
