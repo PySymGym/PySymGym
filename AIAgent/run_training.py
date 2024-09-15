@@ -130,6 +130,7 @@ def run_training(
         val_config=validation_config,
     )
     if optuna_config.study_uri is None and weights_uri is None:
+
         def save_study(study, _):
             joblib.dump(
                 study,
@@ -137,6 +138,7 @@ def run_training(
             )
             with mlflow.start_run(mlflow.last_active_run().info.run_id):
                 mlflow.log_artifact(CURRENT_STUDY_PATH)
+
         study = optuna.create_study(
             sampler=sampler, direction=optuna_config.study_direction
         )
@@ -152,7 +154,8 @@ def run_training(
             optuna_config.study_uri, dst_path=str(REPORT_PATH)
         )
         study: optuna.Study = joblib.load(downloaded_artifact_path)
-        objective_partial(study.best_trial)
+        for _ in range(optuna_config.n_trials):
+            objective_partial(study.best_trial)
 
 
 def objective(
