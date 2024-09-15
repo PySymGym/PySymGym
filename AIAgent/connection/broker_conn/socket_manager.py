@@ -2,10 +2,19 @@ import logging
 import time
 from contextlib import contextmanager, suppress
 
+import psutil
 import websocket
 from config import GameServerConnectorConfig
 from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
+from connection.errors_connection import ProcessStoppedError
+
+
+@contextmanager
+def process_running(pid):
+    if not psutil.pid_exists(pid):
+        raise ProcessStoppedError
+    yield
 
 
 def wait_for_connection(server_instance: ServerInstanceInfo):
@@ -18,7 +27,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
             ConnectionRefusedError,
             ConnectionResetError,
             websocket.WebSocketTimeoutException,
-        ):
+        ), process_running(server_instance.pid):
             ws.settimeout(GameServerConnectorConfig.CREATE_CONNECTION_TIMEOUT_SEC)
             ws.connect(
                 server_instance.ws_url,
@@ -39,12 +48,12 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
 @contextmanager
 def game_server_socket_manager(svm_info: SVMInfo):
     server_instance = acquire_instance(svm_info)
-
-    socket = wait_for_connection(server_instance)
-
     try:
-        socket.settimeout(GameServerConnectorConfig.RESPONCE_TIMEOUT_SEC)
-        yield socket
+        socket = wait_for_connection(server_instance)
+        try:
+            socket.settimeout(GameServerConnectorConfig.RESPONCE_TIMEOUT_SEC)
+            yield socket
+        finally:
+            socket.close()
     finally:
-        socket.close()
         return_instance(server_instance)

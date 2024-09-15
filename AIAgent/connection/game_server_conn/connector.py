@@ -1,8 +1,10 @@
+from functools import wraps
 import logging
 import logging.config
 from typing import Optional
 
 import websocket
+from connection.errors_connection import ConnectionLostError
 from common.game import GameMap, GameState
 
 from .messages import (
@@ -54,11 +56,29 @@ class Connector:
 
         start_message = ClientMessage(StartMessageBody(**map.to_dict()))
         logging.debug(f"--> StartMessage  : {start_message}")
-        self.ws.send(start_message.to_json())
+        self.send(start_message.to_json())
         self._current_step = 0
         self.game_is_over = False
         self.map = map
         self.steps = steps
+
+    def catch_losing_of_connection(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except ConnectionResetError as e:
+                raise ConnectionLostError from e
+
+        return wrapper
+
+    @catch_losing_of_connection
+    def receive(self):
+        return self.ws.recv()
+
+    @catch_losing_of_connection
+    def send(self, msg):
+        return self.ws.send(msg)
 
     def _raise_if_gameover(self, msg) -> GameOverServerMessage | str:
         if self.game_is_over:
@@ -83,7 +103,7 @@ class Connector:
                 return msg
 
     def recv_state_or_throw_gameover(self) -> GameState:
-        received = self.ws.recv()
+        received = self.receive()
         data = GameStateServerMessage.from_json_handle(
             self._raise_if_gameover(received),
             expected=GameStateServerMessage,
@@ -98,11 +118,11 @@ class Connector:
             )
         )
         logging.debug(f"--> ClientMessage : {do_step_message}")
-        self.ws.send(do_step_message.to_json())
+        self.send(do_step_message.to_json())
         self._sent_state_id = next_state_id
 
     def recv_reward_or_throw_gameover(self) -> Reward:
-        received = self.ws.recv()
+        received = self.receive()
         decoded = RewardServerMessage.from_json_handle(
             self._raise_if_gameover(received),
             expected=RewardServerMessage,
