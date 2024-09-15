@@ -154,7 +154,8 @@ def run_training(
             optuna_config.study_uri, dst_path=str(REPORT_PATH)
         )
         study: optuna.Study = joblib.load(downloaded_artifact_path)
-        objective_partial(study.best_trial)
+        for _ in range(optuna_config.n_trials):
+            objective_partial(study.best_trial)
 
 
 def objective(
