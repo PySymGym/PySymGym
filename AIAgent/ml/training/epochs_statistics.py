@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from functools import wraps
+import multiprocessing
 from pathlib import Path
-from statistics import mean
 from typing import TypeAlias
 
 import natsort
+import numpy as np
 import pandas as pd
 from common.typealias import SVMName
-from common.game import GameMap, GameMap2SVM
+from common.game import GameMap2SVM
 from common.classes import Map2Result
 
 EpochNumber: TypeAlias = int
@@ -17,22 +18,24 @@ def sort_dict(d):
     return dict(natsort.natsorted(d.items()))
 
 
+def avg_by_attr(results, path_to_coverage: str) -> int:
+    coverage = np.average(
+        list(map(lambda result: getattr(result, path_to_coverage), results))
+    )
+    return coverage
+
+
 @dataclass
 class StatsWithTable:
     avg: float
     df: pd.DataFrame
 
 
-class Status:
-    def __init__(self):
-        self.epoch: EpochNumber = 0
-        self.failed_maps: list[GameMap2SVM] = []
-        self.count_of_failed_maps: int = 0
+class FailedMaps(list[GameMap2SVM]):
+    lock = multiprocessing.Lock()
 
     def __str__(self) -> str:
-        result = (
-            f"count of failed maps={self.count_of_failed_maps}, on epoch = {self.epoch}"
-        )
+        result = f"count of failed maps = {len(self)}"
         return result
 
 
@@ -42,10 +45,10 @@ class StatisticsCollector:
         file: Path,
     ):
         self._file = file
+        self.lock = multiprocessing.Lock()
 
-        self._epochs_info: dict[EpochNumber, dict[SVMName, StatsWithTable]] = {}
-        self._epoch_number: EpochNumber = 0
-        self._svms_status: dict[SVMName, Status] = {}
+        self._svms_stats_dict: dict[SVMName, StatsWithTable] = {}
+        self._failed_maps_dict: dict[SVMName, FailedMaps] = {}
 
     def update_file(func):
         @wraps(func)
@@ -56,81 +59,108 @@ class StatisticsCollector:
 
         return wrapper
 
-    @update_file
-    def fail(self, game_map2svm: GameMap2SVM):
-        svm_name = game_map2svm.SVMInfo.name
-        svm_status: Status = self._svms_status.get(svm_name, Status())
-        svm_status.failed_maps.append(game_map2svm)
-        svm_status.count_of_failed_maps += 1
-        self._svms_status[svm_name] = svm_status
+    def fail(self, game_map: GameMap2SVM):
+        svm_name = game_map.SVMInfo.name
+        with self.lock:
+            failed_maps = self._failed_maps_dict.setdefault(svm_name, FailedMaps())
+        with failed_maps.lock:
+            failed_maps.append(game_map)
 
     def __clear_failed_maps(self):
-        for svm_status in self._svms_status.values():
-            svm_status.failed_maps.clear()
+        for failed_maps in self._failed_maps_dict.values():
+            failed_maps.clear()
 
     def get_failed_maps(self) -> list[GameMap2SVM]:
         """
-        Returns failed maps on total epoch.
+        Returns failed maps.
 
         NB: The list of failed maps is cleared after each request.
         """
         total_failed_maps: list[GameMap2SVM] = []
-        for svm_status in self._svms_status.values():
-            total_failed_maps.extend(svm_status.failed_maps)
+        for failed_maps in self._failed_maps_dict.values():
+            total_failed_maps.extend(failed_maps)
         self.__clear_failed_maps()
         return total_failed_maps
 
     @update_file
     def update_results(
         self,
-        average_result: float,
         map2results_list: list[Map2Result],
     ):
-        epoch_info = self._epochs_info.get(self._epoch_number, {})
-        svms_and_map2results_lists: dict[SVMName, list[Map2Result]] = dict()
-        for map2result in map2results_list:
-            svm_name = map2result.map.SVMInfo.name
-            map2results_list_of_svm = svms_and_map2results_lists.get(svm_name, [])
-            map2results_list_of_svm.append(map2result)
-            svms_and_map2results_lists[svm_name] = map2results_list_of_svm
-        for svm_name, map2results_list in svms_and_map2results_lists.items():
-            epoch_info[svm_name] = StatsWithTable(
-                average_result, convert_to_df(map2results_list)
-            )
-        self._epochs_info[self._epoch_number] = sort_dict(epoch_info)
+        def generate_svms_results_dict() -> dict[SVMName, list[Map2Result]]:
+            map2results_dict: dict[SVMName, list[Map2Result]] = dict()
+            for map2result in map2results_list:
+                svm_name = map2result.map.SVMInfo.name
+                map2results_list_of_svm = map2results_dict.get(svm_name, [])
+                map2results_list_of_svm.append(map2result)
+                map2results_dict[svm_name] = map2results_list_of_svm
+            return map2results_dict
 
-        self._epoch_number += 1
-        for svm_name in svms_and_map2results_lists:
-            svm_status = self._svms_status.get(svm_name, Status())
-            svm_status.epoch = self._epoch_number
-            self._svms_status[svm_name] = svm_status
+        def generate_svms_stats_dict(
+            svms_and_map2results: dict[SVMName, list[Map2Result]]
+        ):
+            svms_stats_dict: dict[SVMName, list[StatsWithTable]] = dict()
+            for svm_name, map2results_list in svms_and_map2results.items():
+                svms_stats_dict[svm_name] = StatsWithTable(
+                    avg_by_attr(
+                        list(
+                            map(
+                                lambda map2result: map2result.game_result,
+                                map2results_list,
+                            )
+                        ),
+                        "actual_coverage_percent",
+                    ),
+                    convert_to_df(map2results_list),
+                )
+            return svms_stats_dict
 
-    def __get_epochs_results(self) -> str:
-        epochs_results = str()
-        for _, v in self._epochs_info.items():
-            avgs = list(map(lambda statsWithTable: statsWithTable.avg, v.values()))
-            avg_common = mean(avgs)
-            epoch_results = list(
-                map(lambda statsWithTable: statsWithTable.df, v.values())
-            )
-            df = pd.concat(epoch_results, axis=1)
-            epochs_results += f"Average coverage: {str(avg_common)}\n"
-            names_and_averages = zip(v.keys(), avgs)
-            epochs_results += "".join(
+        def calc_avg():
+            return avg_by_attr(
                 list(
                     map(
-                        lambda pair: f"Average coverage of {pair[0]} = {pair[1]}\n",
-                        names_and_averages,
+                        lambda map2result: map2result.game_result,
+                        map2results_list,
+                    )
+                ),
+                "actual_coverage_percent",
+            )
+
+        svms_and_map2results_lists = generate_svms_results_dict()
+        svms_stats_dict = generate_svms_stats_dict(svms_and_map2results_lists)
+
+        self._svms_stats_dict = sort_dict(svms_stats_dict)
+        self.avg_coverage = calc_avg()
+
+    def __get_results(self) -> str:
+        svms_stats = self._svms_stats_dict.items()
+        _, svms_stats_with_table = list(zip(*svms_stats))
+
+        df_concat = pd.concat(
+            list(
+                map(lambda stats_with_table: stats_with_table.df, svms_stats_with_table)
+            ),
+            axis=1,
+        )
+
+        results = (
+            f"Average coverage: {str(self.avg_coverage)}\n"
+            + "".join(
+                list(
+                    map(
+                        lambda svm_name_and_stats_pair: f"Average coverage of {svm_name_and_stats_pair[0]} = {svm_name_and_stats_pair[1].avg}, {self._failed_maps_dict.get(svm_name_and_stats_pair[0], FailedMaps())}\n",
+                        svms_stats,
                     )
                 )
             )
-            epochs_results += df.to_markdown(tablefmt="psql") + "\n"
-        return epochs_results
+            + df_concat.to_markdown(tablefmt="psql")
+        )
+        return results
 
     def __update_file(self):
-        epochs_results = self.__get_epochs_results()
+        results = self.__get_results()
         with open(self._file, "w") as f:
-            f.write(epochs_results)
+            f.write(results)
 
 
 def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:

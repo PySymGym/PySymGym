@@ -6,14 +6,14 @@ import numpy as np
 import torch
 import tqdm
 import mlflow
-from ml.training.epochs_statistics import StatisticsCollector
 from common.classes import Map2Result, GameMap2SVM
-from common.errors import GameError
 from config import GeneralConfig
+from ml.game.errors_game import GameError
 from ml.inference import infer
-from ml.play_game import play_game
+from ml.game.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
+from ml.training.epochs_statistics import StatisticsCollector, avg_by_attr
 from torch_geometric.loader import DataLoader
 from paths import CURRENT_TABLE_PATH
 
@@ -80,24 +80,21 @@ def validate_coverage(
             colour=progress_bar_colour,
         ):
             if isinstance(result, GameError):
-                statistics_collector.fail(result._map)
+                need_to_save_map: bool = result.need_to_save_map()
+                if not need_to_save_map:
+                    statistics_collector.fail(result._map)
             else:
                 all_results.append(result)
 
-    def avg_coverage(results, path_to_coverage: str) -> int:
-        coverage = np.average(
-            list(map(lambda result: getattr(result, path_to_coverage), results))
-        )
-        return coverage
+    statistics_collector.update_results(all_results)
 
-    average_result = avg_coverage(
+    average_result = avg_by_attr(
         list(map(lambda map2result: map2result.game_result, all_results)),
         "actual_coverage_percent",
     )
-    statistics_collector.update_results(average_result, all_results)
     mlflow.log_metrics(
         {
-            "average_dataset_state_result": avg_coverage(
+            "average_dataset_state_result": avg_by_attr(
                 dataset.maps_results.values(), "coverage_percent"
             ),
             "average_result": average_result,

@@ -175,10 +175,15 @@ async def run_servers(count: int) -> list[ServerInstanceInfo]:
 
 
 def kill_server(server_instance: ServerInstanceInfo):
-    os.kill(server_instance.pid, signal.SIGKILL)
     PROCS.remove(server_instance.pid)
-
-    proc_info = psutil.Process(server_instance.pid)
+    try:
+        os.kill(server_instance.pid, signal.SIGKILL)
+        proc_info = psutil.Process(server_instance.pid)
+    except (ProcessLookupError, psutil.NoSuchProcess):
+        logging.warning(
+            f"Failed to kill the process with ID={server_instance.pid}: the process doesn't exist"
+        )
+        return
     wait_for_reset_retries = FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_retries
 
     while wait_for_reset_retries:
