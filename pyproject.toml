@@ -36,7 +36,7 @@ websocket-client = "^1.8.0"
 mlflow = "^2.14.3"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.2.0"
+pytest = "^8.3.3"
 
 [tool.poetry.group.linters.dependencies]
 black = "^24.4.2"
