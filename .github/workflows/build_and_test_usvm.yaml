@@ -1,8 +1,12 @@
 name: Build and test USVM submodule
 
-on: [push, pull_request]
-  paths: 
-    - './GameServers/usvm/'
+on: 
+  push
+    paths: 
+      - 'GameServers/usvm/'
+  pull_request
+    paths: 
+      - 'GameServers/usvm/'
 
 jobs:
   build-and-test:
