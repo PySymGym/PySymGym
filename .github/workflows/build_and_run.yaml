@@ -42,7 +42,7 @@ jobs:
       - name: Build usvm game server
         working-directory: ./GameServers/usvm/
         run: |
-          ./gradlew build --no-daemon
+          ./gradlew assemble --no-daemon
 
       - name: Build .NET game maps
         working-directory: ./maps/DotNet/Maps
