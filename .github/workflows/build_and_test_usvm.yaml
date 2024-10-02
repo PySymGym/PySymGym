@@ -1,10 +1,10 @@
 name: Build and test USVM submodule
 
 on: 
-  push
+  push:
     paths: 
       - 'GameServers/usvm/'
-  pull_request
+  pull_request:
     paths: 
       - 'GameServers/usvm/'
 
