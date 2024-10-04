@@ -1,30 +1,37 @@
 name: Build and test USVM submodule
 
-on: 
-  push:
-    paths: 
-      - 'GameServers/usvm'
-  pull_request:
-    paths: 
-      - 'GameServers/usvm'
+on: [push, pull_request]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v3.5.0
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-          cache: 'maven'
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: true
 
-      - name: Build and test usvm
-        working-directory: ./GameServers/usvm/
-        run: |
-          ./gradlew build --no-daemon
+    - name: Setup Java
+      uses: actions/setup-java@v3.5.0
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+        cache: 'maven'
+
+    - name: Build if submodule changes else assemble
+      run: |
+        git fetch --unshallow
+        old_sha=$(git rev-parse HEAD^1:GameServers/usvm)
+        new_sha=$(git rev-parse HEAD:GameServers/usvm)
+
+        echo "usvm_changed=$([ "$old_sha" != "$new_sha" ] && echo true || echo false)" >> $GITHUB_ENV
+
+    - name: Use the output
+      working-directory: GameServers/usvm
+      run: |
+        if [ "${{ env.usvm_changed }}" == "true" ]; then
+          ./gradlew build
+        else
+          ./gradlew assemble
+        fi
