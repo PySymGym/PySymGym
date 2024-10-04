@@ -1,0 +1,30 @@
+name: Build and test USVM submodule
+
+on: 
+  push:
+    paths: 
+      - 'GameServers/usvm'
+  pull_request:
+    paths: 
+      - 'GameServers/usvm'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v3.5.0
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+          cache: 'maven'
+
+      - name: Build and test usvm
+        working-directory: ./GameServers/usvm/
+        run: |
+          ./gradlew build --no-daemon
