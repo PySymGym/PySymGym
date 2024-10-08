@@ -61,6 +61,7 @@ class ValidationConfig:
     validation: Union[ValidationWithLoss, ValidationWithSVMs] = Field(
         discriminator="val_type"
     )
+    fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass

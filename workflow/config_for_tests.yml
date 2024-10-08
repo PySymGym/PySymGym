@@ -34,6 +34,7 @@ ValidationConfig:
   validation:
     val_type: svms
     servers_count: 1
+  fail_immediately: True
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
   experiment_name: CI
