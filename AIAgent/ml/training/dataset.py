@@ -150,6 +150,8 @@ class TrainingDataset(Dataset):
             )
         if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
             del step[TORCH.statevertex_history_gamevertex].edge_attr
+        if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
+            del step[TORCH.gamevertex_to_gamevertex].edge_attr
         if hasattr(step, 'use_for_train'):
             del step.use_for_train
         return step

@@ -129,7 +129,7 @@ def find_dominators_in_cfg(graph: HeteroData) -> HeteroData:
                 graph[*TORCH.gamevertex_to_gamevertex].edge_index = torch.cat(
                     (
                         graph[*TORCH.gamevertex_to_gamevertex].edge_index,
-                        torch.tensor([[edge[0]], [edge[1]]]),
+                        torch.tensor([[edge[1]], [edge[0]]]),
                     ),
                     dim=1,
                 )
