@@ -1,14 +1,4 @@
-PlatformsConfig:
-  - name: dotnet
-    DatasetConfigs:
-      - dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
-        dataset_description: ../workflow/dataset_for_tests_net.json
-    SVMSInfo:
-      - name: VSharp
-        launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
-        min_port: 35000
-        max_port: 35050
-        server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+PlatformsConfig:  
   - name: java
     DatasetConfigs:
       - dataset_base_path: ../maps/Java/Maps/
@@ -29,7 +19,7 @@ TrainingConfig:
   train_percentage: 1
   threshold_coverage: 100
   load_to_cpu: False
-  epochs: 2
+  epochs: 5
 ValidationConfig:
   validation:
     val_type: svms
