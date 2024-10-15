@@ -66,10 +66,6 @@ class StatisticsCollector:
         with failed_maps.lock:
             failed_maps.append(game_map)
 
-    def __clear_failed_maps(self):
-        for failed_maps in self._failed_maps_dict.values():
-            failed_maps.clear()
-
     def get_failed_maps(self) -> list[GameMap2SVM]:
         """
         Returns failed maps.
@@ -79,7 +75,6 @@ class StatisticsCollector:
         total_failed_maps: list[GameMap2SVM] = []
         for failed_maps in self._failed_maps_dict.values():
             total_failed_maps.extend(failed_maps)
-        self.__clear_failed_maps()
         return total_failed_maps
 
     @update_file
@@ -97,7 +92,7 @@ class StatisticsCollector:
             return map2results_dict
 
         def generate_svms_stats_dict(
-            svms_and_map2results: dict[SVMName, list[Map2Result]]
+            svms_and_map2results: dict[SVMName, list[Map2Result]],
         ):
             svms_stats_dict: dict[SVMName, list[StatsWithTable]] = dict()
             for svm_name, map2results_list in svms_and_map2results.items():
