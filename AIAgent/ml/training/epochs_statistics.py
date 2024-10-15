@@ -32,8 +32,6 @@ class StatsWithTable:
 
 
 class FailedMaps(list[GameMap2SVM]):
-    lock = multiprocessing.Lock()
-
     def __str__(self) -> str:
         result = f"count of failed maps = {len(self)}"
         return result
@@ -63,8 +61,7 @@ class StatisticsCollector:
         svm_name = game_map.SVMInfo.name
         with self.lock:
             failed_maps = self._failed_maps_dict.setdefault(svm_name, FailedMaps())
-        with failed_maps.lock:
-            failed_maps.append(game_map)
+        failed_maps.append(game_map)
 
     def get_failed_maps(self) -> list[GameMap2SVM]:
         """
