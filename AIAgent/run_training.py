@@ -130,6 +130,7 @@ def run_training(
         val_config=validation_config,
     )
     if optuna_config.study_uri is None and weights_uri is None:
+
         def save_study(study, _):
             joblib.dump(
                 study,
@@ -137,6 +138,7 @@ def run_training(
             )
             with mlflow.start_run(mlflow.last_active_run().info.run_id):
                 mlflow.log_artifact(CURRENT_STUDY_PATH)
+
         study = optuna.create_study(
             sampler=sampler, direction=optuna_config.study_direction
         )
@@ -201,7 +203,11 @@ def objective(
 
         def validate(model, dataset: TrainingDataset, epoch):
             result, failed_maps = validate_coverage(
-                model, dataset, epoch, val_config.validation.servers_count
+                model,
+                dataset,
+                epoch,
+                val_config.validation.servers_count,
+                val_config.fail_immediately,
             )
             for _map in failed_maps:
                 dataset.maps.remove(_map)
