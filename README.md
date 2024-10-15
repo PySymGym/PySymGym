@@ -3,6 +3,10 @@
 </p>
 
 # PySymGym
+[![Python linting](https://github.com/PySymGym/PySymGym/actions/workflows/python_linting.yaml/badge.svg)](https://github.com/PySymGym/PySymGym/actions/workflows/python_linting.yaml)
+[![Build SVM-s and maps, and run training](https://github.com/PySymGym/PySymGym/actions/workflows/build_and_run.yaml/badge.svg)](https://github.com/PySymGym/PySymGym/actions/workflows/build_and_run.yaml)
+[![Run python tests](https://github.com/PySymGym/PySymGym/actions/workflows/python_tests.yaml/badge.svg)](https://github.com/PySymGym/PySymGym/actions/workflows/python_tests.yaml)
+
 Python infrastructure to train paths selectors for symbolic execution engines.
 
 We treat paths selection as a game where current state of symbolic execution process, represented as a interprocedural control flow graph equipped with information about execution details, is a map of the world (game map). States of symbolic machine are chips that player able to move. Each step, having current game map, player (AI agent) selects state to move and sends it to game server. Server moves selected state and return updated map to the player. Depending on scoring function, player can be aimed to achieve 100% coverage in minimal number of moves, or achieve 100% coverage with minimal number of tests generated, or something else.
