@@ -71,7 +71,6 @@ def validate_coverage(
     tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in dataset.maps]
     statistics_collector = StatisticsCollector(CURRENT_TABLE_PATH)
     with mp.Pool(server_count) as p:
-        all_results: list[Map2Result] = list()
         for result in tqdm.tqdm(
             p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
@@ -84,9 +83,9 @@ def validate_coverage(
                 if not need_to_save_map:
                     statistics_collector.fail(result._map)
             else:
-                all_results.append(result)
+                statistics_collector.success(result)
 
-    statistics_collector.update_results(all_results)
+    all_results = statistics_collector.get_succeed_map2results()
 
     average_result = avg_by_attr(
         list(map(lambda map2result: map2result.game_result, all_results)),
