@@ -84,9 +84,8 @@ def validate_coverage(
             if isinstance(result, GameError):
                 need_to_save_map: bool = result.need_to_save_map()
                 if not need_to_save_map:
-                    if not fail_immediately:
-                        statistics_collector.fail(result._map)
-                    else:
+                    statistics_collector.fail(result._map)
+                    if fail_immediately:
                         failed_validation = True
             else:
                 all_results.append(result)
