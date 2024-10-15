@@ -88,7 +88,6 @@ def validate_coverage(
                         statistics_collector.fail(result._map)
                     else:
                         failed_validation = True
-                        break
             else:
                 all_results.append(result)
     statistics_collector.update_results(all_results)
