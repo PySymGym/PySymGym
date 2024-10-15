@@ -173,3 +173,7 @@ cython_debug/
 # MLFlow
 *mlartifacts/
 *mlruns/
+
+.vscode/
+.idea/
+*.pkl
