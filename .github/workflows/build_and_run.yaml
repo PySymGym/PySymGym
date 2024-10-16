@@ -94,14 +94,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: logs
-          path: ./*.log
+          path: ./**/*.log
 
       - name: Dump study models
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: models
-          path: ./*.pkl
+          path: ./**/*.pkl
 
       - name: Sanity check
         working-directory: ./AIAgent
