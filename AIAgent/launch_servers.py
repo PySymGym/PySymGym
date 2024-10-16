@@ -128,7 +128,11 @@ async def run_server_instance(
     svm_name = svm_info.name
 
     def launcher(port: int) -> str:
-        return svm_info.launch_command.format(port=port)
+        launch_command = svm_info.launch_command
+        launch_command = launch_command.replace(
+            "$PWD", os.environ["PWD"]
+        )  # let's hardcode PWD
+        return launch_command.format(port=port)
 
     min_port = svm_info.min_port
     max_port = svm_info.max_port
