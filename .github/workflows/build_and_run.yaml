@@ -89,6 +89,13 @@ jobs:
         run: |
           poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
 
+      - name: Dump logs
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: AIAgent/**/*.log
+
       - name: Dump study models
         if: success() || failure()
         uses: actions/upload-artifact@v4
