@@ -75,10 +75,12 @@ jobs:
           mkdir report
           mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
 
-      - name: Launch application
+      - name: Run launch_servers & save its output
         run: |
-          poetry --ansi run poe launch_servers --config ../workflow/config_for_tests.yml &
-          echo "Waiting for server to start..." && sleep 10
+          nohup poetry --ansi run poe launch_servers --config ../workflow/config_for_tests.yml 
+          >> launch_servers_std.log 2>&1 
+          && tail -f launch_servers_std.log 
+          & echo "Waiting for server to start..." && sleep 10
 
       - name: Run MLFlow server
         run: |
@@ -88,6 +90,13 @@ jobs:
       - name: Run training
         run: |
           poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
+
+      - name: Dump logs
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: AIAgent/*.log
 
       - name: Dump study models
         if: success() || failure()
