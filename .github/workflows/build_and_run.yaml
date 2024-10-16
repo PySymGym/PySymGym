@@ -30,9 +30,9 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v3.5.0
         with:
-          distribution: 'zulu'
-          java-version: '11'
-          cache: 'maven'
+          distribution: "zulu"
+          java-version: "11"
+          cache: "maven"
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
@@ -88,13 +88,20 @@ jobs:
       - name: Run training
         run: |
           poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
-  
+
+      - name: Dump study models
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: models
+          path: AIAgent/**/*.pkl
+
       - name: Sanity check
         working-directory: ./AIAgent
         run: |
-            if ls report/study.pkl 1> /dev/null 2>&1; then
-                echo "PKL files found."
-            else
-                echo "No PKL files found."
-                exit 1
-            fi
+          if ls report/study.pkl 1> /dev/null 2>&1; then
+              echo "PKL files found."
+          else
+              echo "No PKL files found."
+              exit 1
+          fi
