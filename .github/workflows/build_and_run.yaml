@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         working-directory: ./
         run: |
+          pip install -r requirements.txt
+
+      - name: Install dependencies
+        working-directory: ./
+        run: |
           poetry --ansi install
           poetry add --group dev poethepoet
 
@@ -86,8 +91,9 @@ jobs:
           echo "Waiting for mlflow server to start..." && sleep 10
 
       - name: Run training
+        working-directory: ./AIAgent
         run: |
-          poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
+          python run_training.py --config ../workflow/config_for_tests.yml      
 
       - name: Dump logs
         if: success() || failure()

@@ -81,9 +81,12 @@ class Connector:
         return self.ws.send(msg)
 
     def _raise_if_gameover(self, msg) -> GameOverServerMessage | str:
-        if self.game_is_over:
+        if self.game_is_over:   
             raise Connector.GameOver
 
+        logging.debug(
+            f"message contents: {msg}"
+        )    
         matching_message_type = ServerMessage.from_json_handle(
             msg, expected=ServerMessage
         ).MessageType

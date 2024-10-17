@@ -8,7 +8,7 @@ import torch
 
 class GeneralConfig:
     MAX_STEPS = 5000
-    LOGGER_LEVEL = logging.INFO
+    LOGGER_LEVEL = logging.DEBUG
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
