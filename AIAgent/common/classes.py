@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Optional, TypeAlias
+from typing import Optional, TypeAlias, Union
 
 from common.game import GameMap, GameMap2SVM
 from ml.protocols import Named
@@ -14,6 +14,16 @@ class GameResult:
     tests_count: int
     errors_count: int
     actual_coverage_percent: Optional[float] = None
+
+    def __str__(self) -> str:
+        return str(
+            (
+                self.actual_coverage_percent,
+                self.tests_count,
+                self.steps_count,
+                self.errors_count,
+            )
+        )
 
     def printable(self, verbose) -> str:
         steps_format = (
@@ -35,6 +45,11 @@ class GameResult:
         return f"{actual_coverage_percent_format} {steps_format} {tests_count_format} {errors_count_format}"
 
 
+class GameFailed:
+    def __str__(self) -> str:
+        return "FAILED"
+
+
 @dataclass
 class Agent2Result:
     agent: Named
@@ -45,7 +60,7 @@ class Agent2Result:
 @dataclass
 class Map2Result:
     map: GameMap2SVM
-    game_result: GameResult
+    game_result: Union[GameResult, GameFailed]
 
 
 GameMapsModelResults: TypeAlias = defaultdict[GameMap, list[Agent2Result]]

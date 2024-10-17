@@ -5,7 +5,7 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-import mlflow
+from common.config import ValidationWithSVMs
 from common.classes import Map2Result, GameMap2SVM
 from config import GeneralConfig
 from ml.game.errors_game import GameError
@@ -13,9 +13,9 @@ from ml.inference import infer
 from ml.game.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
-from ml.training.epochs_statistics import StatisticsCollector, avg_by_attr
+from ml.training.statistics import get_svms_statistics
+
 from torch_geometric.loader import DataLoader
-from paths import CURRENT_TABLE_PATH
 
 
 def catch_return_exception(func):
@@ -47,8 +47,8 @@ def play_game_task(
 def validate_coverage(
     model: torch.nn.Module,
     dataset: TrainingDataset,
-    epoch: int,
-    server_count: int,
+    maps: list[GameMap2SVM],
+    validation_config: ValidationWithSVMs,
     progress_bar_colour: str = "#ed95ce",
 ):
     """
@@ -60,18 +60,18 @@ def validate_coverage(
         Model to evaluate.
     dataset : TrainingDataset
         Dataset object for validation.
-    epoch : int
-        Epoch's number.
-    server_count: int
-        The number of game servers running in parallel.
+    maps : list[GameMap2SVM]
+        List of maps description.
+    validation_config : ValidationWithSVMs
+        Validation config from the config file.
     progress_bar_colour : str
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
-    tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in dataset.maps]
-    statistics_collector = StatisticsCollector(CURRENT_TABLE_PATH)
-    with mp.Pool(server_count) as p:
+    tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in maps]
+    with mp.Pool(validation_config.servers_count) as p:
         all_results: list[Map2Result] = list()
+        maps_to_remove: list[GameMap2SVM] = list()
         for result in tqdm.tqdm(
             p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
@@ -82,33 +82,17 @@ def validate_coverage(
             if isinstance(result, GameError):
                 need_to_save_map: bool = result.need_to_save_map()
                 if not need_to_save_map:
-                    statistics_collector.fail(result._map)
-            else:
-                all_results.append(result)
-    statistics_collector.update_results(all_results)
+                    maps_to_remove.append(result.map2result.map)
+                result = result.map2result
+            all_results.append(result)
 
-    average_result = avg_by_attr(
-        list(map(lambda map2result: map2result.game_result, all_results)),
-        "actual_coverage_percent",
-    )
-    mlflow.log_metrics(
-        {
-            "average_dataset_state_result": avg_by_attr(
-                dataset.maps_results.values(), "coverage_percent"
-            ),
-            "average_result": average_result,
-        },
-        step=epoch,
-    )
-    mlflow.log_artifact(CURRENT_TABLE_PATH, str(epoch))
-
-    return average_result, statistics_collector.get_failed_maps()
+    result, metrics = get_svms_statistics(all_results, validation_config, dataset)
+    return result, metrics, maps_to_remove
 
 
 def validate_loss(
     model: torch.nn.Module,
     dataset: TrainingDataset,
-    epoch: int,
     criterion: Callable,
     batch_size: int,
     progress_bar_colour: str = "#975cdb",
@@ -124,5 +108,5 @@ def validate_loss(
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
     metric_name = str(criterion).replace("(", "_").replace(")", "_")
-    mlflow.log_metric(metric_name, result, step=epoch)
-    return result
+    metrics = {metric_name: result}
+    return result, metrics
