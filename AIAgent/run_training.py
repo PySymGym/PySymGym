@@ -117,6 +117,8 @@ def run_training(
             result, metrics, maps_to_remove = validate_coverage(
                 model, dataset, maps, validation_config.validation.servers_count
             )
+            if maps_to_remove and validation_config.validation.fail_immediately:
+                raise RuntimeError("Validation failed")
             for _map in maps_to_remove:
                 maps.remove(_map)
             return result, metrics

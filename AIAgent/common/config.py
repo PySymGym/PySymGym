@@ -55,6 +55,7 @@ class ValidationWithSVMs:
     val_type: Literal["svms"]
     servers_count: int
     platforms_config: list[Platform] = Field(alias="PlatformsConfig")
+    fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
@@ -62,7 +63,6 @@ class ValidationConfig:
     validation: Union[ValidationWithLoss, ValidationWithSVMs] = Field(
         discriminator="val_type"
     )
-    fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
