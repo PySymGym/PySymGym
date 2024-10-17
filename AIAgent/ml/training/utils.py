@@ -84,8 +84,9 @@ def sync_dataset_with_description(dataset_path: Path, description_path: Path) ->
 
 def remove_call_return_edges(cfg: Data) -> Data:
     shift = 0
+    call_return_edges_types = [1, 2]
     for edge_idx, edge_type in enumerate(cfg.edge_attr):
-        if edge_type in [1, 2]:
+        if edge_type in call_return_edges_types:
             cfg.edge_index = torch.cat(
                 (
                     cfg.edge_index[:, 0 : edge_idx - shift],
@@ -114,7 +115,7 @@ def find_dominators_in_cfg(graph: HeteroData) -> HeteroData:
     cfg = remove_call_return_edges(cfg)
 
     entry_points = find_entry_points(cfg)
-    if len(entry_points) == 0:
+    if not entry_points:
         raise ValueError("There is no entry points to find dominators from.")
     dominators_graphs: list[DiGraph] = list()
     networkx_cfg: DiGraph = to_networkx(cfg)
@@ -139,3 +140,12 @@ def find_dominators_in_cfg(graph: HeteroData) -> HeteroData:
                         torch.tensor([3]),
                     )
                 )
+
+
+def remove_extra_attrs(step: HeteroData):
+    if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
+        del step[TORCH.statevertex_history_gamevertex].edge_attr
+    if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
+        del step[TORCH.gamevertex_to_gamevertex].edge_attr
+    if hasattr(step, "use_for_train"):
+        del step.use_for_train

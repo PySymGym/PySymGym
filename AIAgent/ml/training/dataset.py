@@ -32,6 +32,7 @@ from torch_geometric.data import Dataset, HeteroData
 from common.game import GameState, GameMap2SVM
 from config import GeneralConfig
 from ml.inference import TORCH
+from ml.training.utils import remove_extra_attrs
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -148,12 +149,7 @@ class TrainingDataset(Dataset):
             step = torch.load(
                 self.processed_paths[idx], map_location=GeneralConfig.DEVICE
             )
-        if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
-            del step[TORCH.statevertex_history_gamevertex].edge_attr
-        if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
-            del step[TORCH.gamevertex_to_gamevertex].edge_attr
-        if hasattr(step, 'use_for_train'):
-            del step.use_for_train
+        remove_extra_attrs(step)
         return step
 
     def switch_to(self, mode: Literal["train", "val"]) -> None:
