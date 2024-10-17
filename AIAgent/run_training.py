@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import logging
 import multiprocessing as mp
@@ -38,6 +39,7 @@ from paths import (
     CURRENT_MODEL_PATH,
     CURRENT_STUDY_PATH,
     REPORT_PATH,
+    CURRENT_TABLE_PATH,
 )
 from torch import nn
 from torch_geometric.loader import DataLoader
@@ -57,7 +59,6 @@ create_folders_if_necessary([PROCESSED_DATASET_PATH])
 class TrialSettings:
     lr: float
     batch_size: int
-    random_seed: int
     num_hops_1: int
     num_hops_2: int
     num_of_state_features: int
@@ -112,15 +113,22 @@ def run_training(
             return maps
 
         maps = load_maps_info()
+        with open(CURRENT_TABLE_PATH, "w") as statistics_file:
+            statistics_writer = csv.DictWriter(
+                statistics_file,
+                sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
+            )
+            statistics_writer.writeheader()
 
         def validate(model, dataset: TrainingDataset):
             result, metrics, maps_to_remove = validate_coverage(
-                model, dataset, maps, validation_config.validation.servers_count
+                model, dataset, maps, validation_config.validation
             )
             if maps_to_remove and validation_config.validation.fail_immediately:
                 raise RuntimeError("Validation failed")
             for _map in maps_to_remove:
                 maps.remove(_map)
+            mlflow.log_artifact(CURRENT_TABLE_PATH)
             return result, metrics
 
     dataset = TrainingDataset(

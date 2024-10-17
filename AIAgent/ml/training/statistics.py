@@ -12,53 +12,55 @@ def get_svms_statistics(
     validation_config: ValidationWithSVMs,
     dataset: TrainingDataset,
 ):
-    with open(CURRENT_TABLE_PATH, "w") as statistics_file:
+    with open(CURRENT_TABLE_PATH, "a") as statistics_file:
         maps_results = dict(
             list(
                 map(
                     lambda map2result: (
                         map2result.map.GameMap.MapName,
                         str(map2result.game_result),
-                        results,
-                    )
+                    ),
+                    results,
                 )
             )
         )
         statistics_writer = csv.DictWriter(statistics_file, sorted(maps_results.keys()))
         statistics_writer.writerow(maps_results)
 
-    failed_maps = filter(
-        lambda map2result: isinstance(map2result.game_result, GameFailed), results
-    )
-    successful_maps = filter(
-        lambda map2result: not isinstance(map2result.game_result, GameFailed), results
-    )
-    average_result = avg_by_attr(
-        list(map(lambda map2result: map2result.game_result, successful_maps)),
-        "actual_coverage_percent",
-    )
+    failed_maps = [
+        map2result
+        for map2result in results
+        if isinstance(map2result.game_result, GameFailed)
+    ]
+    successful_maps = [
+        map2result
+        for map2result in results
+        if not isinstance(map2result.game_result, GameFailed)
+    ]
     metrics = {
         "average_dataset_state_coverage": avg_by_attr(
             dataset.maps_results.values(), "coverage_percent"
         ),
-        "average_coverage": average_result,
-    }
-
-    for platform in validation_config.platforms_config:
-        metrics[f"failed_maps_number for_{platform.name}"] = sum(
-            1
-            for map2result in failed_maps
-            if map2result.map.SVMInfo.name == platform.name
-        )
-        metrics[f"average_coverage_for_{platform.name}"] = avg_by_attr(
-            list(
-                map(
-                    lambda map2result: map2result.game_result
-                    if map2result.map.SVMInfo.name == platform.name
-                    else None,
-                    successful_maps,
-                )
-            ),
+        "average_coverage": avg_by_attr(
+            list(map(lambda map2result: map2result.game_result, successful_maps)),
             "actual_coverage_percent",
-        )
+        ),
+    }
+    for platform in validation_config.platforms_config:
+        for svm_info in platform.svms_info:
+            metrics[f"failed_maps_number for_{svm_info.name}"] = sum(
+                [
+                    1
+                    for map2result in failed_maps
+                    if map2result.map.SVMInfo.name == svm_info.name
+                ]
+            )
+            metrics[f"average_coverage_for_{svm_info.name}"] = avg_by_attr(
+                [
+                    map2result.game_result
+                    for map2result in successful_maps
+                    if map2result.map.SVMInfo.name == svm_info.name
+                ],
+                "actual_coverage_percent",
+            )
     return metrics["average_coverage"], metrics
