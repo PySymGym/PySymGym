@@ -8,7 +8,15 @@
       "MapName":"Java.BubbleSort.sort_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BubbleSort.sortSimple",
+      "MapName":"Java.BubbleSort.sortSimple_5000_BFS"
+   },
+   {
+      "StepsToPlay":10000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -80,7 +88,23 @@
       "MapName":"Java.AStar.aStarSearch_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BellmanFord.shortestPath",
+      "MapName":"Java.BellmanFord.shortestPath_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BellmanFord.shortestPath",
+      "MapName":"Java.BellmanFord.shortestPath_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -88,7 +112,23 @@
       "MapName":"Java.BellmanFord.shortestPath_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BFS.search",
+      "MapName":"Java.BFS.search_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BFS.search",
+      "MapName":"Java.BFS.search_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -96,7 +136,15 @@
       "MapName":"Java.BFS.search_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":10000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BFSHelper.searchLevel",
+      "MapName":"Java.BFSHelper.searchLevel_5000_BFS"
+   },
+   {
+      "StepsToPlay":10000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -120,7 +168,23 @@
       "MapName":"Java.CycleDetection.hasCycle_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.DFS.searchIterative",
+      "MapName":"Java.DFS.searchIterative_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.DFS.searchIterative",
+      "MapName":"Java.DFS.searchIterative_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -128,7 +192,23 @@
       "MapName":"Java.DFS.searchIterative_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.Dijsktra.shortestPath",
+      "MapName":"Java.Dijsktra.shortestPath_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.Dijsktra.shortestPath",
+      "MapName":"Java.Dijsktra.shortestPath_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -144,7 +224,23 @@
       "MapName":"Java.Dijsktra.shortestPathOptimized_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.KruskalsMST.getMST",
+      "MapName":"Java.KruskalsMST.getMST_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.KruskalsMST.getMST",
+      "MapName":"Java.KruskalsMST.getMST_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -160,7 +256,23 @@
       "MapName":"Java.PrimsMST.getMST_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.TopologicalSorting.topSort",
+      "MapName":"Java.TopologicalSorting.topSort_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.TopologicalSorting.topSort",
+      "MapName":"Java.TopologicalSorting.topSort_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
@@ -176,7 +288,23 @@
       "MapName":"Java.ConnectedComponentsComputation.splitFormulasByComponent_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.IncWBO.search",
+      "MapName":"Java.IncWBO.search_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.IncWBO.search",
+      "MapName":"Java.IncWBO.search_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
@@ -184,7 +312,23 @@
       "MapName":"Java.IncWBO.search_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.IncWBO.relaxCore",
+      "MapName":"Java.IncWBO.relaxCore_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.IncWBO.relaxCore",
+      "MapName":"Java.IncWBO.relaxCore_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
@@ -192,7 +336,23 @@
       "MapName":"Java.IncWBO.relaxCore_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.LinearSU.bmoSearch",
+      "MapName":"Java.IncWBO.bmoSearch_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.maxsat.algorithms.LinearSU.bmoSearch",
+      "MapName":"Java.IncWBO.bmoSearch_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
@@ -200,7 +360,23 @@
       "MapName":"Java.IncWBO.bmoSearch_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.sat.GlucoseSyrup.addClause",
+      "MapName":"Java.IncWBO.addClause_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.sat.GlucoseSyrup.addClause",
+      "MapName":"Java.IncWBO.addClause_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
@@ -208,7 +384,23 @@
       "MapName":"Java.IncWBO.addClause_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.sat.GlucoseSyrup.solve",
+      "MapName":"Java.IncWBO.solve_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.solvers.sat.GlucoseSyrup.solve",
+      "MapName":"Java.IncWBO.solve_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
@@ -216,7 +408,23 @@
       "MapName":"Java.IncWBO.solve_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.transformations.simplification.FactorOutSimplifier.apply",
+      "MapName":"Java.FactorOutSimplifier.apply_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.transformations.simplification.FactorOutSimplifier.apply",
+      "MapName":"Java.FactorOutSimplifier.apply_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
@@ -224,14 +432,29 @@
       "MapName":"Java.FactorOutSimplifier.apply_0"
    },
    {
-      "StepsToPlay":4000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.transformations.simplification.AdvancedSimplifier.apply",
+      "MapName":"Java.AdvancedSimplifier.apply_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
+      "NameOfObjectToCover":"org.logicng.transformations.simplification.AdvancedSimplifier.apply",
+      "MapName":"Java.AdvancedSimplifier.apply_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"LogicNG/target/logicng-2.5.0.jar",
       "NameOfObjectToCover":"org.logicng.transformations.simplification.AdvancedSimplifier.apply",
       "MapName":"Java.AdvancedSimplifier.apply_0"
-   }
-   ,
+   },
    {
       "StepsToPlay":10000,
       "DefaultSearcher":"BFS",
@@ -241,7 +464,23 @@
       "MapName":"Java.DFA.minimize_0"
    },
    {
-      "StepsToPlay":10000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.dfa.DfaFactory.createFromNfa",
+      "MapName":"Java.DfaFactory.createFromNfa_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.dfa.DfaFactory.createFromNfa",
+      "MapName":"Java.DfaFactory.createFromNfa_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
@@ -249,7 +488,23 @@
       "MapName":"Java.DfaFactory.createFromNfa_0"
    },
    {
-      "StepsToPlay":10000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.NFA.addStandaloneRule",
+      "MapName":"Java.NFA.addStandaloneRule_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.NFA.addStandaloneRule",
+      "MapName":"Java.NFA.addStandaloneRule_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
@@ -265,7 +520,23 @@
       "MapName":"Java.NFA.addRegExp_0"
    },
    {
-      "StepsToPlay":10000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.NFA.addTransition",
+      "MapName":"Java.NFA.addTransition_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.NFA.addTransition",
+      "MapName":"Java.NFA.addTransition_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
@@ -353,7 +624,23 @@
       "MapName":"Java.RegExp.makeCCLs_0"
    },
    {
-      "StepsToPlay":10000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.RegExp.rev",
+      "MapName":"Java.RegExp.rev_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.RegExp.rev",
+      "MapName":"Java.RegExp.rev_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
@@ -361,7 +648,23 @@
       "MapName":"Java.RegExp.rev_0"
    },
    {
-      "StepsToPlay":10000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.SemCheck.check",
+      "MapName":"Java.SemCheck.check_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.SemCheck.check",
+      "MapName":"Java.SemCheck.check_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
@@ -385,7 +688,23 @@
       "MapName":"Java.SemCheck.length_0"
    },
    {
-      "StepsToPlay":10000,
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":5000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.SemCheck.isFiniteChoice",
+      "MapName":"Java.SemCheck.isFiniteChoice_5000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
+      "DefaultSearcher":"BFS",
+      "StepsToStart":10000,
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.core.SemCheck.isFiniteChoice",
+      "MapName":"Java.SemCheck.isFiniteChoice_10000_BFS"
+   },
+   {
+      "StepsToPlay":20000,
       "DefaultSearcher":"BFS",
       "StepsToStart":0,
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
