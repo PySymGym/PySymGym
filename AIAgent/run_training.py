@@ -207,8 +207,9 @@ def objective(
                 dataset,
                 epoch,
                 val_config.validation.servers_count,
-                val_config.fail_immediately,
             )
+            if failed_maps and val_config.fail_immediately:
+                raise RuntimeError("Validation failed")
             for _map in failed_maps:
                 dataset.maps.remove(_map)
             return result

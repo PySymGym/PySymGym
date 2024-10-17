@@ -49,7 +49,6 @@ def validate_coverage(
     dataset: TrainingDataset,
     epoch: int,
     server_count: int,
-    fail_immediately: bool,
     progress_bar_colour: str = "#ed95ce",
 ):
     """
@@ -71,7 +70,6 @@ def validate_coverage(
     wrapper = TrainingModelWrapper(model)
     tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in dataset.maps]
     statistics_collector = StatisticsCollector(CURRENT_TABLE_PATH)
-    failed_validation = False
     with mp.Pool(server_count) as p:
         all_results: list[Map2Result] = list()
         for result in tqdm.tqdm(
@@ -85,13 +83,9 @@ def validate_coverage(
                 need_to_save_map: bool = result.need_to_save_map()
                 if not need_to_save_map:
                     statistics_collector.fail(result._map)
-                    if fail_immediately:
-                        failed_validation = True
             else:
                 all_results.append(result)
     statistics_collector.update_results(all_results)
-    if fail_immediately and failed_validation:
-        raise RuntimeError("Validation failed")
 
     average_result = avg_by_attr(
         list(map(lambda map2result: map2result.game_result, all_results)),
