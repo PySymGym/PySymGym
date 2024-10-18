@@ -3,7 +3,7 @@ from time import perf_counter
 import traceback
 from typing import TypeAlias
 
-from common.classes import GameResult, Map2Result
+from common.classes import GameFailed, GameResult, Map2Result
 from common.game import GameState, GameMap2SVM
 from config import FeatureConfig
 from connection.errors_connection import GameInterruptedError
@@ -189,5 +189,6 @@ def play_game(
             FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
                 with_predictor.model(), with_name=name_of_predictor
             )
-        raise GameError(game_map2svm=game_map2svm, error_name=error.__class__.__name__)
+        map2result = Map2Result(game_map2svm, GameFailed())
+        raise GameError(map2result=map2result, error_name=error.__class__.__name__)
     return map2result

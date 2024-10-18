@@ -54,6 +54,8 @@ class ValidationWithLoss:
 class ValidationWithSVMs:
     val_type: Literal["svms"]
     servers_count: int
+    platforms_config: list[Platform] = Field(alias="PlatformsConfig")
+    fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
@@ -61,7 +63,6 @@ class ValidationConfig:
     validation: Union[ValidationWithLoss, ValidationWithSVMs] = Field(
         discriminator="val_type"
     )
-    fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
@@ -72,7 +73,6 @@ class MLFlowConfig:
 
 @pydantic_dataclass
 class Config:
-    platforms_config: list[Platform] = Field(alias="PlatformsConfig")
     optuna_config: OptunaConfig = Field(alias="OptunaConfig")
     training_config: TrainingConfig = Field(alias="TrainingConfig")
     validation_config: ValidationConfig = Field(alias="ValidationConfig")

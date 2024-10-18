@@ -29,7 +29,7 @@ import tqdm
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
 
-from common.game import GameState, GameMap2SVM
+from common.game import GameState
 from config import GeneralConfig
 from ml.inference import TORCH
 from ml.training.utils import remove_extra_attrs
@@ -75,8 +75,6 @@ class TrainingDataset(Dataset):
         Path to raw files that need to be processed.
     processed_dir : Path
         Path to processed dataset.
-    maps : list[GameMap]
-        List of maps descriptions that should be used in training an validation.
     train_percentage : float
         Percentage of training dataset. (1 - train_percentage) * full_dataset = validation_dataset
     threshold_steps_number : int
@@ -97,7 +95,6 @@ class TrainingDataset(Dataset):
         self,
         raw_dir: Path,
         processed_dir: Path,
-        maps: list[GameMap2SVM],
         train_percentage: float,
         threshold_steps_number: Optional[int] = None,
         load_to_cpu: bool = False,
@@ -106,7 +103,6 @@ class TrainingDataset(Dataset):
         progress_bar_colour: str = "#975cdb",
         n_jobs: int = mp.cpu_count() - 1,
     ):
-        self.maps = maps
         self.n_jobs = n_jobs
         self._raw_dir = raw_dir
         self._processed_dir = processed_dir
