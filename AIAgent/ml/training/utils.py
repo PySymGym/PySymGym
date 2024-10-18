@@ -154,9 +154,7 @@ def remove_extra_attrs(step: HeteroData):
 
 
 def avg_by_attr(results, path_to_coverage: str) -> int:
-    coverage = np.average(
-        list(map(lambda result: getattr(result, path_to_coverage), results))
-    )
+    coverage = np.average([getattr(result, path_to_coverage) for result in results])
     return coverage
 
 

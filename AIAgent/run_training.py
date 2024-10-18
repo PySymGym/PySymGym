@@ -14,8 +14,10 @@ import mlflow
 import optuna
 import torch
 import yaml
+from connection.broker_conn.classes import SVMInfo
 from common.config import (
     Config,
+    DatasetConfig,
     OptunaConfig,
     TrainingConfig,
     ValidationConfig,
@@ -55,6 +57,21 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
+def get_maps_for_svm(svm_info: SVMInfo, dataset_config: DatasetConfig):
+    dataset_base_path = dataset_config.dataset_base_path
+    dataset_description = dataset_config.dataset_description
+    with open(dataset_description, "r") as maps_json:
+        single_json_maps: list[GameMap] = GameMap.schema().load(
+            json.loads(maps_json.read()), many=True
+        )
+    single_json_maps_with_svms: list[GameMap2SVM] = list()
+    for _map in single_json_maps:
+        fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
+        _map.AssemblyFullName = fullName
+        single_json_maps_with_svms.append(GameMap2SVM(_map, svm_info))
+    return single_json_maps_with_svms
+
+
 @dataclass
 class TrialSettings:
     lr: float
@@ -87,32 +104,12 @@ def run_training(
                 validation_config.validation.batch_size,
             )
     elif isinstance(validation_config.validation, ValidationWithSVMs):
+        maps: list[GameMap2SVM] = list()
+        for platform in validation_config.validation.platforms_config:
+            for svm_info in platform.svms_info:
+                for dataset_config in platform.dataset_configs:
+                    maps.extend(get_maps_for_svm(svm_info, dataset_config))
 
-        def load_maps_info():
-            maps: list[GameMap2SVM] = list()
-            for platform in validation_config.validation.platforms_config:
-                svms_info = platform.svms_info
-                for svm_info in svms_info:
-                    for dataset_config in platform.dataset_configs:
-                        dataset_base_path = dataset_config.dataset_base_path
-                        dataset_description = dataset_config.dataset_description
-                        with open(dataset_description, "r") as maps_json:
-                            single_json_maps: list[GameMap] = GameMap.schema().load(
-                                json.loads(maps_json.read()), many=True
-                            )
-                        single_json_maps_with_svms: list[GameMap2SVM] = list()
-                        for _map in single_json_maps:
-                            fullName = os.path.join(
-                                dataset_base_path, _map.AssemblyFullName
-                            )
-                            _map.AssemblyFullName = fullName
-                            single_json_maps_with_svms.append(
-                                GameMap2SVM(_map, svm_info)
-                            )
-                        maps.extend(single_json_maps_with_svms)
-            return maps
-
-        maps = load_maps_info()
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
                 statistics_file,
@@ -124,8 +121,6 @@ def run_training(
             result, metrics, maps_to_remove = validate_coverage(
                 model, dataset, maps, validation_config.validation
             )
-            if maps_to_remove and validation_config.validation.fail_immediately:
-                raise RuntimeError("Validation failed")
             for _map in maps_to_remove:
                 maps.remove(_map)
             mlflow.log_artifact(CURRENT_TABLE_PATH)

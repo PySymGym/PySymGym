@@ -14,15 +14,10 @@ def get_svms_statistics(
 ):
     with open(CURRENT_TABLE_PATH, "a") as statistics_file:
         maps_results = dict(
-            list(
-                map(
-                    lambda map2result: (
-                        map2result.map.GameMap.MapName,
-                        str(map2result.game_result),
-                    ),
-                    results,
-                )
-            )
+            [
+                (map2result.map.GameMap.MapName, str(map2result.game_result))
+                for map2result in results
+            ]
         )
         statistics_writer = csv.DictWriter(statistics_file, sorted(maps_results.keys()))
         statistics_writer.writerow(maps_results)
@@ -42,13 +37,13 @@ def get_svms_statistics(
             dataset.maps_results.values(), "coverage_percent"
         ),
         "average_coverage": avg_by_attr(
-            list(map(lambda map2result: map2result.game_result, successful_maps)),
+            [map2result.game_result for map2result in successful_maps],
             "actual_coverage_percent",
         ),
     }
     for platform in validation_config.platforms_config:
         for svm_info in platform.svms_info:
-            metrics[f"failed_maps_number for_{svm_info.name}"] = sum(
+            metrics[f"failed_maps_number_for_{svm_info.name}"] = sum(
                 [
                     1
                     for map2result in failed_maps

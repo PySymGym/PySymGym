@@ -80,6 +80,8 @@ def validate_coverage(
             colour=progress_bar_colour,
         ):
             if isinstance(result, GameError):
+                if validation_config.fail_immediately:
+                    raise RuntimeError("Validation failed")
                 need_to_save_map: bool = result.need_to_save_map()
                 if not need_to_save_map:
                     maps_to_remove.append(result.map2result.map)
