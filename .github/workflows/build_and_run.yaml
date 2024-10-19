@@ -71,6 +71,7 @@ jobs:
           mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
 
       - name: Launch application
+        working-directory: ./AIAgent
         run: |
           python launch_servers.py --config ../workflow/config_for_tests.yml &
           echo "Waiting for server to start..." && sleep 10
