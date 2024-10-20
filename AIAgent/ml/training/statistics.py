@@ -3,24 +3,37 @@ from ml.training.utils import avg_by_attr
 from ml.training.dataset import TrainingDataset
 from common.config import ValidationWithSVMs
 from paths import CURRENT_TABLE_PATH
-from common.game import GameMap2SVM
-from common.classes import GameFailed
+from common.classes import GameFailed, Map2Result
 
 
 def get_svms_statistics(
-    results: list[GameMap2SVM],
+    results: list[Map2Result],
     validation_config: ValidationWithSVMs,
     dataset: TrainingDataset,
 ):
-    with open(CURRENT_TABLE_PATH, "a") as statistics_file:
-        maps_results = dict(
-            [
-                (map2result.map.GameMap.MapName, str(map2result.game_result))
-                for map2result in results
-            ]
+    with open(CURRENT_TABLE_PATH, "r") as statistics_file:
+        header = next(iter(csv.reader(statistics_file)))
+    maps_results = dict(
+        [
+            (map2result.map.GameMap.MapName, str(map2result.game_result))
+            for map2result in results
+        ]
+    )
+    results_to_write = dict(
+        list(
+            map(
+                lambda map_name: (map_name, "DELETED")
+                if map_name not in maps_results
+                else (map_name, maps_results[map_name]),
+                header,
+            )
         )
-        statistics_writer = csv.DictWriter(statistics_file, sorted(maps_results.keys()))
-        statistics_writer.writerow(maps_results)
+    )
+    with open(CURRENT_TABLE_PATH, "a") as statistics_file:
+        statistics_writer = csv.DictWriter(
+            statistics_file, sorted(results_to_write.keys())
+        )
+        statistics_writer.writerow(results_to_write)
 
     failed_maps = [
         map2result
