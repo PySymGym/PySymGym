@@ -2988,13 +2988,13 @@ optree = ["optree (>=0.12.0)"]
 
 [[package]]
 name = "torch-geometric"
-version = "2.5.3"
+version = "2.6.1"
 description = "Graph Neural Network Library for PyTorch"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "torch_geometric-2.5.3-py3-none-any.whl", hash = "sha256:8277abfc12600b0e8047e0c3ea2d55cc43f08c1448e73e924de827c15d0b5f85"},
-    {file = "torch_geometric-2.5.3.tar.gz", hash = "sha256:ad0761650c8fa56cdc46ee61c564fd4995f07f079965fe732b3a76d109fd3edc"},
+    {file = "torch_geometric-2.6.1-py3-none-any.whl", hash = "sha256:8faeb353f9655f7dbec44c5e0b44c721773bdfb279994da96b9b8b12fd30f427"},
+    {file = "torch_geometric-2.6.1.tar.gz", hash = "sha256:1f18f9d0fc4d2239d526221e4f22606a4a3895b5d965a9856d27610a3df662c6"},
 ]
 
 [package.dependencies]
@@ -3005,15 +3005,13 @@ numpy = "*"
 psutil = ">=5.8.0"
 pyparsing = "*"
 requests = "*"
-scikit-learn = "*"
-scipy = "*"
 tqdm = "*"
 
 [package.extras]
 benchmark = ["matplotlib", "networkx", "pandas", "protobuf (<4.21)", "wandb"]
-dev = ["pre-commit", "torch_geometric[test]"]
-full = ["ase", "captum (<0.7.0)", "graphviz", "h5py", "matplotlib", "networkx", "numba", "opt_einsum", "pandas", "pgmpy", "pynndescent", "pytorch-memlab", "rdflib", "rdkit", "scikit-image", "statsmodels", "sympy", "tabulate", "torch_geometric[graphgym,modelhub]", "torchmetrics", "trimesh"]
-graphgym = ["hydra-core", "protobuf (<4.21)", "pytorch-lightning", "yacs"]
+dev = ["ipython", "matplotlib-inline", "pre-commit", "torch_geometric[test]"]
+full = ["ase", "captum (<0.7.0)", "graphviz", "h5py", "matplotlib", "networkx", "numba (<0.60.0)", "opt_einsum", "pandas", "pgmpy", "pynndescent", "pytorch-memlab", "rdflib", "rdkit", "scikit-image", "scikit-learn", "scipy", "statsmodels", "sympy", "tabulate", "torch_geometric[graphgym,modelhub]", "torchmetrics", "trimesh"]
+graphgym = ["protobuf (<4.21)", "pytorch-lightning (<2.3.0)", "yacs"]
 modelhub = ["huggingface_hub"]
 test = ["onnx", "onnxruntime", "pytest", "pytest-cov"]
 
@@ -3383,4 +3381,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "8dd19e089456045a8aa857d021ed4cf5e167b8a3ad69fe3638a558d37cb78c7c"
+content-hash = "a6a954524713ebe04fdcda4ed7d7455ed8dfbf2313fa7b8ca53efe649e9c039e"
