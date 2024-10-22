@@ -14,7 +14,7 @@ version = "0.1.0"
 
 [tool.poetry.dependencies]
 aiohttp = "^3.10.10"
-dataclasses-json = "^0.6.6"
+dataclasses-json = "^0.6.7"
 func-timeout = "^4.3.5"
 httplib2 = "^0.22.0"
 joblib = "^1.4.2"
