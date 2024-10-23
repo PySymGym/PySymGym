@@ -7,6 +7,7 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
+from func_timeout import FunctionTimedOut
 from torch_geometric.data import Dataset
 
 import joblib
@@ -14,10 +15,11 @@ import mlflow
 import optuna
 import torch
 import yaml
-from connection.broker_conn.classes import SVMInfo
+from connection.errors_connection import GameInterruptedError
+from common.classes import GameFailed, Map2Result
+from ml.training.statistics import get_svms_statistics
 from common.config import (
     Config,
-    DatasetConfig,
     OptunaConfig,
     TrainingConfig,
     ValidationConfig,
@@ -57,19 +59,24 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
-def get_maps_for_svm(svm_info: SVMInfo, dataset_config: DatasetConfig):
-    dataset_base_path = dataset_config.dataset_base_path
-    dataset_description = dataset_config.dataset_description
-    with open(dataset_description, "r") as maps_json:
-        single_json_maps: list[GameMap] = GameMap.schema().load(
-            json.loads(maps_json.read()), many=True
-        )
-    single_json_maps_with_svms: list[GameMap2SVM] = list()
-    for _map in single_json_maps:
-        fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
-        _map.AssemblyFullName = fullName
-        single_json_maps_with_svms.append(GameMap2SVM(_map, svm_info))
-    return single_json_maps_with_svms
+def get_maps(validation_with_svms_config: ValidationWithSVMs):
+    maps: list[GameMap2SVM] = list()
+    for platform in validation_with_svms_config.platforms_config:
+        for svm_info in platform.svms_info:
+            for dataset_config in platform.dataset_configs:
+                dataset_base_path = dataset_config.dataset_base_path
+                dataset_description = dataset_config.dataset_description
+                with open(dataset_description, "r") as maps_json:
+                    single_json_maps: list[GameMap] = GameMap.schema().load(
+                        json.loads(maps_json.read()), many=True
+                    )
+                single_json_maps_with_svms: list[GameMap2SVM] = list()
+                for _map in single_json_maps:
+                    fullName = os.path.join(dataset_base_path, _map.AssemblyFullName)
+                    _map.AssemblyFullName = fullName
+                    single_json_maps_with_svms.append(GameMap2SVM(_map, svm_info))
+                maps.extend(single_json_maps_with_svms)
+    return maps
 
 
 @dataclass
@@ -97,19 +104,19 @@ def run_training(
     if isinstance(validation_config.validation, ValidationWithLoss):
 
         def validate(model, dataset):
-            return validate_loss(
+            criterion = criterion_init()
+            result = validate_loss(
                 model,
                 dataset,
-                criterion_init(),
+                criterion,
                 validation_config.validation.batch_size,
             )
-    elif isinstance(validation_config.validation, ValidationWithSVMs):
-        maps: list[GameMap2SVM] = list()
-        for platform in validation_config.validation.platforms_config:
-            for svm_info in platform.svms_info:
-                for dataset_config in platform.dataset_configs:
-                    maps.extend(get_maps_for_svm(svm_info, dataset_config))
+            metric_name = str(criterion).replace("(", "_").replace(")", "_")
+            metrics = {metric_name: result}
+            return result, metrics
 
+    elif isinstance(validation_config.validation, ValidationWithSVMs):
+        maps: list[GameMap2SVM] = get_maps(validation_config.validation)
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
                 statistics_file,
@@ -118,12 +125,25 @@ def run_training(
             statistics_writer.writeheader()
 
         def validate(model, dataset: TrainingDataset):
-            result, metrics, maps_to_remove = validate_coverage(
+            map2results = validate_coverage(
                 model, dataset, maps, validation_config.validation
             )
-            for _map in maps_to_remove:
-                maps.remove(_map)
+            result, metrics = get_svms_statistics(
+                map2results, validation_config.validation, dataset
+            )
             mlflow.log_artifact(CURRENT_TABLE_PATH)
+
+            def need_to_save_map(map2result: Map2Result):
+                return isinstance(
+                    map2result.game_result.reason, GameInterruptedError
+                ) or isinstance(map2result.game_result.reason, FunctionTimedOut)
+
+            for map2result in map2results:
+                if isinstance(map2result.game_result, GameFailed):
+                    if validation_config.validation.fail_immediately:
+                        raise RuntimeError("Validation failed")
+                    if not need_to_save_map(map2result):
+                        maps.remove(map2result.map)
             return result, metrics
 
     dataset = TrainingDataset(

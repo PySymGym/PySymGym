@@ -12,7 +12,6 @@ from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
 from ml.protocols import Predictor
 from ml.training.dataset import Result, TrainingDataset, convert_input_to_tensor
-from ml.game.errors_game import GameError
 
 TimeDuration: TypeAlias = float
 
@@ -189,6 +188,5 @@ def play_game(
             FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
                 with_predictor.model(), with_name=name_of_predictor
             )
-        map2result = Map2Result(game_map2svm, GameFailed())
-        raise GameError(map2result=map2result, error_name=error.__class__.__name__)
+        map2result = Map2Result(game_map2svm, GameFailed(reason=error))
     return map2result

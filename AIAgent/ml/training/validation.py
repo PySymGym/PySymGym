@@ -8,12 +8,10 @@ import tqdm
 from common.config import ValidationWithSVMs
 from common.classes import Map2Result, GameMap2SVM
 from config import GeneralConfig
-from ml.game.errors_game import GameError
 from ml.inference import infer
 from ml.game.play_game import play_game
 from ml.training.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
-from ml.training.statistics import get_svms_statistics
 
 from torch_geometric.loader import DataLoader
 
@@ -71,7 +69,6 @@ def validate_coverage(
     tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in maps]
     with mp.Pool(validation_config.servers_count) as p:
         all_results: list[Map2Result] = list()
-        maps_to_remove: list[GameMap2SVM] = list()
         for result in tqdm.tqdm(
             p.imap_unordered(play_game_task, tasks, chunksize=1),
             desc="validation",
@@ -79,17 +76,8 @@ def validate_coverage(
             ncols=100,
             colour=progress_bar_colour,
         ):
-            if isinstance(result, GameError):
-                if validation_config.fail_immediately:
-                    raise RuntimeError("Validation failed")
-                need_to_save_map: bool = result.need_to_save_map()
-                if not need_to_save_map:
-                    maps_to_remove.append(result.map2result.map)
-                result = result.map2result
             all_results.append(result)
-
-    result, metrics = get_svms_statistics(all_results, validation_config, dataset)
-    return result, metrics, maps_to_remove
+    return all_results
 
 
 def validate_loss(
@@ -109,6 +97,4 @@ def validate_loss(
         loss: torch.Tensor = criterion(out, batch.y_true)
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
-    metric_name = str(criterion).replace("(", "_").replace(")", "_")
-    metrics = {metric_name: result}
-    return result, metrics
+    return result
