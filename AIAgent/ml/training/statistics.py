@@ -2,7 +2,7 @@ import csv
 from ml.training.utils import avg_by_attr
 from ml.training.dataset import TrainingDataset
 from common.config import ValidationWithSVMs
-from paths import CURRENT_TABLE_PATH
+import paths
 from common.classes import GameFailed, Map2Result
 
 
@@ -11,7 +11,7 @@ def get_svms_statistics(
     validation_config: ValidationWithSVMs,
     dataset: TrainingDataset,
 ):
-    with open(CURRENT_TABLE_PATH, "r") as statistics_file:
+    with open(paths.CURRENT_TABLE_PATH, "r") as statistics_file:
         header = next(iter(csv.reader(statistics_file)))
     maps_results = dict(
         [
@@ -29,7 +29,7 @@ def get_svms_statistics(
             )
         )
     )
-    with open(CURRENT_TABLE_PATH, "a") as statistics_file:
+    with open(paths.CURRENT_TABLE_PATH, "a") as statistics_file:
         statistics_writer = csv.DictWriter(
             statistics_file, sorted(results_to_write.keys())
         )
