@@ -6,7 +6,9 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
+from common.classes import Map2Result
 from common.game import GameMap
 from ml.inference import TORCH
 from networkx.algorithms.dominance import immediate_dominators
@@ -149,3 +151,25 @@ def remove_extra_attrs(step: HeteroData):
         del step[TORCH.gamevertex_to_gamevertex].edge_attr
     if hasattr(step, "use_for_train"):
         del step.use_for_train
+
+
+def avg_by_attr(results, path_to_coverage: str) -> int:
+    if not results:
+        return -1
+    coverage = np.average([getattr(result, path_to_coverage) for result in results])
+    return coverage
+
+
+def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
+    maps = []
+    results = []
+    for map2result in map2result_list:
+        _map = map2result.map
+        map_name = _map.GameMap.MapName
+        game_result_str = map2result.game_result.printable(verbose=True)
+        maps.append(f"{_map.SVMInfo.name} : {map_name}")
+        results.append(game_result_str)
+
+    df = pd.DataFrame(results, columns=["Game result"], index=maps).T
+
+    return df
