@@ -1401,13 +1401,13 @@ dev = ["meson-python (>=0.13.1)", "numpy (>=1.25)", "pybind11 (>=2.6)", "setupto
 
 [[package]]
 name = "mlflow"
-version = "2.17.0"
+version = "2.17.1"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mlflow-2.17.0-py3-none-any.whl", hash = "sha256:64fbc0dfcb7322ed4cbccadc2f533bdd2944001b983ea8c10db45c7c59b46b7c"},
-    {file = "mlflow-2.17.0.tar.gz", hash = "sha256:5bb2089b833da48e4a92a9b4cb1cb5fa509a571eb3c603be39f5238b4721e076"},
+    {file = "mlflow-2.17.1-py3-none-any.whl", hash = "sha256:e614d0732cf95712891bfdfd92461dcf6a85d9e1899591be8399eb107eec6919"},
+    {file = "mlflow-2.17.1.tar.gz", hash = "sha256:04cbec7fe79a4509d8c073ef64302b24e73cb447f5a14ad51d915bfbaa05c73b"},
 ]
 
 [package.dependencies]
@@ -1422,7 +1422,7 @@ Jinja2 = [
 ]
 markdown = ">=3.3,<4"
 matplotlib = "<4"
-mlflow-skinny = "2.17.0"
+mlflow-skinny = "2.17.1"
 numpy = "<3"
 pandas = "<3"
 pyarrow = ">=4.0.0,<18"
@@ -1445,13 +1445,13 @@ xethub = ["mlflow-xethub"]
 
 [[package]]
 name = "mlflow-skinny"
-version = "2.17.0"
+version = "2.17.1"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mlflow_skinny-2.17.0-py3-none-any.whl", hash = "sha256:9eff7160f7459e09c01cc5bc2a68fdba7b64adbce069ef6d1013569830569048"},
-    {file = "mlflow_skinny-2.17.0.tar.gz", hash = "sha256:bbb770368e68ffe783a76fa38854618c1411b44bda21eb8b770ca4cc28801299"},
+    {file = "mlflow_skinny-2.17.1-py3-none-any.whl", hash = "sha256:656b7ccf37e7a5a00124487ad9ff1be781a041b6830ac7ae08cd594fd40b7f69"},
+    {file = "mlflow_skinny-2.17.1.tar.gz", hash = "sha256:75500acab95c81aac469ed12da4a102e229b8e16757b61393080a44d45018020"},
 ]
 
 [package.dependencies]
@@ -1824,6 +1824,7 @@ description = "Nvidia JIT LTO Library"
 optional = false
 python-versions = ">=3"
 files = [
+    {file = "nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_aarch64.whl", hash = "sha256:4abe7fef64914ccfa909bc2ba39739670ecc9e820c83ccc7a6ed414122599b83"},
     {file = "nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:06b3b9b25bf3f8af351d664978ca26a16d2c5127dbd53c0497e28d1fb9611d57"},
     {file = "nvidia_nvjitlink_cu12-12.4.127-py3-none-win_amd64.whl", hash = "sha256:fd9020c501d27d135f983c6d3e244b197a7ccad769e34df53a42e276b0e25fa1"},
 ]
@@ -3321,4 +3322,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "7dc14a2cb4103bea9022943ced2c5f8dbde62bd5919b7b181b97fbc89b4ea175"
+content-hash = "fb4a077a9f4e372d72c89a077c8d905f23c1f6777603f035ef6cc82fc4428179"
