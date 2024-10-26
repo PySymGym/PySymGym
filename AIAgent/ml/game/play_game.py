@@ -141,7 +141,6 @@ def play_map_with_timeout(
 
 def play_game(
     with_predictor: Predictor,
-    max_steps: int,
     game_map2svm: GameMap2SVM,
     with_dataset: TrainingDataset,
 ):
@@ -154,7 +153,7 @@ def play_game(
         )
         with game_server_socket_manager(game_map2svm.SVMInfo) as ws:
             game_result, time = play_func(
-                with_connector=Connector(ws, game_map2svm.GameMap, max_steps),
+                with_connector=Connector(ws, game_map2svm.GameMap),
                 with_predictor=with_predictor,
                 with_dataset=with_dataset,
             )

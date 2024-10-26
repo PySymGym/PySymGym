@@ -34,7 +34,6 @@ def play_game_task(
     game_map2svm, dataset, wrapper = task
     result = play_game(
         with_predictor=wrapper,
-        max_steps=GeneralConfig.MAX_STEPS,
         game_map2svm=game_map2svm,
         with_dataset=dataset,
     )
