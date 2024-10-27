@@ -145,6 +145,7 @@ def play_game(
     with_dataset: TrainingDataset,
 ):
     logging.info(f"<{with_predictor.name()}> is playing {game_map2svm.GameMap.MapName}")
+    need_to_save = False
     try:
         play_func = (
             play_map_with_timeout
@@ -162,30 +163,34 @@ def play_game(
             f"in {game_result.steps_count} steps, {time} seconds, "
             f"actual coverage: {game_result.actual_coverage_percent:.2f}"
         )
-        map2result = Map2Result(game_map2svm, game_result)
-    except (FunctionTimedOut, Exception) as error:
+    except FunctionTimedOut as error:
         need_to_save = True
-        name_of_predictor = with_predictor.name()
-
-        if isinstance(error, FunctionTimedOut):
-            log_message = f"<{name_of_predictor}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
-        elif isinstance(error, GameInterruptedError):
-            log_message = f"<{name_of_predictor}> failed on map {game_map2svm.GameMap.MapName} with {error.__class__.__name__}: {error.desc}"
-            need_to_save = False
-        else:
-            log_message = (
-                f"<{name_of_predictor}> failed on map {game_map2svm.GameMap.MapName}:\n"
+        logging.warning(
+            f"<{with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
+        )
+        game_result = GameFailed(reason=type(error))
+    except GameInterruptedError as error:
+        logging.warning(
+            f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName} with {error.__class__.__name__}: {error.desc}"
+        )
+        game_result = GameFailed(reason=type(error))
+    except Exception as error:
+        need_to_save = True
+        logging.warning(
+            (
+                f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n"
                 + "\n".join(
                     traceback.format_exception(
                         type(error), value=error, tb=error.__traceback__
                     )
                 )
             )
-        logging.warning(log_message)
+        )
+        game_result = GameFailed(reason=type(error))
 
-        if need_to_save:
-            FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
-                with_predictor.model(), with_name=name_of_predictor
-            )
-        map2result = Map2Result(game_map2svm, GameFailed(reason=error))
+    map2result = Map2Result(game_map2svm, game_result)
+    if need_to_save:
+        FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
+            with_predictor.model(), with_name=with_predictor.name()
+        )
     return map2result

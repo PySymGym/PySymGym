@@ -7,7 +7,6 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
-from func_timeout import FunctionTimedOut
 from torch_geometric.data import Dataset
 
 import joblib
@@ -15,8 +14,7 @@ import mlflow
 import optuna
 import torch
 import yaml
-from connection.errors_connection import GameInterruptedError
-from common.classes import GameFailed, Map2Result
+from common.classes import GameFailed
 from ml.training.statistics import get_svms_statistics
 from common.config import (
     Config,
@@ -133,17 +131,12 @@ def run_training(
             )
             mlflow.log_artifact(CURRENT_TABLE_PATH)
 
-            def need_to_save_map(map2result: Map2Result):
-                return isinstance(
-                    map2result.game_result.reason, GameInterruptedError
-                ) or isinstance(map2result.game_result.reason, FunctionTimedOut)
-
             for map2result in map2results:
-                if isinstance(map2result.game_result, GameFailed):
-                    if validation_config.validation.fail_immediately:
-                        raise RuntimeError("Validation failed")
-                    if not need_to_save_map(map2result):
-                        maps.remove(map2result.map)
+                if (
+                    isinstance(map2result.game_result, GameFailed)
+                    and validation_config.validation.fail_immediately
+                ):
+                    raise RuntimeError("Validation failed")
             return result, metrics
 
     dataset = TrainingDataset(
