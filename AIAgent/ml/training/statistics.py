@@ -5,6 +5,11 @@ from common.config import ValidationWithSVMs
 import paths
 from common.classes import GameFailed, Map2Result
 
+AVERAGE_COVERAGE_OF_DATASET_STATE = "average_dataset_state_coverage"
+AVERAGE_COVERAGE = "average_coverage"
+SVM_FAILED_MAPS_NUM_PREFIX = "failed_maps_number_for_"
+SVM_AVERAGE_COVERAGE_PREFIX = "average_coverage_for_"
+
 
 def get_svms_statistics(
     results: list[Map2Result],
@@ -34,7 +39,7 @@ def get_svms_statistics(
             statistics_file, sorted(results_to_write.keys())
         )
         statistics_writer.writerow(results_to_write)
-
+    GAME_RESULT_COVERAGE_PERCENT_ATTR = "actual_coverage_percent"
     failed_maps = [
         map2result
         for map2result in results
@@ -46,29 +51,29 @@ def get_svms_statistics(
         if not isinstance(map2result.game_result, GameFailed)
     ]
     metrics = {
-        "average_dataset_state_coverage": avg_by_attr(
+        AVERAGE_COVERAGE_OF_DATASET_STATE: avg_by_attr(
             dataset.maps_results.values(), "coverage_percent"
         ),
-        "average_coverage": avg_by_attr(
+        AVERAGE_COVERAGE: avg_by_attr(
             [map2result.game_result for map2result in successful_maps],
-            "actual_coverage_percent",
+            GAME_RESULT_COVERAGE_PERCENT_ATTR,
         ),
     }
     for platform in validation_config.platforms_config:
         for svm_info in platform.svms_info:
-            metrics[f"failed_maps_number_for_{svm_info.name}"] = sum(
+            metrics[SVM_FAILED_MAPS_NUM_PREFIX + svm_info.name] = sum(
                 [
                     1
                     for map2result in failed_maps
                     if map2result.map.SVMInfo.name == svm_info.name
                 ]
             )
-            metrics[f"average_coverage_for_{svm_info.name}"] = avg_by_attr(
+            metrics[SVM_AVERAGE_COVERAGE_PREFIX + svm_info.name] = avg_by_attr(
                 [
                     map2result.game_result
                     for map2result in successful_maps
                     if map2result.map.SVMInfo.name == svm_info.name
                 ],
-                "actual_coverage_percent",
+                GAME_RESULT_COVERAGE_PERCENT_ATTR,
             )
-    return metrics["average_coverage"], metrics
+    return metrics

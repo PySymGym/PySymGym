@@ -15,7 +15,7 @@ import optuna
 import torch
 import yaml
 from common.classes import GameFailed
-from ml.training.statistics import get_svms_statistics
+from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
 from common.config import (
     Config,
     OptunaConfig,
@@ -126,7 +126,7 @@ def run_training(
             map2results = validate_coverage(
                 model, dataset, maps, validation_config.validation
             )
-            result, metrics = get_svms_statistics(
+            metrics = get_svms_statistics(
                 map2results, validation_config.validation, dataset
             )
             mlflow.log_artifact(CURRENT_TABLE_PATH)
@@ -137,7 +137,7 @@ def run_training(
                     and validation_config.validation.fail_immediately
                 ):
                     raise RuntimeError("Validation failed")
-            return result, metrics
+            return metrics[AVERAGE_COVERAGE], metrics
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
