@@ -9,6 +9,8 @@ AVERAGE_COVERAGE_OF_DATASET_STATE = "average_dataset_state_coverage"
 AVERAGE_COVERAGE = "average_coverage"
 SVM_FAILED_MAPS_NUM_PREFIX = "failed_maps_number_for_"
 SVM_AVERAGE_COVERAGE_PREFIX = "average_coverage_for_"
+GAME_RESULT_COVERAGE_PERCENT_ATTR = "actual_coverage_percent"
+RESULT_COVERAGE_PERCENT_FIELD_NAME = "coverage_percent"
 
 
 def get_svms_statistics(
@@ -39,7 +41,6 @@ def get_svms_statistics(
             statistics_file, sorted(results_to_write.keys())
         )
         statistics_writer.writerow(results_to_write)
-    GAME_RESULT_COVERAGE_PERCENT_ATTR = "actual_coverage_percent"
     failed_maps = [
         map2result
         for map2result in results
@@ -52,7 +53,7 @@ def get_svms_statistics(
     ]
     metrics = {
         AVERAGE_COVERAGE_OF_DATASET_STATE: avg_by_attr(
-            dataset.maps_results.values(), "coverage_percent"
+            dataset.maps_results.values(), RESULT_COVERAGE_PERCENT_FIELD_NAME
         ),
         AVERAGE_COVERAGE: avg_by_attr(
             [map2result.game_result for map2result in successful_maps],
