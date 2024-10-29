@@ -150,14 +150,11 @@ def run_training(
 
     def model_init(**model_params) -> nn.Module:
         state_model_encoder = StateModelEncoder(**model_params)
-        if weights_uri is None:
-            return state_model_encoder
-        else:
-            downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-                artifact_uri=weights_uri, dst_path=REPORT_PATH
-            )
-            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path))
-            return state_model_encoder
+        path_to_model = REPORT_PATH / "model.pth"
+        state_model_encoder.load_state_dict(
+            torch.load(path_to_model, map_location=torch.device("cpu"))
+        )
+        return state_model_encoder
 
     objective_partial = partial(
         objective,
@@ -188,13 +185,6 @@ def run_training(
             n_jobs=optuna_config.n_jobs,
             callbacks=[save_study],
         )
-    else:
-        downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-            optuna_config.study_uri, dst_path=str(REPORT_PATH)
-        )
-        study: optuna.Study = joblib.load(downloaded_artifact_path)
-        for _ in range(optuna_config.n_trials):
-            objective_partial(study.best_trial)
 
 
 def objective(
@@ -209,12 +199,12 @@ def objective(
     ],
 ):
     config = TrialSettings(
-        lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 800),
-        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
-        num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
-        hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
+        lr=0.00098121341558622,
+        batch_size=514,
+        num_hops_1=5,
+        num_hops_2=3,
+        num_of_state_features=16,
+        hidden_channels=73,
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
@@ -231,21 +221,11 @@ def objective(
     )
     model.to(GeneralConfig.DEVICE)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    criterion = criterion_init()
-
     with mlflow.start_run():
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
             model.train()
-            train(
-                dataloader=train_dataloader,
-                model=model,
-                optimizer=optimizer,
-                criterion=criterion,
-            )
             torch.cuda.empty_cache()
             torch.save(model.state_dict(), CURRENT_MODEL_PATH)
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
