@@ -6,7 +6,7 @@
 Python infrastructure to train paths selectors for symbolic execution engines.
 
 
-## Quick Start
+## Install
 
 
 This repository contains submodules, so use the following command to get sources locally. 
@@ -15,10 +15,10 @@ git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
 ```
 
-Build .net game server (V#)
-```sh
-cd GameServers/VSharp
-dotnet build -c Release
+Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step you need dotnet, cmake, clang and maven to be installed. 
+```bash
+cd ./PySymGym
+make build_SVMs build_maps
 ```
 
 Create & activate virtual environment:
@@ -37,8 +37,16 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 
 ## Usage
 
+### Generate initial dataset
+To start supervised learning we need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
+```bash
+make init_data
+```
+Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
+
 ### Run training
 ...
+
 
 ### ONNX conversion
 
