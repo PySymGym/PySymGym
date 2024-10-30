@@ -1,0 +1,24 @@
+validation:
+  val_type: svms
+  servers_count: 30
+  PlatformsConfig:
+    - name: dotnet
+      DatasetConfigs:
+        - dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
+          dataset_description: ../maps/DotNet/Maps/dataset.json
+      SVMSInfo:
+        - name: VSharp
+          launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
+          min_port: 35000
+          max_port: 35450
+          server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+    - name: java
+      DatasetConfigs:
+        - dataset_base_path: ../maps/Java/Maps/
+          dataset_description: ../maps/Java/Maps/dataset.json
+      SVMSInfo:
+        - name: usvm
+          launch_command: java -jar app.jar --mode server --port {port}
+          min_port: 35500
+          max_port: 35950
+          server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/
