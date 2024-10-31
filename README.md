@@ -15,7 +15,7 @@ git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
 ```
 
-Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step you need dotnet, cmake, clang and maven to be installed. 
+Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step you need dotnet7, cmake, clang and maven to be installed. 
 ```bash
 cd ./PySymGym
 make build_SVMs build_maps
@@ -53,7 +53,7 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
 To use ONNX conversion tool, locate `onyx.py` script in `AIAgent/` directory. Then run the following command:
 
 ```bash
-onyx.py --sample-gamestate <game_state0.json> \
+python3 onyx.py --sample-gamestate <game_state0.json> \
     --pytorch-model <model>.pt \
     --savepath <converted_model_save_path>.onnx \
     --import-model-fqn <model.module.fqn.Model> \
