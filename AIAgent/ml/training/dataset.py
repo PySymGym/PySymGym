@@ -67,7 +67,7 @@ class Step:
 
 class TrainingDataset(Dataset):
     """
-    Dataset class which have information about data location and functions for filtering, ubdating and saving it.
+    Dataset class which have information about data location and functions for filtering, updating and saving it.
 
     Parameters
     ----------
