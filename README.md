@@ -104,8 +104,8 @@ To integrate a new symbolic machine, it is necessary to:
 
 _Integration examples:_
 
-- [VSharp](GameServers/VSharp/) (.NET symbolic machine) and [its dataset](maps/DotNet/)
-- [usvm](GameServers/usvm/) (JVM symbolic machine) and [its dataset](maps/Java/).
+- [VSharp](GameServers/VSharp/) (.NET symbolic machine) and [its maps](maps/DotNet/)
+- [usvm](GameServers/usvm/) (JVM symbolic machine) and [its maps](maps/Java/).
 
 Currently we use V# as a primary game server. You can see example of typical workflow in [our automation](.github/workflows/build_and_run.yaml).
 
