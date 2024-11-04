@@ -89,6 +89,10 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
 
 ### Integrate a new symbolic machine
 
+_Illustration of game process:_
+
+![Illustration of game process](resources/game_process_illustration.svg)
+
 To integrate a new symbolic machine, it is necessary to:
 
 - See [play_game](AIAgent/ml/game/play_game.py) to implement a server part with support for the websocket protocol
@@ -98,11 +102,7 @@ To integrate a new symbolic machine, it is necessary to:
   - Running with a trained model
 - Add the server configuration to your config file.
 
-Illustration of game process:
-
-![Illustration of game process](resources/game_process_illustration.svg)
-
-Integration examples:
+_Integration examples:_
 
 - [VSharp](GameServers/VSharp/) (.NET symbolic machine) and [its dataset](maps/DotNet/)
 - [usvm](GameServers/usvm/) (JVM symbolic machine) and [its dataset](maps/Java/).
