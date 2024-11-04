@@ -3,6 +3,7 @@
 </p>
 
 # PySymGym
+
 [![Python linting](https://github.com/PySymGym/PySymGym/actions/workflows/python_linting.yaml/badge.svg)](https://github.com/PySymGym/PySymGym/actions/workflows/python_linting.yaml)
 [![Build SVM-s and maps, and run training](https://github.com/PySymGym/PySymGym/actions/workflows/build_and_run.yaml/badge.svg)](https://github.com/PySymGym/PySymGym/actions/workflows/build_and_run.yaml)
 [![Run python tests](https://github.com/PySymGym/PySymGym/actions/workflows/python_tests.yaml/badge.svg)](https://github.com/PySymGym/PySymGym/actions/workflows/python_tests.yaml)
@@ -12,6 +13,7 @@ Python infrastructure to train paths selectors for symbolic execution engines.
 We treat paths selection as a game where current state of symbolic execution process, represented as a interprocedural control flow graph equipped with information about execution details, is a map of the world (game map). States of symbolic machine are chips that player able to move. Each step, having current game map, player (AI agent) selects state to move and sends it to game server. Server moves selected state and return updated map to the player. Depending on scoring function, player can be aimed to achieve 100% coverage in minimal number of moves, or achieve 100% coverage with minimal number of tests generated, or something else.
 
 Thus we introduced the following components.
+
 - Game server
 - Game maps
 - AI agent (player)
@@ -19,22 +21,22 @@ Thus we introduced the following components.
 
 As far as we use Json-based format to transfer data between server and agent, together with Json-based game maps description, our gym can be used to train networks using different symbolic execution engines.
 
-
 ## Install
 
-This repository contains submodules, so use the following command to get sources locally. 
 ```sh
 git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
 ```
 
-Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step you need dotnet7, cmake, clang and maven to be installed. 
+Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step you need dotnet7, cmake, clang and maven to be installed.
+
 ```bash
 cd ./PySymGym
 make build_SVMs build_maps
 ```
 
 Create & activate virtual environment:
+
 ```bash
 python3 -m pip install virtualenv
 python3 -m virtualenv .env
@@ -51,27 +53,59 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 ## Repo structure
 
 - **AIAgent** contains Python agent and related infrastructure to train network, prepare data, etc.
-- **GameServers** contains (as submodules) different symbolic execution engines extended to communicate with the agent, generate data for raining, etc.  
+- **GameServers** contains (as submodules) different symbolic execution engines extended to communicate with the agent, generate data for raining, etc.
 - **maps** contains target projects that used as inputs for symbolic execution engines, as data for training.
 
 ## Usage
 
-### Generate initial dataset
-To start supervised learning we need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
-```bash
-make init_data
-```
-Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
-
-### Run training
-...
+### Follow these steps:
 
 - Build game server
 - Build game maps
-- Create Json with maps description 
+- Create Json with maps description
+  - You can use `./workflow/dataset_for_tests_java.json` as a template
 - Generate initial data
 - Convert initial data to dataset for training
 - Run training process
+- Use ONNX to convert your model to ONNX format.
+- Use your ONNX model to run symbolic execution with the model.
+
+### Generate initial dataset
+
+To start supervised learning we need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
+
+```bash
+make init_data
+```
+
+Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
+
+### Run training:
+
+- Configuration setup (specifying server and training parameters). You can use `./workflow/config_for_tests.yml` as a template.
+  - Below we will discuss how you can fully integrate your own symbolic machine.
+- Launching the server manager (`launch_servers`).
+- Run the training process (`run_training`) to get model.
+
+### Integrate a new symbolic machine
+
+To integrate a new symbolic machine, it is necessary to:
+
+- See [play_game](AIAgent/ml/game/play_game.py) to implement a server part with support for the websocket protocol
+- See [messages](AIAgent/connection/game_server_conn/messages.py) to provide serialization-deserialization of data according to the established protocol
+- Implement methods for:
+  - Symbolic execution in training mode
+  - Running with a trained model
+- Add the server configuration to your config file.
+
+Illustration of game process:
+
+![Illustration of game process](resources/game_process_illustration.svg)
+
+Integration examples:
+
+- [VSharp](GameServers/VSharp/) (.NET symbolic machine) and [its dataset](maps/DotNet/)
+- [usvm](GameServers/usvm/) (JVM symbolic machine) and [its dataset](maps/Java/).
 
 Currently we use V# as a primary game server. You can see example of typical workflow in [our automation](.github/workflows/build_and_run.yaml).
 
@@ -96,11 +130,12 @@ python3 onyx.py --sample-gamestate <game_state0.json> \
     [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
 ```
 
-model_kwargs yaml file, *verification* game_states and *sample* game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
+model*kwargs yaml file, \_verification* game*states and \_sample* game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
 
 ## Linting tools
 
 Install [ruff](https://docs.astral.sh/ruff/) linter and code formatter by running following command in repo root to check your codestyle before committing:
+
 ```sh
 pip install ruff
 
