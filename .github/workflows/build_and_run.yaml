@@ -77,7 +77,7 @@ jobs:
 
       - name: Launch application
         run: |
-          poetry --ansi run poe launch_servers --config ../workflow/config_for_tests.yml &
+          poetry --ansi run python3 launch_servers.py --config ../workflow/config_for_tests.yml &
           echo "Waiting for server to start..." && sleep 10
 
       - name: Run MLFlow server
@@ -87,7 +87,7 @@ jobs:
 
       - name: Run training
         run: |
-          poetry --ansi run poe run_training --config ../workflow/config_for_tests.yml
+          poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests.yml
   
       - name: Sanity check
         working-directory: ./AIAgent
