@@ -25,7 +25,6 @@ jobs:
         working-directory: ./
         run: |
           poetry --ansi install
-          poetry add --group dev poethepoet
 
       - name: Setup Java
         uses: actions/setup-java@v3.5.0
