@@ -35,12 +35,9 @@ cd ./PySymGym
 make build_SVMs build_maps
 ```
 
-Create & activate virtual environment:
+Setup environment:
 
 ```bash
-python3 -m pip install virtualenv
-python3 -m virtualenv .env
-source .env/bin/activate
 pip install poetry
 poetry install
 ```
@@ -70,9 +67,11 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 - Use [`onyx.py`](#onnx-conversion) command line tool convert your PyTorch model to ONNX format.
 - Use your ONNX model to guide symbolic execution.
 
-Our team has developed a specialized extension for VSharp that makes it suitable for AI symbolic execution. For example, here’s how to utilize this extension with your ONNX model: 
-  - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
-  - `dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage`
+Our team has developed a specialized extension for VSharp that makes it suitable for AI symbolic execution. For example, here’s how to utilize this extension with your ONNX model:
+
+- Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
+- `dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage`
+
 ### Generate initial dataset
 
 To start supervised learning we need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
