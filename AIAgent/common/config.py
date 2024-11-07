@@ -31,7 +31,7 @@ class OptunaConfig:
     n_trials: int
     n_jobs: int
     study_direction: str
-    study_uri: Optional[str] = Field(default=None)
+    trial_uri: Optional[str] = Field(default=None)
 
 
 @pydantic_dataclass
@@ -82,9 +82,9 @@ class Config:
     @field_validator("weights_uri", mode="after")
     @classmethod
     def check_if_both_none(cls, weights_uri: str, val_info: ValidationInfo):
-        study_uri = val_info.data["optuna_config"].study_uri
-        if (weights_uri is None and study_uri is None) or (
-            weights_uri is not None and study_uri is not None
+        trial_uri = val_info.data["optuna_config"].trial_uri
+        if (weights_uri is None and trial_uri is None) or (
+            weights_uri is not None and trial_uri is not None
         ):
             return weights_uri
         else:

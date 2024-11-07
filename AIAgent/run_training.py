@@ -42,6 +42,7 @@ from paths import (
     CURRENT_STUDY_PATH,
     REPORT_PATH,
     CURRENT_TABLE_PATH,
+    CURRENT_TRIAL_PATH,
 )
 from torch import nn
 from torch_geometric.loader import DataLoader
@@ -171,12 +172,15 @@ def run_training(
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
     )
-    if optuna_config.study_uri is None and weights_uri is None:
+    if optuna_config.trial_uri is None and weights_uri is None:
 
-        def save_study(study, _):
+        def save_study_and_trial(study, trial):
             joblib.dump(study, CURRENT_STUDY_PATH)
+            joblib.dump(trial, CURRENT_TRIAL_PATH)
             with mlflow.start_run(mlflow.last_active_run().info.run_id):
                 mlflow.log_artifact(CURRENT_STUDY_PATH)
+                mlflow.log_artifact(CURRENT_TRIAL_PATH)
+                mlflow.set_tag("best_trial_number", study.best_trial.number)
 
         study = optuna.create_study(
             sampler=sampler, direction=optuna_config.study_direction
@@ -186,15 +190,15 @@ def run_training(
             n_trials=optuna_config.n_trials,
             gc_after_trial=True,
             n_jobs=optuna_config.n_jobs,
-            callbacks=[save_study],
+            callbacks=[save_study_and_trial],
         )
     else:
         downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-            optuna_config.study_uri, dst_path=str(REPORT_PATH)
+            optuna_config.trial_uri, dst_path=str(REPORT_PATH)
         )
-        study: optuna.Study = joblib.load(downloaded_artifact_path)
+        trial: optuna.trial.FrozenTrial = joblib.load(downloaded_artifact_path)
         for _ in range(optuna_config.n_trials):
-            objective_partial(study.best_trial)
+            objective_partial(trial)
 
 
 def objective(
@@ -234,7 +238,7 @@ def objective(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
-    with mlflow.start_run():
+    with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
