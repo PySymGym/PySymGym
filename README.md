@@ -53,7 +53,7 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 ## Repo structure
 
 - **AIAgent** contains Python agent and related infrastructure to train network, prepare data, etc.
-- **GameServers** contains (as submodules) different symbolic execution engines extended to communicate with the agent, generate data for raining, etc.
+- **GameServers** contains (as submodules) different symbolic execution engines extended to communicate with the agent, generate data for training, etc.
 - **maps** contains target projects that used as inputs for symbolic execution engines, as data for training.
 
 ## Usage
@@ -68,8 +68,11 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 - Convert initial data to dataset for training
 - Run training process
 - Use [`onyx.py`](#onnx-conversion) command line tool convert your PyTorch model to ONNX format.
-- Use your ONNX model to run symbolic execution.
+- Use your ONNX model to guide symbolic execution.
 
+Our team has developed a specialized extension for VSharp that makes it suitable for AI symbolic execution. For example, here’s how to utilize this extension with your ONNX model: 
+  - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
+  - `dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage`
 ### Generate initial dataset
 
 To start supervised learning we need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
@@ -81,7 +84,6 @@ make init_data
 Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
 
 ### Run training:
-
 
 - Create configuration (specifying server and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
   - Below we will discuss how you can fully integrate your own symbolic machine
@@ -104,13 +106,13 @@ To integrate a new symbolic machine, it is necessary to:
 - See [messages](AIAgent/connection/game_server_conn/messages.py) to provide serialization-deserialization of data according to the established protocol
 - Implement methods for:
 
-  - Symbolic execution in training mode
-  - Running with a trained model
+  - Symbolic execution in training mode (example: `./VSharp/VSharp.ML.GameServer.Runner/Main.fs`)
+  - Running with a trained model (example: `./VSharp/VSharp.Explorer/AISearcher.fs`)
 
-_Integration examples:_
+_Integration examples:_ see [GameServers](GameServers/) directory. There are 2 integrated symbolic machines at present:
 
-- [VSharp](GameServers/VSharp/) (.NET symbolic machine) and [its maps](maps/DotNet/)
-- [usvm](GameServers/usvm/) (JVM symbolic machine) and [its maps](maps/Java/).
+- [VSharp](https://github.com/PySymGym/VSharp) (.NET symbolic machine) and [its maps](maps/DotNet/)
+- [usvm](https://github.com/PySymGym/usvm) (JVM symbolic machine) and [its maps](maps/Java/).
 
 Currently we use V# as a primary game server. You can see example of typical workflow in [our automation](.github/workflows/build_and_run.yaml).
 
