@@ -67,8 +67,8 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 - Generate initial data
 - Convert initial data to dataset for training
 - Run training process
-- Use ONNX to convert your model to ONNX format.
-- Use your ONNX model to run symbolic execution with the model.
+- Use [`onyx.py`](#onnx-conversion) command line tool convert your PyTorch model to ONNX format.
+- Use your ONNX model to run symbolic execution.
 
 ### Generate initial dataset
 
@@ -82,10 +82,15 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
 
 ### Run training:
 
-- Configuration setup (specifying server and training parameters). You can use `./workflow/config_for_tests.yml` as a template.
-  - Below we will discuss how you can fully integrate your own symbolic machine.
-- Launching the server manager (`launch_servers`).
-- Run the training process (`run_training`) to get model.
+
+- Create configuration (specifying server and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
+  - Below we will discuss how you can fully integrate your own symbolic machine
+- Launch the server manager
+  - `poetry run python3 launch_servers --config path/to/config.yml`
+- Run MLFlow server
+  - `poetry run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts`
+- Run the training process to get PyTorch model.
+  - `poetry run python3 run_training --config path/to/config.yml`
 
 ### Integrate a new symbolic machine
 
@@ -98,9 +103,9 @@ To integrate a new symbolic machine, it is necessary to:
 - See [play_game](AIAgent/ml/game/play_game.py) to implement a server part with support for the websocket protocol
 - See [messages](AIAgent/connection/game_server_conn/messages.py) to provide serialization-deserialization of data according to the established protocol
 - Implement methods for:
+
   - Symbolic execution in training mode
   - Running with a trained model
-- Add the server configuration to your config file.
 
 _Integration examples:_
 
@@ -130,7 +135,7 @@ python3 onyx.py --sample-gamestate <game_state0.json> \
     [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
 ```
 
-model*kwargs yaml file, \_verification* game*states and \_sample* game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
+model_kwargs yaml file, *verification* game_states and *sample* game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
 
 ## Linting tools
 
