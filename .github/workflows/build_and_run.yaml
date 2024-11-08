@@ -68,7 +68,7 @@ jobs:
           dotnet VSharp.ML.GameServer.Runner.dll \
             --mode generator \
             --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net7.0 \
-            --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests.json 
+            --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
             --stepstoserialize 200
 
       - name: Move SerializedEpisodes
