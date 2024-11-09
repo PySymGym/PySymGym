@@ -81,7 +81,7 @@ class Config:
 
     @field_validator("weights_uri", mode="after")
     @classmethod
-    def check_if_both_none(cls, weights_uri: str, val_info: ValidationInfo):
+    def check_if_both_none_or_not_none(cls, weights_uri: str, val_info: ValidationInfo):
         trial_uri = val_info.data["optuna_config"].trial_uri
         if (weights_uri is None and trial_uri is None) or (
             weights_uri is not None and trial_uri is not None
