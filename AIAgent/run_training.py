@@ -4,6 +4,7 @@ import json
 import logging
 import multiprocessing as mp
 import os
+import torch.nn.functional as F
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
@@ -148,6 +149,13 @@ def run_training(
         threshold_coverage=training_config.threshold_coverage,
     )
 
+    def normalize_weights(model):
+        with torch.no_grad():
+            for name, param in model.named_parameters():
+                if 'edge_attr_history_v_s' in name:
+                    # normalize the weights
+                    param.copy_(F.normalize(param, p=2, dim=0))
+
     def model_init(**model_params) -> nn.Module:
         state_model_encoder = StateModelEncoder(**model_params)
         if weights_uri is None:
@@ -156,7 +164,9 @@ def run_training(
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
                 artifact_uri=weights_uri, dst_path=REPORT_PATH
             )
-            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path))
+            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE))
+            normalize_weights(state_model_encoder)
+            
             return state_model_encoder
 
     objective_partial = partial(
