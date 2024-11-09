@@ -152,13 +152,14 @@ def run_training(
     def normalize_weights(model):
         with torch.no_grad():
             for name, param in model.named_parameters():
-                if 'edge_attr_history_v_s' in name:
+                if 'conv3' in name and 'weight' in name:
                     # normalize the weights
                     param.copy_(F.normalize(param, p=2, dim=0))
 
     def model_init(**model_params) -> nn.Module:
         state_model_encoder = StateModelEncoder(**model_params)
         if weights_uri is None:
+            normalize_weights(state_model_encoder)
             return state_model_encoder
         else:
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
@@ -166,7 +167,7 @@ def run_training(
             )
             state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE))
             normalize_weights(state_model_encoder)
-            
+
             return state_model_encoder
 
     objective_partial = partial(
