@@ -28,3 +28,6 @@
 [submodule "GameServers/usvm"]
 	path = GameServers/usvm
 	url = https://github.com/gsvgit/usvm.git
+[submodule "maps/Java/Maps/TheAlgorithms"]
+	path = maps/Java/Maps/TheAlgorithms
+	url = https://github.com/TheAlgorithms/Java.git

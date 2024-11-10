@@ -59,8 +59,40 @@
       "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
-      "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
-      "NameOfObjectToCover": "jflex.dfa.DfaFactory.createFromNfa",
-      "MapName": "Java.DfaFactory.createFromNfa_0"
+      "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"jflex.dfa.DfaFactory.createFromNfa",
+      "MapName":"Java.DfaFactory.createFromNfa_0"
+   },
+   {
+      "StepsToPlay": 400,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 50,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.BubbleSort.sort",
+      "MapName":"Java.BubbleSort.sort_50_DFS"
+   },
+   {
+      "StepsToPlay": 400,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 50,
+      "AssemblyFullName":"manuallycollected/build/libs/manuallycollected.jar",
+      "NameOfObjectToCover":"maps.manuallycollected.DFS.search",
+      "MapName":"Java.DFS.search_50_DFS"
+   },
+   {
+      "StepsToPlay": 400,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 50,
+      "AssemblyFullName":"TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"com.thealgorithms.maths.ChineseRemainderTheorem.solveCRT",
+      "MapName":"Java.ChineseRemainderTheorem.solveCRT_50_DFS"
+   },
+   {
+      "StepsToPlay": 400,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName":"TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover":"com.thealgorithms.misc.MapReduce.mapreduce",
+      "MapName":"Java.MapReduce.mapreduce_0"
    }
 ]
