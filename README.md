@@ -22,7 +22,7 @@ Thus we introduced the following components.
 As far as we use Json-based format to transfer data between server and agent, together with Json-based game maps description, our gym can be used to train networks using different symbolic execution engines.
 
 ## Install
-
+This repository contains submodules, so use the following command to get sources locally. 
 ```sh
 git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
