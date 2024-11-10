@@ -718,6 +718,237 @@
       "AssemblyFullName":"jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
       "NameOfObjectToCover":"jflex.generator.Emitter.emit",
       "MapName":"Java.Emitter.emit_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.maths.CrossCorrelation.crossCorrelation",
+      "MapName": "Java.CrossCorrelation.crossCorrelation_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.sorts.LinkListSort.isSorted",
+      "MapName": "Java.LinkListSort.isSorted_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.scheduling.HighestResponseRatioNextScheduling.calculateTurnAroundTime",
+      "MapName": "Java.HighestResponseRatioNextScheduling.calculateTurnAroundTime_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.lineclipping.CohenSutherland.cohenSutherlandClip",
+      "MapName": "Java.CohenSutherland.cohenSutherlandClip_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.greedyalgorithms.ActivitySelection.activitySelection",
+      "MapName": "Java.ActivitySelection.activitySelection_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.divideandconquer.ClosestPair.closestPair",
+      "MapName": "Java.ClosestPair.closestPair_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.dynamicprogramming.AssignmentUsingBitmask.countWaysUntil",
+      "MapName": "Java.AssignmentUsingBitmask.countWaysUntil_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.stacks.MaximumMinimumWindow.calculateMaxOfMin",
+      "MapName": "Java.MaximumMinimumWindow.calculateMaxOfMin_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.strings.MyAtoi.myAtoi",
+      "MapName": "Java.MyAtoi.myAtoi_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.backtracking.MazeRecursion.solveMazeUsingSecondStrategy",
+      "MapName": "Java.MazeRecursion.solveMazeUsingSecondStrategy_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.conversions.AnyBaseToAnyBase.validForBase",
+      "MapName": "Java.AnyBaseToAnyBase.validForBase_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.backtracking.MColoring.isColoringPossible",
+      "MapName": "Java.MColoring.isColoringPossible_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.bitmanipulation.TwosComplement.twosComplement",
+      "MapName": "Java.TwosComplement.twosComplement_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.geometry.MidpointEllipse.computeEllipsePoints",
+      "MapName": "Java.MidpointEllipse.computeEllipsePoints_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.audiofilters.IIRFilter.process",
+      "MapName": "Java.IIRFilter.process_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.io.BufferedReader.readBlock",
+      "MapName": "Java.BufferedReader.readBlock_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.slidingwindow.MaxSumKSizeSubarray.maxSumKSizeSubarray",
+      "MapName": "Java.MaxSumKSizeSubarray.maxSumKSizeSubarray_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.geometry.MidpointCircle.generateCirclePoints",
+      "MapName": "Java.MidpointCircle.generateCirclePoints_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.recursion.GenerateSubsets.doRecursion",
+      "MapName": "Java.GenerateSubsets.doRecursion_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.searches.BinarySearch2dArray.binarySearch",
+      "MapName": "Java.BinarySearch2dArray.binarySearch_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.matrixexponentiation.Fibonacci.matrixMultiplication",
+      "MapName": "Java.Fibonacci.matrixMultiplication_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.graph.StronglyConnectedComponentOptimized.getOutput",
+      "MapName": "Java.StronglyConnectedComponentOptimized.getOutput_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.others.CRCAlgorithm.divideMessageWithP",
+      "MapName": "Java.CRCAlgorithm.divideMessageWithP_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.ciphers.a5.A5KeyStreamGenerator.getNextKeyStream",
+      "MapName": "Java.A5KeyStreamGenerator.getNextKeyStream_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.scheduling.diskscheduling.LookScheduling.execute",
+      "MapName": "Java.LookScheduling.execute_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.strings.zigZagPattern.ZigZagPattern.encode",
+      "MapName": "Java.ZigZagPattern.encode_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.datastructures.crdt.LWWElementSet.compareTimestamps",
+      "MapName": "Java.LWWElementSet.compareTimestamps_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.datastructures.dynamicarray.DynamicArray.put",
+      "MapName": "Java.DynamicArray.put_0"
+   },
+   {
+      "StepsToPlay": 20000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+      "NameOfObjectToCover": "com.thealgorithms.datastructures.bags.Bag.contains",
+      "MapName": "Java.Bag.contains_0"
    }
-
 ]
