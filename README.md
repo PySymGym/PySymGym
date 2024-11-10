@@ -87,11 +87,11 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
 - Create configuration (specifying server and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
   - Below we will discuss how you can fully integrate your own symbolic machine
 - Launch the server manager
-  - `poetry run python3 launch_servers --config path/to/config.yml`
+  - `poetry run python3 launch_servers.py --config path/to/config.yml`
 - Run MLFlow server
   - `poetry run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts`
 - Run the training process to get PyTorch model.
-  - `poetry run python3 run_training --config path/to/config.yml`
+  - `poetry run python3 run_training.py --config path/to/config.yml`
 
 ### Integrate a new symbolic machine
 
