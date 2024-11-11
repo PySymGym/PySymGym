@@ -22,7 +22,6 @@ jobs:
           cache: "poetry"
 
       - name: Install dependencies
-        working-directory: ./
         run: |
           poetry --ansi install
 
@@ -66,7 +65,11 @@ jobs:
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
         run: |
-          dotnet VSharp.ML.GameServer.Runner.dll --mode generator --datasetbasepath ../../../../../../maps/DotNet/Maps/Root/bin/Release/net7.0 --datasetdescription ../../../../../../workflow/dataset_for_tests_net.json --stepstoserialize 200
+          dotnet VSharp.ML.GameServer.Runner.dll \
+            --mode generator \
+            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net7.0 \
+            --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
+            --stepstoserialize 200
 
       - name: Move SerializedEpisodes
         working-directory: ./AIAgent
