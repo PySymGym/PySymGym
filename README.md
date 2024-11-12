@@ -115,14 +115,6 @@ _Integration examples:_ see [GameServers](GameServers/) directory. There are 2 i
 
 Currently we use V# as a primary game server. You can see example of typical workflow in [our automation](.github/workflows/build_and_run.yaml).
 
-### Dataset description
-
-Json
-
-### Agent-server protocol description
-
-Json
-
 ### ONNX conversion
 
 To use ONNX conversion tool, locate `onyx.py` script in `AIAgent/` directory. Then run the following command:
