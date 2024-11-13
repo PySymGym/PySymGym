@@ -13,57 +13,38 @@ readme = "README.md"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
-aiohttp = "^3.9.5"
-dataclasses-json = "^0.6.6"
+aiohttp = "^3.10.10"
+dataclasses-json = "^0.6.7"
 func-timeout = "^4.3.5"
 httplib2 = "^0.22.0"
 joblib = "^1.4.2"
-matplotlib = "^3.8.4"
+matplotlib = "^3.9.2"
 natsort = "^8.4.0"
-onnx = "^1.16.0"
-onnxruntime = "^1.17.3"
-optuna = "^3.6.1"
-pandas = "^2.2.2"
-pre-commit = "^3.7.1"
-psutil = "^5.9.8"
-pydantic = "^2.7.2"
+onnx = "^1.17.0"
+onnxruntime = "^1.20.0"
+optuna = "^4.0.0"
+pandas = "^2.2.3"
+psutil = "^6.1.0"
+pydantic = "^2.9.2"
 python = "^3.11"
 tabulate = "^0.9.0"
-torch = "^2.3.0"
-torch-geometric = "^2.5.3"
-tqdm = "^4.66.4"
+torch = "^2.5.1"
+torch-geometric = "^2.6.1"
+tqdm = "^4.67.0"
 websocket-client = "^1.8.0"
-mlflow = "^2.14.3"
+mlflow = "^2.17.2"
+cattrs = "^23.2.3"
+attrs = "^24.2.0"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.2.0"
+pytest = "^8.3.3"
 
-[tool.poetry.group.linters.dependencies]
-black = "^24.4.2"
+[tool.poetry.group.formatter.dependencies]
+ruff = "^0.7.3"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
 [tool.ruff]
-exclude = ["maps/DotNet", "GameServers"]
-
-[tool.poe.tasks.launch_servers]
-script = "launch_servers:main"
-cwd = "./AIAgent"
-help = "Run the server"
-
-  [tool.poe.tasks.launch_servers.args.config]
-  options = ["--config"]
-  required = true
-  help = "Path to the configuration file."
-
-[tool.poe.tasks.run_training]
-script = "run_training:main"
-cwd = "./AIAgent"
-help = "Run training"
-
-  [tool.poe.tasks.run_training.args.config]
-  options = ["--config"]
-  required = true
-  help = "Path to the configuration file."
+exclude = ["maps", "GameServers"]

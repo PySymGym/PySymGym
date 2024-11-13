@@ -7,4 +7,5 @@ PROCESSED_DATASET_PATH = REPORT_PATH / "dataset"
 LOG_PATH = Path("./ml_app.log")
 CURRENT_MODEL_PATH = REPORT_PATH / "model.pth"
 CURRENT_STUDY_PATH = REPORT_PATH / "study.pkl"
-CURRENT_TABLE_PATH = REPORT_PATH / "svms_result_table.log"
+CURRENT_TABLE_PATH = REPORT_PATH / "svms_result_table.csv"
+CURRENT_TRIAL_PATH = REPORT_PATH / "trial.pkl"

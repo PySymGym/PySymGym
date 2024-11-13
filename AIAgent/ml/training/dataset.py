@@ -29,9 +29,10 @@ import tqdm
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
 
-from common.game import GameState, GameMap2SVM
+from common.game import GameState
 from config import GeneralConfig
 from ml.inference import TORCH
+from ml.training.utils import remove_extra_attrs
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -66,7 +67,7 @@ class Step:
 
 class TrainingDataset(Dataset):
     """
-    Dataset class which have information about data location and functions for filtering, ubdating and saving it.
+    Dataset class which have information about data location and functions for filtering, updating and saving it.
 
     Parameters
     ----------
@@ -74,8 +75,6 @@ class TrainingDataset(Dataset):
         Path to raw files that need to be processed.
     processed_dir : Path
         Path to processed dataset.
-    maps : list[GameMap]
-        List of maps descriptions that should be used in training an validation.
     train_percentage : float
         Percentage of training dataset. (1 - train_percentage) * full_dataset = validation_dataset
     threshold_steps_number : int
@@ -86,8 +85,8 @@ class TrainingDataset(Dataset):
         Use only maps with coverage which greater or equal then threshold_coverage for training.
     similar_steps_save_prob : float, optional
         Probability to save similar steps to dataset with.
-    progress_bar_colour : str, optional
-        The colour of progress bar during processing and dataset loading :)
+    progress_bar_color : str, optional
+        The color of progress bar during processing and dataset loading :)
     n_jobs: int, optional
         Number of parallel processes to use to process dataset.
     """
@@ -96,16 +95,14 @@ class TrainingDataset(Dataset):
         self,
         raw_dir: Path,
         processed_dir: Path,
-        maps: list[GameMap2SVM],
         train_percentage: float,
         threshold_steps_number: Optional[int] = None,
         load_to_cpu: bool = False,
         threshold_coverage: int = 100,
         similar_steps_save_prob=0,
-        progress_bar_colour: str = "#975cdb",
+        progress_bar_color: str = "#975cdb",
         n_jobs: int = mp.cpu_count() - 1,
     ):
-        self.maps = maps
         self.n_jobs = n_jobs
         self._raw_dir = raw_dir
         self._processed_dir = processed_dir
@@ -114,7 +111,7 @@ class TrainingDataset(Dataset):
         self.threshold_steps_number = threshold_steps_number
         self.maps_results = self._get_results()
         self.similar_steps_save_prob = similar_steps_save_prob
-        self._progress_bar_colour = progress_bar_colour
+        self._progress_bar_color = progress_bar_color
         self._processed_paths = self._get_processed_paths()
         self._load_to_cpu = load_to_cpu
         if self._load_to_cpu:
@@ -148,10 +145,7 @@ class TrainingDataset(Dataset):
             step = torch.load(
                 self.processed_paths[idx], map_location=GeneralConfig.DEVICE
             )
-        if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
-            del step[TORCH.statevertex_history_gamevertex].edge_attr
-        if hasattr(step, 'use_for_train'):
-            del step.use_for_train
+        remove_extra_attrs(step)
         return step
 
     def switch_to(self, mode: Literal["train", "val"]) -> None:
@@ -256,7 +250,7 @@ class TrainingDataset(Dataset):
                 os.listdir(self.raw_dir),
                 desc="Dataset processing",
                 ncols=100,
-                colour=self._progress_bar_colour,
+                colour=self._progress_bar_color,
             ):
                 raw_map_path = Path(self.raw_dir / map_name)
                 processed_map_path = Path(self.processed_dir / map_name)
@@ -271,10 +265,10 @@ class TrainingDataset(Dataset):
                     (raw_step_id, processed_step_id)
                     for processed_step_id, raw_step_id in enumerate(sorted(raw_ids))
                 )
-                is_successfull: list[bool] = list(
+                is_successful: list[bool] = list(
                     p.map(process_and_save_step_task, tasks)
                 )
-                if len(is_successfull) != len(raw_ids):
+                if len(is_successful) != len(raw_ids):
                     logging.warning(f"Processing of map {map_name} failed somewhere.")
                 result = process_result(map_name)
                 result_file = open(os.path.join(processed_map_path, "result"), mode="x")
@@ -320,7 +314,7 @@ class TrainingDataset(Dataset):
             self.processed_paths,
             desc="Dataset loading",
             ncols=100,
-            colour=self._progress_bar_colour,
+            colour=self._progress_bar_color,
         ):
             map_name = get_map_name_from_path(step_path)
             steps[map_name].append(torch.load(step_path, map_location="cpu"))

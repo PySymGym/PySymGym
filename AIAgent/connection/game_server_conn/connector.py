@@ -50,7 +50,6 @@ class Connector:
         self,
         ws: websocket.WebSocket,
         map: GameMap,
-        steps: int,
     ) -> None:
         self.ws = ws
 
@@ -60,7 +59,6 @@ class Connector:
         self._current_step = 0
         self.game_is_over = False
         self.map = map
-        self.steps = steps
 
     def catch_losing_of_connection(func):
         @wraps(func)

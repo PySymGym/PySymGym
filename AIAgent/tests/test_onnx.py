@@ -11,17 +11,12 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
 from onyx import entrypoint
-
-
-def _read_configs(dir) -> list[Path]:
-    return [
-        Path(dir) / file for file in os.listdir(Path(dir)) if file.endswith(".yaml")
-    ]
+from tests.utils import read_configs
 
 
 class TestONNXConversion:
     @pytest.mark.parametrize(
-        "config", _read_configs("tests/resources/model_configurations")
+        "config", read_configs("tests/resources/model_configurations")
     )
     def test_onnx_conversion_successful_on_real_randomized_model(
         self, tmp_path, game_states_fixture, config
