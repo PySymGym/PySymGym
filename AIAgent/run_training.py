@@ -6,7 +6,9 @@ import multiprocessing as mp
 import os
 from dataclasses import asdict, dataclass
 from functools import partial
+import random
 from typing import Any, Callable, Optional
+import numpy
 from torch_geometric.data import Dataset
 
 import joblib
@@ -197,7 +199,14 @@ def run_training(
             objective_partial(study.best_trial)
 
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    numpy.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
 def objective(
+    run_name: str,
     trial: optuna.Trial,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
@@ -234,11 +243,19 @@ def objective(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
-    with mlflow.start_run():
+    with mlflow.start_run(run_name=run_name):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
+            g = torch.Generator()
+            g.manual_seed(0)
+            train_dataloader = DataLoader(
+                dataset,
+                config.batch_size,
+                shuffle=True,
+                worker_init_fn=seed_worker,
+                generator=g,
+            )
             model.train()
             train(
                 dataloader=train_dataloader,
@@ -251,6 +268,10 @@ def objective(
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
             model.eval()
+
+            result, metrics = validate(model, dataset)
+            mlflow.log_metrics(metrics, step=epoch)
+
             dataset.switch_to("val")
             result, metrics = validate(model, dataset)
             mlflow.log_metrics(metrics, step=epoch)

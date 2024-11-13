@@ -13,6 +13,7 @@ from functools import partial
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     DefaultDict,
     Dict,
     List,
@@ -93,6 +94,7 @@ class TrainingDataset(Dataset):
 
     def __init__(
         self,
+        transform_func: Callable,
         raw_dir: Path,
         processed_dir: Path,
         train_percentage: float,
@@ -120,8 +122,10 @@ class TrainingDataset(Dataset):
 
         self.train_percentage = train_percentage
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
+        self.mode = "train"
         self.__indices = self.train_dataset_indices
-        super().__init__()
+
+        super().__init__(transform=transform_func)
 
     def _split_dataset(self) -> Tuple[List, List]:
         full_dataset_len = len(self.processed_paths)
@@ -159,8 +163,10 @@ class TrainingDataset(Dataset):
             'val' --- use validation part.
         """
         if mode == "train":
+            self.mode = mode
             self.__indices = self.train_dataset_indices
         elif mode == "val":
+            self.mode = mode
             self.__indices = self.test_dataset_indices
         else:
             raise ValueError("mode must be either 'train' or 'val'")
