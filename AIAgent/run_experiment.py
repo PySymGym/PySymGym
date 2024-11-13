@@ -31,27 +31,40 @@ STUDY_URI = "mlflow-artifacts:/873437386923880779/0dc152759bf74cd38342f5496397a0
 
 def l2_norm(data):
     scaled_data = data.clone()
-    scaled_data[TORCH.state_vertex].x[:, 2] = torch.nn.functional.normalize(
-        data[TORCH.state_vertex].x[:, 2], dim=0, p=2
+    scaled_data[TORCH.state_vertex].x = torch.nn.functional.normalize(
+        data[TORCH.state_vertex].x, dim=0, p=2
+    )
+    scaled_data[TORCH.game_vertex].x[:, 1] = torch.nn.functional.normalize(
+        data[TORCH.game_vertex].x[:, 1], dim=0, p=2
     )
     return scaled_data
 
 
 def l_inf_norm(data):
     scaled_data = data.clone()
-    scaled_data[TORCH.state_vertex].x[:, 2] = data[TORCH.state_vertex].x[:, 2] / (
-        torch.max(data[TORCH.state_vertex].x[:, 2]) + 1e-12
+    scaled_data[TORCH.state_vertex].x = data[TORCH.state_vertex].x / (
+        torch.max(data[TORCH.state_vertex].x, dim=0).values + 1e-12
+    )
+    scaled_data[TORCH.game_vertex].x[:, 1] = data[TORCH.game_vertex].x[:, 1] / (
+        torch.max(data[TORCH.game_vertex].x[:, 1]) + 1e-12
     )
     return scaled_data
 
 
 def min_max_scaling(data):
     scaled_data = data.clone()
-    scaled_data[TORCH.state_vertex].x[:, 2] = (
-        data[TORCH.state_vertex].x[:, 2] - torch.min(data[TORCH.state_vertex].x[:, 2])
+    scaled_data[TORCH.state_vertex].x = (
+        data[TORCH.state_vertex].x - torch.min(data[TORCH.state_vertex].x, dim=0).values
     ) / (
-        torch.max(data[TORCH.state_vertex].x[:, 2])
-        - torch.min(data[TORCH.state_vertex].x[:, 2])
+        torch.max(data[TORCH.state_vertex].x, dim=0).values
+        - torch.min(data[TORCH.state_vertex].x, dim=0).values
+        + 1e-12
+    )
+    scaled_data[TORCH.game_vertex].x[:, 1] = (
+        data[TORCH.game_vertex].x[:, 1] - torch.min(data[TORCH.game_vertex].x[:, 1])
+    ) / (
+        torch.max(data[TORCH.game_vertex].x[:, 1])
+        - torch.min(data[TORCH.game_vertex].x[:, 1])
         + 1e-12
     )
     return scaled_data
@@ -68,7 +81,7 @@ def main():
     np.random.seed(637)
     torch.use_deterministic_algorithms(True, warn_only=True)
 
-    transform_functions = [None, l2_norm, l_inf_norm, min_max_scaling]
+    transform_functions = [l_inf_norm, min_max_scaling]
     for transform_function in transform_functions:
         dataset = TrainingDataset(
             transform_function,
@@ -97,11 +110,11 @@ def main():
             metric_name = str(criterion).replace("(", "_").replace(")", dataset.mode)
             metrics = {metric_name: result}
             return result, metrics
-        
+
         if transform_function:
-            run_name = f"{transform_function.__name__}_state.VisitedAgainVertices_wo_inplace"
+            run_name = f"{transform_function.__name__}_all_vertex_features"
         else:
-            run_name = "baseline_state.VisitedAgainVertices"
+            run_name = "baseline_all_vertex_feature"
         objective(
             run_name,
             study.best_trial,
