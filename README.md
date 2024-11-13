@@ -22,7 +22,9 @@ Thus we introduced the following components.
 As far as we use Json-based format to transfer data between server and agent, together with Json-based game maps description, our gym can be used to train networks using different symbolic execution engines.
 
 ## Install
-This repository contains submodules, so use the following command to get sources locally. 
+
+This repository contains submodules, so use the following command to get sources locally.
+
 ```sh
 git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
@@ -97,7 +99,7 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
 
 _Illustration of game process:_
 
-![Illustration of game process](resources/game_process_illustration.svg)
+![Illustration of game process](resources/game_process_illustration.png)
 
 To integrate a new symbolic machine, it is necessary to:
 
@@ -128,7 +130,7 @@ python3 onyx.py --sample-gamestate <game_state0.json> \
     [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
 ```
 
-model_kwargs yaml file, *verification* game_states and *sample* game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
+model_kwargs yaml file, _verification_ game_states and _sample_ game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
 
 ## Linting tools
 
