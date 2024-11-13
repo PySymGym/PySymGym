@@ -99,7 +99,7 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
 
 _Illustration of game process:_
 
-![Illustration of game process](resources/game_process_illustration.png)
+<img src="resources/game_process_illustration.png" width="50%" title="Illustration of game process"/>
 
 To integrate a new symbolic machine, it is necessary to:
 
