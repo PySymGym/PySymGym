@@ -145,16 +145,16 @@ ruff format
 
 **Or** [integrate](https://docs.astral.sh/ruff/integrations/#vs-code-official) it with your favorite code editor (for example, [VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff))
 
-## Project description
-
-### Dataset structure
-
-<p align="center">
-  <img src="./resources/dataset.jpg" width="80%">
-</p>
-
-### Results
-
+## Results
+_Comparison of selector based on our model (AI) with the best selector of V#. All except coverage provided for methods with equal coverage._
 <div align="center">
   <img src="./resources/coverage.svg" width="46.11%"> <img src="./resources/tests_eq_coverage.svg" width="46%">
 </div>
+<div align="center">
+  <img src="./resources/total_time_eq_coverage.svg" width="46%"> <img src="./resources/errors_eq_coverage.svg" width="46.1%">
+</div>
+
+*ExecutionTreeContributedCoverage* searcher claimed to be the best in V# for test generation and was chosen as a reference.
+Both searchers were executed with a timeout of 180 seconds for each method.
+
+Our model demonstrates slightly better average coverage (87.97% vs 87.61%) in a slightly worse average time (22.8 sec vs 18.5 sec). Detailed analysis shows that the trained model generates significantly fewer tests (as expected with respect to an objective function) but reports fewer potential errors (which also correlates with the objective function).
