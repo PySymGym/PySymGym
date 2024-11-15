@@ -10,16 +10,16 @@
 
 Python infrastructure to train paths selectors for symbolic execution engines.
 
-We treat paths selection as a game where current state of symbolic execution process, represented as a interprocedural control flow graph equipped with information about execution details, is a map of the world (game map). States of symbolic machine are chips that player able to move. Each step, having current game map, player (AI agent) selects state to move and sends it to game server. Server moves selected state and return updated map to the player. Depending on scoring function, player can be aimed to achieve 100% coverage in minimal number of moves, or achieve 100% coverage with minimal number of tests generated, or something else.
+We treat path selection as a game where the current state of the symbolic execution process, represented as an interprocedural control flow graph equipped with information about execution details, is a map of the world (game map). States of the symbolic machine are chips that the player is able to move. For each step, having a current game map, the player (AI agent) selects the state to move and sends it to the game server. The server moves the selected state and returns the updated map to the player. Depending on the scoring function, the player can aim to achieve 100% coverage in a minimal number of moves, or achieve 100% coverage with a minimal number of tests generated, or something else.
 
-Thus we introduced the following components.
+Thus, we introduced the following components.
 
 - Game server
 - Game maps
 - AI agent (player)
 - Training gym
 
-As far as we use Json-based format to transfer data between server and agent, together with Json-based game maps description, our gym can be used to train networks using different symbolic execution engines.
+Because we use JSON-based format to transfer data between server and agent, including JSON-based game map description, our gym can be used to train networks using different symbolic execution engines.
 
 ## Install
 
@@ -30,7 +30,7 @@ git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
 ```
 
-Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step you need dotnet7, cmake, clang and maven to be installed.
+Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step, you need to install .NET 7, cmake, clang, and maven.
 
 ```bash
 cd ./PySymGym
@@ -61,7 +61,7 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 
 - Build game server
 - Build game maps
-- Create Json with maps description
+- Create JSON with maps description
   - You can use `./workflow/dataset_for_tests_java.json` as a template
 - Generate initial data
 - Convert initial data to dataset for training
@@ -146,7 +146,7 @@ ruff format
 **Or** [integrate](https://docs.astral.sh/ruff/integrations/#vs-code-official) it with your favorite code editor (for example, [VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff))
 
 ## Results
-_Comparison of selector based on our model (AI) with the best selector of V#. All except coverage provided for methods with equal coverage._
+_Comparison of the selector based on our model (AI) with the best selector of V#. All metrics except coverage provided for methods with equal coverage._
 <div align="center">
   <img src="./resources/coverage.svg" width="46.11%"> <img src="./resources/tests_eq_coverage.svg" width="46%">
 </div>
