@@ -15,6 +15,7 @@ import optuna
 import torch
 import yaml
 from common.classes import GameFailed
+from ml.inference import TORCH
 from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
 from common.config import (
     Config,
@@ -139,8 +140,27 @@ def run_training(
                 ):
                     raise RuntimeError("Validation failed")
             return metrics[AVERAGE_COVERAGE], metrics
+    
+    def min_max_scaling(data):
+        scaled_data = data.clone()
+        scaled_data[TORCH.state_vertex].x = (
+            data[TORCH.state_vertex].x - torch.min(data[TORCH.state_vertex].x, dim=0).values
+        ) / (
+            torch.max(data[TORCH.state_vertex].x, dim=0).values
+            - torch.min(data[TORCH.state_vertex].x, dim=0).values
+            + 1e-12
+        )
+        scaled_data[TORCH.game_vertex].x[:, 1] = (
+            data[TORCH.game_vertex].x[:, 1] - torch.min(data[TORCH.game_vertex].x[:, 1])
+        ) / (
+            torch.max(data[TORCH.game_vertex].x[:, 1])
+            - torch.min(data[TORCH.game_vertex].x[:, 1])
+            + 1e-12
+        )
+        return scaled_data
 
     dataset = TrainingDataset(
+        min_max_scaling,
         RAW_DATASET_PATH,
         PROCESSED_DATASET_PATH,
         train_percentage=training_config.train_percentage,
