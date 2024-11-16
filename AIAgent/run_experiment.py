@@ -81,7 +81,7 @@ def main():
     np.random.seed(637)
     torch.use_deterministic_algorithms(True, warn_only=True)
 
-    transform_functions = [l_inf_norm, min_max_scaling]
+    transform_functions = [min_max_scaling]
     for transform_function in transform_functions:
         dataset = TrainingDataset(
             transform_function,
@@ -112,7 +112,7 @@ def main():
             return result, metrics
 
         if transform_function:
-            run_name = f"{transform_function.__name__}_all_vertex_features"
+            run_name = "two_tags_in_cfg_min_max_scaling"
         else:
             run_name = "baseline_all_vertex_feature"
         objective(
