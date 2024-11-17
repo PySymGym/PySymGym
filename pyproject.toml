@@ -40,7 +40,7 @@ attrs = "^24.2.0"
 pytest = "^8.3.3"
 
 [tool.poetry.group.formatter.dependencies]
-ruff = "^0.7.3"
+ruff = "^0.7.4"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
