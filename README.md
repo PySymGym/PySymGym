@@ -72,11 +72,11 @@ The _Main Loop_ implies alternation of these two variants of running as much as 
         val_type: loss
         batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
     ```
-1) Move to **AIAgent** directory
+3) Move to **AIAgent** directory
     ```sh
     cd AIAgent
     ```
-2) Run the training process.
+4) Run the training process.
     ```sh
     poetry run python3 run_training.py --config path/to/config.yml
     ```
@@ -112,7 +112,7 @@ The _Main Loop_ implies alternation of these two variants of running as much as 
     ```
 
 ### Guide symbolic execution with trained model
-1) Use [`onyx.py`](#onnx-conversion) command line to tool convert your PyTorch model to ONNX format.
+1) Use [`onyx.py`](#onnx-conversion) command line tool to convert your PyTorch model to ONNX format.
 2) Use your ONNX model to guide symbolic execution with your SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)) or use existing extension to one of SVMs in this repo:
     - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
     - Run 
