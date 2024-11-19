@@ -43,46 +43,84 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 
 ## Usage
 
-### Follow these steps:
+We use [**MLFlow**](https://mlflow.org/) to log hyper-parameters and training artifacts. Firstly, run MLFlow server:
+```sh
+cd AIAgent
+poetry run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts
+```
+
+_Illustration of game process:_
+<div align="center">
+<img src="resources/game_process_illustration.png" width="50%" title="Illustration of game process"/>
+</div>
+
+As shown in the picture there are two different loops in the _Main Loop_. To run _Hyper-parameters Tuning Loop_ do steps listed in [this chapter](#hyper-parameters-tuning). The second loop runs symbolic execution with given methods and updates the dataset. To run it do [these steps](#dataset-improvement-with-symbolic-virtual-machines).
+The _Main Loop_ implies alternation of these two variants of running as much as you want. After the _Main Loop_ you can run symbolic execution with the trained model (checkout [this chapter](#guide-symbolic-execution-with-trained-model)).
+
+### Hyper-parameters tuning
+
+1) Generate initial dataset to start supervised learning. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
+    ```bash
+    make init_data STEPS_TO_SERIALIZE=<MAX_STEPS>
+    ```
+    Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
+2) Create configuration (specifying training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
+  To use the loss function that is used for training as objective function for hyper-parameters tuning, set the validation config as follow:
+    ```yml
+    ValidationConfig:
+      validation:
+        val_type: loss
+        batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
+    ```
+1) Move to **AIAgent** directory
+    ```sh
+    cd AIAgent
+    ```
+2) Run the training process.
+    ```sh
+    poetry run python3 run_training.py --config path/to/config.yml
+    ```
+
+### Dataset improvement with Symbolic Virtual Machines
 
 1) Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step, you need to install .NET 7, cmake, clang, and maven.
     ```sh
-    make build_SVMs build_maps STEPS_TO_SERIALIZE=<MAX_STEPS>
+    make build_SVMs build_maps
     ``` 
     Optionally add new maps to [maps](./maps/) and integrate the other SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)).
-2) Using [`example from workflow`](`./workflow/dataset_for_tests_java.json`) as a template, create your own configuration with maps to use for training.
-3) Run training process (checkout [this chapter](#run-training)).
-4) Use [`onyx.py`](#onnx-conversion) command line tool convert your PyTorch model to ONNX format.
-5) Use your ONNX model to guide symbolic execution (checkout [integration chapter](#integrate-a-new-symbolic-machine)) or use existing extension to one of SVMs in this repo:
+2) Using [`example from workflow`](`./workflow/dataset_for_tests_java.json`) as a template, create your own configuration with maps to use for training or use the existing ones located in `maps/*/Maps/dataset.json`.
+3) Create configuration (specifying server's and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template. 
+  Add to the configuration the best weights URI and appropriate trial URI (they were logged with MLFlow during hyper-parameters tuning):
+    ```yml
+    weights_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
+    
+    OptunaConfig:
+      ...
+      trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/<EPOCH>/model.pth
+    ```
+4) Move to **AIAgent** directory
+    ```sh
+    cd AIAgent
+    ```
+5) Launch the server manager.
+    ```
+    poetry run python3 launch_servers.py --config path/to/config.yml
+    ```
+6) Run the training process.
+    ```sh
+    poetry run python3 run_training.py --config path/to/config.yml
+    ```
+
+### Guide symbolic execution with trained model
+1) Use [`onyx.py`](#onnx-conversion) command line to tool convert your PyTorch model to ONNX format.
+2) Use your ONNX model to guide symbolic execution with your SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)) or use existing extension to one of SVMs in this repo:
     - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
-    - run `dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage`
-
-### Generate initial dataset
-
-To start supervised learning we need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
-
-```bash
-make init_data
-```
-
-Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
-
-### Run training:
-
-- Create configuration (specifying server and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
-  - Below we will discuss how you can fully integrate your own symbolic machine
-- Launch the server manager
-  - `poetry run python3 launch_servers.py --config path/to/config.yml`
-- Run MLFlow server
-  - `poetry run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts`
-- Run the training process to get PyTorch model.
-  - `poetry run python3 run_training.py --config path/to/config.yml`
+    - Run 
+      ```
+      dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage
+      ```
 
 ### Integrate a new symbolic machine
-
-_Illustration of game process:_
-
-<img src="resources/game_process_illustration.png" width="50%" title="Illustration of game process"/>
 
 To integrate a new symbolic machine, it is necessary to:
 
@@ -102,18 +140,21 @@ Currently we use V# as a primary game server. You can see example of typical wor
 
 ### ONNX conversion
 
-To use ONNX conversion tool, locate `onyx.py` script in `AIAgent/` directory. Then run the following command:
+To use ONNX conversion tool run the following commands:
 
 ```bash
+cd AIAgent
 python3 onyx.py --sample-gamestate <game_state0.json> \
-    --pytorch-model <model>.pt \
+    --pytorch-model <path_to_model>.pth \
     --savepath <converted_model_save_path>.onnx \
     --import-model-fqn <model.module.fqn.Model> \
-    --model-kwargs <yaml_with_model_args.yml> \
+    --model-kwargs <yaml_with_model_args>.yml \
     [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
 ```
 
-model_kwargs yaml file, _verification_ game_states and _sample_ game_state (use any) can be found in [resources/onnx](resources/onnx/) dir
+- `pytorch-model` is a path to PyTorch model's weights.
+- Examples of `model-kwargs` yaml file, _verification_ game_states and `sample-gamestate` (use any) can be found in [resources/onnx](resources/onnx/). 
+- `import-model-fqn` is a path to the class of the model you want to convert. For example, `ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model.StateModelEncoder`.
 
 ## Linting tools
 
