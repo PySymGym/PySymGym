@@ -12,13 +12,6 @@ Python infrastructure to train paths selectors for symbolic execution engines.
 
 We treat path selection as a game where the current state of the symbolic execution process, represented as an interprocedural control flow graph equipped with information about execution details, is a map of the world (game map). States of the symbolic machine are chips that the player is able to move. For each step, having a current game map, the player (AI agent) selects the state to move and sends it to the game server. The server moves the selected state and returns the updated map to the player. Depending on the scoring function, the player can aim to achieve 100% coverage in a minimal number of moves, or achieve 100% coverage with a minimal number of tests generated, or something else.
 
-Thus, we introduced the following components.
-
-- Game server
-- Game maps
-- AI agent (player)
-- Training gym
-
 Because we use JSON-based format to transfer data between server and agent, including JSON-based game map description, our gym can be used to train networks using different symbolic execution engines.
 
 ## Install
@@ -28,13 +21,6 @@ This repository contains submodules, so use the following command to get sources
 ```sh
 git clone https://github.com/gsvgit/PySymGym.git
 git submodule update --init --recursive
-```
-
-Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step, you need to install .NET 7, cmake, clang, and maven.
-
-```bash
-cd ./PySymGym
-make build_SVMs build_maps
 ```
 
 Setup environment:
@@ -59,20 +45,17 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 
 ### Follow these steps:
 
-- Build game server
-- Build game maps
-- Create JSON with maps description
-  - You can use `./workflow/dataset_for_tests_java.json` as a template
-- Generate initial data
-- Convert initial data to dataset for training
-- Run training process
-- Use [`onyx.py`](#onnx-conversion) command line tool convert your PyTorch model to ONNX format.
-- Use your ONNX model to guide symbolic execution.
-
-Our team has developed a specialized extension for VSharp that makes it suitable for AI symbolic execution. For example, here’s how to utilize this extension with your ONNX model:
-
-- Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
-- `dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage`
+1) Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step, you need to install .NET 7, cmake, clang, and maven.
+    ```sh
+    make build_SVMs build_maps STEPS_TO_SERIALIZE=<MAX_STEPS>
+    ``` 
+    Optionally add new maps to [maps](./maps/) and integrate the other SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)).
+2) Using [`example from workflow`](`./workflow/dataset_for_tests_java.json`) as a template, create your own configuration with maps to use for training.
+3) Run training process (checkout [this chapter](#run-training)).
+4) Use [`onyx.py`](#onnx-conversion) command line tool convert your PyTorch model to ONNX format.
+5) Use your ONNX model to guide symbolic execution (checkout [integration chapter](#integrate-a-new-symbolic-machine)) or use existing extension to one of SVMs in this repo:
+    - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
+    - run `dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage`
 
 ### Generate initial dataset
 
