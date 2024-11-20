@@ -54,17 +54,19 @@ _Illustration of game process:_
 <img src="resources/game_process_illustration.png" width="50%" title="Illustration of game process"/>
 </div>
 
-As shown in the picture there are two different loops in the _Main Loop_. To run _Hyper-parameters Tuning Loop_ do steps listed in [this chapter](#hyper-parameters-tuning). The second loop runs symbolic execution with given methods and updates the dataset. To run it do [these steps](#dataset-improvement-with-symbolic-virtual-machines).
-The _Main Loop_ implies alternation of these two variants of running as much as you want. After the _Main Loop_ you can run symbolic execution with the trained model (checkout [this chapter](#guide-symbolic-execution-with-trained-model)).
+As shown in the sequence diagram the training process consists of _Main Loop_ that implies alternation of two variants of running: _Hyper-parameters Tuning_ (**Hyper-parameters Tuning Loop** in the diagram) and _Dataset improving with symbolic virtual machines_ (**for each method** loop in the diagram).
+Before starting the _Main Loop_ you need to [generate initial dataset](#generate-initial-dataset). After this just alternate [_Hyper-parameters Tuning_](#hyper-parameters-tuning) and [_Dataset improving with symbolic virtual machines_](#dataset-improvement-with-symbolic-virtual-machines) as much as you want to achieve good results. Then you can run symbolic execution with the trained model (checkout [this chapter](#guide-symbolic-execution-with-trained-model)).
+
+### Generate initial dataset
+To start supervised learning you need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
+```bash
+make init_data STEPS_TO_SERIALIZE=<MAX_STEPS>
+```
+Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
 
 ### Hyper-parameters tuning
 
-1) Generate initial dataset to start supervised learning. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
-    ```bash
-    make init_data STEPS_TO_SERIALIZE=<MAX_STEPS>
-    ```
-    Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
-2) Create configuration (specifying training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
+1) Create configuration (specifying training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
   To use the loss function that is used for training as objective function for hyper-parameters tuning, set the validation config as follow:
     ```yml
     ValidationConfig:
@@ -72,11 +74,20 @@ The _Main Loop_ implies alternation of these two variants of running as much as 
         val_type: loss
         batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
     ```
-3) Move to **AIAgent** directory
+    Configure optuna, for example, as follow:
+    ```yml
+    OptunaConfig:
+      n_startup_trials: 10
+      n_trials: 30
+      n_jobs: 1
+      study_direction: "minimize"
+    ```
+
+1) Move to **AIAgent** directory
     ```sh
     cd AIAgent
     ```
-4) Run the training process.
+2) Run the training process.
     ```sh
     poetry run python3 run_training.py --config path/to/config.yml
     ```
