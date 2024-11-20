@@ -141,33 +141,24 @@ def run_training(
             return metrics[AVERAGE_COVERAGE], metrics
 
     dataset = TrainingDataset(
-        RAW_DATASET_PATH,
-        PROCESSED_DATASET_PATH,
+        raw_dir=RAW_DATASET_PATH,
+        processed_dir=PROCESSED_DATASET_PATH,
         train_percentage=training_config.train_percentage,
         threshold_steps_number=training_config.threshold_steps_number,
         load_to_cpu=training_config.load_to_cpu,
         threshold_coverage=training_config.threshold_coverage,
+        normalize=True
     )
-
-    def normalize_weights(model):
-        with torch.no_grad():
-            for name, param in model.named_parameters():
-                if 'conv3' in name and 'weight' in name:
-                    # normalize the weights
-                    param.copy_(F.normalize(param, p=2, dim=0))
 
     def model_init(**model_params) -> nn.Module:
         state_model_encoder = StateModelEncoder(**model_params)
         if weights_uri is None:
-            normalize_weights(state_model_encoder)
             return state_model_encoder
         else:
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
                 artifact_uri=weights_uri, dst_path=REPORT_PATH
             )
             state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE))
-            normalize_weights(state_model_encoder)
-
             return state_model_encoder
 
     objective_partial = partial(
