@@ -2,6 +2,7 @@ import torch
 from torch.nn import Linear
 from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv
 from torch.nn.functional import log_softmax
+from ml.training.scaling import min_max_scaling
 
 
 class StateModelEncoder(torch.nn.Module):
@@ -46,6 +47,7 @@ class StateModelEncoder(torch.nn.Module):
         edge_index_in_v_s,
         edge_index_s_s,
     ):
+        game_x, state_x = min_max_scaling(game_x, state_x)
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 
         if edge_type_v_v.numel() != 0:
