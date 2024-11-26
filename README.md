@@ -55,7 +55,9 @@ _Illustration of game process:_
 </div>
 
 As shown in the sequence diagram the training process consists of _Main Loop_ that implies alternation of two variants of running: _Hyper-parameters Tuning_ (**Hyper-parameters Tuning Loop** in the diagram) and _Dataset improving with symbolic virtual machines_ (**for each method** loop in the diagram).
-Before starting the _Main Loop_ you need to [generate initial dataset](#generate-initial-dataset). After this just alternate [_Hyper-parameters Tuning_](#hyper-parameters-tuning) and [_Dataset improving with symbolic virtual machines_](#dataset-improvement-with-symbolic-virtual-machines) as much as you want to achieve good results. Then you can run symbolic execution with the trained model (checkout [this chapter](#guide-symbolic-execution-with-trained-model)).
+Before starting the _Main Loop_ you need to [generate initial dataset](#generate-initial-dataset). Then alternate [_Hyper-parameters Tuning_](#hyper-parameters-tuning) and [_Dataset improving with symbolic virtual machines_](#dataset-improvement-with-symbolic-virtual-machines) until the desired result is achieved. Then you can run symbolic execution with the trained model (checkout [this chapter](#guide-symbolic-execution-with-trained-model)).
+
+The main idea of alternation of two ways of running is to get better dataset and tune hyper-parameters taking into account changes in it. So you tune hyper-parameters, get the best neural network of current dataset (it's assumed that this neural network also is better in the symbolic execution than previous one) and then improve the dataset. After the improving dataset probably there are new the best hyper-parameters for the new dataset. So you need to tune it again. 
 
 ### Generate initial dataset
 To start supervised learning you need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
@@ -65,6 +67,8 @@ make init_data STEPS_TO_SERIALIZE=<MAX_STEPS>
 Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
 
 ### Hyper-parameters tuning
+
+We tune hyper-parameters with [**Optuna**](https://optuna.org/). This step is needed to get the best neural network to have more chances for updating dataset during the other variant of running.
 
 1) Create configuration (specifying training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template.
   To use the loss function that is used for training as objective function for hyper-parameters tuning, set the validation config as follow:
@@ -82,7 +86,6 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
       n_jobs: 1
       study_direction: "minimize"
     ```
-
 1) Move to **AIAgent** directory
     ```sh
     cd AIAgent
@@ -93,6 +96,8 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
     ```
 
 ### Dataset improvement with Symbolic Virtual Machines
+
+As the optimal sequence of symbolic execution steps is unknown we try to get relatively good ones using the best models from the previous step. To do it follow these steps: 
 
 1) Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step, you need to install .NET 7, cmake, clang, and maven.
     ```sh
@@ -123,6 +128,9 @@ Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`
     ```
 
 ### Guide symbolic execution with trained model
+
+After training choose the best model of those that was logged with MLFlow and run symbolic execution using the following instructions: 
+
 1) Use [`onyx.py`](#onnx-conversion) command line tool to convert your PyTorch model to ONNX format.
 2) Use your ONNX model to guide symbolic execution with your SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)) or use existing extension to one of SVMs in this repo:
     - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
