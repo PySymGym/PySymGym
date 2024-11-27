@@ -2,9 +2,11 @@ import argparse
 import csv
 import json
 import logging
+import random
+import numpy as np
+from ml.inference import TORCH
 import multiprocessing as mp
 import os
-import torch.nn.functional as F
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
@@ -91,6 +93,83 @@ class TrialSettings:
     tolerance: float
 
 
+def l2_norm(data):
+        scaled_data = data.clone()
+        attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+        scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = torch.nn.functional.normalize(
+            attr, dim=0, p=2
+        )
+        return scaled_data
+
+def l_inf_norm(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = attr / (
+        torch.max(attr) + 1e-12
+    )
+    return scaled_data
+
+def min_max_scaling(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = (
+        attr - torch.min(attr)
+    ) / (
+        torch.max(attr)
+        - torch.min(attr)
+        + 1e-12
+    )
+    return scaled_data
+
+def z_score_norm(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    mean = torch.mean(attr, dim=0)
+    std = torch.std(attr, dim=0) + 1e-12
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = (attr - mean) / std
+    return scaled_data
+
+def max_abs_scaling(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    max_abs = torch.max(torch.abs(attr), dim=0).values + 1e-12
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = attr / max_abs
+    return scaled_data
+
+def log_scaling(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = torch.log1p(attr)
+    return scaled_data
+
+def robust_scaling(data):
+    scaled_data = data.clone()
+    edge_attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    median = torch.median(edge_attr, dim=0).values
+    q1 = torch.quantile(edge_attr, 0.25, dim=0)
+    q3 = torch.quantile(edge_attr, 0.75, dim=0)
+    iqr = q3 - q1 + 1e-12
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = (edge_attr - median) / iqr
+    return scaled_data
+
+def reciprocal_norm(data):
+    scaled_data = data.clone()
+    edge_attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    
+    epsilon = 1e-12
+    edge_attr_normalized = 1 - 1 / (edge_attr + epsilon)
+    
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = edge_attr_normalized
+    return scaled_data
+
+
+def set_seed():
+    seed_num = 42
+    random.seed(seed_num)
+    np.random.seed(seed_num)
+    torch.manual_seed(seed_num)
+
+
 def run_training(
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
@@ -147,7 +226,7 @@ def run_training(
         threshold_steps_number=training_config.threshold_steps_number,
         load_to_cpu=training_config.load_to_cpu,
         threshold_coverage=training_config.threshold_coverage,
-        normalize=True
+        transform_func=l2_norm,
     )
 
     def model_init(**model_params) -> nn.Module:
@@ -198,7 +277,6 @@ def run_training(
         for _ in range(optuna_config.n_trials):
             objective_partial(study.best_trial)
 
-
 def objective(
     trial: optuna.Trial,
     dataset: TrainingDataset,
@@ -240,7 +318,7 @@ def objective(
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True, worker_init_fn=set_seed(),)
             model.train()
             train(
                 dataloader=train_dataloader,

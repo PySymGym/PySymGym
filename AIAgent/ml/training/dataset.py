@@ -13,6 +13,7 @@ from functools import partial
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     DefaultDict,
     Dict,
     List,
@@ -103,7 +104,7 @@ class TrainingDataset(Dataset):
         similar_steps_save_prob=0,
         progress_bar_colour: str = "#975cdb",
         n_jobs: int = mp.cpu_count() - 1,
-        normalize=True,
+        transform_func: Optional[Callable] = None,
     ):
         self.n_jobs = n_jobs
         self._raw_dir = raw_dir
@@ -124,18 +125,7 @@ class TrainingDataset(Dataset):
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
         self.__indices = self.train_dataset_indices
 
-        self.normalize = normalize
-        if self.normalize:
-            self.calculate_normalization()
-
-        super().__init__()
-        
-    def calculate_normalization(self):
-        for idx in range(len(self)):
-            step = torch.load(self.processed_paths[idx], map_location=GeneralConfig.DEVICE)               
-            attr_to_normalize = (step[*TORCH.gamevertex_history_statevertex].edge_attr).to(torch.float)
-            normalized_edge_attr = F.normalize(attr_to_normalize, p=2, dim=1)
-            step[*TORCH.gamevertex_history_statevertex].edge_attr = normalized_edge_attr
+        super().__init__(transform=transform_func)
 
 
     def _split_dataset(self) -> Tuple[List, List]:
