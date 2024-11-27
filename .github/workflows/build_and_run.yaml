@@ -19,7 +19,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.8"
-          cache: "poetry"
 
       - name: Install dependencies
         run: |
@@ -30,7 +29,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-          cache: 'maven'
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
