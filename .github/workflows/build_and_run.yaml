@@ -16,7 +16,7 @@ jobs:
           apt update
           apt install -y git software-properties-common
           add-apt-repository ppa:dotnet/backports
-          apt-get update && apt-get install -y build-essential dotnet-sdk-9.0 cmake clang
+          apt-get update && apt-get install -y build-essential dotnet-sdk-9.0 cmake clang maven
       
       - name: Debug
         run: |
