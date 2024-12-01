@@ -8,6 +8,9 @@ jobs:
     container:
       image: ubuntu:24.04
     steps:
+      - name: Download & install necessary dependencies
+        run: apt update && apt install -y git
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
