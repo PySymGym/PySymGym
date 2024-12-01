@@ -7,6 +7,9 @@ jobs:
     runs-on: self-hosted
     container:
       image: ubuntu:24.04
+    env:
+      PIP_ROOT_USER_ACTION: ignore
+
     steps:
       - name: Download & install necessary dependencies
         run: apt update && apt install -y git
@@ -16,15 +19,15 @@ jobs:
         with:
           submodules: true
 
-      - name: Install poetry
-        run: |
-          pipx install poetry
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.8"
           cache: "poetry"
+
+      - name: Install poetry
+        run: |
+          pip install poetry
 
       - name: Install dependencies
         run: |
