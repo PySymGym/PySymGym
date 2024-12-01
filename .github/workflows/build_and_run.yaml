@@ -14,10 +14,9 @@ jobs:
       - name: Download & install necessary dependencies
         run: |
           apt update
-          apt install software-properties-common -y
+          apt install -y git software-properties-common
           add-apt-repository ppa:dotnet/backports
-          apt install dotnet-sdk-7.0 -y
-          apt install -y git 
+          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 cmake clang
 
       - name: Checkout repository
         uses: actions/checkout@v4
