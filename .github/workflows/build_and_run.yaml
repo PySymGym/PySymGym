@@ -1,6 +1,6 @@
 name: Build SVM-s and maps + Run training
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build-and-launch:
@@ -12,7 +12,12 @@ jobs:
 
     steps:
       - name: Download & install necessary dependencies
-        run: apt update && apt install -y git
+        run: |
+          apt update
+          apt install software-properties-common -y
+          add-apt-repository ppa:dotnet/backports
+          apt install dotnet-sdk-7.0 -y
+          apt install -y git 
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,10 +35,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry --ansi install
+          poetry --ansi install -q
 
       - name: Setup Java
-        uses: actions/setup-java@v3.5.0
+        uses: actions/setup-java@v4.5.0
         with:
           distribution: 'zulu'
           java-version: '11'
