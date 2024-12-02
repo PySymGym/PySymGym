@@ -31,7 +31,7 @@ ValidationConfig:
             dataset_description: ../workflow/dataset_for_tests_java.json
         SVMSInfo:
           - name: usvm
-            launch_command: java -jar -DLOG_DIR=$PWD app.jar --mode server --port {port}
+            launch_command: java -jar -DLOG_DIR=$LOG_DIR app.jar --mode server --port {port}
             min_port: 35100
             max_port: 35150
             server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/

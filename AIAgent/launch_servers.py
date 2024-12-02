@@ -129,9 +129,7 @@ async def run_server_instance(
 
     def launcher(port: int) -> str:
         launch_command = svm_info.launch_command
-        launch_command = launch_command.replace(
-            "$PWD", os.environ["PWD"]
-        )  # let's hardcode PWD
+        launch_command = launch_command.replace("$LOG_DIR", os.environ["PWD"])
         return launch_command.format(port=port)
 
     min_port = svm_info.min_port
