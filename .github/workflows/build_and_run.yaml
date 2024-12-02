@@ -1,6 +1,6 @@
 name: Build SVM-s and maps + Run training
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build-and-launch:
