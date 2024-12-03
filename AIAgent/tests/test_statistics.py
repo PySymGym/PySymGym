@@ -1,13 +1,13 @@
 import csv
 import pytest
-from ml.training.statistics import (
+from ml.validation.statistics import (
     get_svms_statistics,
     AVERAGE_COVERAGE,
     AVERAGE_COVERAGE_OF_DATASET_STATE,
     SVM_FAILED_MAPS_NUM_PREFIX,
     SVM_AVERAGE_COVERAGE_PREFIX,
 )
-from ml.training.dataset import Result
+from ml.dataset import Result
 from pathlib import Path
 from tests.utils import read_configs
 import yaml
