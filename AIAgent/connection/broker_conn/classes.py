@@ -21,7 +21,7 @@ class ServerInstanceInfo:
 
 
 @pydantic_dataclass(config=dict(extra="ignore"))
-class SVMInfo:
+class SVMInfoViaServer:
     name: SVMName
     launch_command: str
     min_port: int

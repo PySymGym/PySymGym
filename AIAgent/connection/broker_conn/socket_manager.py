@@ -5,7 +5,7 @@ from contextlib import contextmanager, suppress
 import psutil
 import websocket
 from config import GameServerConnectorConfig
-from connection.broker_conn.classes import ServerInstanceInfo, SVMInfo
+from connection.broker_conn.classes import ServerInstanceInfo, SVMInfoViaServer
 from connection.broker_conn.requests import acquire_instance, return_instance
 from connection.errors_connection import ProcessStoppedError
 
@@ -46,7 +46,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
 
 
 @contextmanager
-def game_server_socket_manager(svm_info: SVMInfo):
+def game_server_socket_manager(svm_info: SVMInfoViaServer):
     server_instance = acquire_instance(svm_info)
     try:
         socket = wait_for_connection(server_instance)
