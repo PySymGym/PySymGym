@@ -28,18 +28,18 @@ from common.config import (
 )
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
+from ml.dataset import TrainingDataset
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
-from ml.training.dataset import TrainingDataset
 from ml.training.early_stopping import EarlyStopping
-from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
 from ml.training.train import train
 from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation.validate_loss import validate_loss
-from ml.training.validation.validate_coverage_via_server import (
+from ml.validation.statistics import get_svms_statistics, AVERAGE_COVERAGE
+from ml.validation.validate_coverage_via_server import (
     validate_coverage_via_server,
 )
+from ml.validation.validate_loss import validate_loss
 from paths import (
     LOG_PATH,
     PROCESSED_DATASET_PATH,

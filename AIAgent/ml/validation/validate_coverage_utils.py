@@ -1,10 +1,10 @@
 import torch
 from common.classes import Map2Result, GameMap2SVM
 from functools import wraps
-from ml.training.dataset import TrainingDataset
+from ml.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 
-from ml.training.validation.game.play_game_via_server import play_game
+from ml.validation.game.play_game_via_server import play_game
 
 
 def catch_return_exception(func):
