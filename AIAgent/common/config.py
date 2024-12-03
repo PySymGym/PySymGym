@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal, Optional, Union
 
 from common.typealias import PlatformName
-from connection.broker_conn.classes import SVMInfo
+from connection.broker_conn.classes import SVMInfoViaServer
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
@@ -23,7 +23,7 @@ class DatasetConfig:
 class Platform:
     name: PlatformName
     dataset_configs: list[DatasetConfig] = Field(alias="DatasetConfigs")
-    svms_info: list[SVMInfo] = Field(alias="SVMSInfo")
+    svms_info: list[SVMInfoViaServer] = Field(alias="SVMSInfo")
 
 
 @pydantic_dataclass
