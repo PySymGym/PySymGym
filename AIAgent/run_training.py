@@ -32,7 +32,7 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
 from ml.training.dataset import TrainingDataset
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
-from ml.training.utils import create_file, create_folders_if_necessary
+from ml.training.utils import create_file, create_folders_if_necessary, possibility_loss
 from ml.training.validation import validate_coverage, validate_loss
 from paths import (
     LOG_PATH,
@@ -98,7 +98,8 @@ def run_training(
     weights_uri: Optional[str],
 ):
     def criterion_init():
-        return nn.KLDivLoss(reduction="batchmean")
+        # return nn.KLDivLoss(reduction="batchmean")
+        return possibility_loss
 
     if isinstance(validation_config.validation, ValidationWithLoss):
 
@@ -110,7 +111,8 @@ def run_training(
                 criterion,
                 validation_config.validation.batch_size,
             )
-            metric_name = str(criterion).replace("(", "_").replace(")", "_")
+            # metric_name = str(criterion).replace("(", "_").replace(")", "_")
+            metric_name = "possibility_loss"
             metrics = {metric_name: result}
             return result, metrics
 
@@ -220,8 +222,8 @@ def objective(
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
-        early_stopping_state_len=5,
-        tolerance=0.0001,
+        early_stopping_state_len=7,
+        tolerance=0.00001,
     )
     early_stopping = EarlyStopping(
         state_len=config.early_stopping_state_len, tolerance=config.tolerance
@@ -237,12 +239,11 @@ def objective(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
-
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True, follow_batch=["game_vertex", "y_true"])
             model.train()
             train(
                 dataloader=train_dataloader,

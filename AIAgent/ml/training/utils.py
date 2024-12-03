@@ -29,6 +29,36 @@ def euclidean_dist(y_pred, y_true):
         return 0
 
 
+def possibility_loss(y_pred, y_true, y_true_batch):
+    results_sum = 0
+    batch_numbers = torch.unique(y_true_batch)
+    for elem_number in batch_numbers:
+        y_pred_elem = y_pred[y_true_batch == elem_number]
+        y_true_elem = y_true[y_true_batch == elem_number]
+        right_state_possibility = torch.max(y_pred_elem[y_true_elem > 0])
+        if torch.any(y_true_elem == 0):
+            wrong_state_possibility = torch.max(y_pred_elem[y_true_elem == 0])
+        else:
+            wrong_state_possibility = 0
+        results_sum = results_sum + wrong_state_possibility - right_state_possibility
+    return results_sum / batch_numbers.shape[0]
+
+
+def better_possibility_loss(y_pred, y_true, y_true_batch):
+    results_sum = 0
+    batch_numbers = torch.unique(y_true_batch)
+    for elem_number in batch_numbers:
+        y_pred_elem = y_pred[y_true_batch == elem_number]
+        y_true_elem = y_true[y_true_batch == elem_number]
+        right_state_possibility = torch.max(y_pred_elem[y_true_elem > 0])
+        if torch.any(y_true_elem == 0):
+            wrong_state_possibility = torch.max(y_pred_elem[y_true_elem == 0])
+        else:
+            wrong_state_possibility = 0
+        results_sum = results_sum + (1 / ((right_state_possibility - wrong_state_possibility) + 1)) - 0.5
+    return results_sum / batch_numbers.shape[0]
+
+
 def get_model(
     path_to_weights: Path, model_init: t.Callable[[], torch.nn.Module]
 ) -> torch.nn.Module:
