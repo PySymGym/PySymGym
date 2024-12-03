@@ -8,7 +8,7 @@ from connection.errors_connection import GameInterruptedError
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
 from ml.protocols import Predictor
-from ml.training.dataset import Result, TrainingDataset, convert_input_to_tensor
+from ml.dataset import Result, TrainingDataset, convert_input_to_tensor
 from time import perf_counter
 from typing import TypeAlias
 
@@ -27,19 +27,19 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
     updated_states = {s.Id for s in delta.States}
 
     vertices = [
-                   v for v in game_state.GraphVertices if v.Id not in updated_basic_blocks
-               ] + delta.GraphVertices
+        v for v in game_state.GraphVertices if v.Id not in updated_basic_blocks
+    ] + delta.GraphVertices
 
     edges = [
-                e for e in game_state.Map if e.VertexFrom not in updated_basic_blocks
-            ] + delta.Map
+        e for e in game_state.Map if e.VertexFrom not in updated_basic_blocks
+    ] + delta.Map
 
     active_states = {state for v in vertices for state in v.States}
     new_states = [
-                     s
-                     for s in game_state.States
-                     if s.Id in active_states and s.Id not in updated_states
-                 ] + delta.States
+        s
+        for s in game_state.States
+        if s.Id in active_states and s.Id not in updated_states
+    ] + delta.States
     for s in new_states:
         s.Children = list(filter(lambda c: c in active_states, s.Children))
 
@@ -47,7 +47,7 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
 
 
 def play_map(
-        with_connector: Connector, with_predictor: Predictor, with_dataset: TrainingDataset
+    with_connector: Connector, with_predictor: Predictor, with_dataset: TrainingDataset
 ) -> tuple[GameResult, TimeDuration]:
     steps_count = 0
     game_state = None
@@ -133,15 +133,15 @@ def play_map(
 
 @func_set_timeout(FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.timeout_sec)
 def play_map_with_timeout(
-        with_connector: Connector, with_predictor: Predictor, with_dataset
+    with_connector: Connector, with_predictor: Predictor, with_dataset
 ) -> tuple[GameResult, TimeDuration]:
     return play_map(with_connector, with_predictor, with_dataset)
 
 
 def play_game(
-        with_predictor: Predictor,
-        game_map2svm: GameMap2SVM,
-        with_dataset: TrainingDataset,
+    with_predictor: Predictor,
+    game_map2svm: GameMap2SVM,
+    with_dataset: TrainingDataset,
 ):
     logging.info(f"<{with_predictor.name()}> is playing {game_map2svm.GameMap.MapName}")
     need_to_save = False
@@ -177,12 +177,12 @@ def play_game(
         need_to_save = True
         logging.warning(
             (
-                    f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n"
-                    + "\n".join(
-                traceback.format_exception(
-                    type(error), value=error, tb=error.__traceback__
+                f"<{with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n"
+                + "\n".join(
+                    traceback.format_exception(
+                        type(error), value=error, tb=error.__traceback__
+                    )
                 )
-            )
             )
         )
         game_result = GameFailed(reason=type(error))

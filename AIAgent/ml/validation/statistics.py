@@ -1,6 +1,6 @@
 import csv
 from ml.training.utils import avg_by_attr
-from ml.training.dataset import TrainingDataset
+from ml.dataset import TrainingDataset
 from common.config import ValidationSVM
 import paths
 from common.classes import GameFailed, Map2Result

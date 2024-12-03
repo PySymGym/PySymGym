@@ -4,8 +4,8 @@ import torch
 import tqdm
 from common.classes import Map2Result, GameMap2SVM
 from common.config import ValidationSVMViaServer
-from ml.training.dataset import TrainingDataset
-from ml.training.validation.validate_coverage_utils import play_game_task
+from ml.dataset import TrainingDataset
+from ml.validation.validate_coverage_utils import play_game_task
 from ml.training.wrapper import TrainingModelWrapper
 
 

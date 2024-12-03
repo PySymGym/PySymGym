@@ -5,7 +5,7 @@ import torch
 import tqdm
 from config import GeneralConfig
 from ml.inference import infer
-from ml.training.dataset import TrainingDataset
+from ml.dataset import TrainingDataset
 from torch_geometric.loader import DataLoader
 
 
