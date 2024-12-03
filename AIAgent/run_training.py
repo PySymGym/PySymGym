@@ -7,22 +7,24 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
-from torch_geometric.data import Dataset
 
 import joblib
 import mlflow
 import optuna
 import torch
 import yaml
+from torch import nn
+from torch_geometric.data import Dataset
+from torch_geometric.loader import DataLoader
+
 from common.classes import GameFailed
-from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
 from common.config import (
     Config,
     OptunaConfig,
     TrainingConfig,
     ValidationConfig,
-    ValidationWithLoss,
-    ValidationWithSVMs,
+    ValidationLoss,
+    ValidationSVMViaServer,
 )
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
@@ -31,9 +33,13 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
 )
 from ml.training.dataset import TrainingDataset
 from ml.training.early_stopping import EarlyStopping
+from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
 from ml.training.train import train
 from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation import validate_coverage, validate_loss
+from ml.training.validation.validate_loss import validate_loss
+from ml.training.validation.validate_coverage_via_server import (
+    validate_coverage_via_server,
+)
 from paths import (
     LOG_PATH,
     PROCESSED_DATASET_PATH,
@@ -44,8 +50,6 @@ from paths import (
     CURRENT_TABLE_PATH,
     CURRENT_TRIAL_PATH,
 )
-from torch import nn
-from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -58,7 +62,7 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
-def get_maps(validation_with_svms_config: ValidationWithSVMs):
+def get_maps(validation_with_svms_config: ValidationSVMViaServer):
     maps: list[GameMap2SVM] = list()
     for platform in validation_with_svms_config.platforms_config:
         for svm_info in platform.svms_info:
@@ -100,7 +104,7 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    if isinstance(validation_config.validation, ValidationWithLoss):
+    if isinstance(validation_config.validation, ValidationLoss):
 
         def validate(model, dataset):
             criterion = criterion_init()
@@ -114,7 +118,7 @@ def run_training(
             metrics = {metric_name: result}
             return result, metrics
 
-    elif isinstance(validation_config.validation, ValidationWithSVMs):
+    elif isinstance(validation_config.validation, ValidationSVMViaServer):
         maps: list[GameMap2SVM] = get_maps(validation_config.validation)
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
@@ -124,7 +128,7 @@ def run_training(
             statistics_writer.writeheader()
 
         def validate(model, dataset: TrainingDataset):
-            map2results = validate_coverage(
+            map2results = validate_coverage_via_server(
                 model, dataset, maps, validation_config.validation
             )
             metrics = get_svms_statistics(
