@@ -34,7 +34,7 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
 )
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
-from ml.training.utils import create_file, create_folders_if_necessary
+from common.file_system_utils import create_folders_if_necessary, create_file
 from ml.validation.statistics import get_svms_statistics, AVERAGE_COVERAGE
 from ml.validation.validate_coverage_via_server import (
     validate_coverage_via_server,

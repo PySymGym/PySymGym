@@ -1,5 +1,5 @@
 import csv
-from ml.training.utils import avg_by_attr
+from ml.validation.statistics_utils import avg_by_attr
 from ml.dataset import TrainingDataset
 from common.config import ValidationSVM
 import paths
