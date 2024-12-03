@@ -1,10 +1,11 @@
+from abc import ABC
 from pathlib import Path
 from typing import Literal, Optional, Union
 
+from common.typealias import PlatformName
+from connection.broker_conn.classes import SVMInfo
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
-from connection.broker_conn.classes import SVMInfo
-from common.typealias import PlatformName
 
 
 @pydantic_dataclass
@@ -45,22 +46,31 @@ class TrainingConfig:
 
 
 @pydantic_dataclass
-class ValidationWithLoss:
+class Validation(ABC):
+    val_type: str
+
+
+@pydantic_dataclass
+class ValidationLoss(Validation):
     val_type: Literal["loss"]
     batch_size: int
 
 
 @pydantic_dataclass
-class ValidationWithSVMs:
-    val_type: Literal["svms"]
-    servers_count: int
+class ValidationSVM(Validation, ABC):
     platforms_config: list[Platform] = Field(alias="PlatformsConfig")
     fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
+class ValidationSVMViaServer(ValidationSVM):
+    val_type: Literal["svms_server"]
+    servers_count: int = Field()
+
+
+@pydantic_dataclass
 class ValidationConfig:
-    validation: Union[ValidationWithLoss, ValidationWithSVMs] = Field(
+    validation: Union[ValidationLoss, ValidationSVMViaServer] = Field(
         discriminator="val_type"
     )
 

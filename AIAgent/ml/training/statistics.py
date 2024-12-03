@@ -1,7 +1,7 @@
 import csv
 from ml.training.utils import avg_by_attr
 from ml.training.dataset import TrainingDataset
-from common.config import ValidationWithSVMs
+from common.config import ValidationSVM
 import paths
 from common.classes import GameFailed, Map2Result
 
@@ -15,7 +15,7 @@ RESULT_COVERAGE_PERCENT_FIELD_NAME = "coverage_percent"
 
 def get_svms_statistics(
     results: list[Map2Result],
-    validation_config: ValidationWithSVMs,
+    validation_config: ValidationSVM,
     dataset: TrainingDataset,
 ):
     with open(paths.CURRENT_TABLE_PATH, "r") as statistics_file:
