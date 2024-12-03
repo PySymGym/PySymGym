@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from connection.broker_conn.classes import SVMInfo
+from connection.broker_conn.classes import SVMInfoViaServer
 
 
 @dataclass_json
@@ -79,7 +79,7 @@ class GameMap:
 @dataclass(slots=True)
 class GameMap2SVM:
     GameMap: GameMap
-    SVMInfo: SVMInfo
+    SVMInfo: SVMInfoViaServer
 
 
 @dataclass_json
