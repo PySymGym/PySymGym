@@ -5,8 +5,23 @@ import tqdm
 from common.classes import Map2Result, GameMap2SVM
 from common.config import ValidationSVMViaServer
 from ml.dataset import TrainingDataset
-from ml.validation.validate_coverage_utils import play_game_task
+from ml.validation.game.play_game_via_server import play_game
+from ml.validation.validate_coverage_utils import catch_return_exception
 from ml.training.wrapper import TrainingModelWrapper
+
+
+@catch_return_exception
+def play_game_task(
+    task: tuple[GameMap2SVM, TrainingDataset, TrainingModelWrapper],
+) -> Map2Result:
+    game_map2svm, dataset, wrapper = task
+    result = play_game(
+        with_predictor=wrapper,
+        game_map2svm=game_map2svm,
+        with_dataset=dataset,
+    )
+    torch.cuda.empty_cache()
+    return result
 
 
 def validate_coverage_via_server(
