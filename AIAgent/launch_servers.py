@@ -14,7 +14,7 @@ from queue import Empty, Queue
 import psutil
 import yaml
 from aiohttp import web
-from common.config import Config
+from common.config.config import Config
 from common.validation_coverage.svm_info import SVMInfoViaServer
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import (

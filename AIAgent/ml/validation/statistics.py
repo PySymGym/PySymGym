@@ -1,9 +1,10 @@
 import csv
-from ml.validation.statistics_utils import avg_by_attr
-from ml.dataset import TrainingDataset
-from common.config import ValidationSVM
+
 import paths
 from common.classes import GameFailed, Map2Result
+from common.config.validation_config import ValidationSVM
+from ml.dataset import TrainingDataset
+from ml.validation.statistics_utils import avg_by_attr
 
 AVERAGE_COVERAGE_OF_DATASET_STATE = "average_dataset_state_coverage"
 AVERAGE_COVERAGE = "average_coverage"

@@ -2,12 +2,12 @@ import multiprocessing as mp
 
 import torch
 import tqdm
-from common.classes import Map2Result, GameMap2SVM
-from common.config import ValidationSVMViaServer
+from common.classes import GameMap2SVM, Map2Result
+from common.config.validation_config import ValidationSVMViaServer
 from ml.dataset import TrainingDataset
+from ml.training.wrapper import TrainingModelWrapper
 from ml.validation.game.play_game_via_server import play_game
 from ml.validation.validate_coverage_utils import catch_return_exception
-from ml.training.wrapper import TrainingModelWrapper
 
 
 @catch_return_exception
