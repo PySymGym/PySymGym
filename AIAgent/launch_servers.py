@@ -3,22 +3,21 @@ import asyncio
 import json
 import logging
 import os
-from pathlib import Path
 import signal
 import socket
 import subprocess
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from queue import Empty, Queue
 
 import psutil
-from aiohttp import web
 import yaml
-
+from aiohttp import web
 from common.config import Config
+from common.validation_coverage.svm_info import SVMInfoViaServer
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import (
-    SVMInfoViaServer,
     ServerInstanceInfo,
     Undefined,
     WSUrl,
