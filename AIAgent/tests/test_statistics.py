@@ -1,22 +1,24 @@
 import csv
+import shutil
+from pathlib import Path
+from random import choice
+
+import paths
 import pytest
+import yaml
+from common.classes import GameFailed, GameResult, Map2Result
+from common.config.validation_config import ValidationConfig
+from ml.dataset import Result
 from ml.validation.statistics import (
-    get_svms_statistics,
     AVERAGE_COVERAGE,
     AVERAGE_COVERAGE_OF_DATASET_STATE,
-    SVM_FAILED_MAPS_NUM_PREFIX,
     SVM_AVERAGE_COVERAGE_PREFIX,
+    SVM_FAILED_MAPS_NUM_PREFIX,
+    get_svms_statistics,
 )
-from ml.dataset import Result
-from pathlib import Path
-from tests.utils import read_configs
-import yaml
-from common.classes import GameFailed, Map2Result, GameResult
 from run_training import get_maps
-from random import choice
-from common.config import ValidationConfig
-import shutil
-import paths
+
+from tests.utils import read_configs
 
 
 class TrainingDatasetMock:
