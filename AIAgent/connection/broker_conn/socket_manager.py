@@ -4,8 +4,9 @@ from contextlib import contextmanager, suppress
 
 import psutil
 import websocket
+from common.validation_coverage.svm_info import SVMInfoViaServer
 from config import GameServerConnectorConfig
-from connection.broker_conn.classes import ServerInstanceInfo, SVMInfoViaServer
+from connection.broker_conn.classes import ServerInstanceInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
 from connection.errors_connection import ProcessStoppedError
 
@@ -23,11 +24,14 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
     retries_left = GameServerConnectorConfig.WAIT_FOR_SOCKET_RECONNECTION_MAX_RETRIES
 
     while retries_left:
-        with suppress(
-            ConnectionRefusedError,
-            ConnectionResetError,
-            websocket.WebSocketTimeoutException,
-        ), process_running(server_instance.pid):
+        with (
+            suppress(
+                ConnectionRefusedError,
+                ConnectionResetError,
+                websocket.WebSocketTimeoutException,
+            ),
+            process_running(server_instance.pid),
+        ):
             ws.settimeout(GameServerConnectorConfig.CREATE_CONNECTION_TIMEOUT_SEC)
             ws.connect(
                 server_instance.ws_url,

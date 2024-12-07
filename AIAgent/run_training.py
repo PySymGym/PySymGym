@@ -13,19 +13,16 @@ import mlflow
 import optuna
 import torch
 import yaml
-from torch import nn
-from torch_geometric.data import Dataset
-from torch_geometric.loader import DataLoader
-
 from common.classes import GameFailed
-from common.config import (
-    Config,
-    OptunaConfig,
-    TrainingConfig,
+from common.config.config import Config
+from common.config.optuna_config import OptunaConfig
+from common.config.training_config import TrainingConfig
+from common.config.validation_config import (
     ValidationConfig,
     ValidationLoss,
     ValidationSVMViaServer,
 )
+from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
 from ml.dataset import TrainingDataset
@@ -34,22 +31,24 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
 )
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
-from common.file_system_utils import create_folders_if_necessary, create_file
-from ml.validation.statistics import get_svms_statistics, AVERAGE_COVERAGE
+from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
 from ml.validation.validate_coverage_via_server import (
     validate_coverage_via_server,
 )
 from ml.validation.validate_loss import validate_loss
 from paths import (
+    CURRENT_MODEL_PATH,
+    CURRENT_STUDY_PATH,
+    CURRENT_TABLE_PATH,
+    CURRENT_TRIAL_PATH,
     LOG_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
-    CURRENT_MODEL_PATH,
-    CURRENT_STUDY_PATH,
     REPORT_PATH,
-    CURRENT_TABLE_PATH,
-    CURRENT_TRIAL_PATH,
 )
+from torch import nn
+from torch_geometric.data import Dataset
+from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
