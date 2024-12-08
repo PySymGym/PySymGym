@@ -20,13 +20,13 @@ class ValidationLoss(Validation):
 @pydantic_dataclass
 class ValidationSVM(Validation, ABC):
     platforms_config: list[Platform] = Field(alias="PlatformsConfig")
+    process_count: int = Field(alias="ProcessCount")
     fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
 class ValidationSVMViaServer(ValidationSVM):
     val_type: Literal["svms_server"]
-    servers_count: int = Field()  # type: ignore
 
 
 @pydantic_dataclass

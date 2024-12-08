@@ -49,7 +49,7 @@ def validate_coverage_via_server(
     """
     wrapper = TrainingModelWrapper(model)
     tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in maps]
-    with mp.Pool(validation_config.servers_count) as p:
+    with mp.Pool(validation_config.process_count) as p:
         all_results: list[Map2Result] = list()
         for result in tqdm.tqdm(
             p.imap_unordered(play_game_task, tasks, chunksize=1),

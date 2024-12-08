@@ -20,6 +20,7 @@ from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
     ValidationConfig,
     ValidationLoss,
+    ValidationSVM,
     ValidationSVMViaServer,
 )
 from common.file_system_utils import create_file, create_folders_if_necessary
@@ -61,7 +62,7 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
-def get_maps(validation_with_svms_config: ValidationSVMViaServer):
+def get_maps(validation_with_svms_config: ValidationSVM):
     maps: list[GameMap2SVM] = list()
     for platform in validation_with_svms_config.platforms_config:
         for svm_info in platform.svms_info:

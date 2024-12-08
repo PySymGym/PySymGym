@@ -12,7 +12,7 @@ TrainingConfig:
 ValidationConfig:
   validation:
     val_type: svms_server
-    servers_count: 1
+    process_count: 1
     fail_immediately: True
     PlatformsConfig:
       - name: dotnet
