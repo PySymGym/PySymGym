@@ -12,8 +12,8 @@ import yaml
 from torch_geometric.data import HeteroData
 
 from common.game import GameState
+from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH
-from ml.training.dataset import convert_input_to_tensor
 
 # working version
 ONNX_OPSET_VERSION = 17

@@ -11,7 +11,7 @@ TrainingConfig:
   epochs: 2
 ValidationConfig:
   validation:
-    val_type: svms
+    val_type: svms_server
     servers_count: 1
     fail_immediately: True
     PlatformsConfig:

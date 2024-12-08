@@ -3,22 +3,21 @@ import asyncio
 import json
 import logging
 import os
-from pathlib import Path
 import signal
 import socket
 import subprocess
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from queue import Empty, Queue
 
 import psutil
-from aiohttp import web
 import yaml
-
-from common.config import Config
+from aiohttp import web
+from common.config.config import Config
+from common.validation_coverage.svm_info import SVMInfoViaServer
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import (
-    SVMInfo,
     ServerInstanceInfo,
     Undefined,
     WSUrl,
@@ -67,7 +66,7 @@ async def dequeue_instance(request):
         server_info = SERVER_INSTANCES.get(block=False)
         assert server_info.pid is Undefined
         server_info = await run_server_instance(
-            SVMInfo(**request.query),
+            SVMInfoViaServer(**request.query),
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
@@ -123,7 +122,7 @@ def get_socket_url(port: int) -> WSUrl:
 
 
 async def run_server_instance(
-    svm_info: SVMInfo, should_start_server: bool
+    svm_info: SVMInfoViaServer, should_start_server: bool
 ) -> ServerInstanceInfo:
     svm_name = svm_info.name
 

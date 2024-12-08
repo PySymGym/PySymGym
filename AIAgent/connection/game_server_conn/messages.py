@@ -72,7 +72,7 @@ class ServerMessage:
     class DeserializationException(Exception):
         pass
 
-    def from_json_handle(data, expected):
+    def from_json_handle(data, expected) -> ClientMessage:
         if FeatureConfig.DISABLE_MESSAGE_CHECKS:
             return obj_from_dict(json.loads(data))
 

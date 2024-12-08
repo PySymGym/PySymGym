@@ -7,7 +7,6 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
-from torch_geometric.data import Dataset
 
 import joblib
 import mlflow
@@ -15,36 +14,40 @@ import optuna
 import torch
 import yaml
 from common.classes import GameFailed
-from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
-from common.config import (
-    Config,
-    OptunaConfig,
-    TrainingConfig,
+from common.config.config import Config
+from common.config.optuna_config import OptunaConfig
+from common.config.training_config import TrainingConfig
+from common.config.validation_config import (
     ValidationConfig,
-    ValidationWithLoss,
-    ValidationWithSVMs,
+    ValidationLoss,
+    ValidationSVMViaServer,
 )
+from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
+from ml.dataset import TrainingDataset
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
-from ml.training.dataset import TrainingDataset
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
-from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation import validate_coverage, validate_loss
+from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
+from ml.validation.validate_coverage_via_server import (
+    validate_coverage_via_server,
+)
+from ml.validation.validate_loss import validate_loss
 from paths import (
+    CURRENT_MODEL_PATH,
+    CURRENT_STUDY_PATH,
+    CURRENT_TABLE_PATH,
+    CURRENT_TRIAL_PATH,
     LOG_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
-    CURRENT_MODEL_PATH,
-    CURRENT_STUDY_PATH,
     REPORT_PATH,
-    CURRENT_TABLE_PATH,
-    CURRENT_TRIAL_PATH,
 )
 from torch import nn
+from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
@@ -58,7 +61,7 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
-def get_maps(validation_with_svms_config: ValidationWithSVMs):
+def get_maps(validation_with_svms_config: ValidationSVMViaServer):
     maps: list[GameMap2SVM] = list()
     for platform in validation_with_svms_config.platforms_config:
         for svm_info in platform.svms_info:
@@ -100,7 +103,7 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    if isinstance(validation_config.validation, ValidationWithLoss):
+    if isinstance(validation_config.validation, ValidationLoss):
 
         def validate(model, dataset):
             criterion = criterion_init()
@@ -114,7 +117,7 @@ def run_training(
             metrics = {metric_name: result}
             return result, metrics
 
-    elif isinstance(validation_config.validation, ValidationWithSVMs):
+    elif isinstance(validation_config.validation, ValidationSVMViaServer):
         maps: list[GameMap2SVM] = get_maps(validation_config.validation)
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
@@ -124,7 +127,7 @@ def run_training(
             statistics_writer.writeheader()
 
         def validate(model, dataset: TrainingDataset):
-            map2results = validate_coverage(
+            map2results = validate_coverage_via_server(
                 model, dataset, maps, validation_config.validation
             )
             metrics = get_svms_statistics(

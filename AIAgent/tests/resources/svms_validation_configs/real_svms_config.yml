@@ -1,5 +1,5 @@
 validation:
-  val_type: svms
+  val_type: svms_server
   servers_count: 30
   PlatformsConfig:
     - name: dotnet
