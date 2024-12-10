@@ -46,10 +46,10 @@ class StateModelEncoder(torch.nn.Module):
         edge_attr_history_v_s,
         edge_index_in_v_s,
         edge_index_s_s,
-        y_true_batch,
+        state_x_batch,
         game_x_batch,
     ):
-        game_x, state_x = min_max_scaling(game_x, state_x, game_x_batch, y_true_batch)
+        game_x, state_x = min_max_scaling(game_x, state_x, game_x_batch, state_x_batch)
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 
         if edge_type_v_v.numel() != 0:
@@ -86,4 +86,4 @@ class StateModelEncoder(torch.nn.Module):
             edge_index_s_s,
         ).relu()
         state_x = self.lin(state_x).relu()
-        return softmax(self.lin_last(state_x), dim=0)
+        return log_softmax(self.lin_last(state_x), dim=0)

@@ -4,6 +4,7 @@ import torch
 from config import GeneralConfig
 from ml.inference import infer
 from torch_geometric.data import HeteroData
+from torch_geometric.loader import DataLoader
 
 StateVectorMapping = namedtuple("StateVectorMapping", ["state", "vector"])
 
@@ -17,8 +18,12 @@ def predict_state_with_dict(
     data.to(GeneralConfig.DEVICE)
     reversed_state_map = {v: k for k, v in state_map.items()}
 
+    batch_loader = iter(
+        DataLoader([data], batch_size=1, follow_batch=["game_vertex", "y_true"])
+    )
+    batch = next(batch_loader)
     with torch.no_grad():
-        out = infer(model, data)
+        out = infer(model, batch)
 
     remapped = []
 

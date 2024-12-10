@@ -98,8 +98,8 @@ def run_training(
     weights_uri: Optional[str],
 ):
     def criterion_init():
-        # return nn.KLDivLoss(reduction="batchmean")
-        return possibility_loss
+        return nn.KLDivLoss(reduction="batchmean")
+        # return possibility_loss
 
     if isinstance(validation_config.validation, ValidationWithLoss):
 
@@ -111,8 +111,8 @@ def run_training(
                 criterion,
                 validation_config.validation.batch_size,
             )
-            # metric_name = str(criterion).replace("(", "_").replace(")", "_")
-            metric_name = "possibility_loss"
+            metric_name = str(criterion).replace("(", "_").replace(")", "_")
+            # metric_name = "possibility_loss"
             metrics = {metric_name: result}
             return result, metrics
 
@@ -243,7 +243,7 @@ def objective(
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True, follow_batch=["game_vertex", "y_true"])
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True, follow_batch=["game_vertex", "state_vertex"])
             model.train()
             train(
                 dataloader=train_dataloader,

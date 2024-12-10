@@ -23,7 +23,7 @@ def train(
         batch.to(GeneralConfig.DEVICE)
         optimizer.zero_grad()
         out = infer(model, batch)
-        loss = criterion(out, batch.y_true, batch.y_true_batch)
+        loss = criterion(out, batch.y_true)
         if loss != 0:
             loss.backward()
             optimizer.step()

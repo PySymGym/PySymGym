@@ -87,13 +87,18 @@ def validate_loss(
     progress_bar_colour: str = "#975cdb",
 ):
     epoch_loss = []
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, follow_batch=["game_vertex", "y_true"])
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        follow_batch=["game_vertex", "state_vertex"],
+    )
     for batch in tqdm.tqdm(
         dataloader, desc="test", ncols=100, colour=progress_bar_colour
     ):
         batch.to(GeneralConfig.DEVICE)
         out = infer(model, batch)
-        loss: torch.Tensor = criterion(out, batch.y_true, batch.y_true_batch)
+        loss: torch.Tensor = criterion(out, batch.y_true)
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
     return result

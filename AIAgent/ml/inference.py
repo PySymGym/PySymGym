@@ -52,6 +52,6 @@ def infer(model, data):
         edge_attr_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_attr,
         edge_index_in_v_s=data[*TORCH.gamevertex_in_statevertex].edge_index,
         edge_index_s_s=data[*TORCH.statevertex_parentof_statevertex].edge_index,
-        y_true_batch=data.y_true_batch,
+        state_x_batch=data[TORCH.state_vertex].batch,
         game_x_batch=data[TORCH.game_vertex].batch,
     )
