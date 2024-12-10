@@ -232,7 +232,7 @@ def run_training(
             threshold_steps_number=training_config.threshold_steps_number,
             load_to_cpu=training_config.load_to_cpu,
             threshold_coverage=training_config.threshold_coverage,
-            transform_func=None,
+            transform_func=normalization,
         )
 
         def model_init(**model_params) -> nn.Module:
