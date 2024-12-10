@@ -170,7 +170,13 @@ def run_training(
     weights_uri: Optional[str],
 ):
     normalization_functions = [None,
-                           l2_norm,]
+                           l2_norm,
+                           l_inf_norm,
+                           min_max_scaling,
+                           z_score_norm,
+                           max_abs_scaling,
+                           log_scaling,
+                           reciprocal_norm]
     results = {}
 
     for normalization in normalization_functions:
