@@ -420,6 +420,9 @@ class TrainingDataset(Dataset):
         else:
             self.maps_results[map_name] = map_result
             self._save_steps(map_name, filtered_map_steps, map_result)
+            logging.info(
+                f"New map with name {map_name} was saved with result {tuple(map_result)}"
+            )
         del filtered_map_steps
         del map_name
         del map_result
