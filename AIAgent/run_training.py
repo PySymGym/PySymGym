@@ -163,119 +163,136 @@ def reciprocal_norm(data):
     return scaled_data
 
 
-def set_seed():
-    seed_num = 42
-    random.seed(seed_num)
-    np.random.seed(seed_num)
-    torch.manual_seed(seed_num)
-
-
 def run_training(
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: Optional[str],
 ):
-    def criterion_init():
-        return nn.KLDivLoss(reduction="batchmean")
+    normalization_functions = [None,
+                           l2_norm,]
+    results = {}
 
-    if isinstance(validation_config.validation, ValidationWithLoss):
+    for normalization in normalization_functions:
+        print(f"Running with transform function: {normalization.__name__ if normalization else 'None'}")
 
-        def validate(model, dataset):
-            criterion = criterion_init()
-            result = validate_loss(
-                model,
-                dataset,
-                criterion,
-                validation_config.validation.batch_size,
+        def criterion_init():
+            return nn.KLDivLoss(reduction="batchmean")
+
+        if isinstance(validation_config.validation, ValidationWithLoss):
+
+            def validate(model, dataset):
+                criterion = criterion_init()
+                result = validate_loss(
+                    model,
+                    dataset,
+                    criterion,
+                    validation_config.validation.batch_size,
+                )
+                metric_name = str(criterion).replace("(", "_").replace(")", "_")
+                metrics = {metric_name: result}
+                return result, metrics
+
+        elif isinstance(validation_config.validation, ValidationWithSVMs):
+            maps: list[GameMap2SVM] = get_maps(validation_config.validation)
+            with open(CURRENT_TABLE_PATH, "w") as statistics_file:
+                statistics_writer = csv.DictWriter(
+                    statistics_file,
+                    sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
+                )
+                statistics_writer.writeheader()
+
+            def validate(model, dataset: TrainingDataset):
+                map2results = validate_coverage(
+                    model, dataset, maps, validation_config.validation
+                )
+                metrics = get_svms_statistics(
+                    map2results, validation_config.validation, dataset
+                )
+                mlflow.log_artifact(CURRENT_TABLE_PATH)
+
+                for map2result in map2results:
+                    if (
+                        isinstance(map2result.game_result, GameFailed)
+                        and validation_config.validation.fail_immediately
+                    ):
+                        raise RuntimeError("Validation failed")
+                return metrics[AVERAGE_COVERAGE], metrics
+
+        dataset = TrainingDataset(
+            raw_dir=RAW_DATASET_PATH,
+            processed_dir=PROCESSED_DATASET_PATH,
+            train_percentage=training_config.train_percentage,
+            threshold_steps_number=training_config.threshold_steps_number,
+            load_to_cpu=training_config.load_to_cpu,
+            threshold_coverage=training_config.threshold_coverage,
+            transform_func=None,
+        )
+
+        def model_init(**model_params) -> nn.Module:
+            state_model_encoder = StateModelEncoder(**model_params)
+            if weights_uri is None:
+                return state_model_encoder
+            else:
+                downloaded_artifact_path = mlflow.artifacts.download_artifacts(
+                    artifact_uri=weights_uri, dst_path=REPORT_PATH
+                )
+                state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE))
+                return state_model_encoder
+
+        objective_partial = partial(
+            objective,
+            dataset=dataset,
+            dynamic_dataset=training_config.dynamic_dataset,
+            model_init=model_init,
+            criterion_init=criterion_init,
+            epochs=training_config.epochs,
+            validate=validate,
+        )
+        sampler = optuna.samplers.TPESampler(
+            n_startup_trials=optuna_config.n_startup_trials
+        )
+        if optuna_config.study_uri is None and weights_uri is None:
+
+            def save_study(study, _):
+                joblib.dump(study, CURRENT_STUDY_PATH)
+                with mlflow.start_run(mlflow.last_active_run().info.run_id):
+                    mlflow.log_artifact(CURRENT_STUDY_PATH)
+
+            study = optuna.create_study(
+                sampler=sampler, direction=optuna_config.study_direction
             )
-            metric_name = str(criterion).replace("(", "_").replace(")", "_")
-            metrics = {metric_name: result}
-            return result, metrics
-
-    elif isinstance(validation_config.validation, ValidationWithSVMs):
-        maps: list[GameMap2SVM] = get_maps(validation_config.validation)
-        with open(CURRENT_TABLE_PATH, "w") as statistics_file:
-            statistics_writer = csv.DictWriter(
-                statistics_file,
-                sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
+            study.optimize(
+                objective_partial,
+                n_trials=optuna_config.n_trials,
+                gc_after_trial=True,
+                n_jobs=optuna_config.n_jobs,
+                callbacks=[save_study],
             )
-            statistics_writer.writeheader()
-
-        def validate(model, dataset: TrainingDataset):
-            map2results = validate_coverage(
-                model, dataset, maps, validation_config.validation
-            )
-            metrics = get_svms_statistics(
-                map2results, validation_config.validation, dataset
-            )
-            mlflow.log_artifact(CURRENT_TABLE_PATH)
-
-            for map2result in map2results:
-                if (
-                    isinstance(map2result.game_result, GameFailed)
-                    and validation_config.validation.fail_immediately
-                ):
-                    raise RuntimeError("Validation failed")
-            return metrics[AVERAGE_COVERAGE], metrics
-
-    dataset = TrainingDataset(
-        raw_dir=RAW_DATASET_PATH,
-        processed_dir=PROCESSED_DATASET_PATH,
-        train_percentage=training_config.train_percentage,
-        threshold_steps_number=training_config.threshold_steps_number,
-        load_to_cpu=training_config.load_to_cpu,
-        threshold_coverage=training_config.threshold_coverage,
-        transform_func=l2_norm,
-    )
-
-    def model_init(**model_params) -> nn.Module:
-        state_model_encoder = StateModelEncoder(**model_params)
-        if weights_uri is None:
-            return state_model_encoder
+            best_value = study.best_value
+            results[normalization.__name__ if normalization else "None"] = best_value
         else:
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-                artifact_uri=weights_uri, dst_path=REPORT_PATH
+                optuna_config.study_uri, dst_path=str(REPORT_PATH)
             )
-            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE))
-            return state_model_encoder
+            study: optuna.Study = joblib.load(downloaded_artifact_path)
+            for _ in range(optuna_config.n_trials):
+                objective_partial(study.best_trial)
+            best_value = study.best_value
+            results[normalization.__name__ if normalization else "None"] = best_value
 
-    objective_partial = partial(
-        objective,
-        dataset=dataset,
-        dynamic_dataset=training_config.dynamic_dataset,
-        model_init=model_init,
-        criterion_init=criterion_init,
-        epochs=training_config.epochs,
-        validate=validate,
-    )
-    sampler = optuna.samplers.TPESampler(
-        n_startup_trials=optuna_config.n_startup_trials
-    )
-    if optuna_config.study_uri is None and weights_uri is None:
+    print("Results for all transform functions:")
+    for name, result in results.items():
+        print(f"{name}: {result}")
+    best_normalization = min(results, key=results.get)
+    print(f"Best normalization function: {best_normalization} with result {results[best_normalization]}")
 
-        def save_study(study, _):
-            joblib.dump(study, CURRENT_STUDY_PATH)
-            with mlflow.start_run(mlflow.last_active_run().info.run_id):
-                mlflow.log_artifact(CURRENT_STUDY_PATH)
 
-        study = optuna.create_study(
-            sampler=sampler, direction=optuna_config.study_direction
-        )
-        study.optimize(
-            objective_partial,
-            n_trials=optuna_config.n_trials,
-            gc_after_trial=True,
-            n_jobs=optuna_config.n_jobs,
-            callbacks=[save_study],
-        )
-    else:
-        downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-            optuna_config.study_uri, dst_path=str(REPORT_PATH)
-        )
-        study: optuna.Study = joblib.load(downloaded_artifact_path)
-        for _ in range(optuna_config.n_trials):
-            objective_partial(study.best_trial)
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
 
 def objective(
     trial: optuna.Trial,
@@ -288,13 +305,17 @@ def objective(
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
 ):
+
+    g = torch.Generator()
+    g.manual_seed(42) 
+
     config = TrialSettings(
-        lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 800),
-        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
-        num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
-        hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
+        lr=0.0006347818494377509,
+        batch_size=628,
+        num_hops_1=6,
+        num_hops_2=10,
+        num_of_state_features=15,
+        hidden_channels=120,
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
@@ -318,7 +339,13 @@ def objective(
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True, worker_init_fn=set_seed(),)
+            train_dataloader = DataLoader(
+                dataset, 
+                config.batch_size, 
+                shuffle=True, 
+                worker_init_fn=seed_worker,
+                generator=g,
+                )
             model.train()
             train(
                 dataloader=train_dataloader,
@@ -357,6 +384,11 @@ def main(config: str):
     mlflow.set_experiment(mlflow_config.experiment_name)
     mlflow.set_experiment_tags(asdict(config))
     weights_uri = config.weights_uri
+
+    torch.manual_seed(42)
+    random.seed(42)
+    np.random.seed(42)
+    torch.use_deterministic_algorithms(True, warn_only=True)
 
     run_training(
         optuna_config=config.optuna_config,
