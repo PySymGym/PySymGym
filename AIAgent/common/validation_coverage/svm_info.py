@@ -1,23 +1,18 @@
-from abc import ABC
-from typing import Any
+from typing import Any, Optional
 
 from common.typealias import SVMName
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 
 @pydantic_dataclass
-class SVMInfo(ABC):
+class SVMInfo:
     name: SVMName
     launch_command: str
     server_working_dir: str
+    min_port: Optional[int]
+    max_port: Optional[int]
 
     def to_dict(
         self,
     ) -> dict[str, Any]:  # GameMap class requires the to_dict method for all its fields
         return self.__dict__
-
-
-@pydantic_dataclass(config=dict(extra="ignore"))  # type: ignore
-class SVMInfoViaServer(SVMInfo):
-    min_port: int
-    max_port: int
