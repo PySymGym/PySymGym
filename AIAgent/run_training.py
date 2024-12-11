@@ -49,6 +49,8 @@ from paths import (
 from torch import nn
 from torch_geometric.loader import DataLoader
 
+from ml.training.utils import l2_norm
+
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
     filename=LOG_PATH,
@@ -98,6 +100,7 @@ def run_training(
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: Optional[str],
+    normalization_func
 ): 
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
@@ -149,6 +152,7 @@ def run_training(
         threshold_steps_number=training_config.threshold_steps_number,
         load_to_cpu=training_config.load_to_cpu,
         threshold_coverage=training_config.threshold_coverage,
+        transform_func=normalization_func,
     )
 
     def model_init(**model_params) -> nn.Module:
@@ -297,17 +301,23 @@ def main(config: str):
     mlflow.set_experiment_tags(asdict(config))
     weights_uri = config.weights_uri
 
-    torch.manual_seed(42)
-    random.seed(42)
-    np.random.seed(42)
-    torch.use_deterministic_algorithms(True, warn_only=True)
+    normalization_functions = [None, l2_norm]
 
-    run_training(
-        optuna_config=config.optuna_config,
-        training_config=config.training_config,
-        validation_config=config.validation_config,
-        weights_uri=weights_uri,
-    )
+    for normalization_func in normalization_functions:
+        print(f"Running with transform function: {normalization_func.__name__ if normalization_func else 'None'}")
+
+        torch.manual_seed(42)
+        random.seed(42)
+        np.random.seed(42)
+        torch.use_deterministic_algorithms(True, warn_only=True)
+
+        run_training(
+            optuna_config=config.optuna_config,
+            training_config=config.training_config,
+            validation_config=config.validation_config,
+            weights_uri=weights_uri,
+            normalization_func=normalization_func
+        )
 
 
 if __name__ == "__main__":
