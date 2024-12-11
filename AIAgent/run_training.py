@@ -21,7 +21,6 @@ from common.config.validation_config import (
     ValidationConfig,
     ValidationLoss,
     ValidationSVM,
-    ValidationSVMViaServer,
 )
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
@@ -118,7 +117,7 @@ def run_training(
             metrics = {metric_name: result}
             return result, metrics
 
-    elif isinstance(validation_config.validation, ValidationSVMViaServer):
+    elif isinstance(validation_config.validation, ValidationSVM):
         maps: list[GameMap2SVM] = get_maps(validation_config.validation)
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
