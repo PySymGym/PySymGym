@@ -8,7 +8,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 @pydantic_dataclass
 class Validation(ABC):
-    val_type: str
+    pass
 
 
 @pydantic_dataclass
@@ -20,13 +20,13 @@ class ValidationLoss(Validation):
 @pydantic_dataclass
 class ValidationSVM(Validation, ABC):
     platforms_config: list[Platform] = Field(alias="PlatformsConfig")
-    process_count: int = Field(alias="ProcessCount")
+    process_count: int = Field()
     fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
 class ValidationSVMViaServer(ValidationSVM):
-    val_type: Literal["svms_server"]
+    val_type: Literal["svms_server"] = Field()  # type: ignore
 
 
 @pydantic_dataclass
