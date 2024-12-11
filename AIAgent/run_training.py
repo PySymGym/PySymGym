@@ -49,7 +49,16 @@ from paths import (
 from torch import nn
 from torch_geometric.loader import DataLoader
 
-from ml.training.utils import l2_norm
+from ml.training.utils import (
+    l2_norm,
+    l_inf_norm,
+    min_max_scaling,
+    z_score_norm,
+    max_abs_scaling,
+    log_scaling,
+    robust_scaling,
+    reciprocal_norm,
+)
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -94,14 +103,15 @@ class TrialSettings:
     early_stopping_state_len: int
     tolerance: float
 
+results = {}
 
 def run_training(
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: Optional[str],
-    normalization_func
-): 
+    normalization_func,
+):
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
@@ -163,7 +173,9 @@ def run_training(
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
                 artifact_uri=weights_uri, dst_path=REPORT_PATH
             )
-            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE))
+            state_model_encoder.load_state_dict(
+                torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE)
+            )
             return state_model_encoder
 
     objective_partial = partial(
@@ -202,6 +214,7 @@ def run_training(
         study: optuna.Study = joblib.load(downloaded_artifact_path)
         for _ in range(optuna_config.n_trials):
             objective_partial(study.best_trial)
+    results[normalization_func.__name__ if normalization_func else "None"] = study.best_value
 
 
 def seed_worker(worker_id):
@@ -223,7 +236,7 @@ def objective(
 ):
 
     g = torch.Generator()
-    g.manual_seed(42) 
+    g.manual_seed(42)
 
     config = TrialSettings(
         lr=0.0006347818494377509,
@@ -256,12 +269,12 @@ def objective(
         for epoch in range(epochs):
             dataset.switch_to("train")
             train_dataloader = DataLoader(
-                dataset, 
-                config.batch_size, 
-                shuffle=True, 
+                dataset,
+                config.batch_size,
+                shuffle=True,
                 worker_init_fn=seed_worker,
                 generator=g,
-                )
+            )
             model.train()
             train(
                 dataloader=train_dataloader,
@@ -301,11 +314,22 @@ def main(config: str):
     mlflow.set_experiment_tags(asdict(config))
     weights_uri = config.weights_uri
 
-    normalization_functions = [None, l2_norm]
+    normalization_functions = [
+        None,
+        l2_norm,
+        l_inf_norm,
+        min_max_scaling,
+        z_score_norm,
+        max_abs_scaling,
+        log_scaling,
+        robust_scaling,
+        reciprocal_norm,
+    ]
 
     for normalization_func in normalization_functions:
-        print(f"Running with transform function: {normalization_func.__name__ if normalization_func else 'None'}")
-
+        print(
+            f"Running with transform function: {normalization_func.__name__ if normalization_func else 'None'}"
+        )
         torch.manual_seed(42)
         random.seed(42)
         np.random.seed(42)
@@ -316,8 +340,13 @@ def main(config: str):
             training_config=config.training_config,
             validation_config=config.validation_config,
             weights_uri=weights_uri,
-            normalization_func=normalization_func
+            normalization_func=normalization_func,
         )
+
+    for normalization_name, result in results.items():
+        print(f"{normalization_name}: {result}")
+    best_normalization = max(results, key=results.get)
+    print(f"Best transform function: {best_normalization} with result {results[best_normalization]}")
 
 
 if __name__ == "__main__":
