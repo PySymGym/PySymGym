@@ -173,3 +173,72 @@ def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
     df = pd.DataFrame(results, columns=["Game result"], index=maps).T
 
     return df
+
+def l2_norm(data):
+        scaled_data = data.clone()
+        attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+        scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = torch.nn.functional.normalize(
+            attr, dim=0, p=2
+        )
+        return scaled_data
+
+def l_inf_norm(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = attr / (
+        torch.max(attr) + 1e-12
+    )
+    return scaled_data
+
+def min_max_scaling(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = (
+        attr - torch.min(attr)
+    ) / (
+        torch.max(attr)
+        - torch.min(attr)
+        + 1e-12
+    )
+    return scaled_data
+
+def z_score_norm(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    mean = torch.mean(attr, dim=0)
+    std = torch.std(attr, dim=0) + 1e-12
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = (attr - mean) / std
+    return scaled_data
+
+def max_abs_scaling(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    max_abs = torch.max(torch.abs(attr), dim=0).values + 1e-12
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = attr / max_abs
+    return scaled_data
+
+def log_scaling(data):
+    scaled_data = data.clone()
+    attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = torch.log1p(attr)
+    return scaled_data
+
+def robust_scaling(data):
+    scaled_data = data.clone()
+    edge_attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    median = torch.median(edge_attr, dim=0).values
+    q1 = torch.quantile(edge_attr, 0.25, dim=0)
+    q3 = torch.quantile(edge_attr, 0.75, dim=0)
+    iqr = q3 - q1 + 1e-12
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = (edge_attr - median) / iqr
+    return scaled_data
+
+def reciprocal_norm(data):
+    scaled_data = data.clone()
+    edge_attr = data[TORCH.gamevertex_history_statevertex].edge_attr.to(torch.float)
+    
+    epsilon = 1e-12
+    edge_attr_normalized = 1 - 1 / (edge_attr + epsilon)
+    
+    scaled_data[TORCH.gamevertex_history_statevertex].edge_attr = edge_attr_normalized
+    return scaled_data
