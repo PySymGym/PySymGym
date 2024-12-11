@@ -4,7 +4,7 @@ from contextlib import contextmanager, suppress
 
 import psutil
 import websocket
-from common.validation_coverage.svm_info import SVMInfoViaServer
+from common.validation_coverage.svm_info import SVMInfo
 from config import GameServerConnectorConfig
 from connection.broker_conn.classes import ServerInstanceInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
@@ -50,7 +50,7 @@ def wait_for_connection(server_instance: ServerInstanceInfo):
 
 
 @contextmanager
-def game_server_socket_manager(svm_info: SVMInfoViaServer):
+def game_server_socket_manager(svm_info: SVMInfo):
     server_instance = acquire_instance(svm_info)
     try:
         socket = wait_for_connection(server_instance)
