@@ -47,4 +47,11 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
 [tool.ruff]
-exclude = ["maps", "GameServers"]
+include = ["pyproject.toml", "AIAgent/**/*.py"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "B"]
+ignore = ["E501"]
+extend-select = ["E226"]
+preview = true
+explicit-preview-rules = true
