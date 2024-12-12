@@ -50,7 +50,7 @@ class TestSVMsStatistics:
     @pytest.fixture(params=read_configs("tests/resources/svms_validation_configs"))
     def get_args(self, request):
         with open(request.param) as file:
-            val_config = ValidationConfig(**yaml.safe_load(file)).validation
+            val_config = ValidationConfig(**yaml.safe_load(file)).validation_mode
 
         dataset = TrainingDatasetMock(
             mock_maps_results={
