@@ -18,9 +18,9 @@ from common.config.config import Config
 from common.config.optuna_config import OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
+    CriterionValidation,
+    SVMValidation,
     ValidationConfig,
-    ValidationLoss,
-    ValidationSVM,
 )
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
@@ -61,7 +61,7 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
-def get_maps(validation_with_svms_config: ValidationSVM):
+def get_maps(validation_with_svms_config: SVMValidation):
     maps: list[GameMap2SVM] = list()
     for platform in validation_with_svms_config.platforms_config:
         for svm_info in platform.svms_info:
@@ -103,7 +103,7 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    if isinstance(validation_config.validation, ValidationLoss):
+    if isinstance(validation_config.validation_mode, CriterionValidation):
 
         def validate(model, dataset):
             criterion = criterion_init()
@@ -111,14 +111,14 @@ def run_training(
                 model,
                 dataset,
                 criterion,
-                validation_config.validation.batch_size,
+                validation_config.validation_mode.batch_size,
             )
             metric_name = str(criterion).replace("(", "_").replace(")", "_")
             metrics = {metric_name: result}
             return result, metrics
 
-    elif isinstance(validation_config.validation, ValidationSVM):
-        maps: list[GameMap2SVM] = get_maps(validation_config.validation)
+    elif isinstance(validation_config.validation_mode, SVMValidation):
+        maps: list[GameMap2SVM] = get_maps(validation_config.validation_mode)
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
                 statistics_file,
@@ -128,17 +128,17 @@ def run_training(
 
         def validate(model, dataset: TrainingDataset):
             map2results = validate_coverage_via_server(
-                model, dataset, maps, validation_config.validation
+                model, dataset, maps, validation_config.validation_mode
             )
             metrics = get_svms_statistics(
-                map2results, validation_config.validation, dataset
+                map2results, validation_config.validation_mode, dataset
             )
             mlflow.log_artifact(CURRENT_TABLE_PATH)
 
             for map2result in map2results:
                 if (
                     isinstance(map2result.game_result, GameFailed)
-                    and validation_config.validation.fail_immediately
+                    and validation_config.validation_mode.fail_immediately
                 ):
                     raise RuntimeError("Validation failed")
             return metrics[AVERAGE_COVERAGE], metrics

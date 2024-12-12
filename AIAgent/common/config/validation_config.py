@@ -7,30 +7,30 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 
 @pydantic_dataclass
-class Validation(ABC):
+class ValidationMode(ABC):
     pass
 
 
 @pydantic_dataclass
-class ValidationLoss(Validation):
+class CriterionValidation(ValidationMode):
     val_type: Literal["loss"]
     batch_size: int
 
 
 @pydantic_dataclass
-class ValidationSVM(Validation, ABC):
+class SVMValidation(ValidationMode, ABC):
     platforms_config: list[Platform] = Field(alias="PlatformsConfig")
     process_count: int = Field()
     fail_immediately: bool = Field(default=False)
 
 
 @pydantic_dataclass
-class ValidationSVMViaServer(ValidationSVM):
+class SVMValidationViaServer(SVMValidation):
     val_type: Literal["svms_server"] = Field()  # type: ignore
 
 
 @pydantic_dataclass
 class ValidationConfig:
-    validation: Union[ValidationLoss, ValidationSVMViaServer] = Field(
+    validation_mode: Union[CriterionValidation, SVMValidationViaServer] = Field(
         discriminator="val_type"
     )

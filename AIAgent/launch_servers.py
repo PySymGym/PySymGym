@@ -230,7 +230,7 @@ def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
     config: Config = Config(**trainings_parameters)
-    server_count = config.validation_config.validation.process_count
+    server_count = config.validation_config.validation_mode.process_count
 
     with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()

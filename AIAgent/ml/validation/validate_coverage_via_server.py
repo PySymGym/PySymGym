@@ -3,7 +3,7 @@ import multiprocessing as mp
 import torch
 import tqdm
 from common.classes import GameMap2SVM, Map2Result
-from common.config.validation_config import ValidationSVMViaServer
+from common.config.validation_config import SVMValidationViaServer
 from ml.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from ml.validation.game.play_game_via_server import play_game
@@ -28,7 +28,7 @@ def validate_coverage_via_server(
     model: torch.nn.Module,
     dataset: TrainingDataset,
     maps: list[GameMap2SVM],
-    validation_config: ValidationSVMViaServer,
+    validation_config: SVMValidationViaServer,
     progress_bar_colour: str = "#ed95ce",
 ):
     """
