@@ -345,7 +345,7 @@ def main(config: str):
 
     for normalization_name, result in results.items():
         print(f"{normalization_name}: {result}")
-    best_normalization = max(results, key=results.get)
+    best_normalization = min(results, key=results.get)
     print(f"Best transform function: {best_normalization} with result {results[best_normalization]}")
 
 
