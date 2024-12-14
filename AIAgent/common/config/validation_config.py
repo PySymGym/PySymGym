@@ -25,12 +25,12 @@ class SVMValidation(ValidationMode, ABC):
 
 
 @pydantic_dataclass
-class SVMValidationViaServer(SVMValidation):
+class SVMValidationSendEachStep(SVMValidation):
     val_type: Literal["svms_server"] = Field()  # type: ignore
 
 
 @pydantic_dataclass
 class ValidationConfig:
-    validation_mode: Union[CriterionValidation, SVMValidationViaServer] = Field(
+    validation_mode: Union[CriterionValidation, SVMValidationSendEachStep] = Field(
         discriminator="val_type"
     )
