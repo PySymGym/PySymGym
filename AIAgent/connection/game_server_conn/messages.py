@@ -82,7 +82,7 @@ class ServerMessage:
             err_to_display = f"{type(e)} - {e}: tried to decode {expected}, got unmatched structure, registered to app.log under [ERROR] tag"
             error = f"{type(e)} - {e}: tried to decode {expected}, got raw data: {json.dumps(json.loads(data), indent=2)}"
             logging.error(error)
-            raise ServerMessage.DeserializationException(err_to_display)
+            raise ServerMessage.DeserializationException(err_to_display) from e
 
 
 @dataclass(slots=True)

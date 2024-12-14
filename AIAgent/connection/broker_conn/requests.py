@@ -26,7 +26,7 @@ def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:
 def return_instance(instance: ServerInstanceInfo):
     logging.info(f"returning: {instance}")
 
-    response, content = httplib2.Http().request(
+    response, _ = httplib2.Http().request(
         WebsocketSourceLinks.POST_WS,
         method="POST",
         body=instance.to_json(),
