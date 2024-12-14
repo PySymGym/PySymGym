@@ -1,5 +1,5 @@
 validation_mode:
-  val_type: svms_server
+  val_type: svms_each_step
   process_count: 30
   PlatformsConfig:
     - name: dotnet

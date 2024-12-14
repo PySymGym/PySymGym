@@ -26,7 +26,7 @@ class SVMValidation(ValidationMode, ABC):
 
 @pydantic_dataclass
 class SVMValidationSendEachStep(SVMValidation):
-    val_type: Literal["svms_server"] = Field()  # type: ignore
+    val_type: Literal["svms_each_step"] = Field()  # type: ignore
 
 
 @pydantic_dataclass
