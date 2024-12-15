@@ -6,7 +6,7 @@ from common.classes import GameMap2SVM, Map2Result
 from common.config.validation_config import SVMValidationSendEachStep
 from ml.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
-from ml.validation.game.play_game_via_server import play_game
+from ml.validation.game.play_game_send_each_step import play_game
 from ml.validation.validate_coverage_utils import catch_return_exception
 
 
@@ -24,7 +24,7 @@ def play_game_task(
     return result
 
 
-def validate_coverage_via_server(
+def validate_coverage_send_each_step(
     model: torch.nn.Module,
     dataset: TrainingDataset,
     maps: list[GameMap2SVM],
@@ -42,7 +42,7 @@ def validate_coverage_via_server(
         Dataset object for validation.
     maps : list[GameMap2SVM]
         List of maps description.
-    validation_config : ValidationSVMViaServer
+    validation_config : SVMValidationSendEachStep
         Validation config from the config file.
     progress_bar_colour : str
         Your favorite colour for progress bar.
