@@ -98,8 +98,9 @@ def run_training(
     weights_uri: Optional[str],
 ):
     def criterion_init():
-        return nn.KLDivLoss(reduction="batchmean")
+        # return nn.KLDivLoss(reduction="batchmean")
         # return possibility_loss
+        return nn.BCELoss(reduction='sum')
 
     if isinstance(validation_config.validation, ValidationWithLoss):
 

@@ -1,7 +1,7 @@
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv
-from torch.nn.functional import log_softmax, softmax
+from torch.nn.functional import log_softmax, softmax, sigmoid
 from ml.training.scaling import min_max_scaling
 
 
@@ -86,4 +86,4 @@ class StateModelEncoder(torch.nn.Module):
             edge_index_s_s,
         ).relu()
         state_x = self.lin(state_x).relu()
-        return log_softmax(self.lin_last(state_x), dim=0)
+        return sigmoid(self.lin_last(state_x))
