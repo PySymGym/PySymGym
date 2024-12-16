@@ -95,6 +95,7 @@ class TrainingDataset(Dataset):
 
     def __init__(
         self,
+        transform_func: Callable,
         raw_dir: Path,
         processed_dir: Path,
         train_percentage: float,
@@ -104,7 +105,6 @@ class TrainingDataset(Dataset):
         similar_steps_save_prob=0,
         progress_bar_colour: str = "#975cdb",
         n_jobs: int = mp.cpu_count() - 1,
-        transform_func: Optional[Callable] = None,
     ):
         self.n_jobs = n_jobs
         self._raw_dir = raw_dir
@@ -123,10 +123,10 @@ class TrainingDataset(Dataset):
 
         self.train_percentage = train_percentage
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
+        self.mode = "train"
         self.__indices = self.train_dataset_indices
 
         super().__init__(transform=transform_func)
-
 
     def _split_dataset(self) -> Tuple[List, List]:
         full_dataset_len = len(self.processed_paths)
@@ -165,8 +165,10 @@ class TrainingDataset(Dataset):
         """
         if mode == "train":
             self.__indices = self.train_dataset_indices
+            self.mode = mode
         elif mode == "val":
             self.__indices = self.test_dataset_indices
+            self.mode = mode
         else:
             raise ValueError("mode must be either 'train' or 'val'")
 

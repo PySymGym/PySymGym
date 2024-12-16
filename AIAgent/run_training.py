@@ -214,7 +214,9 @@ def run_training(
         study: optuna.Study = joblib.load(downloaded_artifact_path)
         for _ in range(optuna_config.n_trials):
             objective_partial(study.best_trial)
-    results[normalization_func.__name__ if normalization_func else "None"] = study.best_value
+    results[normalization_func.__name__ if normalization_func else "None"] = (
+        study.best_value
+    )
 
 
 def seed_worker(worker_id):
@@ -224,6 +226,7 @@ def seed_worker(worker_id):
 
 
 def objective(
+    run_name: str,
     trial: optuna.Trial,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
@@ -239,12 +242,12 @@ def objective(
     g.manual_seed(42)
 
     config = TrialSettings(
-        lr=0.0006347818494377509,
-        batch_size=628,
-        num_hops_1=6,
-        num_hops_2=10,
-        num_of_state_features=15,
-        hidden_channels=120,
+        lr=trial.suggest_float("lr", 1e-7, 1e-3),
+        batch_size=trial.suggest_int("batch_size", 8, 800),
+        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
+        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
+        num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
+        hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
@@ -346,7 +349,9 @@ def main(config: str):
     for normalization_name, result in results.items():
         print(f"{normalization_name}: {result}")
     best_normalization = min(results, key=results.get)
-    print(f"Best transform function: {best_normalization} with result {results[best_normalization]}")
+    print(
+        f"Best normalization function: {best_normalization} with result {results[best_normalization]}"
+    )
 
 
 if __name__ == "__main__":
