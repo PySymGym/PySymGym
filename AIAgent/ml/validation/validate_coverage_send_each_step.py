@@ -6,8 +6,8 @@ from common.classes import GameMap2SVM, Map2Result
 from common.config.validation_config import SVMValidationSendEachStep
 from ml.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
+from ml.validation.coverage.validate_coverage_utils import catch_return_exception
 from ml.validation.game.play_game_send_each_step import play_game
-from ml.validation.validate_coverage_utils import catch_return_exception
 
 
 @catch_return_exception
