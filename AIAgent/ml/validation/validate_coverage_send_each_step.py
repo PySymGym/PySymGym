@@ -1,30 +1,13 @@
 import multiprocessing as mp
-from functools import wraps
-from typing import Callable
 
-import numpy as np
 import torch
 import tqdm
-from common.config import ValidationWithSVMs
-from common.classes import Map2Result, GameMap2SVM
-from config import GeneralConfig
-from ml.inference import infer
-from ml.game.play_game import play_game
-from ml.training.dataset import TrainingDataset
+from common.classes import GameMap2SVM, Map2Result
+from common.config.validation_config import SVMValidationSendEachStep
+from ml.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
-
-from torch_geometric.loader import DataLoader
-
-
-def catch_return_exception(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            return e
-
-    return wrapper
+from ml.validation.game.play_game_send_each_step import play_game
+from ml.validation.validate_coverage_utils import catch_return_exception
 
 
 @catch_return_exception
@@ -41,11 +24,11 @@ def play_game_task(
     return result
 
 
-def validate_coverage(
+def validate_coverage_send_each_step(
     model: torch.nn.Module,
     dataset: TrainingDataset,
     maps: list[GameMap2SVM],
-    validation_config: ValidationWithSVMs,
+    validation_config: SVMValidationSendEachStep,
     progress_bar_colour: str = "#ed95ce",
 ):
     """
@@ -59,14 +42,14 @@ def validate_coverage(
         Dataset object for validation.
     maps : list[GameMap2SVM]
         List of maps description.
-    validation_config : ValidationWithSVMs
+    validation_config : SVMValidationSendEachStep
         Validation config from the config file.
     progress_bar_colour : str
         Your favorite colour for progress bar.
     """
     wrapper = TrainingModelWrapper(model)
     tasks = [(game_map2svm, dataset, wrapper) for game_map2svm in maps]
-    with mp.Pool(validation_config.servers_count) as p:
+    with mp.Pool(validation_config.process_count) as p:
         all_results: list[Map2Result] = list()
         for result in tqdm.tqdm(
             p.imap_unordered(play_game_task, tasks, chunksize=1),
@@ -77,23 +60,3 @@ def validate_coverage(
         ):
             all_results.append(result)
     return all_results
-
-
-def validate_loss(
-    model: torch.nn.Module,
-    dataset: TrainingDataset,
-    criterion: Callable,
-    batch_size: int,
-    progress_bar_colour: str = "#975cdb",
-):
-    epoch_loss = []
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    for batch in tqdm.tqdm(
-        dataloader, desc="test", ncols=100, colour=progress_bar_colour
-    ):
-        batch.to(GeneralConfig.DEVICE)
-        out = infer(model, batch)
-        loss: torch.Tensor = criterion(out, batch.y_true)
-        epoch_loss.append(loss.item())
-    result = np.average(epoch_loss)
-    return result

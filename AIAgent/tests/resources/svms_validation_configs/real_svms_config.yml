@@ -1,6 +1,6 @@
-validation:
-  val_type: svms
-  servers_count: 30
+validation_mode:
+  val_type: svms_each_step
+  process_count: 30
   PlatformsConfig:
     - name: dotnet
       DatasetConfigs:

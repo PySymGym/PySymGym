@@ -32,7 +32,6 @@ from torch_geometric.data import Dataset, HeteroData
 from common.game import GameState
 from config import GeneralConfig
 from ml.inference import TORCH
-from ml.training.utils import remove_extra_attrs
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -667,3 +666,12 @@ def convert_input_to_tensor(
         torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
     )
     return data, state_map
+
+
+def remove_extra_attrs(step: HeteroData):
+    if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
+        del step[TORCH.statevertex_history_gamevertex].edge_attr
+    if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
+        del step[TORCH.gamevertex_to_gamevertex].edge_attr
+    if hasattr(step, "use_for_train"):
+        del step.use_for_train
