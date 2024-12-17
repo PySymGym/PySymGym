@@ -34,7 +34,7 @@ tqdm = "^4.67.1"
 websocket-client = "^1.8.0"
 mlflow = "^2.19.0"
 cattrs = "^24.1.2"
-attrs = "^24.2.0"
+attrs = "^24.3.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.4"
