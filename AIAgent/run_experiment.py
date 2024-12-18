@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import joblib
 from ml.training.validation import validate_loss
 from config import GeneralConfig
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
@@ -11,7 +10,6 @@ from ml.training.dataset import TrainingDataset
 import torch
 from torch import nn
 from run_training import objective
-from paths import REPORT_PATH
 import numpy as np
 import random
 
@@ -26,8 +24,8 @@ from ml.training.utils import (
     reciprocal_norm,
 )
 
-RAW_DATASET = Path(" ")
-PROCESSED_DATASET = REPORT_PATH / "dataset"
+RAW_DATASET = Path("")
+PROCESSED_DATASET = "./AIAgent/report/dataset"
 TRACKING_URI = "http://127.0.0.1:8080"
 
 EXPERIMENT_NAME = "history-edges-normalization"
@@ -59,9 +57,6 @@ def main():
         reciprocal_norm,
     ]
 
-    trial = joblib.load("AIAgent/trial_0.pkl")
-    print(trial.params)
-
     for normalization_function in normalization_functions:
         dataset = TrainingDataset(
             normalization_function,
@@ -80,7 +75,7 @@ def main():
                 model,
                 dataset,
                 criterion,
-                200,
+                100,
             )
             metric_name = str(criterion).replace("(", "_").replace(")", dataset.mode)
             metrics = {metric_name: result}
@@ -92,7 +87,6 @@ def main():
             run_name = "None"
         objective(
             run_name,
-            trial,
             dataset,
             dynamic_dataset=False,
             model_init=lambda **model_params: StateModelEncoder(**model_params),
