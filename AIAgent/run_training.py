@@ -2,14 +2,13 @@ import argparse
 import csv
 import json
 import logging
-import random
-import numpy as np
-from ml.inference import TORCH
 import multiprocessing as mp
 import os
 from dataclasses import asdict, dataclass
 from functools import partial
+import random
 from typing import Any, Callable, Optional
+import numpy
 from torch_geometric.data import Dataset
 
 import joblib
@@ -48,17 +47,6 @@ from paths import (
 )
 from torch import nn
 from torch_geometric.loader import DataLoader
-
-from ml.training.utils import (
-    l2_norm,
-    l_inf_norm,
-    min_max_scaling,
-    z_score_norm,
-    max_abs_scaling,
-    log_scaling,
-    robust_scaling,
-    reciprocal_norm,
-)
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -103,14 +91,12 @@ class TrialSettings:
     early_stopping_state_len: int
     tolerance: float
 
-results = {}
 
 def run_training(
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: Optional[str],
-    normalization_func,
 ):
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
@@ -156,13 +142,12 @@ def run_training(
             return metrics[AVERAGE_COVERAGE], metrics
 
     dataset = TrainingDataset(
-        raw_dir=RAW_DATASET_PATH,
-        processed_dir=PROCESSED_DATASET_PATH,
+        RAW_DATASET_PATH,
+        PROCESSED_DATASET_PATH,
         train_percentage=training_config.train_percentage,
         threshold_steps_number=training_config.threshold_steps_number,
         load_to_cpu=training_config.load_to_cpu,
         threshold_coverage=training_config.threshold_coverage,
-        transform_func=normalization_func,
     )
 
     def model_init(**model_params) -> nn.Module:
@@ -173,9 +158,7 @@ def run_training(
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
                 artifact_uri=weights_uri, dst_path=REPORT_PATH
             )
-            state_model_encoder.load_state_dict(
-                torch.load(downloaded_artifact_path, map_location=GeneralConfig.DEVICE)
-            )
+            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path))
             return state_model_encoder
 
     objective_partial = partial(
@@ -214,14 +197,11 @@ def run_training(
         study: optuna.Study = joblib.load(downloaded_artifact_path)
         for _ in range(optuna_config.n_trials):
             objective_partial(study.best_trial)
-    results[normalization_func.__name__ if normalization_func else "None"] = (
-        study.best_value
-    )
 
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
+    numpy.random.seed(worker_seed)
     random.seed(worker_seed)
 
 
@@ -236,10 +216,6 @@ def objective(
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
 ):
-
-    g = torch.Generator()
-    g.manual_seed(42)
-
     config = TrialSettings(
         lr=0.0006347818494377509,
         batch_size=300,
@@ -266,10 +242,12 @@ def objective(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
-    with mlflow.start_run():
+    with mlflow.start_run(run_name=run_name):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
+            g = torch.Generator()
+            g.manual_seed(0)
             train_dataloader = DataLoader(
                 dataset,
                 config.batch_size,
@@ -289,6 +267,10 @@ def objective(
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
             model.eval()
+
+            result, metrics = validate(model, dataset)
+            mlflow.log_metrics(metrics, step=epoch)
+
             dataset.switch_to("val")
             result, metrics = validate(model, dataset)
             mlflow.log_metrics(metrics, step=epoch)
@@ -316,40 +298,11 @@ def main(config: str):
     mlflow.set_experiment_tags(asdict(config))
     weights_uri = config.weights_uri
 
-    normalization_functions = [
-        None,
-        l2_norm,
-        l_inf_norm,
-        min_max_scaling,
-        z_score_norm,
-        max_abs_scaling,
-        log_scaling,
-        robust_scaling,
-        reciprocal_norm,
-    ]
-
-    for normalization_func in normalization_functions:
-        print(
-            f"Running with transform function: {normalization_func.__name__ if normalization_func else 'None'}"
-        )
-        torch.manual_seed(42)
-        random.seed(42)
-        np.random.seed(42)
-        torch.use_deterministic_algorithms(True, warn_only=True)
-
-        run_training(
-            optuna_config=config.optuna_config,
-            training_config=config.training_config,
-            validation_config=config.validation_config,
-            weights_uri=weights_uri,
-            normalization_func=normalization_func,
-        )
-
-    for normalization_name, result in results.items():
-        print(f"{normalization_name}: {result}")
-    best_normalization = min(results, key=results.get)
-    print(
-        f"Best normalization function: {best_normalization} with result {results[best_normalization]}"
+    run_training(
+        optuna_config=config.optuna_config,
+        training_config=config.training_config,
+        validation_config=config.validation_config,
+        weights_uri=weights_uri,
     )
 
 
