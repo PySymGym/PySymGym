@@ -10,9 +10,9 @@ TrainingConfig:
   load_to_cpu: False
   epochs: 2
 ValidationConfig:
-  validation:
-    val_type: svms
-    servers_count: 1
+  validation_mode:
+    val_type: svms_each_step
+    process_count: 1
     fail_immediately: True
     PlatformsConfig:
       - name: dotnet

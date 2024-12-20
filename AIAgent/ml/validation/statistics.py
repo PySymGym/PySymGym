@@ -1,9 +1,10 @@
 import csv
-from ml.training.utils import avg_by_attr
-from ml.training.dataset import TrainingDataset
-from common.config import ValidationWithSVMs
+
 import paths
 from common.classes import GameFailed, Map2Result
+from common.config.validation_config import SVMValidation
+from ml.dataset import TrainingDataset
+from ml.validation.statistics_utils import avg_by_attr
 
 AVERAGE_COVERAGE_OF_DATASET_STATE = "average_dataset_state_coverage"
 AVERAGE_COVERAGE = "average_coverage"
@@ -15,7 +16,7 @@ RESULT_COVERAGE_PERCENT_FIELD_NAME = "coverage_percent"
 
 def get_svms_statistics(
     results: list[Map2Result],
-    validation_config: ValidationWithSVMs,
+    validation_config: SVMValidation,
     dataset: TrainingDataset,
 ):
     with open(paths.CURRENT_TABLE_PATH, "r") as statistics_file:
