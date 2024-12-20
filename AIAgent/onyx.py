@@ -9,11 +9,10 @@ import onnx
 import onnxruntime
 import torch
 import yaml
-from torch_geometric.data import HeteroData
-
 from common.game import GameState
 from ml.inference import ONNX, TORCH
 from ml.training.dataset import convert_input_to_tensor
+from torch_geometric.data import HeteroData
 
 # working version
 ONNX_OPSET_VERSION = 17
@@ -219,7 +218,7 @@ def entrypoint(
     model_onnx = onnx.load(onnx_savepath)
     onnx.checker.check_model(model_onnx)
 
-    if verification_gamestates is not []:
+    if verification_gamestates:
         ort_session = onnxruntime.InferenceSession(onnx_savepath)
 
         for idx, verification_gamestate in enumerate(verification_gamestates, start=1):
