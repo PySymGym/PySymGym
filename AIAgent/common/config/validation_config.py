@@ -7,7 +7,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 
 @pydantic_dataclass
-class ValidationMode(ABC):
+class ValidationMode:
     pass
 
 
