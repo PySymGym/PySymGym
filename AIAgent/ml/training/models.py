@@ -23,14 +23,14 @@ class CommonModel(torch.nn.Module):
         self.gv_layers = nn.ModuleList()
         self.gv_layers.append(self.tag_conv1)
         self.gv_layers.append(SAGEConv(-1, hidden_channels))
-        for i in range(num_gv_layers - 1):
+        for _ in range(num_gv_layers - 1):
             sage_gv = SAGEConv(-1, hidden_channels)
             self.gv_layers.append(sage_gv)
 
         self.sv_layers = nn.ModuleList()
         self.sv_layers.append(self.tag_conv2)
         self.sv_layers.append(SAGEConv(-1, hidden_channels))
-        for i in range(num_sv_layers - 1):
+        for _ in range(num_sv_layers - 1):
             sage_sv = SAGEConv(-1, hidden_channels)
             self.sv_layers.append(sage_sv)
 
@@ -40,7 +40,7 @@ class CommonModel(torch.nn.Module):
 
         self.sv_layers2 = nn.ModuleList()
         self.sv_layers2.append(SAGEConv(-1, hidden_channels))
-        for i in range(num_sv_layers - 1):
+        for _ in range(num_sv_layers - 1):
             sage_sv = SAGEConv(-1, hidden_channels)
             self.sv_layers2.append(sage_sv)
 
