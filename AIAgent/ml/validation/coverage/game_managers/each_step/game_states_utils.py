@@ -27,6 +27,6 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
         if s.Id in active_states and s.Id not in updated_states
     ] + delta.States
     for s in new_states:
-        s.Children = list(filter(lambda c: c in active_states, s.Children))
+        s.Children = [c for c in s.Children if c in active_states]
 
     return GameState(vertices, new_states, edges)
