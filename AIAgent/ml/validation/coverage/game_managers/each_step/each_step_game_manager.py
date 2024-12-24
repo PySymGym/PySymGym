@@ -26,7 +26,7 @@ TimeDuration: TypeAlias = float
 class EachStepGameManager(BaseGameManager):
     def __init__(self, with_predictor: Predictor):
         self.with_predictor = with_predictor
-        super().__init__(self)
+        super().__init__()
 
     @set_timeout_if_needed
     def _play_game_map_with_svm(
