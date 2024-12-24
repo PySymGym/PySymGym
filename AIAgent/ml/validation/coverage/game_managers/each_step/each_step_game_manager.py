@@ -109,7 +109,7 @@ class EachStepGameManager(BaseGameManager):
             torch.cuda.empty_cache()
             return model_result, end_time - start_time
 
-    def play_game_map(
+    def _play_game_map(
         self,
         game_map2svm: GameMap2SVM,
     ) -> Map2Result:
@@ -154,3 +154,6 @@ class EachStepGameManager(BaseGameManager):
                 self.with_predictor.model(), with_name=self.with_predictor.name()
             )
         return Map2Result(game_map2svm, game_result)
+
+    def prepare(self):
+        return
