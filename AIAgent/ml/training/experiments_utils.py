@@ -6,15 +6,14 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
-from common.classes import Map2Result
-from common.game import GameMap
-from ml.inference import TORCH
 from networkx.algorithms.dominance import immediate_dominators
 from networkx.classes import DiGraph
 from torch_geometric.data import Data, HeteroData
 from torch_geometric.utils.convert import to_networkx
+
+from common.game import GameMap
+from ml.inference import TORCH
 
 
 def euclidean_dist(y_pred, y_true):
@@ -38,21 +37,6 @@ def get_model(
     weights["lin_last.bias"] = torch.tensor(np.random.random([1]))
     model.load_state_dict(weights)
     return model
-
-
-def create_folders_if_necessary(paths: list[Path]) -> None:
-    for path in paths:
-        if not path.exists():
-            os.makedirs(path)
-
-
-def create_file(file: Path):
-    open(file, "w").close()
-
-
-def append_to_file(file: Path, s: str):
-    with open(file, "a") as file:
-        file.write(s)
 
 
 def find_unfinished_maps(log_file_path: Path) -> None:
@@ -142,34 +126,3 @@ def find_dominators_in_cfg(graph: HeteroData) -> HeteroData:
                         torch.tensor([3]),
                     )
                 )
-
-
-def remove_extra_attrs(step: HeteroData):
-    if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
-        del step[TORCH.statevertex_history_gamevertex].edge_attr
-    if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
-        del step[TORCH.gamevertex_to_gamevertex].edge_attr
-    if hasattr(step, "use_for_train"):
-        del step.use_for_train
-
-
-def avg_by_attr(results, path_to_coverage: str) -> int:
-    if not results:
-        return -1
-    coverage = np.average([getattr(result, path_to_coverage) for result in results])
-    return coverage
-
-
-def convert_to_df(map2result_list: list[Map2Result]) -> pd.DataFrame:
-    maps = []
-    results = []
-    for map2result in map2result_list:
-        _map = map2result.map
-        map_name = _map.GameMap.MapName
-        game_result_str = map2result.game_result.printable(verbose=True)
-        maps.append(f"{_map.SVMInfo.name} : {map_name}")
-        results.append(game_result_str)
-
-    df = pd.DataFrame(results, columns=["Game result"], index=maps).T
-
-    return df

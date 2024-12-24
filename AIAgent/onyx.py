@@ -10,8 +10,8 @@ import onnxruntime
 import torch
 import yaml
 from common.game import GameState
+from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH
-from ml.training.dataset import convert_input_to_tensor
 from torch_geometric.data import HeteroData
 
 # working version

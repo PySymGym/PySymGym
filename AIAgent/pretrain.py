@@ -1,8 +1,8 @@
 import os
 
+from ml.dataset import TrainingDataset
 from ml.het_gnn_test_train import HetGNNTestTrain
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2.model import StateModelEncoder
-from ml.training.dataset import TrainingDataset
 from paths import RAW_DATASET_PATH
 
 DATASET_PATH = RAW_DATASET_PATH / "pretrain_dataset"

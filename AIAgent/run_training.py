@@ -7,7 +7,6 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
-from torch_geometric.data import Dataset
 
 import joblib
 import mlflow
@@ -15,36 +14,40 @@ import optuna
 import torch
 import yaml
 from common.classes import GameFailed
-from ml.training.statistics import get_svms_statistics, AVERAGE_COVERAGE
-from common.config import (
-    Config,
-    OptunaConfig,
-    TrainingConfig,
+from common.config.config import Config
+from common.config.optuna_config import OptunaConfig
+from common.config.training_config import TrainingConfig
+from common.config.validation_config import (
+    CriterionValidation,
+    SVMValidation,
     ValidationConfig,
-    ValidationWithLoss,
-    ValidationWithSVMs,
 )
+from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
+from ml.dataset import TrainingDataset
 from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
     StateModelEncoder,
 )
-from ml.training.dataset import TrainingDataset
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
-from ml.training.utils import create_file, create_folders_if_necessary
-from ml.training.validation import validate_coverage, validate_loss
+from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
+from ml.validation.validate_coverage_send_each_step import (
+    validate_coverage_send_each_step,
+)
+from ml.validation.validate_loss import validate_loss
 from paths import (
+    CURRENT_MODEL_PATH,
+    CURRENT_STUDY_PATH,
+    CURRENT_TABLE_PATH,
+    CURRENT_TRIAL_PATH,
     LOG_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
-    CURRENT_MODEL_PATH,
-    CURRENT_STUDY_PATH,
     REPORT_PATH,
-    CURRENT_TABLE_PATH,
-    CURRENT_TRIAL_PATH,
 )
 from torch import nn
+from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
@@ -58,7 +61,7 @@ logging.basicConfig(
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
 
-def get_maps(validation_with_svms_config: ValidationWithSVMs):
+def get_maps(validation_with_svms_config: SVMValidation):
     maps: list[GameMap2SVM] = list()
     for platform in validation_with_svms_config.platforms_config:
         for svm_info in platform.svms_info:
@@ -100,7 +103,7 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    if isinstance(validation_config.validation, ValidationWithLoss):
+    if isinstance(validation_config.validation_mode, CriterionValidation):
 
         def validate(model, dataset):
             criterion = criterion_init()
@@ -108,14 +111,14 @@ def run_training(
                 model,
                 dataset,
                 criterion,
-                validation_config.validation.batch_size,
+                validation_config.validation_mode.batch_size,
             )
             metric_name = str(criterion).replace("(", "_").replace(")", "_")
             metrics = {metric_name: result}
             return result, metrics
 
-    elif isinstance(validation_config.validation, ValidationWithSVMs):
-        maps: list[GameMap2SVM] = get_maps(validation_config.validation)
+    elif isinstance(validation_config.validation_mode, SVMValidation):
+        maps: list[GameMap2SVM] = get_maps(validation_config.validation_mode)
         with open(CURRENT_TABLE_PATH, "w") as statistics_file:
             statistics_writer = csv.DictWriter(
                 statistics_file,
@@ -124,18 +127,18 @@ def run_training(
             statistics_writer.writeheader()
 
         def validate(model, dataset: TrainingDataset):
-            map2results = validate_coverage(
-                model, dataset, maps, validation_config.validation
+            map2results = validate_coverage_send_each_step(
+                model, dataset, maps, validation_config.validation_mode
             )
             metrics = get_svms_statistics(
-                map2results, validation_config.validation, dataset
+                map2results, validation_config.validation_mode, dataset
             )
             mlflow.log_artifact(CURRENT_TABLE_PATH)
 
             for map2result in map2results:
                 if (
                     isinstance(map2result.game_result, GameFailed)
-                    and validation_config.validation.fail_immediately
+                    and validation_config.validation_mode.fail_immediately
                 ):
                     raise RuntimeError("Validation failed")
             return metrics[AVERAGE_COVERAGE], metrics

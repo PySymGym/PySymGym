@@ -1,17 +1,16 @@
 import logging
 import traceback
-from time import perf_counter
-from typing import TypeAlias
-
 from common.classes import GameFailed, GameResult, Map2Result
-from common.game import GameMap2SVM, GameState
+from common.game import GameState, GameMap2SVM
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.errors_connection import GameInterruptedError
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut, func_set_timeout
-from ml.dataset import Result, TrainingDataset, convert_input_to_tensor
 from ml.protocols import Predictor
+from ml.dataset import Result, TrainingDataset, convert_input_to_tensor
+from time import perf_counter
+from typing import TypeAlias
 
 TimeDuration: TypeAlias = float
 

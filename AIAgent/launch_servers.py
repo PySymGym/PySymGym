@@ -3,22 +3,21 @@ import asyncio
 import json
 import logging
 import os
-from pathlib import Path
 import signal
 import socket
 import subprocess
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from queue import Empty, Queue
 
 import psutil
-from aiohttp import web
 import yaml
-
-from common.config import Config
+from aiohttp import web
+from common.config.config import Config
+from common.validation_coverage.svm_info import SVMInfo
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from connection.broker_conn.classes import (
-    SVMInfo,
     ServerInstanceInfo,
     Undefined,
     WSUrl,
@@ -231,7 +230,7 @@ def main(config: str):
     with open(config, "r") as file:
         trainings_parameters = yaml.safe_load(file)
     config: Config = Config(**trainings_parameters)
-    server_count = config.validation_config.validation.servers_count
+    server_count = config.validation_config.validation_mode.process_count
 
     with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()

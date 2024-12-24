@@ -4,7 +4,7 @@ import torch
 from common.game import GameState
 from ml.predict import predict_state_with_dict
 from ml.protocols import Predictor
-from ml.training.dataset import convert_input_to_tensor
+from ml.dataset import convert_input_to_tensor
 
 
 class TrainingModelWrapper(Predictor):

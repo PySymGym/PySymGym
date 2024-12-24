@@ -1,11 +1,11 @@
-from functools import wraps
 import logging
 import logging.config
+from functools import wraps
 from typing import Optional
 
 import websocket
-from connection.errors_connection import ConnectionLostError
 from common.game import GameMap, GameState
+from connection.errors_connection import ConnectionLostError
 
 from .messages import (
     ClientMessage,

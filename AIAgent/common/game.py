@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from connection.broker_conn.classes import SVMInfo
+from common.validation_coverage.svm_info import SVMInfo
 from dataclasses_json import dataclass_json
 
 
