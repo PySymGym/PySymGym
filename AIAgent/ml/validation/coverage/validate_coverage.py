@@ -75,20 +75,22 @@ class ValidationCoverage:
         progress_bar_colour : str
             Your favorite colour for progress bar.
         """
-        self._game_manager = self._get_game_manager(validation_config)
-        with mp.Pool(validation_config.process_count) as p:
-            all_results: list[Map2Result | Exception] = list()
-            for result in tqdm.tqdm(
-                p.imap_unordered(self._evaluate_game_map, maps, chunksize=1),
-                desc="validation",
-                total=len(maps),
-                ncols=100,
-                colour=progress_bar_colour,
-            ):
-                all_results.append(result)
+        with mp.Manager() as manager:
+            self._shared_lock = manager.Lock()
+            self._game_manager = self._get_game_manager(validation_config)
+            with mp.Pool(validation_config.process_count) as p:
+                all_results: list[Map2Result | Exception] = list()
+                for result in tqdm.tqdm(
+                    p.imap_unordered(self._evaluate_game_map, maps, chunksize=1),
+                    desc="validation",
+                    total=len(maps),
+                    ncols=100,
+                    colour=progress_bar_colour,
+                ):
+                    all_results.append(result)
         return all_results
 
     def _get_game_manager(self, validation_config: SVMValidation) -> BaseGameManager:
         if isinstance(validation_config, SVMValidationSendEachStep):
-            return EachStepGameManager(TrainingModelWrapper(self.model))
+            return EachStepGameManager(TrainingModelWrapper(self.model), self._shared_lock)
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")

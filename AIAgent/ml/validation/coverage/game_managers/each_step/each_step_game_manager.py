@@ -1,4 +1,5 @@
 import logging
+import threading
 import traceback
 from time import perf_counter
 from typing import TypeAlias
@@ -13,7 +14,10 @@ from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut
 from ml.dataset import convert_input_to_tensor
 from ml.protocols import Predictor
-from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
+from ml.validation.coverage.game_managers.base_game_manager import (
+    BaseGameManager,
+    BaseGamePreparator,
+)
 from ml.validation.coverage.game_managers.each_step.game_states_utils import (
     get_states,
     update_game_state,
@@ -23,10 +27,15 @@ from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
 TimeDuration: TypeAlias = float
 
 
+class EachStepGamePreparator(BaseGamePreparator):
+    def _prepare(self):
+        return
+
+
 class EachStepGameManager(BaseGameManager):
-    def __init__(self, with_predictor: Predictor):
+    def __init__(self, with_predictor: Predictor, shared_lock: threading.Lock):
         self.with_predictor = with_predictor
-        super().__init__()
+        super().__init__(shared_lock)
 
     @set_timeout_if_needed
     def _play_game_map_with_svm(
@@ -155,5 +164,5 @@ class EachStepGameManager(BaseGameManager):
             )
         return Map2Result(game_map2svm, game_result)
 
-    def prepare(self):
-        return
+    def _create_preparator(self):
+        return EachStepGamePreparator(self._shared_lock)
