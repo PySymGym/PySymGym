@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from threading import Lock
+from typing import Optional
 
 from common.classes import Map2Result
 from common.game import GameMap, GameMap2SVM
@@ -49,7 +50,6 @@ class BaseGamePreparator(ABC):
 
 class BaseGameManager(ABC):
     def __init__(self, shared_lock: Lock):
-        self._game_states: dict[str, list[HeteroData]] = {}
         self._shared_lock = shared_lock
         self._preparator = self._create_preparator()
 
@@ -69,13 +69,7 @@ class BaseGameManager(ABC):
         """
         ...
 
-    def get_game_steps(self, game_map: GameMap) -> list[HeteroData]:
-        """Returns list of HeteroData for each step. Guarantees to receive the steps of the played game no more than once. Raises a KeyError.
-
-        Args:
-            game_map (`GameMap`)
-
-        Returns:
-            List with steps (`list[HeteroData]`)
-        """
-        return self._game_states.pop(str(game_map))
+    @abstractmethod
+    def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
+        """Returns list of HeteroData for each step. Guarantees to receive the steps of the played game no more than once. Returns None if steps of game_map can't be received."""
+        ...

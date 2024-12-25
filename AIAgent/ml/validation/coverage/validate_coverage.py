@@ -1,3 +1,4 @@
+import logging
 import multiprocessing as mp
 from typing import Optional
 
@@ -53,7 +54,10 @@ class ValidationCoverage:
                 errors_number=game_result.errors_count,
             )
             steps = self._game_manager.get_game_steps(game_map2svm.GameMap)
-            self.dataset.update_map(game_map2svm.GameMap.MapName, map_result, steps)
+            if steps is not None:
+                self.dataset.update_map(game_map2svm.GameMap.MapName, map_result, steps)
+            else:
+                logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
             del steps
         return result
 
@@ -92,5 +96,7 @@ class ValidationCoverage:
 
     def _get_game_manager(self, validation_config: SVMValidation) -> BaseGameManager:
         if isinstance(validation_config, SVMValidationSendEachStep):
-            return EachStepGameManager(TrainingModelWrapper(self.model), self._shared_lock)
+            return EachStepGameManager(
+                TrainingModelWrapper(self.model), self._shared_lock
+            )
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")

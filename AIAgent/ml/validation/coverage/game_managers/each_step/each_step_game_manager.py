@@ -2,11 +2,11 @@ import logging
 import threading
 import traceback
 from time import perf_counter
-from typing import TypeAlias
+from typing import Optional, TypeAlias
 
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
-from common.game import GameMap2SVM
+from common.game import GameMap, GameMap2SVM
 from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.errors_connection import GameInterruptedError
@@ -23,6 +23,7 @@ from ml.validation.coverage.game_managers.each_step.game_states_utils import (
     update_game_state,
 )
 from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
+from torch_geometric.data.hetero_data import HeteroData
 
 TimeDuration: TypeAlias = float
 
@@ -34,7 +35,8 @@ class EachStepGamePreparator(BaseGamePreparator):
 
 class EachStepGameManager(BaseGameManager):
     def __init__(self, with_predictor: Predictor, shared_lock: threading.Lock):
-        self.with_predictor = with_predictor
+        self._game_states: dict[str, list[HeteroData]] = {}
+        self._with_predictor = with_predictor
         super().__init__(shared_lock)
 
     @set_timeout_if_needed
@@ -65,14 +67,14 @@ class EachStepGameManager(BaseGameManager):
                         delta = with_connector.recv_state_or_throw_gameover()
                         game_state = update_game_state(game_state, delta)
 
-                    predicted_state_id, nn_output = self.with_predictor.predict(
+                    predicted_state_id, nn_output = self._with_predictor.predict(
                         game_state
                     )
 
                     add_single_step(game_state, nn_output)
 
                     logging.debug(
-                        f"<{self.with_predictor.name()}> step: {steps_count}, available states: {get_states(game_state)}, predicted: {predicted_state_id}"
+                        f"<{self._with_predictor.name()}> step: {steps_count}, available states: {get_states(game_state)}, predicted: {predicted_state_id}"
                     )
 
                     with_connector.send_step(
@@ -88,7 +90,7 @@ class EachStepGameManager(BaseGameManager):
             except Connector.GameOver as gameover:
                 if game_state is None:
                     logging.warning(
-                        f"<{self.with_predictor.name()}>: immediate GameOver on {with_connector.map.MapName}"
+                        f"<{self._with_predictor.name()}>: immediate GameOver on {with_connector.map.MapName}"
                     )
                     return (
                         GameResult(steps, 0, 0, 0),
@@ -103,7 +105,7 @@ class EachStepGameManager(BaseGameManager):
             end_time = perf_counter()
             if actual_coverage != 100 and steps_count != steps:
                 logging.warning(
-                    f"<{self.with_predictor.name()}>: not all steps exshausted on {with_connector.map.MapName} with non-100% coverage"
+                    f"<{self._with_predictor.name()}>: not all steps exshausted on {with_connector.map.MapName} with non-100% coverage"
                     f"steps taken: {steps_count}, actual coverage: {actual_coverage:.2f}"
                 )
                 steps_count = steps
@@ -123,32 +125,32 @@ class EachStepGameManager(BaseGameManager):
         game_map2svm: GameMap2SVM,
     ) -> Map2Result:
         logging.info(
-            f"<{self.with_predictor.name()}> is playing {game_map2svm.GameMap.MapName}"
+            f"<{self._with_predictor.name()}> is playing {game_map2svm.GameMap.MapName}"
         )
         need_to_save = False
         try:
             game_result, time = self._play_game_map_with_svm(game_map2svm)
             logging.info(
-                f"<{self.with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
+                f"<{self._with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
                 f"in {game_result.steps_count} steps, {time} seconds, "
                 f"actual coverage: {game_result.actual_coverage_percent:.2f}"
             )
         except FunctionTimedOut as error:
             need_to_save = True
             logging.warning(
-                f"<{self.with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
+                f"<{self._with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
             )
             game_result = GameFailed(reason=type(error))
         except GameInterruptedError as error:
             logging.warning(
-                f"<{self.with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName} with {error.__class__.__name__}: {error.desc}"
+                f"<{self._with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName} with {error.__class__.__name__}: {error.desc}"
             )
             game_result = GameFailed(reason=type(error))
         except Exception as error:
             need_to_save = True
             logging.warning(
                 (
-                    f"<{self.with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n"
+                    f"<{self._with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n"
                     + "\n".join(
                         traceback.format_exception(
                             type(error), value=error, tb=error.__traceback__
@@ -160,9 +162,15 @@ class EachStepGameManager(BaseGameManager):
 
         if need_to_save:
             FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
-                self.with_predictor.model(), with_name=self.with_predictor.name()
+                self._with_predictor.model(), with_name=self._with_predictor.name()
             )
         return Map2Result(game_map2svm, game_result)
 
     def _create_preparator(self):
         return EachStepGamePreparator(self._shared_lock)
+
+    def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
+        if str(game_map) in self._game_states:
+            return self._game_states.pop(str(game_map))
+        else:
+            return None
