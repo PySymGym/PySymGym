@@ -47,14 +47,6 @@ def main():
 
     normalization_functions = [
         None,
-        l2_norm,
-        l_inf_norm,
-        min_max_scaling,
-        z_score_norm,
-        max_abs_scaling,
-        log_scaling,
-        robust_scaling,
-        reciprocal_norm,
     ]
 
     for normalization_function in normalization_functions:

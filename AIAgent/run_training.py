@@ -222,7 +222,7 @@ def objective(
         num_hops_1=6,
         num_hops_2=10,
         num_of_state_features=15,
-        hidden_channels=120,
+        hidden_channels=7,
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,

@@ -33,9 +33,9 @@ class ONNX:
     gamevertex_history_statevertex_index = underscore_join(
         TORCH.gamevertex_history_statevertex + ("index",)
     )
-    gamevertex_history_statevertex_attrs = underscore_join(
-        TORCH.gamevertex_history_statevertex + ("attrs",)
-    )
+    # gamevertex_history_statevertex_attrs = underscore_join(
+    #     TORCH.gamevertex_history_statevertex + ("attrs",)
+    # )
     gamevertex_in_statevertex = underscore_join(TORCH.gamevertex_in_statevertex)
     statevertex_parentof_statevertex = underscore_join(
         TORCH.statevertex_parentof_statevertex
@@ -49,7 +49,7 @@ def infer(model, data):
         edge_index_v_v=data[*TORCH.gamevertex_to_gamevertex].edge_index,
         edge_type_v_v=data[*TORCH.gamevertex_to_gamevertex].edge_type,
         edge_index_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_index,
-        edge_attr_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_attr,
+        # edge_attr_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_attr,
         edge_index_in_v_s=data[*TORCH.gamevertex_in_statevertex].edge_index,
         edge_index_s_s=data[*TORCH.statevertex_parentof_statevertex].edge_index,
     )

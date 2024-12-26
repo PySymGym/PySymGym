@@ -19,9 +19,9 @@ class StateModelEncoder(torch.nn.Module):
         self.conv2 = TAGConv(
             hidden_channels, hidden_channels, num_hops_2, normalize=normalization
         )
-        self.conv3 = ResGatedGraphConv(
-            (hidden_channels, 7), hidden_channels, edge_dim=2
-        )
+        # self.conv3 = ResGatedGraphConv(
+        #     (hidden_channels, 7), hidden_channels, edge_dim=2
+        # )
         self.conv32 = SAGEConv(
             (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
         )
@@ -42,7 +42,7 @@ class StateModelEncoder(torch.nn.Module):
         edge_index_v_v,
         edge_type_v_v,
         edge_index_history_v_s,
-        edge_attr_history_v_s,
+        # edge_attr_history_v_s,
         edge_index_in_v_s,
         edge_index_s_s,
     ):
@@ -51,11 +51,11 @@ class StateModelEncoder(torch.nn.Module):
         if edge_type_v_v.numel() != 0:
             game_x = self.conv1(game_x, edge_index_v_v, edge_type_v_v).relu()
 
-        state_x = self.conv3(
-            (game_x, state_x),
-            edge_index_history_v_s,
-            edge_attr_history_v_s,
-        ).relu()
+        # state_x = self.conv3(
+        #     (game_x, state_x),
+        #     edge_index_history_v_s,
+        #     edge_attr_history_v_s,
+        # ).relu()
 
         state_x = self.conv32(
             (game_x, state_x),
