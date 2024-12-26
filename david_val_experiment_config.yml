@@ -1,0 +1,34 @@
+OptunaConfig:
+  n_startup_trials: 10
+  n_trials: 20
+  n_jobs: 1
+  study_direction: "maximize"
+  trial_uri: mlflow-artifacts:/204896505891330825/f5cb04ac532e43e19fde26d157c9a892/artifacts/trial.pkl
+
+TrainingConfig:
+  dynamic_dataset: True
+  train_percentage: 1
+  threshold_coverage: 100
+  threshold_steps_number: 1000
+  load_to_cpu: False
+  epochs: 30
+
+ValidationConfig:
+  validation_mode:
+    val_type: svms_each_step
+    process_count: 30
+    PlatformsConfig:
+      - name: dotnet
+        DatasetConfigs:
+          - dataset_base_path: ../maps/DotNet/Maps/Root/bin/Release/net7.0
+            dataset_description: ../david_val_experiment_dotnet_dataset.json
+        SVMSInfo:
+          - name: VSharp
+            launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
+            min_port: 35000
+            max_port: 35450
+            server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+
+MLFlowConfig:
+  tracking_uri: http://127.0.0.1:8080
+  experiment_name: david_val_experiment_30.12.2024
