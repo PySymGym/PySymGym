@@ -169,7 +169,10 @@ class EachStepGameManager(BaseGameManager):
         return EachStepGamePreparator(self._namespace)
 
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
-        if str(game_map) in self._game_states:
-            return self._game_states.pop(str(game_map))
-        else:
-            return None
+        return self._game_states.get(str(game_map))
+
+    def delete_game_steps(self, game_map: GameMap):
+        str_game_map = str(game_map)
+        if str_game_map in self._game_states:
+            steps = self._game_states.pop(str_game_map)
+            del steps

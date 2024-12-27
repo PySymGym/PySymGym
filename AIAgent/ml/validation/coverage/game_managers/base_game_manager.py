@@ -71,5 +71,10 @@ class BaseGameManager(ABC):
 
     @abstractmethod
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
-        """Returns list of HeteroData for each step. Guarantees to receive the steps of the played game no more than once. Returns None if steps of game_map can't be received."""
+        """Returns list of HeteroData for each step. Returns None if steps of game_map can't be received."""
+        ...
+
+    @abstractmethod
+    def delete_game_steps(self, game_map: GameMap):
+        """Deletes game steps of game_map"""
         ...
