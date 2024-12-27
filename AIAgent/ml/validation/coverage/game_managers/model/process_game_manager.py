@@ -202,7 +202,8 @@ class ModelGameManager(BaseGameManager):
             dict(sorted(nn_outputs.items())).values(),
         ):
             hetero_input, _ = convert_input_to_tensor(state)
-            hetero_input["y_true"] = torch.Tensor(nn_output[0])
+            nn_output = list(map(lambda x: [x], nn_output[0]))
+            hetero_input["y_true"] = torch.Tensor(nn_output)
             map_steps.append(hetero_input)
         return map_steps
 
