@@ -1,5 +1,6 @@
 import argparse
 import csv
+import inspect
 import json
 import logging
 import multiprocessing as mp
@@ -12,7 +13,6 @@ import joblib
 import mlflow
 import optuna
 import torch
-from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import yaml
 from common.classes import GameFailed
 from common.config.config import Config
@@ -41,12 +41,14 @@ from paths import (
     CURRENT_TABLE_PATH,
     CURRENT_TRIAL_PATH,
     LOG_PATH,
+    MODEL_KWARGS_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
 )
 from torch import nn
 from torch_geometric.data import Dataset
+from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
@@ -261,14 +263,14 @@ def objective(
     early_stopping = EarlyStopping(
         state_len=config.early_stopping_state_len, tolerance=config.tolerance
     )
-    model: nn.Module = model_init(
-        hidden_channels=config.hidden_channels,
-        num_of_state_features=config.num_of_state_features,
-        num_hops_1=config.num_hops_1,
-        num_hops_2=config.num_hops_2,
-        normalization=config.normalization,
-        num_pc_layers=config.num_pc_layers,
+    model_kwargs_names = list(
+        inspect.signature(StateModelEncoder.__init__).parameters.keys()
     )
+    model_kwargs_names.remove("self")
+    model_kwargs = dict(
+        [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
+    )
+    model: nn.Module = model_init(**model_kwargs)
     model.to(GeneralConfig.DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
@@ -278,7 +280,9 @@ def objective(
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to(TrainingDatasetMode.TRAINING)
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=False) # Shuffle leads to problems with GPU memory.
+            train_dataloader = DataLoader(
+                dataset, config.batch_size, shuffle=False
+            )  # Shuffle leads to problems with GPU memory.
             model.train()
             train(
                 dataloader=train_dataloader,
@@ -289,6 +293,9 @@ def objective(
             torch.cuda.empty_cache()
             torch.save(model.state_dict(), CURRENT_MODEL_PATH)
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
+
+            with open(MODEL_KWARGS_PATH, "w") as outfile:
+                yaml.dump(model_kwargs, outfile)
 
             model.eval()
             dataset.switch_to(TrainingDatasetMode.VALIDATION)
