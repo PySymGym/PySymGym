@@ -38,9 +38,9 @@ def create_model_input(
         ONNX.gamevertex_history_statevertex_index: modifier(
             hetero_data[TORCH.gamevertex_history_statevertex].edge_index
         ),
-        ONNX.gamevertex_history_statevertex_attrs: modifier(
-            hetero_data[TORCH.gamevertex_history_statevertex].edge_attr
-        ),
+        # ONNX.gamevertex_history_statevertex_attrs: modifier(
+        #     hetero_data[TORCH.gamevertex_history_statevertex].edge_attr
+        # ),
         ONNX.gamevertex_in_statevertex: modifier(
             hetero_data[TORCH.gamevertex_in_statevertex].edge_index
         ),
@@ -76,7 +76,7 @@ def save_in_onnx(
             ONNX.gamevertex_to_gamevertex_index: [1],
             ONNX.gamevertex_to_gamevertex_type: [0],
             ONNX.gamevertex_history_statevertex_index: [1],
-            ONNX.gamevertex_history_statevertex_attrs: [0, 1],
+            # ONNX.gamevertex_history_statevertex_attrs: [0, 1],
             ONNX.gamevertex_in_statevertex: [1],
             ONNX.statevertex_parentof_statevertex: [1],
         },
@@ -86,7 +86,7 @@ def save_in_onnx(
             ONNX.gamevertex_to_gamevertex_index,
             ONNX.gamevertex_to_gamevertex_type,
             ONNX.gamevertex_history_statevertex_index,
-            ONNX.gamevertex_history_statevertex_attrs,
+            # ONNX.gamevertex_history_statevertex_attrs,
             ONNX.gamevertex_in_statevertex,
             ONNX.statevertex_parentof_statevertex,
         ],
@@ -233,8 +233,8 @@ def entrypoint(
             print(f"{shorten_output(torch_out)=}")
             print(f"{shorten_output(onnx_out[0])=}")
             print(f"{idx}/{len(verification_gamestates)}")
-            assert (
-                shorten_output(torch_out) == shorten_output(onnx_out[0])
+            assert shorten_output(torch_out) == shorten_output(
+                onnx_out[0]
             ), f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
 
 
