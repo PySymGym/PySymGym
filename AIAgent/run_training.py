@@ -41,6 +41,7 @@ from paths import (
     CURRENT_TABLE_PATH,
     CURRENT_TRIAL_PATH,
     LOG_PATH,
+    MODEL_KWARGS_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
@@ -255,6 +256,13 @@ def objective(
             torch.cuda.empty_cache()
             torch.save(model.state_dict(), CURRENT_MODEL_PATH)
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
+
+            model_kwargs = trial.params
+            model_kwargs.pop("lr")
+            model_kwargs.pop("batch_size")
+            model_kwargs["normalization"] = True  # TODO: avoid hardcoding
+            with open(MODEL_KWARGS_PATH, "w") as outfile:
+                yaml.dump(model_kwargs, outfile)
 
             model.eval()
             dataset.switch_to("val")

@@ -6,13 +6,20 @@ from typing import Optional
 import torch
 import tqdm
 from common.classes import GameResult, Map2Result
-from common.config.validation_config import SVMValidation, SVMValidationSendEachStep
+from common.config.validation_config import (
+    SVMValidation,
+    SVMValidationSendEachStep,
+    SVMValidationSendModel,
+)
 from common.game import GameMap2SVM
 from ml.dataset import Result, TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
 from ml.validation.coverage.game_managers.each_step.each_step_game_manager import (
     EachStepGameManager,
+)
+from ml.validation.coverage.game_managers.model.process_game_manager import (
+    ModelGameManager,
 )
 from ml.validation.coverage.validate_coverage_utils import catch_return_exception
 
@@ -108,4 +115,6 @@ class ValidationCoverage:
         namespace.is_prepared = sync_manager.Value("b", False)
         if isinstance(validation_config, SVMValidationSendEachStep):
             return EachStepGameManager(TrainingModelWrapper(self.model), namespace)
+        elif isinstance(validation_config, SVMValidationSendModel):
+            return ModelGameManager(namespace, self.model)
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")
