@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from threading import Lock
+from multiprocessing.managers import Namespace
 from typing import Optional
 
 from common.classes import Map2Result
@@ -15,7 +15,7 @@ class BaseGamePreparator(ABC):
     in a thread-safe manner, ensuring that the process is performed only once.
     """
 
-    def __init__(self, shared_lock: Lock):
+    def __init__(self, namespace: Namespace):
         """
         Initializes the base game preparator.
 
@@ -23,8 +23,8 @@ class BaseGamePreparator(ABC):
             _is_prepared: Flag indicating whether the preparation is complete.
             _shared_lock: Thread lock to ensure thread-safe preparation.
         """
-        self._is_prepared = False
-        self._shared_lock = shared_lock
+        self._shared_lock = namespace.shared_lock
+        self._is_prepared = namespace.is_prepared
 
     def prepare(self):
         """
@@ -34,10 +34,10 @@ class BaseGamePreparator(ABC):
         all attempts after the first thread completes it.
         """
         with self._shared_lock:
-            if self._is_prepared:
+            if self._is_prepared.value:
                 return
             self._prepare()
-            self._is_prepared = True
+            self._is_prepared.value = True
             return
 
     @abstractmethod
@@ -49,8 +49,8 @@ class BaseGamePreparator(ABC):
 
 
 class BaseGameManager(ABC):
-    def __init__(self, shared_lock: Lock):
-        self._shared_lock = shared_lock
+    def __init__(self, namespace: Namespace):
+        self._namespace = namespace
         self._preparator = self._create_preparator()
 
     def play_game_map(self, game_map2svm: GameMap2SVM) -> Map2Result:

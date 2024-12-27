@@ -1,6 +1,6 @@
 import logging
-import threading
 import traceback
+from multiprocessing.managers import Namespace
 from time import perf_counter
 from typing import Optional, TypeAlias
 
@@ -34,10 +34,10 @@ class EachStepGamePreparator(BaseGamePreparator):
 
 
 class EachStepGameManager(BaseGameManager):
-    def __init__(self, with_predictor: Predictor, shared_lock: threading.Lock):
+    def __init__(self, with_predictor: Predictor, namespace: Namespace):
         self._game_states: dict[str, list[HeteroData]] = {}
         self._with_predictor = with_predictor
-        super().__init__(shared_lock)
+        super().__init__(namespace)
 
     @set_timeout_if_needed
     def _play_game_map_with_svm(
@@ -167,7 +167,7 @@ class EachStepGameManager(BaseGameManager):
         return Map2Result(game_map2svm, game_result)
 
     def _create_preparator(self):
-        return EachStepGamePreparator(self._shared_lock)
+        return EachStepGamePreparator(self._namespace)
 
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
         if str(game_map) in self._game_states:

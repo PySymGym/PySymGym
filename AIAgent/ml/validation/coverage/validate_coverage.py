@@ -1,11 +1,15 @@
 import logging
 import multiprocessing as mp
+from multiprocessing.managers import SyncManager
 from typing import Optional
 
 import torch
 import tqdm
 from common.classes import GameResult, Map2Result
-from common.config.validation_config import SVMValidation, SVMValidationSendEachStep
+from common.config.validation_config import (
+    SVMValidation,
+    SVMValidationSendEachStep,
+)
 from common.game import GameMap2SVM
 from ml.dataset import Result, TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
@@ -79,9 +83,8 @@ class ValidationCoverage:
         progress_bar_colour : str
             Your favorite colour for progress bar.
         """
-        with mp.Manager() as manager:
-            self._shared_lock = manager.Lock()
-            self._game_manager = self._get_game_manager(validation_config)
+        with mp.Manager() as sync_manager:
+            self._game_manager = self._get_game_manager(validation_config, sync_manager)
             with mp.Pool(validation_config.process_count) as p:
                 all_results: list[Map2Result | Exception] = list()
                 for result in tqdm.tqdm(
@@ -94,9 +97,12 @@ class ValidationCoverage:
                     all_results.append(result)
         return all_results
 
-    def _get_game_manager(self, validation_config: SVMValidation) -> BaseGameManager:
+    def _get_game_manager(
+        self, validation_config: SVMValidation, sync_manager: SyncManager
+    ) -> BaseGameManager:
+        namespace = sync_manager.Namespace()
+        namespace.shared_lock = sync_manager.Lock()
+        namespace.is_prepared = sync_manager.Value("b", False)
         if isinstance(validation_config, SVMValidationSendEachStep):
-            return EachStepGameManager(
-                TrainingModelWrapper(self.model), self._shared_lock
-            )
+            return EachStepGameManager(TrainingModelWrapper(self.model), namespace)
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")
