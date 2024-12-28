@@ -111,8 +111,8 @@ class ModelGameManager(BaseGameManager):
 
     @set_timeout_if_needed
     def _wait_for_game_over(self, proc: subprocess.Popen) -> None:
-        out, _ = proc.communicate()
-        logging.debug(out)
+        out, err = proc.communicate()
+        logging.debug(f"out = {str(out)}\nerr = {str(err)}")
 
     def _get_result(self, game_map2svm: GameMap2SVM) -> GameResult | GameFailed:
         output_dir = self._get_output_dir(game_map2svm.GameMap)
