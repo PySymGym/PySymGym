@@ -257,7 +257,7 @@ def objective(
             torch.save(model.state_dict(), CURRENT_MODEL_PATH)
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
-            model_kwargs = trial.params
+            model_kwargs = trial.params.copy()
             model_kwargs.pop("lr")
             model_kwargs.pop("batch_size")
             model_kwargs["normalization"] = True  # TODO: avoid hardcoding
