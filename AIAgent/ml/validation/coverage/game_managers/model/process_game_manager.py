@@ -1,3 +1,4 @@
+import glob
 import json
 import logging
 import os
@@ -64,6 +65,9 @@ class ModelGamePreparator(BaseGamePreparator):
 
 
 class ModelGameManager(BaseGameManager):
+    GAME_STATE_SUFFIX = "gameState"
+    NN_OUTPUT_SUFFIX = "nn_output"
+
     def __init__(
         self,
         namespace: Namespace,
@@ -162,8 +166,6 @@ class ModelGameManager(BaseGameManager):
         return Map2Result(game_map2svm, game_result)
 
     def get_game_steps(self, game_map: GameMap) -> list[HeteroData]:
-        GAME_STATE_SUFFIX = "gameState"
-        NN_OUTPUT_SUFFIX = "nn_output"
         output_dir = self._get_output_dir(game_map)
         files = [
             f
@@ -185,10 +187,12 @@ class ModelGameManager(BaseGameManager):
                 return json.loads(file.read())
 
         for file in files:
-            if file.endswith(GAME_STATE_SUFFIX) or file.endswith(NN_OUTPUT_SUFFIX):
+            if file.endswith(ModelGameManager.GAME_STATE_SUFFIX) or file.endswith(
+                ModelGameManager.NN_OUTPUT_SUFFIX
+            ):
                 index = get_index(file)
                 full_path = output_dir / file
-                if file.endswith(GAME_STATE_SUFFIX):
+                if file.endswith(ModelGameManager.GAME_STATE_SUFFIX):
                     states[index] = get_game_state(full_path)
                 else:
                     nn_outputs[index] = get_nn_output(full_path)
@@ -204,3 +208,27 @@ class ModelGameManager(BaseGameManager):
 
     def _create_preparator(self):
         return ModelGamePreparator(self._namespace, self._model, self._path_to_model)
+
+    def delete_game_steps(self, game_map: GameMap):
+        def delete_files_with_suffix(suffix: str):
+            directory = (
+                Path(ModelGameManager.NN_OUTPUT_SUFFIX) / game_map.AssemblyFullName
+            )
+            try:
+                pattern = os.path.join(directory, f"*{suffix}")
+                files_to_delete = glob.glob(pattern, recursive=True)
+
+                for file_path in files_to_delete:
+                    os.remove(file_path)
+                    logging.debug(f"File deleted: {file_path}")
+
+            except Exception as e:
+                logging.error(
+                    "Something happened during deletion:"
+                    + "\n".join(
+                        traceback.format_exception(e.__class__, e, e.__traceback__)
+                    )
+                )
+
+        delete_files_with_suffix(ModelGameManager.GAME_STATE_SUFFIX)
+        delete_files_with_suffix(ModelGameManager.NN_OUTPUT_SUFFIX)
