@@ -74,6 +74,10 @@ async def dequeue_instance(request):
     except Empty:
         logging.error("Couldn't dequeue instance, the queue is not replenishing")
         raise
+    except Exception as e:
+        logging.error(e, exc_info=True)
+        SERVER_INSTANCES.put(server_info)
+        raise
 
 
 @routes.post("/post_ws")
