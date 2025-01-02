@@ -64,7 +64,6 @@ async def wait_for_port(port, timeout=10):
 async def dequeue_instance(request):
     try:
         server_info = SERVER_INSTANCES.get(block=False)
-        assert server_info.pid is Undefined
         server_info = await run_server_instance(
             SVMInfo(**request.query),
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
