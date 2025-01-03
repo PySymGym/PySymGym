@@ -26,12 +26,11 @@ from typing import (
 import numpy as np
 import torch
 import tqdm
-from torch.utils.data import random_split
-from torch_geometric.data import Dataset, HeteroData
-
 from common.game import GameState
 from config import GeneralConfig
 from ml.inference import TORCH
+from torch.utils.data import random_split
+from torch_geometric.data import Dataset, HeteroData
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -379,6 +378,15 @@ class TrainingDataset(Dataset):
         for path in all_steps_paths:
             map_steps.append(torch.load(path, map_location=GeneralConfig.DEVICE))
         return map_steps
+
+    def is_update_map_required(self, map_name: str, map_result: Result):
+        if map_name in self.maps_results.keys():
+            return (
+                self.maps_results[map_name] == map_result
+                and map_result.coverage_percent == 100
+            ) or (self.maps_results[map_name] < map_result)
+        else:
+            return True
 
     def update_map(
         self,
