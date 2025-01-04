@@ -368,14 +368,6 @@
       "MapName": "MatrixMultiplicationMain_0"
    },
    {
-      "StepsToPlay": 1000,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 0,
-      "AssemblyFullName": "ManuallyCollected.dll",
-      "NameOfObjectToCover": "SudokuMain",
-      "MapName": "SudokuMain_0"
-   },
-   {
       "StepsToPlay": 200,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
@@ -1078,14 +1070,6 @@
       "AssemblyFullName": "BizHawk.Emulation.DiscSystem.dll",
       "NameOfObjectToCover": "DiscMountJob.Run",
       "MapName": "DiscMountJob.Run_5000_BFS"
-   },
-   {
-      "StepsToPlay": 4000,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 0,
-      "AssemblyFullName": "BizHawk.Emulation.DiscSystem.dll",
-      "NameOfObjectToCover": "DiscHasher.OldHash",
-      "MapName": "DiscHasher.OldHash_0"
    },
    {
       "StepsToPlay": 4000,
@@ -1872,14 +1856,6 @@
       "MapName": "BucketSort.Sort_0"
    },
    {
-      "StepsToPlay": 3000,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 2000,
-      "AssemblyFullName": "Advanced.Algorithms.dll",
-      "NameOfObjectToCover": "BucketSort.Sort",
-      "MapName": "BucketSort.Sort_2000_BFS"
-   },
-   {
       "StepsToPlay": 1000,
       "DefaultSearcher": "DFS",
       "StepsToStart": 1000,
@@ -2432,38 +2408,6 @@
       "MapName": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs_0"
    },
    {
-      "StepsToPlay": 10000,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 1000,
-      "AssemblyFullName": "Unity.dll",
-      "NameOfObjectToCover": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs",
-      "MapName": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs_1000_BFS"
-   },
-   {
-      "StepsToPlay": 10000,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 5000,
-      "AssemblyFullName": "Unity.dll",
-      "NameOfObjectToCover": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs",
-      "MapName": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs_5000_BFS"
-   },
-   {
-      "StepsToPlay": 10000,
-      "DefaultSearcher": "DFS",
-      "StepsToStart": 1000,
-      "AssemblyFullName": "Unity.dll",
-      "NameOfObjectToCover": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs",
-      "MapName": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs_1000_DFS"
-   },
-   {
-      "StepsToPlay": 10000,
-      "DefaultSearcher": "DFS",
-      "StepsToStart": 5000,
-      "AssemblyFullName": "Unity.dll",
-      "NameOfObjectToCover": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs",
-      "MapName": "PartialDerivUtilWriter.GenerateDefinitionsAndFuncs_5000_DFS"
-   },
-   {
       "StepsToPlay": 5000,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
@@ -2686,14 +2630,6 @@
       "AssemblyFullName": "ManuallyCollected.dll",
       "NameOfObjectToCover": "solveWordWrap",
       "MapName": "solveWordWrap_0"
-   },
-   {
-      "StepsToPlay": 2000,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 0,
-      "AssemblyFullName": "ManuallyCollected.dll",
-      "NameOfObjectToCover": "AhoCorasickMain",
-      "MapName": "AhoCorasickMain_0"
    },
    {
       "StepsToPlay": 2000,
