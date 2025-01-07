@@ -13,6 +13,7 @@ from typing import Optional
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
 from common.game import GameMap, GameMap2SVM, GameState
+from common.network_utils import next_free_port
 from func_timeout import FunctionTimedOut
 from ml.dataset import convert_input_to_tensor
 from ml.validation.coverage.game_managers.base_game_manager import (
@@ -88,7 +89,6 @@ class ModelGameManager(BaseGameManager):
         path_to_model: str = CURRENT_MODEL_PATH,
     ):
         self._namespace = namespace
-        self._occupied_ports: list[int] = namespace.occupied_ports
         self._shared_lock = namespace.shared_lock
         self._model = model
         self._path_to_model = path_to_model
@@ -102,20 +102,21 @@ class ModelGameManager(BaseGameManager):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
         svm_info = game_map2svm.SVMInfo
 
-        def look_for_free_port(attempts_left=100) -> int:
-            if attempts_left == 0:
-                raise RuntimeError("Can't find any free port!")
-            logging.debug(f"Looking for port... attempts left: {attempts_left}")
-            for i in range(svm_info.min_port, svm_info.max_port + 1):
+        def look_for_free_port() -> int:
+            logging.debug("Looking for port...")
+            try:
                 with self._shared_lock:
-                    if i not in self._occupied_ports:
-                        self._occupied_ports.append(i)
-                        return i
-            else:
-                time.sleep(0.1)
-                return look_for_free_port(attempts_left - 1)
+                    port = next_free_port(svm_info.min_port, svm_info.max_port)
+                    logging.debug(f"Try to occupy {port=}")
+                    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    server_socket.bind(("localhost", port))
+                    server_socket.listen(1)
+                    return port, server_socket
+            except OSError:
+                logging.debug(f"Failed to occupy {port=}")
+                return look_for_free_port()
 
-        port = look_for_free_port()
+        port, server_socket = look_for_free_port()
         launch_command = svm_info.launch_command.format(
             **{
                 STEPS_TO_PLAY: game_map.StepsToPlay,
@@ -137,7 +138,7 @@ class ModelGameManager(BaseGameManager):
             cwd=Path(svm_info.server_working_dir),
             encoding="utf-8",
         )
-        return proc, port
+        return proc, port, server_socket
 
     def _kill_game_process(self, proc: subprocess.Popen):
         proc.kill()
@@ -150,24 +151,26 @@ class ModelGameManager(BaseGameManager):
         return out, err
 
     @set_timeout_if_needed
-    def _wait_for_game_over(self, proc: subprocess.Popen, game_map: GameMap) -> None:
-        self._wait_for_game_over_and_read_game_steps(proc, game_map)
+    def _wait_for_game_over(
+        self, proc: subprocess.Popen, game_map: GameMap, socket: socket.socket
+    ) -> None:
+        self._wait_for_game_over_and_read_game_steps(proc, game_map, socket)
         out, err = self.log_proc_output(proc)
         return out, err
 
     def _wait_for_game_over_and_read_game_steps(
-        self, proc: subprocess.Popen, game_map: GameMap
+        self, proc: subprocess.Popen, game_map: GameMap, socket: socket.socket
     ):
-        logging.debug("reading of steps...")
+        logging.debug("reading steps...")
         start = time.time()
-        self._get_steps_while_playing(game_map)
+        self._get_steps_while_playing(game_map, socket)
         end = time.time()
         steps_reading = end - start
         logging.debug(f"steps are read... {steps_reading=}s.")
         proc.wait()
         assert proc.returncode == 0
 
-    def _get_steps_while_playing(self, game_map: GameMap):
+    def _get_steps_while_playing(self, game_map: GameMap, server_socket: socket.socket):
         game_map_info = self._game_steps[game_map.MapName]
         game_state, steps, port = (
             game_map_info.game_state,
@@ -176,9 +179,6 @@ class ModelGameManager(BaseGameManager):
         )
         step_number = len(steps)
 
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind(("localhost", port))
-        server_socket.listen(1)
         logging.debug(f"Server listening on port {port}")
         conn, addr = server_socket.accept()
         logging.debug(f"Connection from {addr}")
@@ -256,11 +256,12 @@ class ModelGameManager(BaseGameManager):
         return result
 
     def _play_game_map(self, game_map2svm: GameMap2SVM) -> Map2Result:
-        proc, port = self._run_game_process(game_map2svm)
         try:
+            running_res = self._run_game_process(game_map2svm)
+            proc, port, socket = running_res
             game_map = game_map2svm.GameMap
             self._game_steps[game_map.MapName] = ModelGameMapInfo(None, [], port)
-            out, err = self._wait_for_game_over(proc, game_map)
+            out, err = self._wait_for_game_over(proc, game_map, socket)
             game_result = self._get_result(game_map2svm)
             if isinstance(game_result, GameFailed):
                 logging.error(f"\nout = {str(out)}\nerr = {str(err)}")
@@ -273,11 +274,9 @@ class ModelGameManager(BaseGameManager):
         except Exception as e:
             trace = "\n".join(traceback.format_exception(type(e), e, e.__traceback__))
             logging.error(trace)
-            self._kill_game_process(proc)
+            if running_res is not None:
+                self._kill_game_process(proc)
             game_result = GameFailed(reason=type(e))
-        finally:
-            with self._shared_lock:
-                self._occupied_ports.remove(port)
 
         return Map2Result(game_map2svm, game_result)
 

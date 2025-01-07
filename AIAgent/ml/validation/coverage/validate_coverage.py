@@ -117,8 +117,6 @@ class ValidationCoverage:
                 else:
                     logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
                 del steps
-            else:
-                self._game_manager.delete_game_steps(game_map)
         return result
 
     def validate_coverage(
@@ -178,7 +176,6 @@ class ValidationCoverage:
         namespace = sync_manager.Namespace()
         namespace.shared_lock = sync_manager.Lock()
         namespace.is_prepared = sync_manager.Value("b", False)
-        namespace.occupied_ports = sync_manager.list()
         if isinstance(validation_config, SVMValidationSendEachStep):
             return EachStepGameManager(TrainingModelWrapper(self.model), namespace)
         elif isinstance(validation_config, SVMValidationSendModel):
