@@ -17,7 +17,7 @@ ValidationConfig:
   validation_mode:
     val_type: svms_model
     process_count: 30
-    fail_immediately: True
+    fail_immediately: False
     PlatformsConfig:
       - name: dotnet
         DatasetConfigs:
@@ -25,8 +25,10 @@ ValidationConfig:
             dataset_description: ../david_val_experiment_dotnet_dataset.json
         SVMSInfo:
           - name: VSharp
-            launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode sendmodel --mapname {MapName} --model {ModelPath} --stepstoplay {StepsToPlay} --defaultsearcher {DefaultSearcher} --stepstostart {StepsToStart} --assemblyfullname {AssemblyFullName} --nameofobjecttocover {NameOfObjectToCover} --outfolder {OutputDir} --usegpu --optimize
+            launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode sendmodel --mapname {MapName} --model {ModelPath} --stepstoplay {StepsToPlay} --defaultsearcher {DefaultSearcher} --stepstostart {StepsToStart} --assemblyfullname {AssemblyFullName} --nameofobjecttocover {NameOfObjectToCover} --outfolder {OutputDir} --port {Port}
             server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+            min_port: 35000
+            max_port: 35050
 
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
