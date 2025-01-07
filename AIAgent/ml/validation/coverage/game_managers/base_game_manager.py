@@ -75,6 +75,6 @@ class BaseGameManager(ABC):
         ...
 
     @abstractmethod
-    def delete_game_steps(self, game_map: GameMap):
-        """Deletes game steps of game_map"""
+    def delete_game_artifacts(self, game_map: GameMap):
+        """Deletes game artifacts of game_map"""
         ...
