@@ -1,11 +1,14 @@
-import glob
 import json
 import logging
 import os
+import socket
 import subprocess
+import time
 import traceback
+from dataclasses import dataclass
 from multiprocessing.managers import Namespace
 from pathlib import Path
+from typing import Optional
 
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
@@ -16,8 +19,10 @@ from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
 )
+from ml.validation.coverage.game_managers.each_step.game_states_utils import (
+    update_game_state,
+)
 from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
-from onyx import load_gamestate
 from paths import CURRENT_MODEL_PATH, MODEL_KWARGS_PATH, REPORT_PATH
 from torch_geometric.data.hetero_data import HeteroData
 
@@ -30,6 +35,7 @@ STEPS_TO_START = "StepsToStart"
 ASSEMBLY_FULL_NAME = "AssemblyFullName"
 NAME_OF_OBJECT_TO_COVER = "NameOfObjectToCover"
 OUTPUT_DIR = "OutputDir"
+PORT = "Port"
 
 CURRENT_ONNX_MODEL_PATH = REPORT_PATH / "model.onnx"
 GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/7825_gameState.json"
@@ -64,6 +70,13 @@ class ModelGamePreparator(BaseGamePreparator):
         assert proc.returncode == 0
 
 
+@dataclass
+class ModelGameMapInfo:
+    game_state: GameState
+    steps: list[HeteroData]
+    port: int
+
+
 class ModelGameManager(BaseGameManager):
     GAME_STATE_SUFFIX = "gameState"
     NN_OUTPUT_SUFFIX = "nn_output"
@@ -75,8 +88,11 @@ class ModelGameManager(BaseGameManager):
         path_to_model: str = CURRENT_MODEL_PATH,
     ):
         self._namespace = namespace
+        self._occupied_ports: list[int] = namespace.occupied_ports
+        self._shared_lock = namespace.shared_lock
         self._model = model
         self._path_to_model = path_to_model
+        self._game_steps: dict[str, ModelGameMapInfo] = {}
         super().__init__(self._namespace)
 
     def _get_output_dir(self, game_map: GameMap) -> Path:
@@ -84,6 +100,22 @@ class ModelGameManager(BaseGameManager):
 
     def _run_game_process(self, game_map2svm: GameMap2SVM):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
+        svm_info = game_map2svm.SVMInfo
+
+        def look_for_free_port(attempts_left=100) -> int:
+            if attempts_left == 0:
+                raise RuntimeError("Can't find any free port!")
+            logging.debug(f"Looking for port... attempts left: {attempts_left}")
+            for i in range(svm_info.min_port, svm_info.max_port + 1):
+                with self._shared_lock:
+                    if i not in self._occupied_ports:
+                        self._occupied_ports.append(i)
+                        return i
+            else:
+                time.sleep(0.1)
+                return look_for_free_port(attempts_left - 1)
+
+        port = look_for_free_port()
         launch_command = svm_info.launch_command.format(
             **{
                 STEPS_TO_PLAY: game_map.StepsToPlay,
@@ -94,6 +126,7 @@ class ModelGameManager(BaseGameManager):
                 MAP_NAME: game_map.MapName,
                 MODEL_PATH: Path(CURRENT_ONNX_MODEL_PATH).absolute(),
                 OUTPUT_DIR: self._get_output_dir(game_map2svm.GameMap).absolute(),
+                PORT: port,
             },
         )
         logging.info(f"Launch command: {launch_command}")
@@ -102,17 +135,93 @@ class ModelGameManager(BaseGameManager):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=Path(svm_info.server_working_dir),
+            encoding="utf-8",
         )
-        return proc
+        return proc, port
 
     def _kill_game_process(self, proc: subprocess.Popen):
         proc.kill()
+        _ = self.log_proc_output(proc)
         logging.warning(f"Process {proc.pid} was intentionally killed")
 
-    @set_timeout_if_needed
-    def _wait_for_game_over(self, proc: subprocess.Popen) -> None:
+    def log_proc_output(self, proc: subprocess.Popen):
         out, err = proc.communicate()
         logging.debug(f"out = {str(out)}\nerr = {str(err)}")
+        return out, err
+
+    @set_timeout_if_needed
+    def _wait_for_game_over(self, proc: subprocess.Popen, game_map: GameMap) -> None:
+        self._wait_for_game_over_and_read_game_steps(proc, game_map)
+        out, err = self.log_proc_output(proc)
+        return out, err
+
+    def _wait_for_game_over_and_read_game_steps(
+        self, proc: subprocess.Popen, game_map: GameMap
+    ):
+        logging.debug("reading of steps...")
+        start = time.time()
+        self._get_steps_while_playing(game_map)
+        end = time.time()
+        steps_reading = end - start
+        logging.debug(f"steps are read... {steps_reading=}s.")
+        proc.wait()
+        assert proc.returncode == 0
+
+    def _get_steps_while_playing(self, game_map: GameMap):
+        game_map_info = self._game_steps[game_map.MapName]
+        game_state, steps, port = (
+            game_map_info.game_state,
+            game_map_info.steps,
+            game_map_info.port,
+        )
+        step_number = len(steps)
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(("localhost", port))
+        server_socket.listen(1)
+        logging.debug(f"Server listening on port {port}")
+        conn, addr = server_socket.accept()
+        logging.debug(f"Connection from {addr}")
+
+        terminator = b"\n"
+        data = b""
+
+        def get_next_message() -> Optional[bytes]:
+            nonlocal data
+            while terminator not in data:
+                chunk = conn.recv(2048)
+                if not chunk:
+                    return None
+                data += chunk
+            message, _, data = data.partition(terminator)
+            return message
+
+        def get_game_state() -> Optional[GameState]:
+            message = get_next_message()
+            if message is not None:
+                return GameState.from_dict(json.loads(message.decode("utf-8")))
+
+        def get_nn_output() -> Optional[list]:
+            message = get_next_message()
+            if message is not None:
+                return json.loads(message.decode("utf-8"))
+
+        while True:
+            readed_game_state = get_game_state()
+            if readed_game_state is None:
+                break
+            nn_output = get_nn_output()
+            if step_number == 0:
+                game_state = readed_game_state
+            else:
+                delta = readed_game_state
+                game_state = update_game_state(game_state, delta)
+            hetero_input, _ = convert_input_to_tensor(game_state)
+            nn_output = list(map(lambda x: [x], nn_output[0]))
+            hetero_input["y_true"] = torch.Tensor(nn_output)
+            steps.append(hetero_input)
+            step_number += 1
+        self._game_steps[game_map.MapName].game_state = game_state
 
     def _get_result(self, game_map2svm: GameMap2SVM) -> GameResult | GameFailed:
         output_dir = self._get_output_dir(game_map2svm.GameMap)
@@ -147,13 +256,17 @@ class ModelGameManager(BaseGameManager):
         return result
 
     def _play_game_map(self, game_map2svm: GameMap2SVM) -> Map2Result:
-        proc = self._run_game_process(game_map2svm)
+        proc, port = self._run_game_process(game_map2svm)
         try:
-            _ = self._wait_for_game_over(proc)
+            game_map = game_map2svm.GameMap
+            self._game_steps[game_map.MapName] = ModelGameMapInfo(None, [], port)
+            out, err = self._wait_for_game_over(proc, game_map)
             game_result = self._get_result(game_map2svm)
+            if isinstance(game_result, GameFailed):
+                logging.error(f"\nout = {str(out)}\nerr = {str(err)}")
         except FunctionTimedOut as error:
             logging.warning(
-                f"Timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
+                f"Timeouted on map {game_map.MapName} with {error.timedOutAfter}s"
             )
             self._kill_game_process(proc)
             game_result = GameFailed(reason=type(error))
@@ -162,74 +275,35 @@ class ModelGameManager(BaseGameManager):
             logging.error(trace)
             self._kill_game_process(proc)
             game_result = GameFailed(reason=type(e))
+        finally:
+            with self._shared_lock:
+                self._occupied_ports.remove(port)
 
         return Map2Result(game_map2svm, game_result)
 
     def get_game_steps(self, game_map: GameMap) -> list[HeteroData]:
-        output_dir = self._get_output_dir(game_map)
-        files = [
-            f
-            for f in os.listdir(output_dir)
-            if os.path.isfile(os.path.join(output_dir, f))
-        ]
-        states = dict()
-        nn_outputs = dict()
-
-        def get_index(s: str) -> int:
-            return int(s[0 : s.find("_")])
-
-        def get_game_state(path: str) -> GameState:
-            with open(path, "r") as gamestate_file:
-                return load_gamestate(gamestate_file)
-
-        def get_nn_output(path: str):
-            with open(path, "r") as file:
-                return json.loads(file.read())
-
-        for file in files:
-            if file.endswith(ModelGameManager.GAME_STATE_SUFFIX) or file.endswith(
-                ModelGameManager.NN_OUTPUT_SUFFIX
-            ):
-                index = get_index(file)
-                full_path = output_dir / file
-                if file.endswith(ModelGameManager.GAME_STATE_SUFFIX):
-                    states[index] = get_game_state(full_path)
-                else:
-                    nn_outputs[index] = get_nn_output(full_path)
-        map_steps = []
-        for state, nn_output in zip(
-            dict(sorted(states.items())).values(),
-            dict(sorted(nn_outputs.items())).values(),
-        ):
-            hetero_input, _ = convert_input_to_tensor(state)
-            nn_output = list(map(lambda x: [x], nn_output[0]))
-            hetero_input["y_true"] = torch.Tensor(nn_output)
-            map_steps.append(hetero_input)
-        return map_steps
+        game_map_info = self._game_steps[game_map.MapName]
+        return game_map_info.steps
 
     def _create_preparator(self):
         return ModelGamePreparator(self._namespace, self._model, self._path_to_model)
 
     def delete_game_steps(self, game_map: GameMap):
-        def delete_files_with_suffix(suffix: str):
-            directory = (
-                Path(ModelGameManager.NN_OUTPUT_SUFFIX) / game_map.AssemblyFullName
+        directory = Path(SVMS_OUTPUT_PATH) / game_map.MapName
+        empty_dir = Path(SVMS_OUTPUT_PATH) / "empty_temp_dir_for_rsync"
+        os.makedirs(empty_dir, exist_ok=True)
+        try:
+            _ = subprocess.run(
+                ["rsync", "-a", "--delete", f"{empty_dir}/", f"{directory}/"],
+                check=True,
+                capture_output=True,
             )
-            try:
-                pattern = os.path.join(directory, f"*{suffix}")
-                files_to_delete = glob.glob(pattern, recursive=True)
+            # logging.debug(f"Directory deleted: {directory}")
+        except subprocess.CalledProcessError as e:
+            logging.error(
+                "Something happened during deletion:"
+                + "\n".join(traceback.format_exception(e.__class__, e, e.__traceback__))
+            )
 
-                for file_path in files_to_delete:
-                    os.remove(file_path)
-                    logging.debug(f"File deleted: {file_path}")
-
-            except Exception as e:
-                logging.error(
-                    "Something happened during deletion:"
-                    + "\n".join(
-                        traceback.format_exception(e.__class__, e, e.__traceback__)
-                    )
-                )
-
-        delete_files_with_suffix(ModelGameManager.GAME_STATE_SUFFIX)
-        delete_files_with_suffix(ModelGameManager.NN_OUTPUT_SUFFIX)
+        states = self._game_steps.pop(game_map.MapName)
+        del states
