@@ -31,11 +31,9 @@ from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
 )
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
+from ml.validation.coverage.validate_coverage import ValidationCoverage
+from ml.validation.loss import validate_loss
 from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
-from ml.validation.validate_coverage_send_each_step import (
-    validate_coverage_send_each_step,
-)
-from ml.validation.validate_loss import validate_loss
 from paths import (
     CURRENT_MODEL_PATH,
     CURRENT_STUDY_PATH,
@@ -127,8 +125,8 @@ def run_training(
             statistics_writer.writeheader()
 
         def validate(model, dataset: TrainingDataset):
-            map2results = validate_coverage_send_each_step(
-                model, dataset, maps, validation_config.validation_mode
+            map2results = ValidationCoverage(model, dataset).validate_coverage(
+                maps, validation_config.validation_mode
             )
             metrics = get_svms_statistics(
                 map2results, validation_config.validation_mode, dataset
