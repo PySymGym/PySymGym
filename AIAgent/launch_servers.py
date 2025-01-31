@@ -14,6 +14,7 @@ from queue import Empty, Queue
 import psutil
 import yaml
 from aiohttp import web
+from common.network_utils import next_free_port
 from common.config.config import Config
 from common.validation_coverage.svm_info import SVMInfo
 from config import BrokerConfig, FeatureConfig, GeneralConfig
@@ -33,21 +34,6 @@ logging.basicConfig(
 
 FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
 avoid_same_free_port_lock = asyncio.Lock()
-
-
-def next_free_port(
-    min_port=BrokerConfig.BROKER_PORT + 1,
-    max_port=BrokerConfig.BROKER_PORT + 1000,
-):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while min_port <= max_port:
-        try:
-            sock.bind(("", min_port))
-            sock.close()
-            return min_port
-        except OSError:
-            min_port += 1
-    raise IOError("no free ports")
 
 
 async def wait_for_port(port, timeout=10):
