@@ -492,6 +492,10 @@ class TrainingDataset(Dataset):
             return np.array_equal(new_g_v, old_g_v) and np.array_equal(new_s_v, old_s_v)
 
         def merge_distributions(old_distribution, new_distribution):
+            if old_distribution.device != new_distribution.device:
+                device = GeneralConfig.DEVICE
+                old_distribution = old_distribution.to(device)
+                new_distribution = new_distribution.to(device)
             distributions_sum = old_distribution + new_distribution
             distributions_sum[distributions_sum != 0] = 1
             merged_distribution = distributions_sum / torch.sum(distributions_sum)
