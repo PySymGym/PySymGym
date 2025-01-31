@@ -84,9 +84,6 @@ class ModelGameMapInfo:
 
 
 class ModelGameManager(BaseGameManager):
-    GAME_STATE_SUFFIX = "gameState"
-    NN_OUTPUT_SUFFIX = "nn_output"
-
     def __init__(
         self,
         namespace: Namespace,
@@ -144,7 +141,9 @@ class ModelGameManager(BaseGameManager):
                     port = next_free_port(svm_info.min_port, svm_info.max_port)
                     logging.debug(f"Try to occupy {port=}")
                     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    server_socket.bind(("localhost", port))
+                    server_socket.bind(
+                        ("localhost", port)
+                    )  # TODO: working within a local network
                     server_socket.listen(1)
                     return port, server_socket
             except OSError:
