@@ -106,10 +106,11 @@ class ModelGameManager(BaseGameManager):
             # TODO: rewrite it more clear to read
             running_res = self._run_game_process(game_map2svm)
             proc, port, socket = running_res
-            self._games_info[map_name] = ModelGameMapInfo(None, [], port)
+            self._games_info[map_name] = ModelGameMapInfo(
+                total_game_state=None, total_steps=[], occupied_port=port
+            )
             self._wait_for_game_over(proc, game_map, socket)
             game_result = self._get_result(game_map2svm)
-            proc_output = self._get_proc_output(proc)
             if (
                 isinstance(game_result, GameFailed)
                 or len(self._games_info[map_name].total_steps) == 0
@@ -117,7 +118,7 @@ class ModelGameManager(BaseGameManager):
                 logger = logging.error
             else:
                 logger = logging.debug
-            self._log_proc_output(proc_output, logger)
+            self._get_and_log_proc_output(proc, logger)
         except FunctionTimedOut as error:
             logging.warning(f"Timeouted on map {map_name} with {error.timedOutAfter}s")
             self._kill_game_process(proc, logging.warning)
