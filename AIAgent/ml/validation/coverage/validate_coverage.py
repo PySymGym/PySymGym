@@ -66,8 +66,7 @@ class ValidationCoverage:
                 else:
                     logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
                 del steps
-            else:
-                self._game_manager.delete_game_steps(game_map)
+        self._game_manager.delete_game_steps(game_map)
         return result
 
     def validate_coverage(
