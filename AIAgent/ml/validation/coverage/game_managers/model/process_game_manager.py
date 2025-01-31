@@ -40,6 +40,8 @@ CURRENT_ONNX_MODEL_PATH = REPORT_PATH / "model.onnx"
 GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/7825_gameState.json"
 SVMS_OUTPUT_PATH = REPORT_PATH / "svms_output"
 
+# TODO: docs
+
 
 class ModelGamePreparator(BaseGamePreparator):
     def __init__(

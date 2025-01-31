@@ -49,6 +49,7 @@ class BaseGamePreparator(ABC):
 
 
 class BaseGameManager(ABC):
+    # TODO: docs
     def __init__(self, namespace: Namespace):
         self._namespace = namespace
         self._preparator = self._create_preparator()
