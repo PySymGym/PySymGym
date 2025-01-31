@@ -136,8 +136,10 @@ class ModelGameManager(BaseGameManager):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
         svm_info = game_map2svm.SVMInfo
 
-        def look_for_free_port() -> int:
-            logging.debug("Looking for port...")
+        def look_for_free_port(attempts=100) -> int:
+            if attempts <= 0:
+                raise RuntimeError("Failed to occupy port")
+            logging.debug(f"Looking for port... Attempls left: {attempts}.")
             try:
                 with self._shared_lock:
                     port = next_free_port(svm_info.min_port, svm_info.max_port)
@@ -150,7 +152,7 @@ class ModelGameManager(BaseGameManager):
                     return port, server_socket
             except OSError:
                 logging.debug("Failed to occupy port")
-                return look_for_free_port()
+                return look_for_free_port(attempts - 1)
 
         port, server_socket = look_for_free_port()
         launch_command = svm_info.launch_command.format(
