@@ -127,7 +127,7 @@ class ModelGameManager(BaseGameManager):
             if running_res is not None:
                 self._kill_game_process(proc, logging.error)
             game_result = GameFailed(reason=type(e))
-
+        torch.cuda.empty_cache()
         return Map2Result(game_map2svm, game_result)
 
     def _get_output_dir(self, game_map: GameMap) -> Path:
@@ -293,7 +293,7 @@ class ModelGameManager(BaseGameManager):
         map_name = game_map.MapName
         if map_name in self._games_info:
             game_map_info = self._games_info[map_name]
-            steps = game_map_info.steps
+            steps = game_map_info.steps if game_map_info.steps else None
         else:
             steps = None
         return steps
