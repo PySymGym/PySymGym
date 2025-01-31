@@ -16,7 +16,11 @@ def create_file(file: Path):
 
 def delete_dir(dir: str | Path):
     try:
-        os.rmdir(str(dir))
+        _ = subprocess.run(
+            ["rm", "-rf", f"{str(dir)}"], # ⚰️😵
+            check=True,
+            capture_output=True,
+        )
     except subprocess.CalledProcessError as e:
         logging.error(e, exc_info=True)
         raise
