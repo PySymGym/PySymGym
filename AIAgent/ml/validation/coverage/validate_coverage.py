@@ -110,6 +110,8 @@ class ValidationCoverage:
     def _get_game_manager(
         self, validation_config: SVMValidation, sync_manager: SyncManager
     ) -> BaseGameManager:
+        # TODO: docs
+
         namespace = sync_manager.Namespace()
         namespace.shared_lock = sync_manager.Lock()
         namespace.is_prepared = sync_manager.Value("b", False)

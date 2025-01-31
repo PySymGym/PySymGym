@@ -27,6 +27,7 @@ from torch_geometric.data.hetero_data import HeteroData
 from websocket import WebSocket
 
 TimeDuration: TypeAlias = float
+# TODO: docs
 
 
 class EachStepGamePreparator(BaseGamePreparator):
