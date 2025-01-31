@@ -80,9 +80,9 @@ class ModelGamePreparator(BaseGamePreparator):
 
 @dataclass
 class ModelGameMapInfo:
-    game_state: GameState
-    steps: list[HeteroData]
-    port: int
+    total_game_state: GameState
+    total_steps: list[HeteroData]
+    occupied_port: int
 
 
 class ModelGameManager(BaseGameManager):
@@ -111,7 +111,7 @@ class ModelGameManager(BaseGameManager):
             proc_output = self._get_proc_output(proc)
             if (
                 isinstance(game_result, GameFailed)
-                or len(self._games_info[map_name].steps) == 0
+                or len(self._games_info[map_name].total_steps) == 0
             ):
                 logger = logging.error
             else:
@@ -195,9 +195,9 @@ class ModelGameManager(BaseGameManager):
         map_name = game_map.MapName
         game_map_info = self._games_info[map_name]
         game_state, steps, port = (
-            game_map_info.game_state,
-            game_map_info.steps,
-            game_map_info.port,
+            game_map_info.total_game_state,
+            game_map_info.total_steps,
+            game_map_info.occupied_port,
         )
         step_count = len(steps)
 
@@ -249,7 +249,7 @@ class ModelGameManager(BaseGameManager):
             hetero_input["y_true"] = torch.Tensor(nn_output)
             steps.append(hetero_input)
             step_count += 1
-        self._games_info[map_name].game_state = game_state
+        self._games_info[map_name].total_game_state = game_state
 
     def _get_result(self, game_map2svm: GameMap2SVM) -> GameResult | GameFailed:
         game_map = game_map2svm.GameMap
@@ -258,7 +258,7 @@ class ModelGameManager(BaseGameManager):
         result_file = (
             output_dir / f"{map_name}result"
         )  # TODO: the path to result must be documented
-        if self._games_info[map_name].game_state is None:
+        if self._games_info[map_name].total_game_state is None:
             # there is no any step chosen by oracle
             logging.warning(f"immediate GameOver on {map_name}")
             result = GameResult(game_map2svm.GameMap.StepsToPlay, 0, 0, 0)
@@ -294,7 +294,7 @@ class ModelGameManager(BaseGameManager):
         map_name = game_map.MapName
         if map_name in self._games_info:
             game_map_info = self._games_info[map_name]
-            steps = game_map_info.steps if game_map_info.steps else None
+            steps = game_map_info.total_steps if game_map_info.total_steps else None
         else:
             steps = None
         return steps
