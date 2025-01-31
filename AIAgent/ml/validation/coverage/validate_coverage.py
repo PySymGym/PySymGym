@@ -6,10 +6,7 @@ from typing import Optional
 import torch
 import tqdm
 from common.classes import GameResult, Map2Result
-from common.config.validation_config import (
-    SVMValidation,
-    SVMValidationSendEachStep,
-)
+from common.config.validation_config import SVMValidation, SVMValidationSendEachStep
 from common.game import GameMap2SVM
 from ml.dataset import Result, TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
@@ -45,6 +42,7 @@ class ValidationCoverage:
             self._game_manager.play_game_map
         )
         result: Map2Result | Exception = catching_play_game_map(game_map2svm)
+        game_map = game_map2svm.GameMap
         if (
             self.dataset is not None
             and isinstance(result, Map2Result)
@@ -57,7 +55,6 @@ class ValidationCoverage:
                 negative_steps_number=-game_result.steps_count,
                 errors_number=game_result.errors_count,
             )
-            game_map = game_map2svm.GameMap
             map_name = game_map.MapName
             if self.dataset.is_update_map_required(map_name, map_result):
                 steps = self._game_manager.get_game_steps(game_map)
@@ -66,7 +63,7 @@ class ValidationCoverage:
                 else:
                     logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
                 del steps
-        self._game_manager.delete_game_steps(game_map)
+        self._game_manager.delete_game_artifacts(game_map)
         return result
 
     def validate_coverage(
