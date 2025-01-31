@@ -103,6 +103,7 @@ class ModelGameManager(BaseGameManager):
         game_map = game_map2svm.GameMap
         map_name = game_map.MapName
         try:
+            # TODO: rewrite it more clear to read
             running_res = self._run_game_process(game_map2svm)
             proc, port, socket = running_res
             self._games_info[map_name] = ModelGameMapInfo(None, [], port)
