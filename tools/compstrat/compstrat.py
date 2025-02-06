@@ -21,7 +21,7 @@ class Args:
 
 def entrypoint(args: Args):
     def create(strat, run, color):
-        return Strategy(strat, pd.read_csv(run), color)
+        return Strategy(strat, pd.read_csv(run, index_col="method"), color)
 
     philippine_orange = Color(255, 115, 0, "orange")
     blue_sparkle = Color(0, 119, 255, "blue")
