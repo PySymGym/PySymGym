@@ -1,6 +1,7 @@
 import enum
 import json
 import os
+from typing import Optional
 import warnings
 
 import matplotlib.pyplot as plt
@@ -14,11 +15,12 @@ class Color:
     r: int
     g: int
     b: int
+    a: float = 1
 
     name: str
 
-    def to_rgb(self):
-        return (self.r / 255, self.g / 255, self.b / 255)
+    def to_rgba(self):
+        return (self.r / 255, self.g / 255, self.b / 255, self.a)
 
     @staticmethod
     def from_hex(hex_str: str):
@@ -36,11 +38,12 @@ class Strategy:
     name: str
     df: pd.DataFrame
     color: Color
+    ecolor: Color
 
 
 class DataSourceType(enum.Enum):
     # Outer join dataframe
-    OUTER_JOIN = "OUTER_JOIN"
+    OUTER_JOIN_DF = "OUTER_JOIN_DF"
     # Inner join dataframe
     INNER_JOIN_DF = "INNER_JOIN_DF"
     # Inner join dataframe with equal coverage
@@ -54,8 +57,8 @@ class CompareConfig:
     metric: str
     divider_line: bool = False
     less_is_winning: bool = False
-    logscale: bool = False
     exp_name: str = None
+    scale: Optional[str]
 
 
 class Comparator:
@@ -64,7 +67,8 @@ class Comparator:
         strat1: Strategy,
         strat2: Strategy,
         savedir: str,
-        eq_color: Color = Color(0, 0, 0, "black"),
+        eq_color: Color = Color(0, 0, 0, 1, "black"),
+        eq_ecolor: Color = Color(0, 0, 0, 0.5, "translucent_black"),
     ) -> None:
         self.savedir = savedir
         self.strat1 = strat1
@@ -73,36 +77,27 @@ class Comparator:
             columns=[f"{strat1.name}_won", f"{strat2.name}_won", "eq"]
         )
         self.eq_color = eq_color
+        self.eq_ecolor = eq_ecolor
 
         with open(os.path.join(self.savedir, "symdiff_starts_methods.json"), "w") as f:
             json.dump(
-                list(
-                    set(strat1.df["method"]).symmetric_difference(
-                        set(strat2.df["method"])
-                    )
-                ),
+                list(set(strat1.df.index).symmetric_difference(set(strat2.df.index))),
                 f,
                 indent=4,
             )
-        self.drop_failed()
-
-        self.outer_df = self.strat1.df.merge(
-            self.strat2.df,
-            on="method",
-            how="outer",
-            suffixes=(self.strat1.name, self.strat2.name),
-        )
 
         self.inner_df = self.strat1.df.merge(
             self.strat2.df,
             on="method",
             how="inner",
-            suffixes=(self.strat1.name, self.strat2.name),
+            suffixes=(f"_{self.strat1.name}", f"_{self.strat2.name}"),
         )
 
+        self.inner_df.mean().to_csv(os.path.join(self.savedir, "mean_statistics.csv"))
+
         self.inner_coverage_eq = self.inner_df.loc[
-            self.inner_df[f"coverage{self.strat1.name}"]
-            == self.inner_df[f"coverage{self.strat2.name}"]
+            self.inner_df[f"coverage_{self.strat1.name}"]
+            == self.inner_df[f"coverage_{self.strat2.name}"]
         ]
 
     def _drop_failed(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -121,40 +116,34 @@ class Comparator:
 
         comparison_datasource_description = "datasource: "
         match config.datasource:
-            case DataSourceType.OUTER_JOIN:
-                dataframe = self.inner_df
-                comparison_datasource_description += "all methods (outer join)"
             case DataSourceType.INNER_JOIN_DF:
-                dataframe = self.inner_df
+                all_results = self.inner_df
                 comparison_datasource_description += (
                     "methods, completed by both strats (inner join)"
                 )
             case DataSourceType.INNER_JOIN_COVERAGE_EQ_DF:
-                dataframe = self.inner_coverage_eq
+                all_results = self.inner_coverage_eq
                 comparison_datasource_description += "methods, completed by both strats with equal coverage (inner join, cov1 == cov2)"
-
-        strat1_win = dataframe.loc[
+        strat1_win = all_results.loc[
             left_win_comparison(
-                dataframe[f"{config.by_column}{self.strat1.name}"],
-                dataframe[f"{config.by_column}{self.strat2.name}"],
+                all_results[f"{config.by_column}_{self.strat1.name}"],
+                all_results[f"{config.by_column}_{self.strat2.name}"],
             )
         ]
-        strat2_win = dataframe.loc[
+        strat2_win = all_results.loc[
             left_win_comparison(
-                dataframe[f"{config.by_column}{self.strat2.name}"],
-                dataframe[f"{config.by_column}{self.strat1.name}"],
+                all_results[f"{config.by_column}_{self.strat2.name}"],
+                all_results[f"{config.by_column}_{self.strat1.name}"],
             )
         ]
-        eq = dataframe.loc[
-            dataframe[f"{config.by_column}{self.strat1.name}"]
-            == dataframe[f"{config.by_column}{self.strat2.name}"]
+        eq = all_results.loc[
+            all_results[f"{config.by_column}_{self.strat1.name}"]
+            == all_results[f"{config.by_column}_{self.strat2.name}"]
         ]
 
-        scale = "linscale"
-        if config.logscale:
-            plt.xscale("log")
-            plt.yscale("log")
-            scale = "logscale"
+        if config.scale:
+            plt.xscale(config.scale)
+            plt.yscale(config.scale)
 
         if config.divider_line:
             plt.axline([0, 0], [1, 1])
@@ -168,29 +157,78 @@ class Comparator:
             len(strat2_win),
             len(eq),
         ]
+        plt.errorbar(
+            x=strat1_win[f"{config.by_column}_{self.strat2.name}"],
+            y=strat1_win[f"{config.by_column}_{self.strat1.name}"],
+            xerr=[
+                strat1_win[f"{config.by_column}_{self.strat2.name}"]
+                - strat1_win[f"{config.by_column}_min_{self.strat2.name}"],
+                strat1_win[f"{config.by_column}_max_{self.strat2.name}"]
+                - strat1_win[f"{config.by_column}_{self.strat2.name}"],
+            ],
+            yerr=[
+                strat1_win[f"{config.by_column}_{self.strat1.name}"]
+                - strat1_win[f"{config.by_column}_min_{self.strat1.name}"],
+                strat1_win[f"{config.by_column}_max_{self.strat1.name}"]
+                - strat1_win[f"{config.by_column}_{self.strat1.name}"],
+            ],
+            ecolor=self.strat1.ecolor.to_rgba(),
+            ls="none",
+            capsize=3,
+            marker="o",
+            color=self.strat1.color.to_rgba(),
+        )
+        plt.errorbar(
+            x=strat2_win[f"{config.by_column}_{self.strat2.name}"],
+            y=strat2_win[f"{config.by_column}_{self.strat1.name}"],
+            xerr=[
+                strat2_win[f"{config.by_column}_{self.strat2.name}"]
+                - strat2_win[f"{config.by_column}_min_{self.strat2.name}"],
+                strat2_win[f"{config.by_column}_max_{self.strat2.name}"]
+                - strat2_win[f"{config.by_column}_{self.strat2.name}"],
+            ],
+            yerr=[
+                strat2_win[f"{config.by_column}_{self.strat1.name}"]
+                - strat2_win[f"{config.by_column}_min_{self.strat1.name}"],
+                strat2_win[f"{config.by_column}_max_{self.strat1.name}"]
+                - strat2_win[f"{config.by_column}_{self.strat1.name}"],
+            ],
+            ecolor=self.strat2.ecolor.to_rgba(),
+            ls="none",
+            capsize=3,
+            marker="o",
+            color=self.strat2.color.to_rgba(),
+        )
+        plt.errorbar(
+            x=eq[f"{config.by_column}_{self.strat2.name}"],
+            y=eq[f"{config.by_column}_{self.strat1.name}"],
+            xerr=[
+                eq[f"{config.by_column}_{self.strat2.name}"]
+                - eq[f"{config.by_column}_min_{self.strat2.name}"],
+                eq[f"{config.by_column}_max_{self.strat2.name}"]
+                - eq[f"{config.by_column}_{self.strat2.name}"],
+            ],
+            yerr=[
+                eq[f"{config.by_column}_{self.strat1.name}"]
+                - eq[f"{config.by_column}_min_{self.strat1.name}"],
+                eq[f"{config.by_column}_max_{self.strat1.name}"]
+                - eq[f"{config.by_column}_{self.strat1.name}"],
+            ],
+            ecolor=self.eq_ecolor.to_rgba(),
+            ls="none",
+            capsize=3,
+            marker="o",
+            color=self.eq_color.to_rgba(),
+        )
 
-        plt.scatter(
-            strat1_win[f"{config.by_column}{self.strat2.name}"],
-            strat1_win[f"{config.by_column}{self.strat1.name}"],
-            color=[self.strat1.color.to_rgb()],
-        )
-        plt.scatter(
-            strat2_win[f"{config.by_column}{self.strat2.name}"],
-            strat2_win[f"{config.by_column}{self.strat1.name}"],
-            color=[self.strat2.color.to_rgb()],
-        )
-        plt.scatter(
-            eq[f"{config.by_column}{self.strat2.name}"],
-            eq[f"{config.by_column}{self.strat1.name}"],
-            color=self.eq_color.to_rgb(),
-        )
         plt.xlabel(
             f"{self.strat2.name} {config.by_column}, {config.metric}\n\n"
-            f"{config.by_column} {comparison_datasource_description}, {scale}\n"
+            f"{config.by_column} {comparison_datasource_description}, {config.scale}\n"
             f"{self.strat1.name} ({self.strat1.color.name}) won: {len(strat1_win)}, "
-            f"{self.strat2.name} ({self.strat2.color.name}) won: {len(strat2_win)}, eq ({self.eq_color.name}): {len(eq)}"
+            f"{self.strat2.name} ({self.strat2.color.name}) won: {len(strat2_win)}, \n eq ({self.eq_color.name}): {len(eq)}"
         )
         plt.ylabel(f"{self.strat1.name} {config.by_column}, {config.metric}")
+
         savename = (
             f"{config.on}.pdf" if config.exp_name is None else f"{config.exp_name}.pdf"
         )
