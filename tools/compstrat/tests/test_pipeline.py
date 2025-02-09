@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 from compstrat import Args, entrypoint
-from src.compstrat_config_extractor import read_configs
+from tools.compstrat.src.config_extractor import read_configs
 
 MOCK_CONFIGS_DIR = pathlib.Path("tests/resources/mock_compare_confs")
 

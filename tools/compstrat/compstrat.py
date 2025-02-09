@@ -6,29 +6,31 @@ import typing as t
 import pandas as pd
 from attrs import define
 from src.comparator import Color, Comparator, CompareConfig, Strategy
-from src.compstrat_config_extractor import read_configs
+from src.config_extractor import read_configs
+from src.preprocessing import preprocess
 
 
 @define
 class Args:
     strat1: str
-    run1: str
+    runs1: list[str]
     strat2: str
-    run2: str
+    runs2: list[str]
     savedir: pathlib.Path
     configs: t.Sequence[CompareConfig]
 
 
 def entrypoint(args: Args):
-    def create(strat, run, color):
-        return Strategy(strat, pd.read_csv(run, index_col="method"), color)
-
     philippine_orange = Color(255, 115, 0, "orange")
     blue_sparkle = Color(0, 119, 255, "blue")
     os.makedirs(args.savedir, exist_ok=True)
+    strat1_df, strat2_df = preprocess(
+        [pd.read_csv(run, index_col="method") for run in args.runs1],
+        [pd.read_csv(run, index_col="method") for run in args.runs2],
+    )
     comparator = Comparator(
-        strat1=create(args.strat1, args.run1, philippine_orange),
-        strat2=create(args.strat2, args.run2, blue_sparkle),
+        strat1=Strategy(args.strat1, strat1_df, philippine_orange),
+        strat2=Strategy(args.strat2, strat2_df, blue_sparkle),
         savedir=args.savedir,
     )
     comparator.compare(args.configs)
@@ -45,10 +47,12 @@ def main():
     )
     parser.add_argument(
         "-r1",
-        "--run1",
+        "--runs1",
+        action="extend",
+        nargs="+",
         type=str,
         required=True,
-        help="Path to the first strategy run result",
+        help="Paths to the first strategy runs results",
     )
     parser.add_argument(
         "-s2",
@@ -59,33 +63,35 @@ def main():
     )
     parser.add_argument(
         "-r2",
-        "--run2",
+        "--runs2",
+        action="extend",
+        nargs="+",
         type=str,
         required=True,
-        help="Path to ther second strategy run result",
+        help="Paths to the second strategy runs results",
     )
     parser.add_argument(
         "-cp",
         "--configs-path",
         type=pathlib.Path,
         required=True,
-        help="Path to ther second strategy run result",
+        help="Path to the compare configurations",
     )
     parser.add_argument(
         "--savedir",
         type=pathlib.Path,
         required=False,
         default="report",
-        help="Path to save results to",
+        help="Path for saving the comparison results",
     )
     args = parser.parse_args()
 
     entrypoint(
         Args(
             strat1=args.strat1,
-            run1=args.run1,
+            run1=args.runs1,
             strat2=args.strat2,
-            run2=args.run2,
+            run2=args.runs2,
             savedir=args.savedir,
             configs=read_configs(args.configs_path),
         )
