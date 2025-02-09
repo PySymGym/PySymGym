@@ -123,7 +123,7 @@ class TrainingDataset(Dataset):
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
         self.mode = "train"
         self.__indices = self.train_dataset_indices
-        super().__init__()
+        super().__init__(transform=transform)
 
     def _split_dataset(self) -> Tuple[List, List]:
         full_dataset_len = len(self.processed_paths)
