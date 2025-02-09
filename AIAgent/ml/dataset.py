@@ -13,6 +13,7 @@ from functools import partial
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     DefaultDict,
     Dict,
     List,
@@ -92,6 +93,7 @@ class TrainingDataset(Dataset):
 
     def __init__(
         self,
+        transform: Callable,
         raw_dir: Path,
         processed_dir: Path,
         train_percentage: float,
@@ -119,6 +121,7 @@ class TrainingDataset(Dataset):
 
         self.train_percentage = train_percentage
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
+        self.mode = "train"
         self.__indices = self.train_dataset_indices
         super().__init__()
 
@@ -159,8 +162,10 @@ class TrainingDataset(Dataset):
         """
         if mode == "train":
             self.__indices = self.train_dataset_indices
+            self.mode = mode
         elif mode == "val":
             self.__indices = self.test_dataset_indices
+            self.mode = mode
         else:
             raise ValueError("mode must be either 'train' or 'val'")
 

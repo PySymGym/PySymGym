@@ -205,7 +205,7 @@ def run_training(
 
 
 def objective(
-    trial: optuna.Trial,
+    run_name: str,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
     model_init: Callable[[Any], nn.Module],
@@ -216,12 +216,12 @@ def objective(
     ],
 ):
     config = TrialSettings(
-        lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 800),
-        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
-        num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
-        hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
+        lr=0.0006347818494377509,
+        batch_size=300,
+        num_hops_1=6,
+        num_hops_2=10,
+        num_of_state_features=15,
+        hidden_channels=7,
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
@@ -241,7 +241,7 @@ def objective(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
-    with mlflow.start_run(run_name=str(trial.number)):
+    with mlflow.start_run(run_name=run_name):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
