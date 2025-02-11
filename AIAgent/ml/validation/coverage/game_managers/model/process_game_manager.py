@@ -46,6 +46,8 @@ FULL_COVERAGE_PERCENT = 100
 # 1. TODO: find a better place for it
 # 2. TODO: remove magic consts in other modules
 
+# TODO: consider unifying message logging
+
 # TODO: docs
 
 
@@ -281,18 +283,21 @@ class ModelGameManager(BaseGameManager):
                     errors_count=errors_count,
                     actual_coverage_percent=actual_coverage_percent,
                 )
-
+                actual_coverage_formatted = f"{actual_coverage_percent:.2f}"
                 if steps_count == 0:
                     if actual_coverage_percent != FULL_COVERAGE_PERCENT:
                         logging.warning(
-                            f"There is neither any step chosen by oracle, nor full coverage. Immediate GameOver on {map_name}."
+                            f"There is neither any step chosen by oracle, nor full coverage. Actual coverage: {actual_coverage_formatted}. Immediate GameOver on {map_name}."
                         )
                         return GameResult(game_map2svm.GameMap.StepsToPlay, 0, 0, 0)
                     else:
                         logging.warning(
                             f"The map {map_name} was completely covered without an oracle?!"
                         )
-
+                elif steps_count < game_map.StepsToPlay:
+                    logging.warning(
+                        f"Not all steps exhausted on {game_map.MapName} with non-100% coverage. Steps taken by oracle: {steps_count}, actual coverage: {actual_coverage_formatted}."
+                    )
                 logging.info(
                     f"Finished map {map_name} "
                     f"in {result.steps_count} steps,"
