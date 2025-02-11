@@ -175,7 +175,7 @@ class ModelGameManager(BaseGameManager):
             launch_command.split(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=Path(svm_info.server_working_dir),
+            cwd=Path(svm_info.server_working_dir).resolve(),
             encoding="utf-8",
         )
         return proc, port, server_socket
