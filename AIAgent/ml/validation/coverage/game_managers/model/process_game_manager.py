@@ -42,6 +42,10 @@ CURRENT_ONNX_MODEL_PATH = REPORT_PATH / "model.onnx"
 GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/7825_gameState.json"
 SVMS_OUTPUT_PATH = REPORT_PATH / "svms_output"
 
+FULL_COVERAGE_PERCENT = 100
+# 1. TODO: find a better place for it
+# 2. TODO: remove magic consts in other modules
+
 # TODO: docs
 
 
@@ -264,36 +268,41 @@ class ModelGameManager(BaseGameManager):
         result_file = (
             output_dir / f"{map_name}result"
         )  # TODO: the path to result must be documented
-        if self._games_info[map_name].total_game_state is None:
-            # there is no any step chosen by oracle
-            logging.warning(f"immediate GameOver on {map_name}")
-            result = GameResult(game_map2svm.GameMap.StepsToPlay, 0, 0, 0)
-        else:
-            try:
-                with open(result_file) as f:
-                    actual_coverage_percent, tests_count, steps_count, errors_count = (
-                        f.read().split()
-                    )
-                    actual_coverage_percent = int(actual_coverage_percent)
-                    tests_count = int(tests_count)
-                    steps_count = int(steps_count)
-                    errors_count = int(errors_count)
-                    result = GameResult(
-                        steps_count=steps_count,
-                        tests_count=tests_count,
-                        errors_count=errors_count,
-                        actual_coverage_percent=actual_coverage_percent,
-                    )
-                    logging.info(
-                        f"Finished map {map_name} "
-                        f"in {result.steps_count} steps,"
-                        f"actual coverage: {result.actual_coverage_percent:.2f}"
-                    )
-            except FileNotFoundError:
-                logging.error(
-                    f"The result of {map_name} cannot be found after completing the game?!"
+        try:
+            with open(result_file) as f:
+                actual_coverage_percent, tests_count, _, errors_count = f.read().split()
+                actual_coverage_percent = int(actual_coverage_percent)
+                tests_count = int(tests_count)
+                steps_count = len(self._games_info[map_name].total_steps)
+                errors_count = int(errors_count)
+                result = GameResult(
+                    steps_count=steps_count,
+                    tests_count=tests_count,
+                    errors_count=errors_count,
+                    actual_coverage_percent=actual_coverage_percent,
                 )
-                result = GameFailed("There is no file with game result")
+
+                if steps_count == 0:
+                    if actual_coverage_percent != FULL_COVERAGE_PERCENT:
+                        logging.warning(
+                            f"There is neither any step chosen by oracle, nor full coverage. Immediate GameOver on {map_name}."
+                        )
+                        return GameResult(game_map2svm.GameMap.StepsToPlay, 0, 0, 0)
+                    else:
+                        logging.warning(
+                            f"The map {map_name} was completely covered without an oracle?!"
+                        )
+
+                logging.info(
+                    f"Finished map {map_name} "
+                    f"in {result.steps_count} steps,"
+                    f"actual coverage: {result.actual_coverage_percent:.2f}"
+                )
+        except FileNotFoundError:
+            logging.error(
+                f"The result of {map_name} cannot be found after completing the game?!"
+            )
+            result = GameFailed("There is no file with game result")
         return result
 
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
