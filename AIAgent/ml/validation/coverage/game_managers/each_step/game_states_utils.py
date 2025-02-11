@@ -10,7 +10,7 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
         return delta
 
     updated_basic_blocks = {v.Id for v in delta.GraphVertices}
-    updated_states = {s.Id for s in delta.States}
+    updated_states = get_states(delta)
 
     vertices = [
         v for v in game_state.GraphVertices if v.Id not in updated_basic_blocks
