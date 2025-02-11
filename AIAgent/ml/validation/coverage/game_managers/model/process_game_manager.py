@@ -234,19 +234,19 @@ class ModelGameManager(BaseGameManager):
 
         while True:
             try:
-                readed_game_state = get_game_state()
-                if readed_game_state is None:
+                received_game_state = get_game_state()
+                if received_game_state is None:
                     break
-                logging.debug(f"<- state: {readed_game_state}")
+                logging.debug(f"<- state: {received_game_state}")
                 nn_output = get_nn_output()
                 logging.debug(f"<- nn_output: {nn_output}")
             except ConnectionResetError as e:
                 logging.error(e, exc_info=True)
                 raise
             if step_count == 0:
-                game_state = readed_game_state
+                game_state = received_game_state
             else:
-                delta = readed_game_state
+                delta = received_game_state
                 game_state = update_game_state(game_state, delta)
             hetero_input, _ = convert_input_to_tensor(game_state)
             nn_output = list(map(lambda x: [x], nn_output[0]))
