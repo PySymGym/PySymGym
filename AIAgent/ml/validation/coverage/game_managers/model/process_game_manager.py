@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import torch
+import yaml
 from common.classes import GameFailed, GameResult, Map2Result
 from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM, GameState
@@ -22,6 +23,7 @@ from ml.validation.coverage.game_managers.each_step.game_states_utils import (
     update_game_state,
 )
 from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
+from onyx import entrypoint, load_gamestate, resolve_import_model
 from paths import CURRENT_MODEL_PATH, MODEL_KWARGS_PATH, REPORT_PATH
 from torch_geometric.data.hetero_data import HeteroData
 
@@ -56,19 +58,17 @@ class ModelGamePreparator(BaseGamePreparator):
 
     def _create_onnx_model(self):
         import_model_fqn = self._model.__class__.__module__ + ".StateModelEncoder"
-        launch_command = f"""python onyx.py --sample-gamestate {GAMESTATE_EXAMPLE_PATH}
-                            --pytorch-model {self._path_to_model}
-                            --savepath {CURRENT_ONNX_MODEL_PATH}
-                            --import-model-fqn {import_model_fqn}
-                            --model-kwargs {MODEL_KWARGS_PATH}"""
-        logging.info(f"Launch command: {launch_command}")
-        proc = subprocess.Popen(
-            launch_command.split(),
-            stdout=subprocess.PIPE,
-            start_new_session=True,
-        )
-        proc.wait()
-        assert proc.returncode == 0
+        with open(MODEL_KWARGS_PATH, "r") as file:
+            model_kwargs = yaml.safe_load(file)
+
+        with open(GAMESTATE_EXAMPLE_PATH) as gamestate_file:
+            entrypoint(
+                sample_gamestate=load_gamestate(gamestate_file),
+                pytorch_model_path=self._path_to_model,
+                onnx_savepath=CURRENT_ONNX_MODEL_PATH,
+                model_def=resolve_import_model(import_model_fqn),
+                model_kwargs=model_kwargs,
+            )
 
     def _clean_output_folder(self):
         return delete_dir(SVMS_OUTPUT_PATH)
