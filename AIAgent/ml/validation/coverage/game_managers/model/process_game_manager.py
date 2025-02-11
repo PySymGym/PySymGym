@@ -249,7 +249,7 @@ class ModelGameManager(BaseGameManager):
                 delta = received_game_state
                 game_state = update_game_state(game_state, delta)
             hetero_input, _ = convert_input_to_tensor(game_state)
-            nn_output = list(map(lambda x: [x], nn_output[0]))
+            nn_output = [[x] for x in nn_output[0]]
             hetero_input["y_true"] = torch.Tensor(nn_output)
             steps.append(hetero_input)
             step_count += 1
