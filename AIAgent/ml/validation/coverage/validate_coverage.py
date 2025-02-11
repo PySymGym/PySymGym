@@ -63,6 +63,8 @@ class ValidationCoverage:
                 else:
                     logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
                 del steps
+        elif isinstance(result, Exception):
+            logging.error(result, exc_info=True)
         self._game_manager.delete_game_artifacts(game_map)
         return result
 
