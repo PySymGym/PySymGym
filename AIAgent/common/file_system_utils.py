@@ -1,6 +1,6 @@
 import logging
 import os
-import subprocess
+import shutil
 from pathlib import Path
 
 
@@ -16,11 +16,7 @@ def create_file(file: Path):
 
 def delete_dir(dir: str | Path):
     try:
-        _ = subprocess.run(
-            ["rm", "-rf", f"{str(dir)}"], # ⚰️😵
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as e:
+        shutil.rmtree(dir)
+    except Exception as e:
         logging.error(e, exc_info=True)
         raise
