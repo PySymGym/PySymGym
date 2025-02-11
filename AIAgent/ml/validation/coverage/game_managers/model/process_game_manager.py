@@ -340,7 +340,7 @@ class ModelGameManager(BaseGameManager):
         self, proc_output: tuple, logger: Callable[..., None] = logging.debug
     ):
         out, err = proc_output
-        logger(f"out = {str(out)}\nerr = {str(err)}")
+        logger(f"out:\n{str(out)}\nerr:\n{str(err)}")
 
     def _create_preparator(self):
         return ModelGamePreparator(self._namespace, self._model, self._path_to_model)
