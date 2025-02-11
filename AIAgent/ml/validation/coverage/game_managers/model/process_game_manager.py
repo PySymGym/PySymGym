@@ -234,7 +234,7 @@ class ModelGameManager(BaseGameManager):
             if message is not None:
                 return json.loads(message.decode("utf-8"))
 
-        while True:
+        while step_count <= game_map.StepsToPlay:
             try:
                 received_game_state = get_game_state()
                 if received_game_state is None:
