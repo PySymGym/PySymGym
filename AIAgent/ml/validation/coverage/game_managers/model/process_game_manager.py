@@ -294,7 +294,10 @@ class ModelGameManager(BaseGameManager):
                         logging.warning(
                             f"The map {map_name} was completely covered without an oracle?!"
                         )
-                elif steps_count < game_map.StepsToPlay:
+                elif (
+                    steps_count < game_map.StepsToPlay
+                    and actual_coverage_percent != FULL_COVERAGE_PERCENT
+                ):
                     logging.warning(
                         f"Not all steps exhausted on {game_map.MapName} with non-100% coverage. Steps taken by oracle: {steps_count}, actual coverage: {actual_coverage_formatted}."
                     )
