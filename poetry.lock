@@ -1977,13 +1977,13 @@ files = [
 
 [[package]]
 name = "optuna"
-version = "4.2.0"
+version = "4.2.1"
 description = "A hyperparameter optimization framework"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "optuna-4.2.0-py3-none-any.whl", hash = "sha256:539a47fda44104eb2b879c883d4640704b482df416ae99d0f24505f6e2280c28"},
-    {file = "optuna-4.2.0.tar.gz", hash = "sha256:6ce226483317cf73df133d9ddf300091f946c0ad0dbdbc50b28891049b8400f2"},
+    {file = "optuna-4.2.1-py3-none-any.whl", hash = "sha256:6d38199013441d3f70fac27136e05c0188c5f4ec3848db708ac311cbdeb30dbf"},
+    {file = "optuna-4.2.1.tar.gz", hash = "sha256:2ecd74cdc8aaf5dda1f2b9e267999bab21def9a33e0a4f415ecae0c468c401e0"},
 ]
 
 [package.dependencies]
@@ -3463,4 +3463,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "00485cbd4e3f1339e533fa9750b2bbf9276b8ac606234b31d371232ad4eb8364"
+content-hash = "dfcd57f337d41fde98ecefe17e1a43c5007cd7eeed819e465e5d821d73fa0d17"
