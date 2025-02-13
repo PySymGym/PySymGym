@@ -1,7 +1,6 @@
 import enum
 import json
 import os
-from typing import Optional
 import warnings
 
 import matplotlib.pyplot as plt
@@ -12,12 +11,11 @@ from attrs import define
 
 @define
 class Color:
+    name: str
     r: int
     g: int
     b: int
     a: float = 1
-
-    name: str
 
     def to_rgba(self):
         return (self.r / 255, self.g / 255, self.b / 255, self.a)
@@ -58,7 +56,7 @@ class CompareConfig:
     divider_line: bool = False
     less_is_winning: bool = False
     exp_name: str = None
-    scale: Optional[str]
+    scale: str = None
 
 
 class Comparator:
@@ -67,8 +65,8 @@ class Comparator:
         strat1: Strategy,
         strat2: Strategy,
         savedir: str,
-        eq_color: Color = Color(0, 0, 0, 1, "black"),
-        eq_ecolor: Color = Color(0, 0, 0, 0.5, "translucent_black"),
+        eq_color: Color = Color("black", 0, 0, 0, 1),
+        eq_ecolor: Color = Color("translucent_black", 0, 0, 0, 0.5),
     ) -> None:
         self.savedir = savedir
         self.strat1 = strat1
@@ -116,6 +114,11 @@ class Comparator:
 
         comparison_datasource_description = "datasource: "
         match config.datasource:
+            case DataSourceType.OUTER_JOIN_DF:
+                all_results = self.inner_df
+                comparison_datasource_description += (
+                    "methods, completed by both strats (inner join)"
+                )
             case DataSourceType.INNER_JOIN_DF:
                 all_results = self.inner_df
                 comparison_datasource_description += (

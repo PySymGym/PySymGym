@@ -6,7 +6,6 @@
   exp_name: coverage
   less_is_winning: false
   metric: '%'
-  scale: symlog
 
 # comparison by number of tests on methods where both strats succeeded
 - by_column: tests

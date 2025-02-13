@@ -28,23 +28,23 @@ def preprocess(
         ].mean(axis=1)
 
         strat1_df[f"{metric}_min"] = pd.concat(
-            [all_runs[f"{STRAT1_PREFIX}{i}"][metric] for i in range(5)],
+            [all_runs[f"{STRAT1_PREFIX}{i}"][metric] for i in range(len(strat1_runs))],
             axis=1,
-            keys=list(range(5)),
+            keys=list(range(len(strat1_runs))),
         ).min(axis=1)
         strat2_df[f"{metric}_min"] = pd.concat(
-            [all_runs[f"{STRAT2_PREFIX}{i}"][metric] for i in range(5)],
+            [all_runs[f"{STRAT2_PREFIX}{i}"][metric] for i in range(len(strat2_runs))],
             axis=1,
-            keys=list(range(5)),
+            keys=list(range(len(strat2_runs))),
         ).min(axis=1)
         strat1_df[f"{metric}_max"] = pd.concat(
-            [all_runs[f"{STRAT1_PREFIX}{i}"][metric] for i in range(5)],
+            [all_runs[f"{STRAT1_PREFIX}{i}"][metric] for i in range(len(strat1_runs))],
             axis=1,
-            keys=list(range(5)),
+            keys=list(range(len(strat1_runs))),
         ).max(axis=1)
         strat2_df[f"{metric}_max"] = pd.concat(
-            [all_runs[f"{STRAT2_PREFIX}{i}"][metric] for i in range(5)],
+            [all_runs[f"{STRAT2_PREFIX}{i}"][metric] for i in range(len(strat2_runs))],
             axis=1,
-            keys=list(range(5)),
+            keys=list(range(len(strat2_runs))),
         ).max(axis=1)
     return strat1_df, strat2_df

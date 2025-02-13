@@ -21,16 +21,16 @@ class Args:
 
 
 def entrypoint(args: Args):
-    philippine_orange = Color(255, 115, 0, "orange")
-    blue_sparkle = Color(0, 119, 255, "blue")
+    philippine_orange, translucent_philippine_orange = Color("orange", 255, 115, 0), Color("translucent_orange", 255, 115, 0, 0.5)
+    blue_sparkle, translucent_blue_sparkle = Color("blue", 0, 119, 255), Color("translucent_blue", 0, 119, 255, 0.5)
     os.makedirs(args.savedir, exist_ok=True)
     strat1_df, strat2_df = preprocess(
         [pd.read_csv(run, index_col="method") for run in args.runs1],
         [pd.read_csv(run, index_col="method") for run in args.runs2],
     )
     comparator = Comparator(
-        strat1=Strategy(args.strat1, strat1_df, philippine_orange),
-        strat2=Strategy(args.strat2, strat2_df, blue_sparkle),
+        strat1=Strategy(args.strat1, strat1_df, philippine_orange, translucent_philippine_orange),
+        strat2=Strategy(args.strat2, strat2_df, blue_sparkle, translucent_blue_sparkle),
         savedir=args.savedir,
     )
     comparator.compare(args.configs)
@@ -89,9 +89,9 @@ def main():
     entrypoint(
         Args(
             strat1=args.strat1,
-            run1=args.runs1,
+            runs1=args.runs1,
             strat2=args.strat2,
-            run2=args.runs2,
+            runs2=args.runs2,
             savedir=args.savedir,
             configs=read_configs(args.configs_path),
         )
