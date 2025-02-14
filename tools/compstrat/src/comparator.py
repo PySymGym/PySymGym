@@ -112,6 +112,18 @@ class Comparator:
                 return left < right
             return left > right
 
+        strat1_col, strat2_col = (
+            f"{config.by_column}_{self.strat1.name}",
+            f"{config.by_column}_{self.strat2.name}",
+        )
+        strat1_min_col, strat2_min_col = (
+            f"{config.by_column}_min_{self.strat1.name}",
+            f"{config.by_column}_min_{self.strat2.name}",
+        )
+        strat1_max_col, strat2_max_col = (
+            f"{config.by_column}_max_{self.strat1.name}",
+            f"{config.by_column}_max_{self.strat2.name}",
+        )
         comparison_datasource_description = "datasource: "
         match config.datasource:
             case DataSourceType.OUTER_JOIN_DF:
@@ -129,20 +141,17 @@ class Comparator:
                 comparison_datasource_description += "methods, completed by both strats with equal coverage (inner join, cov1 == cov2)"
         strat1_win = all_results.loc[
             left_win_comparison(
-                all_results[f"{config.by_column}_{self.strat1.name}"],
-                all_results[f"{config.by_column}_{self.strat2.name}"],
+                all_results[strat1_col],
+                all_results[strat2_col],
             )
         ]
         strat2_win = all_results.loc[
             left_win_comparison(
-                all_results[f"{config.by_column}_{self.strat2.name}"],
-                all_results[f"{config.by_column}_{self.strat1.name}"],
+                all_results[strat2_col],
+                all_results[strat1_col],
             )
         ]
-        eq = all_results.loc[
-            all_results[f"{config.by_column}_{self.strat1.name}"]
-            == all_results[f"{config.by_column}_{self.strat2.name}"]
-        ]
+        eq = all_results.loc[all_results[strat1_col] == all_results[strat2_col]]
 
         if config.scale:
             plt.xscale(config.scale)
@@ -161,19 +170,15 @@ class Comparator:
             len(eq),
         ]
         plt.errorbar(
-            x=strat1_win[f"{config.by_column}_{self.strat2.name}"],
-            y=strat1_win[f"{config.by_column}_{self.strat1.name}"],
+            x=strat1_win[strat2_col],
+            y=strat1_win[strat1_col],
             xerr=[
-                strat1_win[f"{config.by_column}_{self.strat2.name}"]
-                - strat1_win[f"{config.by_column}_min_{self.strat2.name}"],
-                strat1_win[f"{config.by_column}_max_{self.strat2.name}"]
-                - strat1_win[f"{config.by_column}_{self.strat2.name}"],
+                strat1_win[strat2_col] - strat1_win[strat2_min_col],
+                strat1_win[strat2_max_col] - strat1_win[strat2_col],
             ],
             yerr=[
-                strat1_win[f"{config.by_column}_{self.strat1.name}"]
-                - strat1_win[f"{config.by_column}_min_{self.strat1.name}"],
-                strat1_win[f"{config.by_column}_max_{self.strat1.name}"]
-                - strat1_win[f"{config.by_column}_{self.strat1.name}"],
+                strat1_win[strat1_col] - strat1_win[strat1_min_col],
+                strat1_win[strat1_max_col] - strat1_win[strat1_col],
             ],
             ecolor=self.strat1.ecolor.to_rgba(),
             ls="none",
@@ -182,19 +187,15 @@ class Comparator:
             color=self.strat1.color.to_rgba(),
         )
         plt.errorbar(
-            x=strat2_win[f"{config.by_column}_{self.strat2.name}"],
-            y=strat2_win[f"{config.by_column}_{self.strat1.name}"],
+            x=strat2_win[strat2_col],
+            y=strat2_win[strat1_col],
             xerr=[
-                strat2_win[f"{config.by_column}_{self.strat2.name}"]
-                - strat2_win[f"{config.by_column}_min_{self.strat2.name}"],
-                strat2_win[f"{config.by_column}_max_{self.strat2.name}"]
-                - strat2_win[f"{config.by_column}_{self.strat2.name}"],
+                strat2_win[strat2_col] - strat2_win[strat2_min_col],
+                strat2_win[strat2_max_col] - strat2_win[strat2_col],
             ],
             yerr=[
-                strat2_win[f"{config.by_column}_{self.strat1.name}"]
-                - strat2_win[f"{config.by_column}_min_{self.strat1.name}"],
-                strat2_win[f"{config.by_column}_max_{self.strat1.name}"]
-                - strat2_win[f"{config.by_column}_{self.strat1.name}"],
+                strat2_win[strat1_col] - strat2_win[strat1_min_col],
+                strat2_win[strat1_max_col] - strat2_win[strat1_col],
             ],
             ecolor=self.strat2.ecolor.to_rgba(),
             ls="none",
@@ -203,19 +204,15 @@ class Comparator:
             color=self.strat2.color.to_rgba(),
         )
         plt.errorbar(
-            x=eq[f"{config.by_column}_{self.strat2.name}"],
-            y=eq[f"{config.by_column}_{self.strat1.name}"],
+            x=eq[strat2_col],
+            y=eq[strat1_col],
             xerr=[
-                eq[f"{config.by_column}_{self.strat2.name}"]
-                - eq[f"{config.by_column}_min_{self.strat2.name}"],
-                eq[f"{config.by_column}_max_{self.strat2.name}"]
-                - eq[f"{config.by_column}_{self.strat2.name}"],
+                eq[strat2_col] - eq[strat2_min_col],
+                eq[strat2_max_col] - eq[strat2_col],
             ],
             yerr=[
-                eq[f"{config.by_column}_{self.strat1.name}"]
-                - eq[f"{config.by_column}_min_{self.strat1.name}"],
-                eq[f"{config.by_column}_max_{self.strat1.name}"]
-                - eq[f"{config.by_column}_{self.strat1.name}"],
+                eq[strat1_col] - eq[strat1_min_col],
+                eq[strat1_max_col] - eq[strat1_col],
             ],
             ecolor=self.eq_ecolor.to_rgba(),
             ls="none",
