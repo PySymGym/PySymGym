@@ -52,17 +52,17 @@ python3 runstrat.py \
 
 Docs:
 ```bash
-usage: compstrat.py [-h] -s1 STRAT1 -r1 RUN1 -s2 STRAT2 -r2 RUN2 -cp CONFIGS_PATH [--savedir SAVEDIR]
+usage: compstrat.py [-h] -s1 STRAT1 -r1 RUN1_0 RUN1_1 RUN1_2 ... -s2 STRAT2 -r2 RUN2_0 RUN2_1 RUN2_2 ... -cp CONFIGS_PATH [--savedir SAVEDIR]
 
 options:
   -h, --help            show this help message and exit
   -s1 STRAT1, --strat1 STRAT1
                         Name of the first strategy
-  -r1 RUN1, --run1 RUN1
+  -r1 RUN1_0 RUN1_1 RUN1_2 ..., --runs1 RUN1_0 RUN1_1 RUN1_2 ...
                         Path to the first strategy run result
   -s2 STRAT2, --strat2 STRAT2
                         Name of the second strategy
-  -r2 RUN2, --run2 RUN2
+  -r2 RUN2_0 RUN2_1 RUN2_2 ..., --runs2 RUN2_0 RUN2_1 RUN2_2 ...
                         Path to ther second strategy run result
   -cp CONFIGS_PATH, --configs-path CONFIGS_PATH
                         Path to ther second strategy run result
