@@ -39,11 +39,13 @@ class Connector:
             actual_coverage: Optional[int],
             tests_count: int,
             errors_count: int,
+            steps_count: int,
             *args,
         ) -> None:
             self.actual_coverage = actual_coverage
             self.tests_count = tests_count
             self.errors_count = errors_count
+            self.steps_count = steps_count
             super().__init__(*args)
 
     def __init__(
@@ -96,6 +98,7 @@ class Connector:
                     actual_coverage=deser_msg.MessageBody.ActualCoverage,
                     tests_count=deser_msg.MessageBody.TestsCount,
                     errors_count=deser_msg.MessageBody.ErrorsCount,
+                    steps_count=deser_msg.MessageBody.StepsCount,
                 )
             case _:
                 return msg

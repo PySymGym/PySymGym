@@ -103,6 +103,9 @@ def play_map(
 
         tests_count = gameover.tests_count
         errors_count = gameover.errors_count
+        logging.warning(
+            f"total_steps_count={gameover.steps_count}, steps_to_start={with_connector.map.StepsToStart}, steps_to_play={with_connector.map.StepsToPlay}, map_name={with_connector.map.MapName}"
+        )
 
     end_time = perf_counter()
 
