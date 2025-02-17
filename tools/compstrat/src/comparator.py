@@ -1,12 +1,15 @@
 import enum
 import json
 import os
+from typing import Optional
 import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import tqdm
 from attrs import define
+
+from src.preprocessing import MIN_POSTFIX, MAX_POSTFIX
 
 
 @define
@@ -55,8 +58,8 @@ class CompareConfig:
     metric: str
     divider_line: bool = False
     less_is_winning: bool = False
-    exp_name: str = None
-    scale: str = None
+    exp_name: Optional[str] = None
+    scale: Optional[str] = None
 
 
 class Comparator:
@@ -117,12 +120,12 @@ class Comparator:
             f"{config.by_column}_{self.strat2.name}",
         )
         strat1_min_col, strat2_min_col = (
-            f"{config.by_column}_min_{self.strat1.name}",
-            f"{config.by_column}_min_{self.strat2.name}",
+            f"{config.by_column}{MIN_POSTFIX}_{self.strat1.name}",
+            f"{config.by_column}{MIN_POSTFIX}_{self.strat2.name}",
         )
         strat1_max_col, strat2_max_col = (
-            f"{config.by_column}_max_{self.strat1.name}",
-            f"{config.by_column}_max_{self.strat2.name}",
+            f"{config.by_column}{MAX_POSTFIX}_{self.strat1.name}",
+            f"{config.by_column}{MAX_POSTFIX}_{self.strat2.name}",
         )
         comparison_datasource_description = "datasource: "
         match config.datasource:
