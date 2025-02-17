@@ -12,6 +12,7 @@ import joblib
 import mlflow
 import optuna
 import torch
+from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import yaml
 from common.classes import GameFailed
 from common.config.config import Config
@@ -277,6 +278,7 @@ def main(config: str):
 
     mp.set_start_method("spawn", force=True)
     print(GeneralConfig.DEVICE)
+    torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage])
 
     mlflow_config = config.mlflow_config
     if mlflow_config.tracking_uri is not None:
