@@ -25,6 +25,7 @@ from typing import (
 
 import numpy as np
 import torch
+from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import tqdm
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
@@ -377,7 +378,10 @@ class TrainingDataset(Dataset):
             if not file_path.endswith("result")
         ]
         for path in all_steps_paths:
-            map_steps.append(torch.load(path, map_location=GeneralConfig.DEVICE))
+            with torch.serialization.safe_globals(
+                [BaseStorage, NodeStorage, EdgeStorage]
+            ):
+                map_steps.append(torch.load(path, map_location=GeneralConfig.DEVICE))
         return map_steps
 
     def update_map(
