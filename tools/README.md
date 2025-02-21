@@ -52,21 +52,21 @@ python3 runstrat.py \
 
 Docs:
 ```bash
-usage: compstrat.py [-h] -s1 STRAT1 -r1 RUN1 -s2 STRAT2 -r2 RUN2 -cp CONFIGS_PATH [--savedir SAVEDIR]
+usage: compstrat.py [-h] -s1 STRAT1 -r1 RUNS1 [RUNS1 ...] -s2 STRAT2 -r2 RUNS2 [RUNS2 ...] -cp CONFIGS_PATH [--savedir SAVEDIR]
 
 options:
   -h, --help            show this help message and exit
   -s1 STRAT1, --strat1 STRAT1
                         Name of the first strategy
-  -r1 RUN1, --run1 RUN1
-                        Path to the first strategy run result
+  -r1 RUNS1 [RUNS1 ...], --runs1 RUNS1 [RUNS1 ...]
+                        Paths to the first strategy runs results
   -s2 STRAT2, --strat2 STRAT2
                         Name of the second strategy
-  -r2 RUN2, --run2 RUN2
-                        Path to ther second strategy run result
+  -r2 RUNS2 [RUNS2 ...], --runs2 RUNS2 [RUNS2 ...]
+                        Paths to the second strategy runs results
   -cp CONFIGS_PATH, --configs-path CONFIGS_PATH
-                        Path to ther second strategy run result
-  --savedir SAVEDIR     Path to save results to
+                        Path to the compare configurations
+  --savedir SAVEDIR     Path for saving the comparison results
 ```
 To compare two results run
 

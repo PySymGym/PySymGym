@@ -5,7 +5,6 @@
   divider_line: true
   exp_name: coverage
   less_is_winning: false
-  logscale: false
   metric: '%'
 
 # comparison by number of tests on methods where both strats succeeded
@@ -14,8 +13,8 @@
   divider_line: true
   exp_name: tests
   less_is_winning: true
-  logscale: true
   metric: count
+  scale: symlog
 
 # comparison by number of errors on methods where both strats succeeded
 - by_column: errors
@@ -23,8 +22,8 @@
   divider_line: true
   exp_name: errors
   less_is_winning: false
-  logscale: true
   metric: count
+  scale: symlog
 
 # comparison by total time on methods where both strats succeeded
 - by_column: total_time_sec
@@ -32,7 +31,6 @@
   divider_line: true
   exp_name: total_time_secs
   less_is_winning: true
-  logscale: false
   metric: s
 
 # comparison by number of tests on methods where both strats succeeded
@@ -41,8 +39,8 @@
   divider_line: true
   exp_name: tests_eq_coverage
   less_is_winning: true
-  logscale: true
   metric: count
+  scale: symlog
 
 # comparison by number of errors on methods where both strats succeeded
 - by_column: errors
@@ -50,8 +48,8 @@
   divider_line: true
   exp_name: errors_eq_coverage
   less_is_winning: false
-  logscale: true
   metric: count
+  scale: symlog
 
 # comparison by total time on methods where both strats succeeded and 
 - by_column: total_time_sec
@@ -59,5 +57,5 @@
   divider_line: true
   exp_name: total_time_eq_coverage
   less_is_winning: true
-  logscale: true
   metric: s
+  scale: symlog

@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 from compstrat import Args, entrypoint
-from src.compstrat_config_extractor import read_configs
+from src.config_extractor import read_configs
 
 MOCK_CONFIGS_DIR = pathlib.Path("tests/resources/mock_compare_confs")
 
@@ -23,8 +23,8 @@ def test_pipeline_with_mock_data(configs_path: pathlib.Path):
         args = Args(
             strat1="ALPHA",
             strat2="BETA",
-            run1="tests/resources/mock_runs/strat_alpha.csv",
-            run2="tests/resources/mock_runs/strat_beta.csv",
+            runs1=["tests/resources/mock_runs/strat_alpha.csv"],
+            runs2=["tests/resources/mock_runs/strat_beta.csv"],
             configs=read_configs(configs_path),
             savedir=tmpdirname,
         )
