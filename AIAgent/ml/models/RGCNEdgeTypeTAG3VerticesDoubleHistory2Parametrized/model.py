@@ -1,7 +1,16 @@
 import torch
 from torch.nn import Linear
-from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv
+from torch_geometric.nn import (
+    TAGConv,
+    SAGEConv,
+    RGCNConv,
+    ResGatedGraphConv,
+    HeteroConv,
+)
 from torch.nn.functional import log_softmax
+
+from ml.inference import TORCH
+import copy
 
 
 class StateModelEncoder(torch.nn.Module):
@@ -82,4 +91,115 @@ class StateModelEncoder(torch.nn.Module):
             edge_index_s_s,
         ).relu()
         state_x = self.lin(state_x).relu()
+        return log_softmax(self.lin_last(state_x), dim=0)
+
+
+class HeteroStateModelEncoder(torch.nn.Module):
+    def __init__(
+        self,
+        hidden_channels,
+        num_of_state_features,
+        num_hops_1,
+        num_hops_2,
+        normalization: bool,
+    ):
+        super().__init__()
+        self.hetero_conv1 = HeteroConv(
+            {
+                TORCH.gamevertex_to_gamevertex: TAGConv(
+                    7,
+                    hidden_channels,
+                    num_hops_1,
+                    normalize=normalization,
+                ),
+            }
+        )
+        self.hetero_conv2 = HeteroConv(
+            {
+                TORCH.gamevertex_to_gamevertex: RGCNConv(
+                    hidden_channels,
+                    hidden_channels,
+                    3,
+                ),
+            }
+        )
+        self.hetero_conv20 = HeteroConv(
+            {
+                TORCH.gamevertex_history_statevertex: ResGatedGraphConv(
+                    (hidden_channels, 7),
+                    hidden_channels,
+                    edge_dim=2,
+                ),
+            }
+        )
+        self.hetero_conv3 = HeteroConv(
+            {
+                TORCH.gamevertex_history_statevertex: SAGEConv(
+                    (hidden_channels, hidden_channels),
+                    hidden_channels,
+                    normalize=normalization,
+                ),
+            }
+        )
+        self.hetero_conv4 = HeteroConv(
+            {
+                TORCH.gamevertex_in_statevertex: SAGEConv(
+                    (hidden_channels, hidden_channels),
+                    hidden_channels,
+                    normalize=normalization,
+                )
+            }
+        )
+        self.hetero_conv5 = HeteroConv(
+            {
+                TORCH.gamevertex_in_statevertex: SAGEConv(
+                    (hidden_channels, hidden_channels),
+                    hidden_channels,
+                    normalize=normalization,
+                )
+            }
+        )
+        self.hetero_conv6 = HeteroConv(
+            {
+                TORCH.statevertex_parentof_statevertex: TAGConv(
+                    hidden_channels,
+                    hidden_channels,
+                    num_hops_2,
+                    normalize=normalization,
+                )
+            }
+        )
+        self.hetero_conv7 = HeteroConv(
+            {
+                TORCH.statevertex_parentof_statevertex: SAGEConv(
+                    hidden_channels,
+                    hidden_channels,
+                    normalize=normalization,
+                )
+            }
+        )
+        self.lin = Linear(hidden_channels, num_of_state_features)
+        self.lin_last = Linear(num_of_state_features, 1)
+
+    def forward(self, x_dict, edge_index_dict, edge_type_dict, edge_attr_dict):
+        x_dict_copy = dict(x_dict)
+        game_x_dict = self.hetero_conv1(x_dict_copy, edge_index_dict)
+        game_x_dict = self.hetero_conv2(
+            game_x_dict,
+            edge_index_dict,
+            edge_type_dict,
+        )
+        x_dict_copy[TORCH.game_vertex] = game_x_dict[TORCH.game_vertex]
+        state_x_dict = self.hetero_conv20(x_dict_copy, edge_index_dict, edge_attr_dict)
+        x_dict_copy[TORCH.state_vertex] = state_x_dict[TORCH.state_vertex]
+        state_x_dict = self.hetero_conv3(x_dict_copy, edge_index_dict)
+        x_dict_copy[TORCH.state_vertex] = state_x_dict[TORCH.state_vertex]
+        state_x_dict = self.hetero_conv4(x_dict_copy, edge_index_dict)
+        x_dict_copy[TORCH.state_vertex] = state_x_dict[TORCH.state_vertex]
+        state_x_dict = self.hetero_conv5(x_dict_copy, edge_index_dict)
+        x_dict_copy[TORCH.state_vertex] = state_x_dict[TORCH.state_vertex]
+        state_x_dict = self.hetero_conv6(x_dict_copy, edge_index_dict)
+        x_dict_copy[TORCH.state_vertex] = state_x_dict[TORCH.state_vertex]
+        state_x_dict = self.hetero_conv7(x_dict_copy, edge_index_dict)
+        state_x = self.lin(state_x_dict[TORCH.state_vertex]).relu()
         return log_softmax(self.lin_last(state_x), dim=0)
