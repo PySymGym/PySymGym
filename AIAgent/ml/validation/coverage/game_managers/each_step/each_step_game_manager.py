@@ -177,3 +177,6 @@ class EachStepGameManager(BaseGameManager):
         if str_game_map in self._game_states:
             steps = self._game_states.pop(str_game_map)
             del steps
+
+    def are_steps_required(self, game_map: GameMap, required: bool):
+        return
