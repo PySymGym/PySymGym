@@ -317,13 +317,11 @@ class ModelGameManager(BaseGameManager):
         ):  # there is no already taken steps
 
             def get_steps_from_svm() -> list:
-                data = b""
-                while True:
-                    chunk = conn.recv(4096)
-                    if not chunk:
-                        break
-                    data += chunk
-                steps_json = json.loads(data)
+                output_dir = self._get_output_dir(game_map)
+                steps = output_dir / f"{map_name}_steps"
+                game_map_info.proc.wait()
+                with open(steps, "br") as f:
+                    steps_json = json.load(f)
                 steps = list(map(lambda v: ModelGameStep.from_dict(v), steps_json))  # type: ignore
                 return steps
 
