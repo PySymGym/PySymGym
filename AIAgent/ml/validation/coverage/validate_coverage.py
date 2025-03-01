@@ -6,13 +6,20 @@ from typing import Optional
 import torch
 import tqdm
 from common.classes import GameResult, Map2Result
-from common.config.validation_config import SVMValidation, SVMValidationSendEachStep
+from common.config.validation_config import (
+    SVMValidation,
+    SVMValidationSendEachStep,
+    SVMValidationSendModel,
+)
 from common.game import GameMap2SVM
 from ml.dataset import Result, TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
 from ml.validation.coverage.game_managers.each_step.each_step_game_manager import (
     EachStepGameManager,
+)
+from ml.validation.coverage.game_managers.model.process_game_manager import (
+    ModelGameManager,
 )
 from ml.validation.coverage.validate_coverage_utils import catch_return_exception
 
@@ -57,12 +64,15 @@ class ValidationCoverage:
             )
             map_name = game_map.MapName
             if self.dataset.is_update_map_required(map_name, map_result):
+                self._game_manager.are_steps_required(game_map=game_map, required=True)
                 steps = self._game_manager.get_game_steps(game_map)
                 if steps is not None:
                     self.dataset.update_map(map_name, map_result, steps)
                 else:
                     logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
                 del steps
+            else:
+                self._game_manager.are_steps_required(game_map=game_map, required=False)
         elif isinstance(result, Exception):
             logging.error(result, exc_info=True)
         self._game_manager.delete_game_artifacts(game_map)
@@ -103,9 +113,13 @@ class ValidationCoverage:
     def _get_game_manager(
         self, validation_config: SVMValidation, sync_manager: SyncManager
     ) -> BaseGameManager:
+        # TODO: docs
+
         namespace = sync_manager.Namespace()
         namespace.shared_lock = sync_manager.Lock()
         namespace.is_prepared = sync_manager.Value("b", False)
         if isinstance(validation_config, SVMValidationSendEachStep):
             return EachStepGameManager(TrainingModelWrapper(self.model), namespace)
+        elif isinstance(validation_config, SVMValidationSendModel):
+            return ModelGameManager(namespace, self.model)
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")
