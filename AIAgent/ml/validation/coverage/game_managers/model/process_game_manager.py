@@ -13,6 +13,7 @@ from common.classes import GameFailed, GameResult, Map2Result
 from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM, GameState
 from common.network_utils import next_free_port
+from common.validation_coverage.svm_info import SVMInfo
 from func_timeout import FunctionTimedOut
 from ml.dataset import convert_input_to_tensor
 from ml.validation.coverage.game_managers.base_game_manager import (
@@ -70,7 +71,9 @@ class ModelGamePreparator(BaseGamePreparator):
         super().__init__(namespace)
 
     def _create_onnx_model(self):
-        import_model_fqn = self._model.__class__.__module__ + ".StateModelEncoder"
+        import_model_fqn = (
+            f"{self._model.__class__.__module__}.{self._model.__class__.__name__}"
+        )
         with open(MODEL_KWARGS_PATH, "r") as file:
             model_kwargs = yaml.safe_load(file)
 
@@ -159,29 +162,30 @@ class ModelGameManager(BaseGameManager):
     def _get_output_dir(self, game_map: GameMap) -> Path:
         return SVMS_OUTPUT_PATH / f"{game_map.MapName}"
 
+    def _look_for_free_port(
+        self, svm_info: SVMInfo, attempts=100
+    ) -> Tuple[int, socket.socket]:
+        if attempts <= 0:
+            raise RuntimeError("Failed to occupy port")
+        logging.debug(f"Looking for port... Attempls left: {attempts}.")
+        try:
+            with self._shared_lock:
+                port = next_free_port(svm_info.min_port, svm_info.max_port)
+                logging.debug(f"Try to occupy {port=}")
+                server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                server_socket.bind(
+                    ("localhost", port)
+                )  # TODO: working within a local network
+                server_socket.listen(1)
+                return port, server_socket
+        except OSError:
+            logging.debug("Failed to occupy port")
+            return self._look_for_free_port(svm_info, attempts - 1)
+
     def _run_game_process(self, game_map2svm: GameMap2SVM):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
-        svm_info = game_map2svm.SVMInfo
 
-        def look_for_free_port(attempts=100) -> Tuple[int, socket.socket]:
-            if attempts <= 0:
-                raise RuntimeError("Failed to occupy port")
-            logging.debug(f"Looking for port... Attempls left: {attempts}.")
-            try:
-                with self._shared_lock:
-                    port = next_free_port(svm_info.min_port, svm_info.max_port)
-                    logging.debug(f"Try to occupy {port=}")
-                    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    server_socket.bind(
-                        ("localhost", port)
-                    )  # TODO: working within a local network
-                    server_socket.listen(1)
-                    return port, server_socket
-            except OSError:
-                logging.debug("Failed to occupy port")
-                return look_for_free_port(attempts - 1)
-
-        port, server_socket = look_for_free_port()
+        port, server_socket = self._look_for_free_port(svm_info)
         launch_command = svm_info.launch_command.format(
             **{
                 STEPS_TO_PLAY: game_map.StepsToPlay,
@@ -224,14 +228,12 @@ class ModelGameManager(BaseGameManager):
         )  # TODO: the path to result must be documented
         while True:
             try:
-                with open(result_file) as f:
-                    actual_coverage_percent, tests_count, steps_count, errors_count = (
-                        f.read().split()
-                    )
-                actual_coverage_percent = int(actual_coverage_percent)
-                tests_count = int(tests_count)
-                steps_count = int(steps_count) - game_map.StepsToStart
-                errors_count = int(errors_count)
+                with open(result_file, "r") as f:
+                    data = f.read().split()
+                (actual_coverage_percent, tests_count, steps_count, errors_count) = map(
+                    int, data
+                )
+                steps_count -= game_map.StepsToStart
                 result = GameResult(
                     steps_count=steps_count,
                     tests_count=tests_count,
@@ -242,7 +244,7 @@ class ModelGameManager(BaseGameManager):
                 if steps_count == 0:
                     if actual_coverage_percent != FULL_COVERAGE_PERCENT:
                         logging.warning(
-                            f"There is neither any step chosen by oracle, nor full coverage. Actual coverage: {actual_coverage_formatted}. Immediate GameOver on {map_name}."
+                            f"There is neither any step chosen by oracle, nor full coverage achieved. Actual coverage: {actual_coverage_formatted}. Immediate GameOver on {map_name}."
                         )
                         return GameResult(game_map2svm.GameMap.StepsToPlay, 0, 0, 0)
                     else:
@@ -275,22 +277,20 @@ class ModelGameManager(BaseGameManager):
                 return GameFailed(msg)
 
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
-        map_name = game_map.MapName
-        if map_name in self._games_info:
-            game_map_info = self._games_info[map_name]
-            steps = game_map_info.total_steps if game_map_info.total_steps else None
-        else:
-            steps = None
-        return steps
+        game_map_info = self._games_info.get(game_map.MapName)
+        return (
+            game_map_info.total_steps
+            if game_map_info and game_map_info.total_steps
+            else None
+        )
 
     def are_steps_required(self, game_map: GameMap, required: bool):
         map_name = game_map.MapName
-        if map_name in self._games_info:
-            game_map_info = self._games_info[map_name]
-        else:
+        if map_name not in self._games_info:
             msg = f"Can't find game info of {game_map.MapName}"
             logging.warning(msg)
             return
+        game_map_info = self._games_info[map_name]
         if isinstance(game_map_info.game_result, GameResultDetails):
             game_result = game_map_info.game_result
         else:
@@ -310,7 +310,7 @@ class ModelGameManager(BaseGameManager):
             conn.shutdown(socket.SHUT_WR)
 
         conn = get_conn()
-        _ = alert_svm_about_step_saving(conn, required)
+        alert_svm_about_step_saving(conn, required)
 
         if (
             not game_map_info.total_steps and required
