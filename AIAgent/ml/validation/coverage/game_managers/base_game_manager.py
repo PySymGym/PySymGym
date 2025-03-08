@@ -49,6 +49,7 @@ class BaseGamePreparator(ABC):
 
 
 class BaseGameManager(ABC):
+    # TODO: docs
     def __init__(self, namespace: Namespace):
         self._namespace = namespace
         self._preparator = self._create_preparator()
@@ -77,4 +78,9 @@ class BaseGameManager(ABC):
     @abstractmethod
     def delete_game_artifacts(self, game_map: GameMap):
         """Deletes game artifacts of game_map"""
+        ...
+
+    @abstractmethod
+    def are_steps_required(self, game_map: GameMap, required: bool):
+        """Action on case if saving of steps is (not) required"""
         ...
