@@ -284,7 +284,7 @@ class ModelGameManager(BaseGameManager):
             else None
         )
 
-    def are_steps_required(self, game_map: GameMap, required: bool):
+    def notify_steps_requirement(self, game_map: GameMap, required: bool):
         map_name = game_map.MapName
         if map_name not in self._games_info:
             msg = f"Can't find game info of {game_map.MapName}"
