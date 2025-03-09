@@ -178,5 +178,5 @@ class EachStepGameManager(BaseGameManager):
             steps = self._game_states.pop(str_game_map)
             del steps
 
-    def are_steps_required(self, game_map: GameMap, required: bool):
+    def notify_steps_requirement(self, game_map: GameMap, required: bool):
         return

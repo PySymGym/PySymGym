@@ -81,6 +81,14 @@ class BaseGameManager(ABC):
         ...
 
     @abstractmethod
-    def are_steps_required(self, game_map: GameMap, required: bool):
-        """Action on case if saving of steps is (not) required"""
+    def notify_steps_requirement(self, game_map: GameMap, required: bool):
+        """Notify the symbolic execution environment whether to preserve execution steps.
+
+        Allows the client to optimize resource usage by skipping unnecessary step data
+        transmission when metrics are not improved.
+
+        Args:
+            game_map: game map
+            required: True if steps should be preserved and transmitted
+        """
         ...
