@@ -63,20 +63,19 @@ class ValidationCoverage:
                 errors_number=game_result.errors_count,
             )
             map_name = game_map.MapName
-            if self.dataset.is_update_map_required(map_name, map_result):
-                self._game_manager.notify_steps_requirement(
-                    game_map=game_map, required=True
-                )
+            is_update_map_required = self.dataset.is_update_map_required(
+                map_name, map_result
+            )
+            self._game_manager.notify_steps_requirement(
+                game_map=game_map, required=is_update_map_required
+            )
+            if is_update_map_required:
                 steps = self._game_manager.get_game_steps(game_map)
                 if steps is not None:
                     self.dataset.update_map(map_name, map_result, steps)
                 else:
                     logging.debug(f"Failed to obtain steps of game={str(game_map2svm)}")
                 del steps
-            else:
-                self._game_manager.notify_steps_requirement(
-                    game_map=game_map, required=False
-                )
         elif isinstance(result, Exception):
             logging.error(result, exc_info=True)
         self._game_manager.delete_game_artifacts(game_map)
