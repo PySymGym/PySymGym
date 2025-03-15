@@ -5,15 +5,14 @@ import subprocess
 import time
 from multiprocessing.managers import Namespace
 from pathlib import Path
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
 import torch
 import yaml
 from common.classes import GameFailed, GameResult, Map2Result
 from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM
-from common.network_utils import next_free_port
-from common.validation_coverage.svm_info import SVMInfo
+from common.network_utils import look_for_free_port_locked
 from func_timeout import FunctionTimedOut
 from ml.dataset import get_hetero_data
 from ml.validation.coverage.game_managers.base_game_manager import (
@@ -107,85 +106,74 @@ class ModelGameManager(BaseGameManager):
         self._shared_lock = namespace.shared_lock
         self._model = model
         self._path_to_model = path_to_model
-        self._games_info: dict[str, ModelGameMapInfo] = {}
+        self._games_info: dict[str, ModelGameMapInfo] = dict()
         super().__init__(self._namespace)
 
     def _play_game_map(self, game_map2svm: GameMap2SVM) -> Map2Result:
         game_map = game_map2svm.GameMap
         map_name = game_map.MapName
-        game_map_info = ModelGameMapInfo(
-            total_game_state=None,
-            total_steps=[],
-            proc=None,  # type: ignore
-            game_result=None,  # type: ignore
-            # TODO: avoid ugly code
+        game_result = None
+        game_info = ModelGameMapInfo(
+            total_game_state=None, total_steps=[], proc=None, game_result=game_result
         )
-        self._games_info[map_name] = game_map_info
-        running_res = None
+        self._games_info[map_name] = game_info
+
+        def kill_proc(proc: Optional[subprocess.Popen], logger: Callable[..., None]):
+            if proc is None:
+                logging.warning(
+                    f"There is no such proc?! Can't kill instance of {map_name}."
+                )
+                return
+            self._kill_game_process(proc, logger)
+
         try:
-            # TODO: rewrite it more clear to read
-            running_res = self._run_game_process(game_map2svm)
-            proc, port, socket = running_res
-            game_map_info.proc = proc
+            proc, port, socket = self._run_game_process(game_map2svm)
+        except Exception as e:
+            logging.error(e, exc_info=True)
+            return Map2Result(
+                game_map2svm,
+                GameFailed(reason=f"Failed to instantiate process for {map_name}"),
+            )
+
+        try:
+            game_info.proc = proc
             svm_connection_info = SVMConnectionInfo(occupied_port=port, socket=socket)
-            game_result = self._get_result(game_map2svm, proc)
+            game_success_or_failure = self._get_result(game_map2svm, proc)
             # TODO: There is confusion here because of the ambiguous name of the 'GameResult'. Renaming is needed.
-            if isinstance(game_result, GameResult):
+            if isinstance(game_success_or_failure, GameResult):
                 game_result = GameResultDetails(
-                    game_result=game_result,
+                    game_result=game_success_or_failure,
                     svm_connection_info=svm_connection_info,
                 )
             else:
-                game_result = GameFailedDetails(game_failed=game_result)
+                game_result = GameFailedDetails(game_failed=game_success_or_failure)
         except FunctionTimedOut as error:
             logging.warning(
-                f"Timeouted on map {map_name} with {error.timedOutAfter}s after {self._games_info[map_name].total_steps}"
+                f"Timeouted on map {map_name} with {error.timedOutAfter}s after {len(game_info.total_steps)} steps"
             )
-            self._kill_game_process(proc, logging.warning)
-            game_failed = GameFailed(reason=type(error))
-            game_result = GameFailedDetails(game_failed=game_failed)
-        except Exception as e:
-            logging.error(e, exc_info=True)
-            if running_res is not None:
-                self._kill_game_process(proc, logging.error)
-            game_failed = GameFailed(reason=type(e))
-            game_result = GameFailedDetails(game_failed=game_failed)
+            kill_proc(proc, logging.warning)
+            game_result = GameFailedDetails(game_failed=GameFailed(reason=type(error)))
+        except Exception as error:
+            logging.error(error, exc_info=True)
+            kill_proc(proc, logging.error)
+            game_result = GameFailedDetails(game_failed=GameFailed(reason=type(error)))
         finally:
             torch.cuda.empty_cache()
-            game_map_info.game_result = game_result  # type: ignore
-        if isinstance(game_result, GameResultDetails):  # type: ignore
+        game_info.game_result = game_result
+
+        if isinstance(game_result, GameResultDetails):
             game_result = game_result.game_result
         else:
-            game_result = game_result.game_failed  # type: ignore # TODO: Handle some weird type error
+            game_result = game_result.game_failed
         return Map2Result(game_map2svm, game_result)
 
     def _get_output_dir(self, game_map: GameMap) -> Path:
         return SVMS_OUTPUT_PATH / f"{game_map.MapName}"
 
-    def _look_for_free_port(
-        self, svm_info: SVMInfo, attempts=100
-    ) -> Tuple[int, socket.socket]:
-        if attempts <= 0:
-            raise RuntimeError("Failed to occupy port")
-        logging.debug(f"Looking for port... Attempls left: {attempts}.")
-        try:
-            with self._shared_lock:
-                port = next_free_port(svm_info.min_port, svm_info.max_port)
-                logging.debug(f"Try to occupy {port=}")
-                server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                server_socket.bind(
-                    ("localhost", port)
-                )  # TODO: working within a local network
-                server_socket.listen(1)
-                return port, server_socket
-        except OSError:
-            logging.debug("Failed to occupy port")
-            return self._look_for_free_port(svm_info, attempts - 1)
-
     def _run_game_process(self, game_map2svm: GameMap2SVM):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
 
-        port, server_socket = self._look_for_free_port(svm_info)
+        port, server_socket = look_for_free_port_locked(self._shared_lock, svm_info)
         launch_command = svm_info.launch_command.format(
             **{
                 STEPS_TO_PLAY: game_map.StepsToPlay,
@@ -317,9 +305,15 @@ class ModelGameManager(BaseGameManager):
         ):  # there is no already taken steps
 
             def get_steps_from_svm() -> list[ModelGameStep]:
+                proc = game_map_info.proc
+                if proc is None:
+                    logging.error(
+                        "I can't get the steps of a failed game (there was no game)"
+                    )
+                    return []
                 output_dir = self._get_output_dir(game_map)
                 steps = output_dir / f"{map_name}_steps"
-                game_map_info.proc.wait()
+                proc.wait()
                 with open(steps, "br") as f:
                     steps_json = json.load(f)
                 steps = list(map(lambda v: ModelGameStep.from_dict(v), steps_json))  # type: ignore
@@ -366,8 +360,13 @@ class ModelGameManager(BaseGameManager):
         return proc.communicate()
 
     def _get_and_log_proc_output(
-        self, proc: subprocess.Popen, logger: Callable[..., None] = logging.debug
+        self,
+        proc: Optional[subprocess.Popen],
+        logger: Callable[..., None] = logging.debug,
     ):
+        if proc is None:
+            logger("There is no proc?! Can't log proc output.")
+            return
         return self._log_proc_output(self._get_proc_output(proc), logger)
 
     def _log_proc_output(
