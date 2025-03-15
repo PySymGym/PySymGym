@@ -38,4 +38,4 @@ class ModelGameMapInfo:
 @dataclass(slots=True)
 class ModelGameStep:
     GameState: GameState
-    Output: list
+    Output: list[list[float]]
