@@ -1,7 +1,6 @@
-from typing import Any, Optional
+from typing import Any
 
 from common.typealias import SVMName
-from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 
@@ -10,8 +9,8 @@ class SVMInfo:
     name: SVMName
     launch_command: str
     server_working_dir: str
-    min_port: Optional[int] = Field(default=None)
-    max_port: Optional[int] = Field(default=None)
+    min_port: int
+    max_port: int
 
     def to_dict(
         self,

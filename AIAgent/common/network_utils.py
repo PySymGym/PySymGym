@@ -29,7 +29,7 @@ def look_for_free_port_locked(
     logging.debug(f"Looking for port... Attempls left: {attempts}.")
     try:
         with lock:
-            port = next_free_port(svm_info.min_port, svm_info.max_port)  # type: ignore
+            port = next_free_port(svm_info.min_port, svm_info.max_port)
             logging.debug(f"Try to occupy {port=}")
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket.bind(
