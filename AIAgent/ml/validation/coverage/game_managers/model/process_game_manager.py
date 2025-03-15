@@ -11,11 +11,11 @@ import torch
 import yaml
 from common.classes import GameFailed, GameResult, Map2Result
 from common.file_system_utils import delete_dir
-from common.game import GameMap, GameMap2SVM, GameState
+from common.game import GameMap, GameMap2SVM
 from common.network_utils import next_free_port
 from common.validation_coverage.svm_info import SVMInfo
 from func_timeout import FunctionTimedOut
-from ml.dataset import convert_input_to_tensor
+from ml.dataset import get_hetero_data
 from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
@@ -325,23 +325,16 @@ class ModelGameManager(BaseGameManager):
                 steps = list(map(lambda v: ModelGameStep.from_dict(v), steps_json))  # type: ignore
                 return steps
 
-            def convert_steps_to_hetero(steps: list[ModelGameStep]):
+            def convert_steps_to_hetero(steps: list[ModelGameStep]) -> list[HeteroData]:
                 if not steps:
                     return []
                 step = steps.pop(0)
                 game_state, nn_output = step.GameState, step.Output
 
-                def get_hetero_data(game_state: GameState, nn_output: list):
-                    hetero_input, _ = convert_input_to_tensor(game_state)
-                    nn_output = [[x] for x in nn_output[0]]
-                    hetero_input["y_true"] = torch.Tensor(nn_output)
-                    return hetero_input
-
                 steps_hetero = [get_hetero_data(game_state, nn_output)]
                 for step in steps:
                     delta = step.GameState
                     game_state = update_game_state(game_state, delta)
-                    hetero_input, _ = convert_input_to_tensor(game_state)
                     hetero_input = get_hetero_data(game_state, step.Output)
                     steps_hetero.append(hetero_input)
                 return steps_hetero
