@@ -316,7 +316,7 @@ class ModelGameManager(BaseGameManager):
             not game_map_info.total_steps and required
         ):  # there is no already taken steps
 
-            def get_steps_from_svm() -> list:
+            def get_steps_from_svm() -> list[ModelGameStep]:
                 output_dir = self._get_output_dir(game_map)
                 steps = output_dir / f"{map_name}_steps"
                 game_map_info.proc.wait()
@@ -325,7 +325,7 @@ class ModelGameManager(BaseGameManager):
                 steps = list(map(lambda v: ModelGameStep.from_dict(v), steps_json))  # type: ignore
                 return steps
 
-            def convert_steps_to_hetero(steps: list):
+            def convert_steps_to_hetero(steps: list[ModelGameStep]):
                 if not steps:
                     return []
                 step = steps.pop(0)
