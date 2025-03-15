@@ -30,8 +30,8 @@ class GameFailedDetails:
 class ModelGameMapInfo:
     total_game_state: Optional[GameState]
     total_steps: list[HeteroData]
-    proc: subprocess.Popen
-    game_result: Union[GameResultDetails, GameFailedDetails]
+    proc: Optional[subprocess.Popen]
+    game_result: Union[GameResultDetails, GameFailedDetails, None]
 
 
 @dataclass_json
