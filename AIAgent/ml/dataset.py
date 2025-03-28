@@ -25,13 +25,13 @@ from typing import (
 
 import numpy as np
 import torch
-from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import tqdm
 from common.game import GameState
 from config import GeneralConfig
 from ml.inference import TORCH
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
+from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -492,6 +492,10 @@ class TrainingDataset(Dataset):
             return np.array_equal(new_g_v, old_g_v) and np.array_equal(new_s_v, old_s_v)
 
         def merge_distributions(old_distribution, new_distribution):
+            if old_distribution.device != new_distribution.device:
+                device = GeneralConfig.DEVICE
+                old_distribution = old_distribution.to(device)
+                new_distribution = new_distribution.to(device)
             distributions_sum = old_distribution + new_distribution
             distributions_sum[distributions_sum != 0] = 1
             merged_distribution = distributions_sum / torch.sum(distributions_sum)
@@ -687,3 +691,10 @@ def remove_extra_attrs(step: HeteroData):
         del step[TORCH.gamevertex_to_gamevertex].edge_attr
     if hasattr(step, "use_for_train"):
         del step.use_for_train
+
+
+def get_hetero_data(game_state: GameState, nn_output: list[list[float]]) -> HeteroData:
+    hetero_input, _ = convert_input_to_tensor(game_state)
+    nn_output = [[x] for x in nn_output[0]]
+    hetero_input["y_true"] = torch.Tensor(nn_output)
+    return hetero_input
