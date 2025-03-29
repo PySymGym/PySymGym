@@ -37,6 +37,8 @@ GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
 MOVEDSTATESUFFIX = "_movedState"
 
+NUM_PC_FEATURES = 49
+
 StateId: TypeAlias = int
 StateIndex: TypeAlias = int
 StateMap: TypeAlias = Dict[StateId, StateIndex]
@@ -552,7 +554,6 @@ def convert_input_to_tensor(
 
     nodes_path_condition = []
     edge_index_pc_pc, edge_index_pc_state, edge_index_state_pc = [], [], []
-    NUM_PC_FEATURES = 49
 
     state_map: Dict[StateId, StateIndex] = dict()
     vertex_map: Dict[VertexId, VertexIndex] = dict()

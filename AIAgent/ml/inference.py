@@ -11,7 +11,11 @@ class TORCH:
     gamevertex_history_statevertex = (_GAME_VERTEX, "history", _STATE_VERTEX)
     gamevertex_in_statevertex = (_GAME_VERTEX, "in", _STATE_VERTEX)
     statevertex_parentof_statevertex = (_STATE_VERTEX, "parent_of", _STATE_VERTEX)
-    pathcondvertex_to_pathcondvertex = (_PATH_CONDITION_VERTEX, "to", _PATH_CONDITION_VERTEX)
+    pathcondvertex_to_pathcondvertex = (
+        _PATH_CONDITION_VERTEX,
+        "to",
+        _PATH_CONDITION_VERTEX,
+    )
     pathcondvertex_to_statevertex = (_PATH_CONDITION_VERTEX, "to", _STATE_VERTEX)
     statevertex_to_pathcondvertex = (_STATE_VERTEX, "to", _PATH_CONDITION_VERTEX)
     # not used in ONNX
@@ -51,10 +55,14 @@ def infer(model, data):
     return model(
         game_x=data[TORCH.game_vertex].x,
         state_x=data[TORCH.state_vertex].x,
+        pc_x=data[TORCH.path_condition_vertex].x,
         edge_index_v_v=data[*TORCH.gamevertex_to_gamevertex].edge_index,
         edge_type_v_v=data[*TORCH.gamevertex_to_gamevertex].edge_type,
         edge_index_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_index,
         edge_attr_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_attr,
         edge_index_in_v_s=data[*TORCH.gamevertex_in_statevertex].edge_index,
         edge_index_s_s=data[*TORCH.statevertex_parentof_statevertex].edge_index,
+        edge_index_pc_pc=data[*TORCH.pathcondvertex_to_pathcondvertex].edge_index,
+        edge_index_pc_state=data[*TORCH.pathcondvertex_to_statevertex].edge_index,
+        edge_index_state_pc=data[*TORCH.statevertex_to_pathcondvertex].edge_index,
     )
