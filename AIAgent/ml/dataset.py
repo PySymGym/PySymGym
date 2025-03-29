@@ -27,7 +27,7 @@ import numpy as np
 import torch
 from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import tqdm
-from common.game import GameState
+from common.game import GameState, PathConditionVertex
 from config import GeneralConfig
 from ml.inference import TORCH
 from torch.utils.data import random_split
@@ -531,6 +531,10 @@ def flatten_dict(dict_to_flatten: Dict) -> List[Any]:
     return sum(dict_to_flatten.values(), [])
 
 
+PathConditionVertexId: TypeAlias = int
+PathConditionVertexIndex: TypeAlias = int
+
+
 def convert_input_to_tensor(
     input: GameState,
 ) -> Tuple[HeteroData, Dict[StateId, StateIndex]]:
@@ -538,6 +542,7 @@ def convert_input_to_tensor(
     Converts game env to tensors
     """
     graphVertices = input.GraphVertices
+    path_condition_vertices = input.PathConditionVertices
     game_states, game_edges = input.States, input.Map
     data = HeteroData()
     nodes_vertex, edges_index_v_v, edges_attr_v_v, edges_types_v_v = [], [], [], []
@@ -546,10 +551,38 @@ def convert_input_to_tensor(
     edges_index_s_v_history, edges_index_v_s_history = [], []
     edges_attr_s_v, edges_attr_v_s = [], []
 
+    nodes_path_condition = []
+    edge_index_pc_pc, edge_index_pc_state, edge_index_state_pc = [], [], []
+    NUM_PC_FEATURES = 49
+
     state_map: Dict[StateId, StateIndex] = dict()
     vertex_map: Dict[VertexId, VertexIndex] = dict()
     vertex_index = 0
     state_index = 0
+
+    def one_hot_encoding(pc_v: PathConditionVertex) -> np.ndarray:
+        encoded = np.zeros(NUM_PC_FEATURES, dtype=int)
+        encoded[pc_v.Type] = 1
+        return encoded
+
+    pc_map: Dict[PathConditionVertexId, PathConditionVertexIndex] = dict()
+    for pc_idx, pc_v in enumerate(path_condition_vertices):
+        if pc_v.Id not in pc_map:
+            nodes_path_condition.append(one_hot_encoding(pc_v))
+            pc_map[pc_v.Id] = pc_idx
+        else:
+            raise RuntimeError(
+                "There are two path condition vertices with the same Id."
+            )
+
+    for pc_v in path_condition_vertices:
+        for child_id in pc_v.Children:
+            edge_index_pc_pc.extend(
+                [
+                    [pc_map[pc_v.Id], pc_map[child_id]],
+                    [pc_map[child_id], pc_map[pc_v.Id]],
+                ]
+            )
 
     # vertex nodes
     for v in graphVertices:
@@ -589,7 +622,6 @@ def convert_input_to_tensor(
                 np.array(
                     [
                         s.Position,
-                        s.PathConditionSize,
                         s.VisitedAgainVertices,
                         s.VisitedNotCoveredVerticesInZone,
                         s.VisitedNotCoveredVerticesOutOfZone,
@@ -610,6 +642,13 @@ def convert_input_to_tensor(
                     np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
                 )
             state_index = state_index + 1
+
+            edge_index_pc_state.append(
+                [pc_map[s.PathCondition.Id], state_map[state_id]]
+            )
+            edge_index_state_pc.append(
+                [state_map[state_id], pc_map[s.PathCondition.Id]]
+            )
         else:
             state_doubles += 1
 
@@ -630,6 +669,9 @@ def convert_input_to_tensor(
 
     data[TORCH.game_vertex].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
     data[TORCH.state_vertex].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
+    data[TORCH.path_condition_vertex].x = torch.tensor(
+        np.array(nodes_path_condition), dtype=torch.float
+    )
 
     def tensor_not_empty(tensor):
         return tensor.numel() != 0
@@ -676,6 +718,15 @@ def convert_input_to_tensor(
     # if (edges_index_s_s): #TODO: empty?
     data[*TORCH.statevertex_parentof_statevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
+    )
+    data[TORCH.pathcondvertex_to_pathcondvertex].edge_index = null_if_empty(
+        torch.tensor(np.array(edge_index_pc_pc), dtype=torch.long).t().contiguous()
+    )
+    data[TORCH.pathcondvertex_to_statevertex].edge_index = null_if_empty(
+        torch.tensor(np.array(edge_index_pc_state), dtype=torch.long).t().contiguous()
+    )
+    data[TORCH.statevertex_to_pathcondvertex].edge_index = null_if_empty(
+        torch.tensor(np.array(edge_index_state_pc), dtype=torch.long).t().contiguous()
     )
     return data, state_map
 
