@@ -1,14 +1,19 @@
 _GAME_VERTEX = "game_vertex"
 _STATE_VERTEX = "state_vertex"
+_PATH_CONDITION_VERTEX = "path_condition_vertex"
 
 
 class TORCH:
     game_vertex = _GAME_VERTEX
     state_vertex = _STATE_VERTEX
+    path_condition_vertex = _PATH_CONDITION_VERTEX
     gamevertex_to_gamevertex = (_GAME_VERTEX, "to", _GAME_VERTEX)
     gamevertex_history_statevertex = (_GAME_VERTEX, "history", _STATE_VERTEX)
     gamevertex_in_statevertex = (_GAME_VERTEX, "in", _STATE_VERTEX)
     statevertex_parentof_statevertex = (_STATE_VERTEX, "parent_of", _STATE_VERTEX)
+    pathcondvertex_to_pathcondvertex = (_PATH_CONDITION_VERTEX, "to", _PATH_CONDITION_VERTEX)
+    pathcondvertex_to_statevertex = (_PATH_CONDITION_VERTEX, "to", _STATE_VERTEX)
+    statevertex_to_pathcondvertex = (_STATE_VERTEX, "to", _PATH_CONDITION_VERTEX)
     # not used in ONNX
     statevertex_history_gamevertex = (_STATE_VERTEX, "history", _GAME_VERTEX)
     statevertex_in_gamevertex = (_STATE_VERTEX, "in", _GAME_VERTEX)
