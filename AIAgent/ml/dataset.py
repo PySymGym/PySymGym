@@ -144,7 +144,6 @@ class TrainingDataset(Dataset):
             step = torch.load(
                 self.processed_paths[idx], map_location=GeneralConfig.DEVICE
             )
-        remove_extra_attrs(step)
         return step
 
     def switch_to(self, mode: Literal["train", "val"]) -> None:
@@ -545,11 +544,11 @@ def convert_input_to_tensor(
     path_condition_vertices = input.PathConditionVertices
     game_states, game_edges = input.States, input.Map
     data = HeteroData()
-    nodes_vertex, edges_index_v_v, edges_attr_v_v, edges_types_v_v = [], [], [], []
+    nodes_vertex, edges_index_v_v, edges_types_v_v = [], [], []
     nodes_state, edges_index_s_s = [], []
     edges_index_s_v_in, edges_index_v_s_in = [], []
     edges_index_s_v_history, edges_index_v_s_history = [], []
-    edges_attr_s_v, edges_attr_v_s = [], []
+    edges_attr_s_v = []
 
     nodes_path_condition = []
     edge_index_pc_pc, edge_index_pc_state, edge_index_state_pc = [], [], []
@@ -608,7 +607,6 @@ def convert_input_to_tensor(
         edges_index_v_v.append(
             np.array([vertex_map[e.VertexFrom], vertex_map[e.VertexTo]])
         )
-        edges_attr_v_v.append(np.array([e.Label.Token]))
         edges_types_v_v.append(e.Label.Token)
 
     state_doubles = 0
@@ -636,9 +634,6 @@ def convert_input_to_tensor(
                 edges_index_s_v_history.append(np.array([state_index, v_to]))
                 edges_index_v_s_history.append(np.array([v_to, state_index]))
                 edges_attr_s_v.append(
-                    np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
-                )
-                edges_attr_v_s.append(
                     np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
                 )
             state_index = state_index + 1
@@ -673,22 +668,12 @@ def convert_input_to_tensor(
         np.array(nodes_path_condition), dtype=torch.float
     )
 
-    def tensor_not_empty(tensor):
-        return tensor.numel() != 0
-
     # dumb fix
     def null_if_empty(tensor):
-        return (
-            tensor
-            if tensor_not_empty(tensor)
-            else torch.empty((2, 0), dtype=torch.int64)
-        )
+        return tensor if tensor.numel() != 0 else torch.empty((2, 0), dtype=torch.int64)
 
     data[*TORCH.gamevertex_to_gamevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
-    )
-    data[*TORCH.gamevertex_to_gamevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_v_v), dtype=torch.long
     )
     data[*TORCH.gamevertex_to_gamevertex].edge_type = torch.tensor(
         np.array(edges_types_v_v), dtype=torch.long
@@ -709,11 +694,11 @@ def convert_input_to_tensor(
         .t()
         .contiguous()
     )
-    data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
+    data[*TORCH.statevertex_history_gamevertex].edge_attr = torch.tensor(
         np.array(edges_attr_s_v), dtype=torch.long
     )
     data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_v_s), dtype=torch.long
+        np.array(edges_attr_s_v), dtype=torch.long
     )
     # if (edges_index_s_s): #TODO: empty?
     data[*TORCH.statevertex_parentof_statevertex].edge_index = null_if_empty(
@@ -729,12 +714,3 @@ def convert_input_to_tensor(
         torch.tensor(np.array(edge_index_state_pc), dtype=torch.long).t().contiguous()
     )
     return data, state_map
-
-
-def remove_extra_attrs(step: HeteroData):
-    if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
-        del step[TORCH.statevertex_history_gamevertex].edge_attr
-    if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
-        del step[TORCH.gamevertex_to_gamevertex].edge_attr
-    if hasattr(step, "use_for_train"):
-        del step.use_for_train
