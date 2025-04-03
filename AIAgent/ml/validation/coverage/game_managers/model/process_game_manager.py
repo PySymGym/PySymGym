@@ -30,7 +30,13 @@ from ml.validation.coverage.game_managers.model.classes import (
     SVMConnectionInfo,
 )
 from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
-from onyx import entrypoint, load_gamestate, resolve_import_model
+from onyx import (
+    entrypoint as save_torch_model_to_onnx_file,
+)
+from onyx import (
+    load_gamestate,
+    resolve_import_model,
+)
 from paths import CURRENT_MODEL_PATH, MODEL_KWARGS_PATH, REPORT_PATH
 from torch_geometric.data.hetero_data import HeteroData
 
@@ -77,7 +83,7 @@ class ModelGamePreparator(BaseGamePreparator):
             model_kwargs = yaml.safe_load(file)
 
         with open(GAMESTATE_EXAMPLE_PATH) as gamestate_file:
-            entrypoint(
+            save_torch_model_to_onnx_file(
                 sample_gamestate=load_gamestate(gamestate_file),
                 pytorch_model_path=self._path_to_model,
                 onnx_savepath=CURRENT_ONNX_MODEL_PATH,
