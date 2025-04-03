@@ -97,8 +97,8 @@ class ModelGamePreparator(BaseGamePreparator):
             return delete_dir(SVMS_OUTPUT_PATH)
 
     def _prepare(self):
-        self._create_onnx_model()
         self._clean_output_folder()
+        self._create_onnx_model()
 
 
 class ModelGameManager(BaseGameManager):
