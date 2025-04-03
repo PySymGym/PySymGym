@@ -1,4 +1,3 @@
-import json
 import logging
 import socket
 import subprocess
@@ -14,20 +13,19 @@ from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM
 from common.network_utils import look_for_free_port_locked
 from func_timeout import FunctionTimedOut
-from ml.dataset import get_hetero_data
 from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
-)
-from ml.validation.coverage.game_managers.each_step.game_states_utils import (
-    update_game_state,
 )
 from ml.validation.coverage.game_managers.model.classes import (
     GameFailedDetails,
     GameResultDetails,
     ModelGameMapInfo,
-    ModelGameStep,
     SVMConnectionInfo,
+)
+from ml.validation.coverage.game_managers.model.game_utils import (
+    convert_steps_to_hetero,
+    get_steps_from_svm,
 )
 from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
 from onyx import (
@@ -271,12 +269,22 @@ class ModelGameManager(BaseGameManager):
                 return GameFailed(msg)
 
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
-        game_map_info = self._games_info.get(game_map.MapName)
-        return (
-            game_map_info.total_steps
-            if game_map_info and game_map_info.total_steps
-            else None
-        )
+        map_name = game_map.MapName
+        if map_name not in self._games_info:
+            return None
+        game_map_info = self._games_info[map_name]
+        if not game_map_info.total_steps:  # there is no already taken steps
+            try:
+                steps = get_steps_from_svm(
+                    game_map=game_map,
+                    game_map_info=game_map_info,
+                    game_output_dir=self._get_output_dir(game_map),
+                )
+                game_map_info.total_steps = convert_steps_to_hetero(steps)
+            except Exception as e:
+                logging.error(e, exc_info=True)
+
+        return game_map_info.total_steps if game_map_info.total_steps else None
 
     def notify_steps_requirement(self, game_map: GameMap, required: bool):
         map_name = game_map.MapName
@@ -306,52 +314,12 @@ class ModelGameManager(BaseGameManager):
         conn = get_conn()
         alert_svm_about_step_saving(conn, required)
 
-        if (
-            not game_map_info.total_steps and required
-        ):  # there is no already taken steps
-
-            def get_steps_from_svm() -> list[ModelGameStep]:
-                proc = game_map_info.proc
-                if proc is None:
-                    logging.error(
-                        "I can't get the steps of a failed game (there was no game)"
-                    )
-                    return []
-                output_dir = self._get_output_dir(game_map)
-                steps = output_dir / f"{map_name}_steps"
-                proc.wait()
-                with open(steps, "br") as f:
-                    steps_json = json.load(f)
-                steps = list(map(lambda v: ModelGameStep.from_dict(v), steps_json))  # type: ignore
-                return steps
-
-            def convert_steps_to_hetero(steps: list[ModelGameStep]) -> list[HeteroData]:
-                if not steps:
-                    return []
-                step = steps.pop(0)
-                game_state, nn_output = step.GameState, step.Output
-
-                steps_hetero = [get_hetero_data(game_state, nn_output)]
-                for step in steps:
-                    delta = step.GameState
-                    game_state = update_game_state(game_state, delta)
-                    hetero_input = get_hetero_data(game_state, step.Output)
-                    steps_hetero.append(hetero_input)
-                return steps_hetero
-
-            try:
-                steps = get_steps_from_svm()
-                game_map_info.total_steps = convert_steps_to_hetero(steps)
-            except Exception as e:
-                logging.error(e, exc_info=True)
-
-        if isinstance(game_map_info.game_result, GameFailedDetails) or (
-            len(self._games_info[map_name].total_steps) == 0 and required
-        ):
-            logger = logging.error
-        else:
-            logger = logging.debug
-        self._get_and_log_proc_output(game_map_info.proc, logger)
+        self._get_and_log_proc_output(
+            proc=game_map_info.proc,
+            logger=logging.error
+            if isinstance(game_map_info.game_result, GameFailedDetails)
+            else logging.debug,
+        )
 
     def delete_game_artifacts(self, game_map: GameMap):
         map_name = game_map.MapName
