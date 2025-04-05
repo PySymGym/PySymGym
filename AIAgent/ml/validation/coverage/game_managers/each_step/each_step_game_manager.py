@@ -27,6 +27,7 @@ from torch_geometric.data.hetero_data import HeteroData
 from websocket import WebSocket
 
 TimeDuration: TypeAlias = float
+# TODO: docs
 
 
 class EachStepGamePreparator(BaseGamePreparator):
@@ -176,3 +177,6 @@ class EachStepGameManager(BaseGameManager):
         if str_game_map in self._game_states:
             steps = self._game_states.pop(str_game_map)
             del steps
+
+    def notify_steps_requirement(self, game_map: GameMap, required: bool):
+        return
