@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Linear
-from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv, GCNConv
+from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv, GCN
 from torch.nn.functional import log_softmax
 from ml.dataset import NUM_PC_FEATURES
 
@@ -13,6 +13,7 @@ class StateModelEncoder(torch.nn.Module):
         num_hops_1,
         num_hops_2,
         normalization: bool,
+        num_pc_layers,
     ):
         super().__init__()
         self.conv1 = RGCNConv(hidden_channels, hidden_channels, 3)
@@ -21,7 +22,7 @@ class StateModelEncoder(torch.nn.Module):
             hidden_channels, hidden_channels, num_hops_2, normalize=normalization
         )
         self.conv3 = ResGatedGraphConv(
-            (hidden_channels, 7), hidden_channels, edge_dim=2
+            (hidden_channels, 6), hidden_channels, edge_dim=2
         )
         self.conv32 = SAGEConv(
             (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
@@ -33,7 +34,12 @@ class StateModelEncoder(torch.nn.Module):
             (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
         )
         self.conv5 = SAGEConv(hidden_channels, hidden_channels, normalize=normalization)
-        self.pc_conv = GCNConv(NUM_PC_FEATURES, hidden_channels)
+        self.pc_conv = GCN(
+            NUM_PC_FEATURES,
+            hidden_channels,
+            num_layers=num_pc_layers,
+            out_channels=hidden_channels,
+        )
         self.pc_to_state = SAGEConv(
             (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
         )
