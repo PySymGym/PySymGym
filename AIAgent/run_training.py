@@ -27,13 +27,11 @@ from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
 from ml.dataset import TrainingDataset
-from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
-    StateModelEncoder,
-)
+from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
-from ml.validation.loss import validate_loss
+from ml.validation.loss.validate_loss import validate_loss
 from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
 from paths import (
     CURRENT_MODEL_PATH,
@@ -89,6 +87,7 @@ class TrialSettings:
     num_of_state_features: int
     hidden_channels: int
     normalization: bool
+    num_pc_layers: int
     early_stopping_state_len: int
     tolerance: float
 
@@ -216,12 +215,13 @@ def objective(
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 800),
+        batch_size=trial.suggest_int("batch_size", 8, 400),
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
         num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
+        num_pc_layers=trial.suggest_int("num_pc_layers", 1, 7),
         early_stopping_state_len=5,
         tolerance=0.0001,
     )
@@ -283,6 +283,7 @@ def main(config: str):
         mlflow.set_tracking_uri(uri=mlflow_config.tracking_uri)
     mlflow.set_experiment(mlflow_config.experiment_name)
     mlflow.set_experiment_tags(asdict(config))
+    mlflow.enable_system_metrics_logging()
     weights_uri = config.weights_uri
 
     run_training(
