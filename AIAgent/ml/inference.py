@@ -33,6 +33,7 @@ class ONNX:
     # string values are the same as parameter names
     game_vertex = TORCH.game_vertex
     state_vertex = TORCH.state_vertex
+    path_condition_vertex = TORCH.path_condition_vertex
     gamevertex_to_gamevertex_index = underscore_join(
         TORCH.gamevertex_to_gamevertex + ("index",)
     )
@@ -48,6 +49,15 @@ class ONNX:
     gamevertex_in_statevertex = underscore_join(TORCH.gamevertex_in_statevertex)
     statevertex_parentof_statevertex = underscore_join(
         TORCH.statevertex_parentof_statevertex
+    )
+    pathcondvertex_to_pathcondvertex_index = underscore_join(
+        TORCH.pathcondvertex_to_pathcondvertex
+    )
+    pathcondvertex_to_statevertex_index = underscore_join(
+        TORCH.pathcondvertex_to_statevertex
+    )
+    statevertex_to_pathcondvertex_index = underscore_join(
+        TORCH.statevertex_to_pathcondvertex
     )
 
 
