@@ -215,7 +215,7 @@ def objective(
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 400),
+        batch_size=trial.suggest_int("batch_size", 8, 150),
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
         num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
