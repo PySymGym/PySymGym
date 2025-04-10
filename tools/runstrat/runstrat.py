@@ -124,7 +124,7 @@ def entrypoint(args: Args) -> pd.DataFrame:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--strategy", type=str, required=True, help="V# searcher strategy"
+        "-s", "--strategy", type=str, required=True, help="V# searcher strategy. ETCC and AI are supported."
     )
     parser.add_argument(
         "-mp",
@@ -139,7 +139,7 @@ def main():
     parser.add_argument(
         "-ps",
         type=pathlib.Path,
-        dest="pysymgym_path",
+        dest="pysymgym-path",
         required=False,
         help="Absolute path to PySymGym",
     )
