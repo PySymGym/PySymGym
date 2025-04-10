@@ -3,3 +3,4 @@ num_of_state_features: 250
 num_hops_1: 20
 num_hops_2: 20
 normalization: true
+num_pc_layers: 6
