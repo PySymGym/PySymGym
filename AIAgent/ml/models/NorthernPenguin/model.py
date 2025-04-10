@@ -59,7 +59,6 @@ class StateModelEncoder(torch.nn.Module):
         edge_index_s_s,
         edge_index_pc_pc,
         edge_index_pc_state,
-        edge_index_state_pc,
     ):
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 
