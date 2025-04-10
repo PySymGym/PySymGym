@@ -50,14 +50,11 @@ class ONNX:
     statevertex_parentof_statevertex = underscore_join(
         TORCH.statevertex_parentof_statevertex
     )
-    pathcondvertex_to_pathcondvertex_index = underscore_join(
+    pathcondvertex_to_pathcondvertex = underscore_join(
         TORCH.pathcondvertex_to_pathcondvertex
     )
-    pathcondvertex_to_statevertex_index = underscore_join(
+    pathcondvertex_to_statevertex = underscore_join(
         TORCH.pathcondvertex_to_statevertex
-    )
-    statevertex_to_pathcondvertex_index = underscore_join(
-        TORCH.statevertex_to_pathcondvertex
     )
 
 
@@ -74,5 +71,4 @@ def infer(model, data):
         edge_index_s_s=data[*TORCH.statevertex_parentof_statevertex].edge_index,
         edge_index_pc_pc=data[*TORCH.pathcondvertex_to_pathcondvertex].edge_index,
         edge_index_pc_state=data[*TORCH.pathcondvertex_to_statevertex].edge_index,
-        edge_index_state_pc=data[*TORCH.statevertex_to_pathcondvertex].edge_index,
     )
