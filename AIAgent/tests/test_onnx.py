@@ -7,7 +7,7 @@ import pytest
 import torch
 import yaml
 from common.game import GameState
-from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
+from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
 from onyx import entrypoint
