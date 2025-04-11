@@ -117,14 +117,14 @@ def entrypoint(args: Args) -> pd.DataFrame:
         results.append(asdict(run_result))
 
     df = pd.DataFrame(results)
-    df.to_csv(f"{args.strategy}_{timestamp}.csv", index=False)
+    df.to_csv(f"{args.strategy.name}_{timestamp}.csv", index=False)
     return df
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--strategy", type=str, required=True, help="V# searcher strategy. ETCC and AI are supported."
+        "-s", "--strategy", type=str, required=True, help="V# searcher strategy. ExecutionTreeContributedCoverage and AI are supported."
     )
     parser.add_argument(
         "-mp",

@@ -19,7 +19,7 @@ class BasePSStrategy:
             assert model_path is not None
             return AIStrategy(name, model_path)
 
-        if name == "ETCC":
+        if name == "ExecutionTreeContributedCoverage":
             return ExecutionTreeContributedCoverageStrategy(name)
 
         raise ValueError(f"Unknown strategy: {name}")
