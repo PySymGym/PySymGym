@@ -4,6 +4,7 @@ import logging
 import pathlib
 import subprocess
 from datetime import datetime
+import os
 
 import func_timeout
 import pandas as pd
@@ -13,19 +14,25 @@ from src.parsing import load_config, parse_runner_output
 from src.psstrategy import BasePSStrategy
 from src.structs import RunResult
 from src.subprocess_calls import call_test_runner
+from enum import Enum
 
 timestamp = datetime.fromtimestamp(datetime.now().timestamp())
 
 
-def setup_logging(strategy_name: str):
+def setup_logging(savedir: pathlib.Path, strategy_name: str):
     logging.basicConfig(
-        filename=f"{strategy_name}_{timestamp}.log",
+        filename=os.path.join(savedir, f"{strategy_name}_{timestamp}.log"),
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
         level=logging.INFO,
     )
 
 
 AssemblyInfo = tuple[pathlib.Path, pathlib.Path]
+
+
+class RunMode(Enum):
+    BENCHMARKS = "Benchmarks"
+    DEBUG = "Debug"
 
 
 @define
@@ -35,6 +42,7 @@ class Args:
     pysymgym_path: pathlib.Path
     savedir: pathlib.Path
     assembly_infos: list[tuple[pathlib.Path, pathlib.Path]]
+    run_mode: RunMode = RunMode.BENCHMARKS
 
 
 def entrypoint(args: Args) -> pd.DataFrame:
@@ -43,7 +51,7 @@ def entrypoint(args: Args) -> pd.DataFrame:
         / "GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll"
     ).resolve()
 
-    setup_logging(strategy_name=args.strategy.name)
+    setup_logging(args.savedir, strategy_name=args.strategy.name)
 
     assembled = list(
         itertools.chain(
@@ -70,6 +78,8 @@ def entrypoint(args: Args) -> pd.DataFrame:
                 timeout=args.timeout,
             )
         except subprocess.CalledProcessError as cpe:
+            if args.run_mode == RunMode.DEBUG:
+                raise cpe
             logging.error(
                 f"""
                 runner threw {cpe} on {launch_info.method}, this method will be skipped
@@ -79,11 +89,13 @@ def entrypoint(args: Args) -> pd.DataFrame:
             )
             continue
         except func_timeout.FunctionTimedOut as fto:
+            if args.run_mode == RunMode.DEBUG:
+                raise fto
             logging.error(
                 f"""
-                runner timed out on {launch_info.method}, this method will be skipped
-                cmd: {" ".join(map(str,fto.timedOutKwargs["call"]))}
-                """
+            runner timed out on {launch_info.method}, this method will be skipped
+            cmd: {" ".join(map(str, fto.timedOutKwargs["call"]))}
+            """
             )
             continue
 
@@ -95,6 +107,8 @@ def entrypoint(args: Args) -> pd.DataFrame:
                 runner_coverage,
             ) = parse_runner_output(runner_output)
         except AttributeError as e:
+            if args.run_mode == RunMode.DEBUG:
+                raise e
             logging.error(
                 f"""
                 {e} thrown on {launch_info.method}, this method will be skipped
@@ -117,14 +131,20 @@ def entrypoint(args: Args) -> pd.DataFrame:
         results.append(asdict(run_result))
 
     df = pd.DataFrame(results)
-    df.to_csv(f"{args.strategy.name}_{timestamp}.csv", index=False)
+    df.to_csv(
+        os.path.join(args.savedir, f"{args.strategy.name}_{timestamp}.csv"), index=False
+    )
     return df
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--strategy", type=str, required=True, help="V# searcher strategy. ExecutionTreeContributedCoverage and AI are supported."
+        "-s",
+        "--strategy",
+        type=str,
+        required=True,
+        help="V# searcher strategy. ExecutionTreeContributedCoverage and AI are supported.",
     )
     parser.add_argument(
         "-mp",
