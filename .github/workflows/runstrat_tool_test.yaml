@@ -1,0 +1,70 @@
+name: Test runstrat tool
+
+on: 
+  push:
+    paths: 
+      - 'tools/runstrat'
+  pull_request:
+    paths: 
+      - 'tools/runstrat'
+
+jobs:
+  build-and-launch:
+    runs-on: self-hosted
+    container:
+      image: ubuntu:24.04
+    env:
+      PIP_ROOT_USER_ACTION: ignore
+
+    steps:
+      - name: Download & install necessary dependencies
+        run: |
+          apt update
+          apt install -y git software-properties-common
+          add-apt-repository ppa:dotnet/backports
+          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-9.0 cmake clang
+
+      - name: Debug
+        run: |
+          printenv
+          dotnet --version
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+    
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+            
+      - name: Install poetry
+        run: |
+          pip install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry --ansi install -q
+      
+      - name: Build V# game server
+        working-directory: ./GameServers/VSharp/
+        run: |
+          dotnet build VSharp.ML.GameServer.Runner -c Release
+      
+      - name: Build .NET maps for tests
+        working-directory: ./tools/runstrat/resources
+        run: |
+          dotnet build ForTests -c Release
+      
+      - name: Run tests
+        working-directory: ./tools/runstrat
+        run: |
+          poetry run pytest tests -sv -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runstrat_artifacts
+          path: tools/runstrat/artifacts/*
