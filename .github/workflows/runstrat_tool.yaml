@@ -3,10 +3,10 @@ name: Test runstrat tool
 on: 
   push:
     paths: 
-      - 'tools/runstrat'
+      - 'tools/runstrat/**'
   pull_request:
     paths: 
-      - 'tools/runstrat'
+      - 'tools/runstrat/**'
 
 jobs:
   build-and-launch:
