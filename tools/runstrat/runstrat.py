@@ -21,6 +21,7 @@ DOTNET_VERSION = "7.0"
 PATH_TO_VSHARP = Path(
     f"GameServers/VSharp/VSharp.Runner/bin/Release/net{DOTNET_VERSION}/VSharp.Runner.dll"
 )
+
 timestamp = datetime.fromtimestamp(datetime.now().timestamp())
 
 
