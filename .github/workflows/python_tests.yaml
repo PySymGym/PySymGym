@@ -22,7 +22,6 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install
-          poetry add --group dev poethepoet
 
       - name: Run main repo tests
         working-directory: ./AIAgent

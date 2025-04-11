@@ -1,0 +1,58 @@
+name: Test runstrat tool
+
+on: 
+  push:
+    paths: 
+      - 'tools/runstrat/**'
+  pull_request:
+    paths: 
+      - 'tools/runstrat/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+    
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+      
+      - name: Set up .NET 7.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+            
+      - name: Install poetry
+        run: |
+          pip install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry --ansi install -q
+      
+      - name: Build V# game server
+        working-directory: ./GameServers/VSharp/
+        run: |
+          dotnet build VSharp.ML.GameServer.Runner -c Release
+      
+      - name: Build .NET maps for tests
+        working-directory: ./tools/runstrat/resources
+        run: |
+          dotnet build ForTests -c Release
+      
+      - name: Run tests
+        working-directory: ./tools/runstrat
+        run: |
+          poetry run pytest tests -sv -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: tools/runstrat/artifacts/*
