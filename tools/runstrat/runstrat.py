@@ -16,6 +16,12 @@ from src.structs import RunResult
 from src.subprocess_calls import call_test_runner
 from enum import Enum
 
+
+DOTNET_VERSION = "7.0"
+PATH_TO_VSHARP = pathlib.Path(
+    f"GameServers/VSharp/VSharp.Runner/bin/Release/net{DOTNET_VERSION}/VSharp.Runner.dll"
+)
+
 timestamp = datetime.fromtimestamp(datetime.now().timestamp())
 
 
@@ -46,10 +52,7 @@ class Args:
 
 
 def entrypoint(args: Args) -> pd.DataFrame:
-    runner_path = pathlib.Path(
-        args.pysymgym_path
-        / "GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll"
-    ).resolve()
+    runner_path = pathlib.Path(args.pysymgym_path / PATH_TO_VSHARP).resolve()
 
     setup_logging(args.savedir, strategy_name=args.strategy.name)
 
