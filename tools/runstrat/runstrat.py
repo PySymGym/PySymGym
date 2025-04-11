@@ -1,7 +1,7 @@
 import argparse
 import itertools
 import logging
-import pathlib
+from pathlib import Path
 import subprocess
 from datetime import datetime
 import os
@@ -18,14 +18,13 @@ from enum import Enum
 
 
 DOTNET_VERSION = "7.0"
-PATH_TO_VSHARP = pathlib.Path(
+PATH_TO_VSHARP = Path(
     f"GameServers/VSharp/VSharp.Runner/bin/Release/net{DOTNET_VERSION}/VSharp.Runner.dll"
 )
-
 timestamp = datetime.fromtimestamp(datetime.now().timestamp())
 
 
-def setup_logging(savedir: pathlib.Path, strategy_name: str):
+def setup_logging(savedir: Path, strategy_name: str):
     logging.basicConfig(
         filename=os.path.join(savedir, f"{strategy_name}_{timestamp}.log"),
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
@@ -33,7 +32,7 @@ def setup_logging(savedir: pathlib.Path, strategy_name: str):
     )
 
 
-AssemblyInfo = tuple[pathlib.Path, pathlib.Path]
+AssemblyInfo = tuple[Path, Path]
 
 
 class RunMode(Enum):
@@ -45,14 +44,14 @@ class RunMode(Enum):
 class Args:
     strategy: BasePSStrategy
     timeout: int
-    pysymgym_path: pathlib.Path
-    savedir: pathlib.Path
-    assembly_infos: list[tuple[pathlib.Path, pathlib.Path]]
+    pysymgym_path: Path
+    savedir: Path
+    assembly_infos: list[tuple[Path, Path]]
     run_mode: RunMode = RunMode.BENCHMARKS
 
 
 def entrypoint(args: Args) -> pd.DataFrame:
-    runner_path = pathlib.Path(args.pysymgym_path / PATH_TO_VSHARP).resolve()
+    runner_path = Path(args.pysymgym_path / PATH_TO_VSHARP).resolve()
 
     setup_logging(args.savedir, strategy_name=args.strategy.name)
 
@@ -60,8 +59,8 @@ def entrypoint(args: Args) -> pd.DataFrame:
         itertools.chain(
             *[
                 load_config(
-                    pathlib.Path(dll_path).resolve(),
-                    pathlib.Path(launch_info).resolve(),
+                    Path(dll_path).resolve(),
+                    Path(launch_info).resolve(),
                 )
                 for dll_path, launch_info in args.assembly_infos
             ]
@@ -152,7 +151,7 @@ def main():
     parser.add_argument(
         "-mp",
         "--model-path",
-        type=pathlib.Path,
+        type=Path,
         required=False,
         help="Absolute path to AI model if AI strategy is selected",
     )
@@ -161,7 +160,7 @@ def main():
     )
     parser.add_argument(
         "-ps",
-        type=pathlib.Path,
+        type=Path,
         dest="pysymgym-path",
         required=False,
         help="Absolute path to PySymGym",
@@ -169,14 +168,14 @@ def main():
     parser.add_argument(
         "-sd",
         "--savedir",
-        type=pathlib.Path,
+        type=Path,
         required=False,
         help="Path to save results to. Default is current directory.",
     )
     parser.add_argument(
         "-as",
         "--assembly-infos",
-        type=pathlib.Path,
+        type=Path,
         action="append",
         nargs=2,
         metavar=("dlls-path", "launch-info-path"),
@@ -185,7 +184,7 @@ def main():
 
     args = parser.parse_args()
 
-    default_savedir = args.savedir or pathlib.Path(".")
+    default_savedir = args.savedir or Path(".")
     entrypoint(
         Args(
             strategy=BasePSStrategy.parse(args.strategy, model_path=args.model_path),
