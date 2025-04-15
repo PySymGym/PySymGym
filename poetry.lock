@@ -2139,14 +2139,14 @@ files = [
 
 [[package]]
 name = "optuna"
-version = "4.2.1"
+version = "4.3.0"
 description = "A hyperparameter optimization framework"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "optuna-4.2.1-py3-none-any.whl", hash = "sha256:6d38199013441d3f70fac27136e05c0188c5f4ec3848db708ac311cbdeb30dbf"},
-    {file = "optuna-4.2.1.tar.gz", hash = "sha256:2ecd74cdc8aaf5dda1f2b9e267999bab21def9a33e0a4f415ecae0c468c401e0"},
+    {file = "optuna-4.3.0-py3-none-any.whl", hash = "sha256:0ea1a01c99c09cbdf3e2dcd9af01dea86778d9fa20ca26f0238a98e7462d8dcb"},
+    {file = "optuna-4.3.0.tar.gz", hash = "sha256:b3866842a84bc0bbb9906363bd846cfc39d09d3196265354bfdfda6a2f123b84"},
 ]
 
 [package.dependencies]
@@ -3734,4 +3734,4 @@ test = ["big-O", "importlib-resources ; python_version < \"3.9\"", "jaraco.funct
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "65b0ae371c0ba44d69e8d2797233d9339ba6aea2c03b2c086952aac19a8309e1"
+content-hash = "70fe79b813aff91522b2386cede648f076a43ec4f2517c90fe70c37637a4959b"
