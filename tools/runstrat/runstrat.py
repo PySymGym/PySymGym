@@ -46,7 +46,7 @@ class Args:
     timeout: int
     pysymgym_path: Path
     savedir: Path
-    assembly_infos: list[tuple[Path, Path]]
+    assembly_infos: list[AssemblyInfo]
     run_mode: RunMode = RunMode.BENCHMARKS
 
 

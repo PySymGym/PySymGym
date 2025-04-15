@@ -12,7 +12,7 @@ class BasePSStrategy:
     def parse(name: str, model_path: Path = None) -> "BasePSStrategy":
         """
         Parse strategy from name and kwargs
-        :param name: strategy name (AI, ETCC)
+        :param name: strategy name (AI, ExecutionTreeContributedCoverage)
         :param kwargs: strategy arguments
         """
         if name == "AI":
