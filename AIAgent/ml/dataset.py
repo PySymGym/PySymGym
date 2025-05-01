@@ -369,7 +369,7 @@ class TrainingDataset(Dataset):
                 filtered_map_steps.append(step)
         return filtered_map_steps
 
-    def _get_map_steps(self, map_name) -> list[HeteroData]:
+    def _get_map_steps(self, map_name, device=GeneralConfig.DEVICE) -> list[HeteroData]:
         path_to_map_steps = Path(os.path.join(self.processed_dir, map_name))
         map_steps = []
         all_steps_paths = [
@@ -381,7 +381,7 @@ class TrainingDataset(Dataset):
             with torch.serialization.safe_globals(
                 [BaseStorage, NodeStorage, EdgeStorage]
             ):
-                map_steps.append(torch.load(path, map_location=GeneralConfig.DEVICE))
+                map_steps.append(torch.load(path, map_location=device))
         return map_steps
 
     def is_update_map_required(self, map_name: str, map_result: Result):
@@ -487,12 +487,16 @@ class TrainingDataset(Dataset):
             return game_v, states
 
         new_steps = create_dict(steps)
-        old_steps = create_dict(self._get_map_steps(map_name))
+        old_steps = create_dict(self._get_map_steps(map_name, device="cpu"))
 
         def graphs_are_equal(new_g_v, old_g_v, new_s_v, old_s_v):
             return np.array_equal(new_g_v, old_g_v) and np.array_equal(new_s_v, old_s_v)
 
         def merge_distributions(old_distribution, new_distribution):
+            if old_distribution.device != new_distribution.device:
+                device = "cpu"
+                old_distribution = old_distribution.to(device)
+                new_distribution = new_distribution.to(device)
             distributions_sum = old_distribution + new_distribution
             distributions_sum[distributions_sum != 0] = 1
             merged_distribution = distributions_sum / torch.sum(distributions_sum)
