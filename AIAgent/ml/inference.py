@@ -43,19 +43,22 @@ class ONNX:
     gamevertex_history_statevertex_index = underscore_join(
         TORCH.gamevertex_history_statevertex + ("index",)
     )
+    statevertex_history_gamevertex_index = underscore_join(
+        TORCH.statevertex_history_gamevertex + ("index",)
+    )
     gamevertex_history_statevertex_attrs = underscore_join(
         TORCH.gamevertex_history_statevertex + ("attrs",)
     )
     gamevertex_in_statevertex = underscore_join(TORCH.gamevertex_in_statevertex)
+    statevertex_in_gamevertex = underscore_join(TORCH.statevertex_in_gamevertex)
     statevertex_parentof_statevertex = underscore_join(
         TORCH.statevertex_parentof_statevertex
     )
     pathcondvertex_to_pathcondvertex = underscore_join(
         TORCH.pathcondvertex_to_pathcondvertex
     )
-    pathcondvertex_to_statevertex = underscore_join(
-        TORCH.pathcondvertex_to_statevertex
-    )
+    pathcondvertex_to_statevertex = underscore_join(TORCH.pathcondvertex_to_statevertex)
+    statevertex_to_pathcondvertex = underscore_join(TORCH.statevertex_to_pathcondvertex)
 
 
 def infer(model, data):
@@ -66,9 +69,12 @@ def infer(model, data):
         edge_index_v_v=data[*TORCH.gamevertex_to_gamevertex].edge_index,
         edge_type_v_v=data[*TORCH.gamevertex_to_gamevertex].edge_type,
         edge_index_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_index,
+        edge_index_history_s_v=data[*TORCH.statevertex_history_gamevertex].edge_index,
         edge_attr_history_v_s=data[*TORCH.gamevertex_history_statevertex].edge_attr,
         edge_index_in_v_s=data[*TORCH.gamevertex_in_statevertex].edge_index,
+        edge_index_in_s_v=data[*TORCH.statevertex_in_gamevertex].edge_index,
         edge_index_s_s=data[*TORCH.statevertex_parentof_statevertex].edge_index,
         edge_index_pc_pc=data[*TORCH.pathcondvertex_to_pathcondvertex].edge_index,
-        edge_index_pc_state=data[*TORCH.pathcondvertex_to_statevertex].edge_index,
+        edge_index_pc_s=data[*TORCH.pathcondvertex_to_statevertex].edge_index,
+        edge_index_s_pc=data[*TORCH.statevertex_to_pathcondvertex].edge_index,
     )
