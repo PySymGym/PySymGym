@@ -40,11 +40,17 @@ def create_model_input(
         ONNX.gamevertex_history_statevertex_index: modifier(
             hetero_data[TORCH.gamevertex_history_statevertex].edge_index
         ),
+        ONNX.statevertex_history_gamevertex_index: modifier(
+            hetero_data[TORCH.statevertex_history_gamevertex].edge_index
+        ),
         ONNX.gamevertex_history_statevertex_attrs: modifier(
             hetero_data[TORCH.gamevertex_history_statevertex].edge_attr
         ),
         ONNX.gamevertex_in_statevertex: modifier(
             hetero_data[TORCH.gamevertex_in_statevertex].edge_index
+        ),
+        ONNX.statevertex_in_gamevertex: modifier(
+            hetero_data[TORCH.statevertex_in_gamevertex].edge_index
         ),
         ONNX.statevertex_parentof_statevertex: modifier(
             hetero_data[TORCH.statevertex_parentof_statevertex].edge_index
@@ -54,6 +60,9 @@ def create_model_input(
         ),
         ONNX.pathcondvertex_to_statevertex: modifier(
             hetero_data[TORCH.pathcondvertex_to_statevertex].edge_index
+        ),
+        ONNX.statevertex_to_pathcondvertex: modifier(
+            hetero_data[TORCH.statevertex_to_pathcondvertex].edge_index
         ),
     }
 
@@ -85,11 +94,14 @@ def save_in_onnx(
             ONNX.gamevertex_to_gamevertex_index: [1],
             ONNX.gamevertex_to_gamevertex_type: [0],
             ONNX.gamevertex_history_statevertex_index: [1],
+            ONNX.statevertex_history_gamevertex_index: [1],
             ONNX.gamevertex_history_statevertex_attrs: [0, 1],
             ONNX.gamevertex_in_statevertex: [1],
+            ONNX.statevertex_in_gamevertex: [1],
             ONNX.statevertex_parentof_statevertex: [1],
             ONNX.pathcondvertex_to_pathcondvertex: [1],
             ONNX.pathcondvertex_to_statevertex: [1],
+            ONNX.statevertex_to_pathcondvertex: [1],
         },
         input_names=[
             ONNX.game_vertex,
@@ -98,11 +110,14 @@ def save_in_onnx(
             ONNX.gamevertex_to_gamevertex_index,
             ONNX.gamevertex_to_gamevertex_type,
             ONNX.gamevertex_history_statevertex_index,
+            ONNX.statevertex_history_gamevertex_index,
             ONNX.gamevertex_history_statevertex_attrs,
             ONNX.gamevertex_in_statevertex,
+            ONNX.statevertex_in_gamevertex,
             ONNX.statevertex_parentof_statevertex,
             ONNX.pathcondvertex_to_pathcondvertex,
             ONNX.pathcondvertex_to_statevertex,
+            ONNX.statevertex_to_pathcondvertex,
         ],
         output_names=["out"],
         opset_version=ONNX_OPSET_VERSION,
