@@ -1,5 +1,7 @@
+import glob
 import json
 import os
+import random
 import shutil
 import typing as t
 from collections import defaultdict
@@ -126,3 +128,18 @@ def find_dominators_in_cfg(graph: HeteroData) -> HeteroData:
                         torch.tensor([3]),
                     )
                 )
+
+
+def sample_dataset(path_to_dataset: Path, path_to_save: Path, percentage: float):
+    files_paths = glob.glob(os.path.join(path_to_dataset, "*", "*.pt"))
+
+    random.shuffle(files_paths)
+    for path in files_paths[: round(len(files_paths) * percentage)]:
+        _, _, map_name, file_name = os.path.normpath(path).split(os.sep)
+        if not Path(os.path.join(path_to_save, map_name)).exists():
+            os.makedirs(os.path.join(path_to_save, map_name))
+            shutil.copyfile(
+                os.path.join(path_to_dataset, map_name, "result"),
+                os.path.join(path_to_save, map_name, "result"),
+            )
+        shutil.copyfile(path, os.path.join(path_to_save, map_name, file_name))
