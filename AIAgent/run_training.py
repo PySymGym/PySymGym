@@ -20,6 +20,7 @@ from common.config.optuna_config import OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
     CriterionValidation,
+    CustomValidation,
     SVMValidation,
     ValidationConfig,
 )
@@ -27,7 +28,7 @@ from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
 from ml.dataset import TrainingDataset
-from ml.models.NorthernPenguin.model import StateModelEncoder
+from ml.models.InvisibleCow.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
@@ -82,12 +83,9 @@ def get_maps(validation_with_svms_config: SVMValidation):
 class TrialSettings:
     lr: float
     batch_size: int
-    num_hops_1: int
-    num_hops_2: int
     num_of_state_features: int
     hidden_channels: int
     normalization: bool
-    num_pc_layers: int
     early_stopping_state_len: int
     tolerance: float
 
@@ -101,45 +99,75 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    if isinstance(validation_config.validation_mode, CriterionValidation):
+    def get_validation(validation_mode):
+        if isinstance(validation_mode, CriterionValidation):
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-        def validate(model, dataset):
-            criterion = criterion_init()
-            result = validate_loss(
-                model,
-                dataset,
-                criterion,
-                validation_config.validation_mode.batch_size,
-            )
-            metric_name = str(criterion).replace("(", "_").replace(")", "_")
-            metrics = {metric_name: result}
-            return result, metrics
+            def validate(model, dataset: TrainingDataset):
+                if validation_mode.dataset == "training":
+                    dataset.switch_to("train")
+                if validation_mode.dataset == "validation":
+                    dataset.switch_to("val")
 
-    elif isinstance(validation_config.validation_mode, SVMValidation):
-        maps: list[GameMap2SVM] = get_maps(validation_config.validation_mode)
-        with open(CURRENT_TABLE_PATH, "w") as statistics_file:
-            statistics_writer = csv.DictWriter(
-                statistics_file,
-                sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
-            )
-            statistics_writer.writeheader()
+                criterion = criterion_init()
+                result = validate_loss(
+                    model,
+                    dataset,
+                    criterion,
+                    validation_mode.batch_size,
+                )
+                metric_name = (
+                    str(criterion).replace("(", "_").replace(")", "_")
+                    + validation_mode.dataset
+                )
+                metrics = {metric_name: result}
+                return result, metrics
+
+            return validate
+
+        elif isinstance(validation_mode, SVMValidation):
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:False"
+            maps: list[GameMap2SVM] = get_maps(validation_mode)
+            with open(CURRENT_TABLE_PATH, "w") as statistics_file:
+                statistics_writer = csv.DictWriter(
+                    statistics_file,
+                    sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
+                )
+                statistics_writer.writeheader()
+
+            def validate(model, dataset: TrainingDataset):
+                map2results = ValidationCoverage(model, dataset).validate_coverage(
+                    maps, validation_mode
+                )
+                metrics = get_svms_statistics(map2results, validation_mode, dataset)
+                mlflow.log_artifact(CURRENT_TABLE_PATH)
+
+                for map2result in map2results:
+                    if (
+                        isinstance(map2result.game_result, GameFailed)
+                        and validation_mode.fail_immediately
+                    ):
+                        raise RuntimeError("Validation failed")
+                return metrics[AVERAGE_COVERAGE], metrics
+
+            return validate
+
+    if not isinstance(validation_config.validation_mode, CustomValidation):
+        validate = get_validation(validation_config.validation_mode)
+    else:
+        val_pipeline = list()
+        for val_mode in validation_config.validation_mode.val_sequence:
+            val_pipeline.append(get_validation(val_mode))
 
         def validate(model, dataset: TrainingDataset):
-            map2results = ValidationCoverage(model, dataset).validate_coverage(
-                maps, validation_config.validation_mode
-            )
-            metrics = get_svms_statistics(
-                map2results, validation_config.validation_mode, dataset
-            )
-            mlflow.log_artifact(CURRENT_TABLE_PATH)
-
-            for map2result in map2results:
-                if (
-                    isinstance(map2result.game_result, GameFailed)
-                    and validation_config.validation_mode.fail_immediately
-                ):
-                    raise RuntimeError("Validation failed")
-            return metrics[AVERAGE_COVERAGE], metrics
+            metrics = dict()
+            results = list()
+            for val_func in val_pipeline:
+                single_val_result, single_val_metrics = val_func(model, dataset)
+                results.append(single_val_result)
+                metrics.update(single_val_metrics)
+                torch.cuda.empty_cache()
+            return results[0], metrics
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
@@ -215,13 +243,10 @@ def objective(
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 150),
-        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
+        batch_size=trial.suggest_int("batch_size", 8, 50),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         normalization=True,
-        num_pc_layers=trial.suggest_int("num_pc_layers", 1, 7),
         early_stopping_state_len=5,
         tolerance=0.0001,
     )
@@ -244,7 +269,7 @@ def objective(
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
             dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=False)
             model.train()
             train(
                 dataloader=train_dataloader,

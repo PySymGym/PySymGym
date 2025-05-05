@@ -38,6 +38,8 @@ STATESUFFIX = "_statesInfo"
 MOVEDSTATESUFFIX = "_movedState"
 
 NUM_PC_FEATURES = 49
+NUM_STATE_FEATURES = 6
+NUM_CFG_VERTEX_FEATURES = 7
 
 StateId: TypeAlias = int
 StateIndex: TypeAlias = int
