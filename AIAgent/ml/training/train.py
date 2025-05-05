@@ -2,6 +2,7 @@ from typing import Callable
 
 import torch
 import tqdm
+import os
 from torch_geometric.loader import DataLoader
 
 from config import GeneralConfig
@@ -14,6 +15,7 @@ def train(
     optimizer: torch.optim.Optimizer,
     criterion: Callable,
 ):
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     for batch in tqdm.tqdm(
         dataloader,
         desc="training",
