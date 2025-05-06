@@ -85,6 +85,7 @@ class TrialSettings:
     batch_size: int
     num_of_state_features: int
     hidden_channels: int
+    num_blocks: int
     normalization: bool
     early_stopping_state_len: int
     tolerance: float
@@ -246,6 +247,7 @@ def objective(
         batch_size=trial.suggest_int("batch_size", 8, 50),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
+        num_blocks=trial.suggest_int("num_blocks", 1, 5),
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
