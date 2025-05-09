@@ -24,7 +24,7 @@ class Block(torch.nn.Module):
             (state_channels, hidden_channels), hidden_channels, normalize=normalization
         )
         self.state_to_pc_conv = SAGEConv(
-            (hidden_channels, pc_channels), hidden_channels, normalize=normalization
+            (state_channels, pc_channels), hidden_channels, normalize=normalization
         )
 
         self.cfg_conv = Sequential(
