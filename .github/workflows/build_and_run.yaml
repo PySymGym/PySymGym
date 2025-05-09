@@ -16,7 +16,7 @@ jobs:
           apt update
           apt install -y git software-properties-common
           add-apt-repository ppa:dotnet/backports
-          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-9.0 cmake clang maven
+          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-9.0 cmake clang
       
       - name: Debug
         run: |
@@ -41,42 +41,15 @@ jobs:
         run: |
           poetry --ansi install -q
 
-      - name: Setup Java
-        uses: actions/setup-java@v4.5.0
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-          cache: 'maven'
-
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
         run: |
           dotnet build VSharp.ML.GameServer.Runner -c Release
 
-      - name: Build usvm game server
-        working-directory: ./GameServers/usvm/
-        run: |
-          ./gradlew assemble --no-daemon
-
       - name: Build .NET game maps
         working-directory: ./maps/DotNet/Maps
         run: |
           dotnet build Root -c Release
-
-      - name: Build manually collected Java game maps
-        working-directory: ./maps/Java/Maps
-        run: |
-          ./gradlew build
-
-      - name: Build Java game maps from LogicNG
-        working-directory: ./maps/Java/Maps/LogicNG
-        run: |
-          mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true
-
-      - name: Build Java game maps from jflex
-        working-directory: ./maps/Java/Maps/jflex
-        run: |
-          mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true -Dfmt.skip
 
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
