@@ -10,17 +10,18 @@ class Block(torch.nn.Module):
         self,
         pc_channels,
         cfg_vertex_channels,
+        state_channels,
         hidden_channels,
         normalization,
     ):
         super().__init__()
         self.state_history_cfg_conv = SAGEConv(
-            (hidden_channels, cfg_vertex_channels),
+            (state_channels, cfg_vertex_channels),
             hidden_channels,
             normalize=normalization,
         )
         self.state_in_cfg_conv = SAGEConv(
-            (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
+            (state_channels, hidden_channels), hidden_channels, normalize=normalization
         )
         self.state_to_pc_conv = SAGEConv(
             (hidden_channels, pc_channels), hidden_channels, normalize=normalization
@@ -58,7 +59,7 @@ class Block(torch.nn.Module):
         )
 
         self.cfg_history_state_conv = SAGEConv(
-            (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
+            (hidden_channels, state_channels), hidden_channels, normalize=normalization
         )
         self.cfg_in_state_conv = SAGEConv(
             (hidden_channels, hidden_channels), hidden_channels, normalize=normalization
@@ -116,9 +117,9 @@ class Block(torch.nn.Module):
 class StateModelEncoder(torch.nn.Module):
     def __init__(
         self,
-        hidden_channels,
-        num_of_state_features,
-        num_blocks,
+        hidden_channels: int,
+        num_of_state_features: int,
+        blocks: list[int],
         normalization: bool,
     ):
         super().__init__()
@@ -146,21 +147,23 @@ class StateModelEncoder(torch.nn.Module):
                 NUM_PC_FEATURES,
                 NUM_CFG_VERTEX_FEATURES,
                 hidden_channels,
+                blocks[0],
                 normalization,
             )
         )
 
-        for _ in range(num_blocks - 1):
+        for block_num in range(1, len(blocks)):
             self.blocks.append(
                 Block(
-                    hidden_channels,
-                    hidden_channels,
-                    hidden_channels,
+                    blocks[block_num - 1],
+                    blocks[block_num - 1],
+                    blocks[block_num - 1],
+                    blocks[block_num],
                     normalization,
                 )
             )
 
-        self.lin = Linear(hidden_channels, num_of_state_features)
+        self.lin = Linear(blocks[-1], num_of_state_features)
         self.lin_last = Linear(num_of_state_features, 1)
 
     def forward(
