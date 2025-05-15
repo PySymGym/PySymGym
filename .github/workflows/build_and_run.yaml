@@ -17,10 +17,12 @@ jobs:
           apt install -y git software-properties-common
           apt-get update && apt-get install -y build-essential cmake clang curl
       
-      - name: Set up .NET 7.0.x
+      - name: Set up .NET 7.0.x and 9.0.x
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '7.0.x'
+          dotnet-version: |
+            7.0.x
+            9.0.x
       
       - name: Debug
         run: |
