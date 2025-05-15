@@ -53,12 +53,9 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-          cache: 'maven'
-          cache-dependency-path: |
-            ./GameServers/**/.gradle/*
-            ./GameServers/**/gradle-wrapper.properties
-            ./maps/Java/Maps/.gradle/*
-            ./maps/Java/Maps/**/gradle-wrapper.properties
+          cache: | 
+            'maven'
+            'gradle'
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
