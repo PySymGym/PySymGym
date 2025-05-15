@@ -15,7 +15,7 @@ jobs:
         run: |
           apt update
           apt install -y git software-properties-common
-          apt-get update && apt-get install -y build-essential cmake clang curl
+          apt-get update && apt-get install -y build-essential cmake clang curl maven
       
       - name: Set up .NET 7.0.x and 9.0.x
         uses: actions/setup-dotnet@v4
@@ -53,9 +53,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-          cache: | 
-            'maven'
-            'gradle'
+          cache: 'maven'
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
@@ -76,6 +74,16 @@ jobs:
         working-directory: ./maps/Java/Maps
         run: |
           ./gradlew build
+      
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Build Java game maps from LogicNG
         working-directory: ./maps/Java/Maps/LogicNG
