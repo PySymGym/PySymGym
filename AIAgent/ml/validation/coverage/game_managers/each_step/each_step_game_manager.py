@@ -49,8 +49,7 @@ class EachStepGameManager(BaseGameManager):
         steps_count = 0
         game_state = None
         actual_coverage = None
-        steps = with_connector.map.StepsToPlay
-
+        steps = with_connector.map.StepsToPlay + game_map2svm.GameMap.StepsToStart
         start_time = perf_counter()
 
         map_steps = []
@@ -61,8 +60,8 @@ class EachStepGameManager(BaseGameManager):
             map_steps.append(hetero_input)  # noqa: F821
 
         try:
-            for _ in range(with_connector.map.StepsToPlay):
-                if steps_count == 0:
+            for i in range(with_connector.map.StepsToPlay):
+                if i == 0:
                     game_state = with_connector.recv_state_or_throw_gameover()
                 else:
                     delta = with_connector.recv_state_or_throw_gameover()
@@ -82,10 +81,8 @@ class EachStepGameManager(BaseGameManager):
                 )
 
                 _ = with_connector.recv_reward_or_throw_gameover()
-                steps_count += 1
 
             _ = with_connector.recv_state_or_throw_gameover()  # wait for gameover
-            steps_count += 1
         except Connector.GameOver as gameover:
             if game_state is None:
                 logging.warning(
@@ -99,6 +96,7 @@ class EachStepGameManager(BaseGameManager):
                 actual_coverage = gameover.actual_coverage
 
             tests_count = gameover.tests_count
+            steps_count = gameover.steps_count
             errors_count = gameover.errors_count
 
         end_time = perf_counter()
