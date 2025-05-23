@@ -49,6 +49,7 @@ class BaseGamePreparator(ABC):
 
 
 class BaseGameManager(ABC):
+    # TODO: docs
     def __init__(self, namespace: Namespace):
         self._namespace = namespace
         self._preparator = self._create_preparator()
@@ -77,4 +78,17 @@ class BaseGameManager(ABC):
     @abstractmethod
     def delete_game_artifacts(self, game_map: GameMap):
         """Deletes game artifacts of game_map"""
+        ...
+
+    @abstractmethod
+    def notify_steps_requirement(self, game_map: GameMap, required: bool):
+        """Notify the symbolic execution environment whether to preserve execution steps.
+
+        Allows the client to optimize resource usage by skipping unnecessary step data
+        transmission when metrics are not improved.
+
+        Args:
+            game_map: game map
+            required: True if steps should be preserved and transmitted
+        """
         ...
