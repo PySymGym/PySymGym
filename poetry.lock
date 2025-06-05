@@ -245,14 +245,14 @@ files = [
 
 [[package]]
 name = "cattrs"
-version = "25.1.0"
+version = "25.1.1"
 description = "Composable complex class support for attrs and dataclasses."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "cattrs-25.1.0-py3-none-any.whl", hash = "sha256:b07bd2082298f8915d53ed7254c4c34d90995d4a79467b7df7bbd544eef532f1"},
-    {file = "cattrs-25.1.0.tar.gz", hash = "sha256:3bf01e9592b38a49bdae47a26385583f000c98862d0efcda2c03a508b02b95b8"},
+    {file = "cattrs-25.1.1-py3-none-any.whl", hash = "sha256:1b40b2d3402af7be79a7e7e097a9b4cd16d4c06e6d526644b0b26a063a1cc064"},
+    {file = "cattrs-25.1.1.tar.gz", hash = "sha256:c914b734e0f2d59e5b720d145ee010f1fd9a13ee93900922a2f3f9d593b8382c"},
 ]
 
 [package.dependencies]
@@ -3784,4 +3784,4 @@ test = ["big-O", "importlib-resources ; python_version < \"3.9\"", "jaraco.funct
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "4d230a7ebadb2645cf25a92707de218c3d42373c19e048d6db846e3958ed8dc1"
+content-hash = "b7ba41c3475497b88071b8154f4330bb2dbad26fb38b751d51f3fd70ab904043"
