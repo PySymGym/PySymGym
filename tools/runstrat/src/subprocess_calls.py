@@ -24,6 +24,7 @@ def call_test_runner(
         "--strat",
         strategy.name,
         "--check-coverage",
+        "--optimize",
     ]
 
     match strategy:

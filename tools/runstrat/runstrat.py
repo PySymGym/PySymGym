@@ -158,8 +158,9 @@ def main():
     )
     parser.add_argument(
         "-ps",
+        "--pysymgym-path",
         type=Path,
-        dest="pysymgym-path",
+        dest="pysymgym_path",
         required=False,
         help="Absolute path to PySymGym",
     )
