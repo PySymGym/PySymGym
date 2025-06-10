@@ -28,7 +28,7 @@ from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
 from ml.dataset import TrainingDataset
-from ml.models.InvisibleCow.model import StateModelEncoder
+from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
@@ -83,12 +83,14 @@ def get_maps(validation_with_svms_config: SVMValidation):
 class TrialSettings:
     lr: float
     batch_size: int
+    num_hops_1: int
+    num_hops_2: int
     num_of_state_features: int
     hidden_channels: int
-    blocks: int
     normalization: bool
     early_stopping_state_len: int
     tolerance: float
+    num_pc_layers: int
 
 
 def run_training(
@@ -244,13 +246,12 @@ def objective(
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 50),
+        batch_size=trial.suggest_int("batch_size", 8, 32),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
-        blocks=[
-            trial.suggest_int(f"hidden_channels_{block_num}", 64, 128)
-            for block_num in range(trial.suggest_int("num_blocks", 1, 5))
-        ],
+        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
+        num_hops_2 = trial.suggest_int("num_hops_2", 2, 10),
+        num_pc_layers=trial.suggest_int("num_pc_layers", 1, 5),
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
