@@ -58,7 +58,7 @@ class StateModelEncoder(torch.nn.Module):
         edge_index_in_v_s,
         edge_index_s_s,
         edge_index_pc_pc,
-        edge_index_pc_state,
+        edge_index_pc_s,
     ):
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 
@@ -86,7 +86,7 @@ class StateModelEncoder(torch.nn.Module):
             edge_index_in_v_s,
         ).relu()
 
-        state_x = self.pc_to_state((pc_x, state_x), edge_index_pc_state).relu()
+        state_x = self.pc_to_state((pc_x, state_x), edge_index_pc_s).relu()
         state_x = self.conv2(
             state_x,
             edge_index_s_s,
