@@ -1,5 +1,6 @@
 import argparse
 import csv
+import inspect
 import json
 import logging
 import multiprocessing as mp
@@ -41,6 +42,7 @@ from paths import (
     CURRENT_TABLE_PATH,
     CURRENT_TRIAL_PATH,
     LOG_PATH,
+    MODEL_KWARGS_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
@@ -228,13 +230,14 @@ def objective(
     early_stopping = EarlyStopping(
         state_len=config.early_stopping_state_len, tolerance=config.tolerance
     )
-    model: nn.Module = model_init(
-        hidden_channels=config.hidden_channels,
-        num_of_state_features=config.num_of_state_features,
-        num_hops_1=config.num_hops_1,
-        num_hops_2=config.num_hops_2,
-        normalization=config.normalization,
+    model_kwargs_names = list(
+        inspect.signature(StateModelEncoder.__init__).parameters.keys()
     )
+    model_kwargs_names.remove("self")
+    model_kwargs = dict(
+        [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
+    )
+    model: nn.Module = model_init(**model_kwargs)
     model.to(GeneralConfig.DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
@@ -255,6 +258,9 @@ def objective(
             torch.cuda.empty_cache()
             torch.save(model.state_dict(), CURRENT_MODEL_PATH)
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
+
+            with open(MODEL_KWARGS_PATH, "w") as outfile:
+                yaml.dump(model_kwargs, outfile)
 
             model.eval()
             dataset.switch_to("val")

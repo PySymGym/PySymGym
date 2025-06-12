@@ -1,5 +1,4 @@
 import logging
-import logging.config
 from functools import wraps
 from typing import Optional
 
@@ -38,11 +37,13 @@ class Connector:
             self,
             actual_coverage: Optional[int],
             tests_count: int,
+            steps_count: int,
             errors_count: int,
             *args,
         ) -> None:
             self.actual_coverage = actual_coverage
             self.tests_count = tests_count
+            self.steps_count = steps_count
             self.errors_count = errors_count
             super().__init__(*args)
 
@@ -95,6 +96,7 @@ class Connector:
                 raise Connector.GameOver(
                     actual_coverage=deser_msg.MessageBody.ActualCoverage,
                     tests_count=deser_msg.MessageBody.TestsCount,
+                    steps_count=deser_msg.MessageBody.StepsCount,
                     errors_count=deser_msg.MessageBody.ErrorsCount,
                 )
             case _:
