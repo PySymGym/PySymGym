@@ -250,7 +250,7 @@ def objective(
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
         num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2 = trial.suggest_int("num_hops_2", 2, 10),
+        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
         num_pc_layers=trial.suggest_int("num_pc_layers", 1, 5),
         normalization=True,
         early_stopping_state_len=5,
@@ -265,6 +265,7 @@ def objective(
         num_hops_1=config.num_hops_1,
         num_hops_2=config.num_hops_2,
         normalization=config.normalization,
+        num_pc_layers=config.num_pc_layers,
     )
     model.to(GeneralConfig.DEVICE)
 
