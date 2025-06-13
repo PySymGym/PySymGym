@@ -221,8 +221,8 @@ def entrypoint(
     torch_model.eval()
     infer(torch_model, hetero_sample_gamestate)
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
-
     torch_model.load_state_dict(state_dict)
+
     save_in_onnx(torch_model, hetero_sample_gamestate, onnx_savepath)
     model_onnx = onnx.load(onnx_savepath)
     onnx.checker.check_model(model_onnx)
