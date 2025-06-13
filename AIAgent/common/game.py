@@ -14,10 +14,18 @@ class StateHistoryElem:
 
 @dataclass_json
 @dataclass(slots=True)
+class PathConditionVertex:
+    Id: int
+    Type: int
+    Children: list[int]
+
+
+@dataclass_json
+@dataclass(slots=True)
 class State:
     Id: int
     Position: int
-    PathConditionSize: int
+    PathCondition: PathConditionVertex
     VisitedAgainVertices: int
     VisitedNotCoveredVerticesInZone: int
     VisitedNotCoveredVerticesOutOfZone: int
@@ -63,6 +71,7 @@ class GameMapEdge:
 class GameState:
     GraphVertices: list[GameMapVertex]
     States: list[State]
+    PathConditionVertices: list[PathConditionVertex]
     Map: list[GameMapEdge]
 
 
