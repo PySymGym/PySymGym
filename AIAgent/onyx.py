@@ -44,15 +44,9 @@ def create_model_input(
         ONNX.gamevertex_history_statevertex_attrs: modifier(
             hetero_data[TORCH.gamevertex_history_statevertex].edge_attr
         ),
-        # ONNX.statevertex_history_gamevertex_index: modifier(
-        #     hetero_data[TORCH.statevertex_history_gamevertex].edge_index
-        # ),
         ONNX.gamevertex_in_statevertex: modifier(
             hetero_data[TORCH.gamevertex_in_statevertex].edge_index
         ),
-        # ONNX.statevertex_in_gamevertex: modifier(
-        #     hetero_data[TORCH.statevertex_in_gamevertex].edge_index
-        # ),
         ONNX.statevertex_parentof_statevertex: modifier(
             hetero_data[TORCH.statevertex_parentof_statevertex].edge_index
         ),
@@ -62,9 +56,6 @@ def create_model_input(
         ONNX.pathcondvertex_to_statevertex: modifier(
             hetero_data[TORCH.pathcondvertex_to_statevertex].edge_index
         ),
-        # ONNX.statevertex_to_pathcondvertex: modifier(
-        #     hetero_data[TORCH.statevertex_to_pathcondvertex].edge_index
-        # ),
     }
 
 
