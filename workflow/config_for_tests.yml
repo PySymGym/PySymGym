@@ -25,16 +25,6 @@ ValidationConfig:
             min_port: 35000
             max_port: 35050
             server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
-      - name: java
-        DatasetConfigs:
-          - dataset_base_path: ../maps/Java/Maps/
-            dataset_description: ../workflow/dataset_for_tests_java.json
-        SVMSInfo:
-          - name: usvm
-            launch_command: java -jar app.jar --mode server --port {port}
-            min_port: 35100
-            max_port: 35150
-            server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
   experiment_name: CI
