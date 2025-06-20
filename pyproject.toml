@@ -37,7 +37,7 @@ cattrs = "^25.1.1"
 attrs = "^25.3.0"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.4.0"
+pytest = "^8.4.1"
 
 [tool.poetry.group.formatter.dependencies]
 ruff = "^0.12.0"
