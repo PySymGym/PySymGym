@@ -1,4 +1,5 @@
 import ast
+from enum import Enum
 import glob
 import json
 import logging
@@ -16,7 +17,6 @@ from typing import (
     DefaultDict,
     Dict,
     List,
-    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -66,6 +66,11 @@ StatesDistribution: TypeAlias = torch.tensor
 class Step:
     graph: HeteroData
     states_distribution: StatesDistribution
+
+
+class TrainingDatasetMode(Enum):
+    TRAINING = "TRAINING"
+    VALIDATION = "VALIDATION"
 
 
 class TrainingDataset(Dataset):
@@ -150,7 +155,7 @@ class TrainingDataset(Dataset):
             )
         return step
 
-    def switch_to(self, mode: Literal["train", "val"]) -> None:
+    def switch_to(self, mode: TrainingDatasetMode) -> None:
         """
         Switch between training and validation modes
 
@@ -160,12 +165,12 @@ class TrainingDataset(Dataset):
             'train' --- use training part;\n
             'val' --- use validation part.
         """
-        if mode == "train":
+        if mode is TrainingDatasetMode.TRAINING:
             self.__indices = self.train_dataset_indices
-        elif mode == "val":
+        elif mode is TrainingDatasetMode.VALIDATION:
             self.__indices = self.test_dataset_indices
         else:
-            raise ValueError("mode must be either 'train' or 'val'")
+            raise ValueError("mode must be either 'TRAINING' or 'VALIDATION'")
 
     @property
     def raw_dir(self):
