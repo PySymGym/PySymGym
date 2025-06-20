@@ -1,9 +1,10 @@
 from abc import ABC
-from typing import Literal, Optional, Union
+from typing import Literal, Union
 
 from common.config.platform_config import Platform
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
+from ml.dataset import TrainingDatasetMode
 
 
 @pydantic_dataclass
@@ -15,7 +16,7 @@ class ValidationMode:
 class CriterionValidation(ValidationMode):
     val_type: Literal["loss"]
     batch_size: int
-    dataset: Optional[Literal["validation", "training"]] = Field(default="validation")
+    dataset: TrainingDatasetMode = Field(default=TrainingDatasetMode.VALIDATION)
 
 
 @pydantic_dataclass

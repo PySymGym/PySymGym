@@ -23,11 +23,12 @@ from common.config.validation_config import (
     CustomValidation,
     SVMValidation,
     ValidationConfig,
+    ValidationMode,
 )
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
-from ml.dataset import TrainingDataset
+from ml.dataset import TrainingDataset, TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
@@ -102,16 +103,14 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    def get_validation(validation_mode):
+    def get_validation(validation_mode: ValidationMode):
         if isinstance(validation_mode, CriterionValidation):
+            # See the meaning here: https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf
+            # In short, this setting allows to optimize memory usage.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
             def validate(model, dataset: TrainingDataset):
-                if validation_mode.dataset == "training":
-                    dataset.switch_to("train")
-                if validation_mode.dataset == "validation":
-                    dataset.switch_to("val")
-
+                dataset.switch_to(validation_mode.dataset)
                 criterion = criterion_init()
                 result = validate_loss(
                     model,
@@ -129,7 +128,10 @@ def run_training(
             return validate
 
         elif isinstance(validation_mode, SVMValidation):
+            # See the meaning here: https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf
+            # In short, this setting allows to optimize memory usage, but doesn't work with multiprocessing. So it's turned off here.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:False"
+
             maps: list[GameMap2SVM] = get_maps(validation_mode)
             with open(CURRENT_TABLE_PATH, "w") as statistics_file:
                 statistics_writer = csv.DictWriter(
@@ -275,8 +277,8 @@ def objective(
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
-            dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=False)
+            dataset.switch_to(TrainingDatasetMode.TRAINING)
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=False) # Shuffle leads to problems with GPU memory.
             model.train()
             train(
                 dataloader=train_dataloader,
@@ -289,7 +291,7 @@ def objective(
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
             model.eval()
-            dataset.switch_to("val")
+            dataset.switch_to(TrainingDatasetMode.VALIDATION)
             result, metrics = validate(model, dataset)
             mlflow.log_metrics(metrics, step=epoch)
             if dynamic_dataset:
