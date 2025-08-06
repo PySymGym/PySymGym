@@ -20,20 +20,20 @@ from common.config.optuna_config import OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
     CriterionValidation,
+    CustomValidation,
     SVMValidation,
     ValidationConfig,
+    ValidationMode,
 )
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig
-from ml.dataset import TrainingDataset
-from ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model import (
-    StateModelEncoder,
-)
+from ml.dataset import TrainingDataset, TrainingDatasetMode
+from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
 from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
-from ml.validation.loss import validate_loss
+from ml.validation.loss.validate_loss import validate_loss
 from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
 from paths import (
     CURRENT_MODEL_PATH,
@@ -91,6 +91,7 @@ class TrialSettings:
     normalization: bool
     early_stopping_state_len: int
     tolerance: float
+    num_pc_layers: int
 
 
 def run_training(
@@ -102,45 +103,76 @@ def run_training(
     def criterion_init():
         return nn.KLDivLoss(reduction="batchmean")
 
-    if isinstance(validation_config.validation_mode, CriterionValidation):
+    def get_validation(validation_mode: ValidationMode):
+        if isinstance(validation_mode, CriterionValidation):
+            # See the meaning here: https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf
+            # In short, this setting allows to optimize memory usage.
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-        def validate(model, dataset):
-            criterion = criterion_init()
-            result = validate_loss(
-                model,
-                dataset,
-                criterion,
-                validation_config.validation_mode.batch_size,
-            )
-            metric_name = str(criterion).replace("(", "_").replace(")", "_")
-            metrics = {metric_name: result}
-            return result, metrics
+            def validate(model, dataset: TrainingDataset):
+                dataset.switch_to(validation_mode.dataset)
+                criterion = criterion_init()
+                result = validate_loss(
+                    model,
+                    dataset,
+                    criterion,
+                    validation_mode.batch_size,
+                )
+                metric_name = (
+                    str(criterion).replace("(", "_").replace(")", "_")
+                    + validation_mode.dataset
+                )
+                metrics = {metric_name: result}
+                return result, metrics
 
-    elif isinstance(validation_config.validation_mode, SVMValidation):
-        maps: list[GameMap2SVM] = get_maps(validation_config.validation_mode)
-        with open(CURRENT_TABLE_PATH, "w") as statistics_file:
-            statistics_writer = csv.DictWriter(
-                statistics_file,
-                sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
-            )
-            statistics_writer.writeheader()
+            return validate
+
+        elif isinstance(validation_mode, SVMValidation):
+            # See the meaning here: https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf
+            # In short, this setting allows to optimize memory usage, but doesn't work with multiprocessing. So it's turned off here.
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:False"
+
+            maps: list[GameMap2SVM] = get_maps(validation_mode)
+            with open(CURRENT_TABLE_PATH, "w") as statistics_file:
+                statistics_writer = csv.DictWriter(
+                    statistics_file,
+                    sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
+                )
+                statistics_writer.writeheader()
+
+            def validate(model, dataset: TrainingDataset):
+                map2results = ValidationCoverage(model, dataset).validate_coverage(
+                    maps, validation_mode
+                )
+                metrics = get_svms_statistics(map2results, validation_mode, dataset)
+                mlflow.log_artifact(CURRENT_TABLE_PATH)
+
+                for map2result in map2results:
+                    if (
+                        isinstance(map2result.game_result, GameFailed)
+                        and validation_mode.fail_immediately
+                    ):
+                        raise RuntimeError("Validation failed")
+                return metrics[AVERAGE_COVERAGE], metrics
+
+            return validate
+
+    if not isinstance(validation_config.validation_mode, CustomValidation):
+        validate = get_validation(validation_config.validation_mode)
+    else:
+        val_pipeline = list()
+        for val_mode in validation_config.validation_mode.val_sequence:
+            val_pipeline.append(get_validation(val_mode))
 
         def validate(model, dataset: TrainingDataset):
-            map2results = ValidationCoverage(model, dataset).validate_coverage(
-                maps, validation_config.validation_mode
-            )
-            metrics = get_svms_statistics(
-                map2results, validation_config.validation_mode, dataset
-            )
-            mlflow.log_artifact(CURRENT_TABLE_PATH)
-
-            for map2result in map2results:
-                if (
-                    isinstance(map2result.game_result, GameFailed)
-                    and validation_config.validation_mode.fail_immediately
-                ):
-                    raise RuntimeError("Validation failed")
-            return metrics[AVERAGE_COVERAGE], metrics
+            metrics = dict()
+            results = list()
+            for val_func in val_pipeline:
+                single_val_result, single_val_metrics = val_func(model, dataset)
+                results.append(single_val_result)
+                metrics.update(single_val_metrics)
+                torch.cuda.empty_cache()
+            return results[0], metrics
 
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
@@ -216,11 +248,12 @@ def objective(
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 800),
-        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
+        batch_size=trial.suggest_int("batch_size", 8, 32),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
         hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
+        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
+        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
+        num_pc_layers=trial.suggest_int("num_pc_layers", 1, 5),
         normalization=True,
         early_stopping_state_len=5,
         tolerance=0.0001,
@@ -234,6 +267,7 @@ def objective(
         num_hops_1=config.num_hops_1,
         num_hops_2=config.num_hops_2,
         normalization=config.normalization,
+        num_pc_layers=config.num_pc_layers,
     )
     model.to(GeneralConfig.DEVICE)
 
@@ -243,8 +277,8 @@ def objective(
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
-            dataset.switch_to("train")
-            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=True)
+            dataset.switch_to(TrainingDatasetMode.TRAINING)
+            train_dataloader = DataLoader(dataset, config.batch_size, shuffle=False) # Shuffle leads to problems with GPU memory.
             model.train()
             train(
                 dataloader=train_dataloader,
@@ -257,7 +291,7 @@ def objective(
             mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
             model.eval()
-            dataset.switch_to("val")
+            dataset.switch_to(TrainingDatasetMode.VALIDATION)
             result, metrics = validate(model, dataset)
             mlflow.log_metrics(metrics, step=epoch)
             if dynamic_dataset:
@@ -283,6 +317,7 @@ def main(config: str):
         mlflow.set_tracking_uri(uri=mlflow_config.tracking_uri)
     mlflow.set_experiment(mlflow_config.experiment_name)
     mlflow.set_experiment_tags(asdict(config))
+    mlflow.enable_system_metrics_logging()
     weights_uri = config.weights_uri
 
     run_training(

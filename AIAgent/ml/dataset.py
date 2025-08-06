@@ -1,4 +1,5 @@
 import ast
+from enum import Enum
 import glob
 import json
 import logging
@@ -16,7 +17,6 @@ from typing import (
     DefaultDict,
     Dict,
     List,
-    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -27,7 +27,7 @@ import numpy as np
 import torch
 from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import tqdm
-from common.game import GameState
+from common.game import GameState, PathConditionVertex
 from config import GeneralConfig
 from ml.inference import TORCH
 from torch.utils.data import random_split
@@ -36,6 +36,10 @@ from torch_geometric.data import Dataset, HeteroData
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
 MOVEDSTATESUFFIX = "_movedState"
+
+NUM_PC_FEATURES = 49
+NUM_STATE_FEATURES = 6
+NUM_CFG_VERTEX_FEATURES = 7
 
 StateId: TypeAlias = int
 StateIndex: TypeAlias = int
@@ -62,6 +66,11 @@ StatesDistribution: TypeAlias = torch.tensor
 class Step:
     graph: HeteroData
     states_distribution: StatesDistribution
+
+
+class TrainingDatasetMode(Enum):
+    TRAINING = "TRAINING"
+    VALIDATION = "VALIDATION"
 
 
 class TrainingDataset(Dataset):
@@ -144,10 +153,9 @@ class TrainingDataset(Dataset):
             step = torch.load(
                 self.processed_paths[idx], map_location=GeneralConfig.DEVICE
             )
-        remove_extra_attrs(step)
         return step
 
-    def switch_to(self, mode: Literal["train", "val"]) -> None:
+    def switch_to(self, mode: TrainingDatasetMode) -> None:
         """
         Switch between training and validation modes
 
@@ -157,12 +165,12 @@ class TrainingDataset(Dataset):
             'train' --- use training part;\n
             'val' --- use validation part.
         """
-        if mode == "train":
+        if mode is TrainingDatasetMode.TRAINING:
             self.__indices = self.train_dataset_indices
-        elif mode == "val":
+        elif mode is TrainingDatasetMode.VALIDATION:
             self.__indices = self.test_dataset_indices
         else:
-            raise ValueError("mode must be either 'train' or 'val'")
+            raise ValueError("mode must be either 'TRAINING' or 'VALIDATION'")
 
     @property
     def raw_dir(self):
@@ -368,7 +376,7 @@ class TrainingDataset(Dataset):
                 filtered_map_steps.append(step)
         return filtered_map_steps
 
-    def _get_map_steps(self, map_name) -> list[HeteroData]:
+    def _get_map_steps(self, map_name, device=GeneralConfig.DEVICE) -> list[HeteroData]:
         path_to_map_steps = Path(os.path.join(self.processed_dir, map_name))
         map_steps = []
         all_steps_paths = [
@@ -380,7 +388,7 @@ class TrainingDataset(Dataset):
             with torch.serialization.safe_globals(
                 [BaseStorage, NodeStorage, EdgeStorage]
             ):
-                map_steps.append(torch.load(path, map_location=GeneralConfig.DEVICE))
+                map_steps.append(torch.load(path, map_location=device))
         return map_steps
 
     def is_update_map_required(self, map_name: str, map_result: Result):
@@ -486,12 +494,16 @@ class TrainingDataset(Dataset):
             return game_v, states
 
         new_steps = create_dict(steps)
-        old_steps = create_dict(self._get_map_steps(map_name))
+        old_steps = create_dict(self._get_map_steps(map_name, device="cpu"))
 
         def graphs_are_equal(new_g_v, old_g_v, new_s_v, old_s_v):
             return np.array_equal(new_g_v, old_g_v) and np.array_equal(new_s_v, old_s_v)
 
         def merge_distributions(old_distribution, new_distribution):
+            if old_distribution.device != new_distribution.device:
+                device = "cpu"
+                old_distribution = old_distribution.to(device)
+                new_distribution = new_distribution.to(device)
             distributions_sum = old_distribution + new_distribution
             distributions_sum[distributions_sum != 0] = 1
             merged_distribution = distributions_sum / torch.sum(distributions_sum)
@@ -531,6 +543,10 @@ def flatten_dict(dict_to_flatten: Dict) -> List[Any]:
     return sum(dict_to_flatten.values(), [])
 
 
+PathConditionVertexId: TypeAlias = int
+PathConditionVertexIndex: TypeAlias = int
+
+
 def convert_input_to_tensor(
     input: GameState,
 ) -> Tuple[HeteroData, Dict[StateId, StateIndex]]:
@@ -538,18 +554,46 @@ def convert_input_to_tensor(
     Converts game env to tensors
     """
     graphVertices = input.GraphVertices
+    path_condition_vertices = input.PathConditionVertices
     game_states, game_edges = input.States, input.Map
     data = HeteroData()
-    nodes_vertex, edges_index_v_v, edges_attr_v_v, edges_types_v_v = [], [], [], []
+    nodes_vertex, edges_index_v_v, edges_types_v_v = [], [], []
     nodes_state, edges_index_s_s = [], []
     edges_index_s_v_in, edges_index_v_s_in = [], []
     edges_index_s_v_history, edges_index_v_s_history = [], []
-    edges_attr_s_v, edges_attr_v_s = [], []
+    edges_attr_s_v = []
+
+    nodes_path_condition = []
+    edge_index_pc_pc, edge_index_pc_state, edge_index_state_pc = [], [], []
 
     state_map: Dict[StateId, StateIndex] = dict()
     vertex_map: Dict[VertexId, VertexIndex] = dict()
     vertex_index = 0
     state_index = 0
+
+    def one_hot_encoding(pc_v: PathConditionVertex) -> np.ndarray:
+        encoded = np.zeros(NUM_PC_FEATURES, dtype=int)
+        encoded[pc_v.Type] = 1
+        return encoded
+
+    pc_map: Dict[PathConditionVertexId, PathConditionVertexIndex] = dict()
+    for pc_idx, pc_v in enumerate(path_condition_vertices):
+        if pc_v.Id not in pc_map:
+            nodes_path_condition.append(one_hot_encoding(pc_v))
+            pc_map[pc_v.Id] = pc_idx
+        else:
+            raise RuntimeError(
+                "There are two path condition vertices with the same Id."
+            )
+
+    for pc_v in path_condition_vertices:
+        for child_id in pc_v.Children:
+            edge_index_pc_pc.extend(
+                [
+                    [pc_map[pc_v.Id], pc_map[child_id]],
+                    [pc_map[child_id], pc_map[pc_v.Id]],
+                ]
+            )
 
     # vertex nodes
     for v in graphVertices:
@@ -575,7 +619,6 @@ def convert_input_to_tensor(
         edges_index_v_v.append(
             np.array([vertex_map[e.VertexFrom], vertex_map[e.VertexTo]])
         )
-        edges_attr_v_v.append(np.array([e.Label.Token]))
         edges_types_v_v.append(e.Label.Token)
 
     state_doubles = 0
@@ -589,7 +632,6 @@ def convert_input_to_tensor(
                 np.array(
                     [
                         s.Position,
-                        s.PathConditionSize,
                         s.VisitedAgainVertices,
                         s.VisitedNotCoveredVerticesInZone,
                         s.VisitedNotCoveredVerticesOutOfZone,
@@ -606,10 +648,14 @@ def convert_input_to_tensor(
                 edges_attr_s_v.append(
                     np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
                 )
-                edges_attr_v_s.append(
-                    np.array([h.NumOfVisits, h.StepWhenVisitedLastTime])
-                )
             state_index = state_index + 1
+
+            edge_index_pc_state.append(
+                [pc_map[s.PathCondition.Id], state_map[state_id]]
+            )
+            edge_index_state_pc.append(
+                [state_map[state_id], pc_map[s.PathCondition.Id]]
+            )
         else:
             state_doubles += 1
 
@@ -630,23 +676,16 @@ def convert_input_to_tensor(
 
     data[TORCH.game_vertex].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
     data[TORCH.state_vertex].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
-
-    def tensor_not_empty(tensor):
-        return tensor.numel() != 0
+    data[TORCH.path_condition_vertex].x = torch.tensor(
+        np.array(nodes_path_condition), dtype=torch.float
+    )
 
     # dumb fix
     def null_if_empty(tensor):
-        return (
-            tensor
-            if tensor_not_empty(tensor)
-            else torch.empty((2, 0), dtype=torch.int64)
-        )
+        return tensor if tensor.numel() != 0 else torch.empty((2, 0), dtype=torch.int64)
 
     data[*TORCH.gamevertex_to_gamevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_v_v), dtype=torch.long).t().contiguous()
-    )
-    data[*TORCH.gamevertex_to_gamevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_v_v), dtype=torch.long
     )
     data[*TORCH.gamevertex_to_gamevertex].edge_type = torch.tensor(
         np.array(edges_types_v_v), dtype=torch.long
@@ -667,23 +706,23 @@ def convert_input_to_tensor(
         .t()
         .contiguous()
     )
-    data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
+    data[*TORCH.statevertex_history_gamevertex].edge_attr = torch.tensor(
         np.array(edges_attr_s_v), dtype=torch.long
     )
     data[*TORCH.gamevertex_history_statevertex].edge_attr = torch.tensor(
-        np.array(edges_attr_v_s), dtype=torch.long
+        np.array(edges_attr_s_v), dtype=torch.long
     )
     # if (edges_index_s_s): #TODO: empty?
     data[*TORCH.statevertex_parentof_statevertex].edge_index = null_if_empty(
         torch.tensor(np.array(edges_index_s_s), dtype=torch.long).t().contiguous()
     )
+    data[TORCH.pathcondvertex_to_pathcondvertex].edge_index = null_if_empty(
+        torch.tensor(np.array(edge_index_pc_pc), dtype=torch.long).t().contiguous()
+    )
+    data[TORCH.pathcondvertex_to_statevertex].edge_index = null_if_empty(
+        torch.tensor(np.array(edge_index_pc_state), dtype=torch.long).t().contiguous()
+    )
+    data[TORCH.statevertex_to_pathcondvertex].edge_index = null_if_empty(
+        torch.tensor(np.array(edge_index_state_pc), dtype=torch.long).t().contiguous()
+    )
     return data, state_map
-
-
-def remove_extra_attrs(step: HeteroData):
-    if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
-        del step[TORCH.statevertex_history_gamevertex].edge_attr
-    if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
-        del step[TORCH.gamevertex_to_gamevertex].edge_attr
-    if hasattr(step, "use_for_train"):
-        del step.use_for_train

@@ -13,6 +13,7 @@ from common.game import GameState
 from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH
 from torch_geometric.data import HeteroData
+from ml.inference import infer
 
 # working version
 ONNX_OPSET_VERSION = 17
@@ -28,6 +29,9 @@ def create_model_input(
     return {
         ONNX.game_vertex: modifier(hetero_data[TORCH.game_vertex].x),
         ONNX.state_vertex: modifier(hetero_data[TORCH.state_vertex].x),
+        ONNX.path_condition_vertex: modifier(
+            hetero_data[TORCH.path_condition_vertex].x
+        ),
         ONNX.gamevertex_to_gamevertex_index: modifier(
             hetero_data[TORCH.gamevertex_to_gamevertex].edge_index
         ),
@@ -46,6 +50,12 @@ def create_model_input(
         ONNX.statevertex_parentof_statevertex: modifier(
             hetero_data[TORCH.statevertex_parentof_statevertex].edge_index
         ),
+        ONNX.pathcondvertex_to_pathcondvertex: modifier(
+            hetero_data[TORCH.pathcondvertex_to_pathcondvertex].edge_index
+        ),
+        ONNX.pathcondvertex_to_statevertex: modifier(
+            hetero_data[TORCH.pathcondvertex_to_statevertex].edge_index
+        ),
     }
 
 
@@ -63,40 +73,40 @@ def save_in_onnx(
     save_path: pathlib.Path,
     verbose: bool = False,
 ):
-    gamestate = sample_input
     torch.onnx.export(
         model=model,
-        args=create_torch_input(gamestate),
+        args=create_torch_input(sample_input),
         f=save_path,
         verbose=verbose,
         dynamic_axes={
             ONNX.game_vertex: [0],
             ONNX.state_vertex: [0],
+            ONNX.path_condition_vertex: [0],
             ONNX.gamevertex_to_gamevertex_index: [1],
             ONNX.gamevertex_to_gamevertex_type: [0],
             ONNX.gamevertex_history_statevertex_index: [1],
             ONNX.gamevertex_history_statevertex_attrs: [0, 1],
             ONNX.gamevertex_in_statevertex: [1],
             ONNX.statevertex_parentof_statevertex: [1],
+            ONNX.pathcondvertex_to_pathcondvertex: [1],
+            ONNX.pathcondvertex_to_statevertex: [1],
         },
         input_names=[
             ONNX.game_vertex,
             ONNX.state_vertex,
+            ONNX.path_condition_vertex,
             ONNX.gamevertex_to_gamevertex_index,
             ONNX.gamevertex_to_gamevertex_type,
             ONNX.gamevertex_history_statevertex_index,
             ONNX.gamevertex_history_statevertex_attrs,
             ONNX.gamevertex_in_statevertex,
             ONNX.statevertex_parentof_statevertex,
+            ONNX.pathcondvertex_to_pathcondvertex,
+            ONNX.pathcondvertex_to_statevertex,
         ],
         output_names=["out"],
         opset_version=ONNX_OPSET_VERSION,
     )
-
-
-def torch_run(torch_model: torch.nn.Module, data: HeteroData) -> ...:
-    torch_in = tuple(create_model_input(data).values())
-    return torch_model(*torch_in)
 
 
 def onnx_run(ort_session: onnxruntime.InferenceSession, data: HeteroData) -> ...:
@@ -208,10 +218,9 @@ def entrypoint(
 ):
     torch_model = model_def(**model_kwargs)
     hetero_sample_gamestate, _ = convert_input_to_tensor(sample_gamestate)
-
-    torch_run(torch_model, hetero_sample_gamestate)
+    torch_model.eval()
+    infer(torch_model, hetero_sample_gamestate)
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
-
     torch_model.load_state_dict(state_dict)
 
     save_in_onnx(torch_model, hetero_sample_gamestate, onnx_savepath)
@@ -220,21 +229,20 @@ def entrypoint(
 
     if verification_gamestates:
         ort_session = onnxruntime.InferenceSession(onnx_savepath)
-
         for idx, verification_gamestate in enumerate(verification_gamestates, start=1):
             hetero_verification_gamestate, _ = convert_input_to_tensor(
                 verification_gamestate
             )
-            torch_out = torch_run(torch_model, hetero_verification_gamestate)
+            torch_out = infer(torch_model, hetero_verification_gamestate)
             onnx_out = onnx_run(ort_session, hetero_verification_gamestate)
 
             print(len(verification_gamestate.States))
             print(f"{shorten_output(torch_out)=}")
             print(f"{shorten_output(onnx_out[0])=}")
             print(f"{idx}/{len(verification_gamestates)}")
-            assert (
-                shorten_output(torch_out) == shorten_output(onnx_out[0])
-            ), f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
+            assert shorten_output(torch_out) == shorten_output(onnx_out[0]), (
+                f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
+            )
 
 
 if __name__ == "__main__":

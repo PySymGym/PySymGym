@@ -1,6 +1,7 @@
 import logging
 import multiprocessing as mp
 from multiprocessing.managers import SyncManager
+import random
 from typing import Optional
 
 import torch
@@ -86,6 +87,7 @@ class ValidationCoverage:
         progress_bar_colour : str
             Your favorite colour for progress bar.
         """
+        random.shuffle(maps)
         with mp.Manager() as sync_manager:
             self._game_manager = self._get_game_manager(validation_config, sync_manager)
             with mp.Pool(validation_config.process_count) as p:

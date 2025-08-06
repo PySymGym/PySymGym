@@ -28,5 +28,7 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
     ] + delta.States
     for s in new_states:
         s.Children = [c for c in s.Children if c in active_states]
-
-    return GameState(vertices, new_states, edges)
+    new_path_condition_vertices = (
+        game_state.PathConditionVertices + delta.PathConditionVertices
+    )
+    return GameState(vertices, new_states, new_path_condition_vertices, edges)
