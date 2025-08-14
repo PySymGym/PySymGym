@@ -3,86 +3,10 @@ name: Build SVM-s and maps + Run training
 on: [push, pull_request]
 
 jobs:
-  ensure-image:
-    runs-on: self-hosted
-    container:
-      image: ubuntu:24.04
-    env:
-      PIP_ROOT_USER_ACTION: ignore
-    permissions:
-      packages: write
-    outputs:
-      docker_hash: ${{ steps.hash.outputs.hash }}
-    steps:
-      - name: Install git
-        run: |
-          apt update && apt install -y git
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure repo
-        run: |
-          git config --global --add safe.directory /__w/PySymGym/PySymGym
-          # Fetch history for PR
-          git fetch --depth=1 origin ${{ github.base_ref }}  
-          # Fetch history for push
-          git fetch origin main
-
-      - name: Check for Dockerfile changes
-        id: dockerfile_check
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            BASE_REF="${{ github.event.before }}"
-            HEAD_REF="${{ github.sha }}"
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_REF="${{ github.event.pull_request.base.sha }}"
-            HEAD_REF="${{ github.event.pull_request.head.sha }}"
-          fi
-          hash_head=$(git ls-tree "$HEAD_REF" .github/docker/Dockerfile | awk '{print $3}')
-          hash_prev=$(git ls-tree "$BASE_REF" .github/docker/Dockerfile | awk '{print $3}')
-
-          if [ "$hash_head" = "$hash_prev" ]; then
-            echo "docker_changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "docker_changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Calculate Dockerfile hash
-        id: hash
-        run: |
-          HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-
-      - name: Install deps
-        if: ${{ steps.dockerfile_check.outputs.docker_changed == 'true' }}
-        run: |
-          apt update && apt install -y curl
-          curl https://get.docker.com/ | bash
-
-      - name: Login to GitHub Container Registry
-        if: ${{ steps.dockerfile_check.outputs.docker_changed == 'true' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: pysymgym
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push the image if needed
-        if: ${{ steps.dockerfile_check.outputs.docker_changed == 'true' }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .github/docker/
-          push: true
-          tags: ghcr.io/pysymgym/pysymgym:${{ steps.hash.outputs.hash }}
-
   build-and-launch:
-    needs: ensure-image
     runs-on: self-hosted
     container:
-      image: ghcr.io/pysymgym/pysymgym:${{ needs.ensure-image.outputs.docker_hash }}
-    env:
-      PIP_ROOT_USER_ACTION: ignore
+      image: ghcr.io/pysymgym/pysymgym:${{ vars.HASH_DEPS_DOCKER_IMAGE }}
     permissions:
       packages: read
     steps:

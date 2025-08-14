@@ -1,0 +1,48 @@
+name: Publish image to GHCR
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-image:
+    runs-on: self-hosted
+    container:
+      image: ubuntu:24.04
+    permissions:
+      packages: write
+    steps:
+      - name: Install git
+        run: |
+          apt update && apt install -y git
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure repo
+        run: |
+          git config --global --add safe.directory /__w/PySymGym/PySymGym
+
+      - name: Calculate Dockerfile hash
+        id: hash
+        run: |
+          HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Install deps
+        run: |
+          apt update && apt install -y curl
+          curl https://get.docker.com/ | bash
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: pysymgym
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image if needed
+        uses: docker/build-push-action@v6
+        with:
+          context: .github/docker/
+          push: true
+          tags: ghcr.io/pysymgym/pysymgym:${{ steps.hash.outputs.hash }}
