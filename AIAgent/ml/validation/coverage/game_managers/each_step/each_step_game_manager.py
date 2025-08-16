@@ -60,8 +60,8 @@ class EachStepGameManager(BaseGameManager):
             map_steps.append(hetero_input)  # noqa: F821
 
         try:
-            for i in range(with_connector.map.StepsToPlay):
-                if i == 0:
+            while True:
+                if game_state is None:
                     game_state = with_connector.recv_state_or_throw_gameover()
                 else:
                     delta = with_connector.recv_state_or_throw_gameover()
@@ -81,8 +81,7 @@ class EachStepGameManager(BaseGameManager):
                 )
 
                 _ = with_connector.recv_reward_or_throw_gameover()
-
-            _ = with_connector.recv_state_or_throw_gameover()  # wait for gameover
+                steps_count += 1
         except Connector.GameOver as gameover:
             if game_state is None:
                 logging.warning(
