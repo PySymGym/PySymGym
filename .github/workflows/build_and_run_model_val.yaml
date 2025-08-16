@@ -1,31 +1,23 @@
-name: Build SVM-s and maps + Run training
+name: Build SVM-s and maps + Run training (model validation)
 
 on: [push, pull_request]
 
 jobs:
-  calculate-dockerfile-hash:
+  build-and-launch:
     runs-on: self-hosted
     container:
       image: ubuntu:24.04
-    outputs:
-      dockerfile_hash: ${{ steps.hash.outputs.hash }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    env:
+      PIP_ROOT_USER_ACTION: ignore
 
-      - name: Calculate Dockerfile hash
-        id: hash
-        run: |
-          HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-  build-and-launch:
-    needs: calculate-dockerfile-hash
-    runs-on: self-hosted
-    container:
-      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
-    permissions:
-      packages: read
     steps:
+      - name: Download & install necessary dependencies
+        run: |
+          apt update
+          apt install -y git software-properties-common
+          add-apt-repository ppa:dotnet/backports
+          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-9.0 cmake clang
+
       - name: Debug
         run: |
           printenv
@@ -74,12 +66,6 @@ jobs:
           mkdir report
           mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
 
-      - name: Launch application
-        working-directory: ./AIAgent
-        run: |
-          poetry --ansi run python3 launch_servers.py --config ../workflow/config_for_tests.yml &
-          echo "Waiting for server to start..." && sleep 10
-
       - name: Run MLFlow server
         working-directory: ./AIAgent
         run: |
@@ -89,7 +75,7 @@ jobs:
       - name: Run training
         working-directory: ./AIAgent
         run: |
-          poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests.yml
+          poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests_send_model_val.yml
 
       - name: Upload mlartifacts
         if: always()

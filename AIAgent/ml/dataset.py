@@ -1,5 +1,4 @@
 import ast
-from enum import Enum
 import glob
 import json
 import logging
@@ -10,6 +9,7 @@ import random
 import shutil
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass
+from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import (
@@ -25,13 +25,13 @@ from typing import (
 
 import numpy as np
 import torch
-from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage
 import tqdm
 from common.game import GameState, PathConditionVertex
 from config import GeneralConfig
 from ml.inference import TORCH
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
+from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
@@ -726,3 +726,19 @@ def convert_input_to_tensor(
         torch.tensor(np.array(edge_index_state_pc), dtype=torch.long).t().contiguous()
     )
     return data, state_map
+
+
+def remove_extra_attrs(step: HeteroData):
+    if hasattr(step[TORCH.statevertex_history_gamevertex], "edge_attr"):
+        del step[TORCH.statevertex_history_gamevertex].edge_attr
+    if hasattr(step[TORCH.gamevertex_to_gamevertex], "edge_attr"):
+        del step[TORCH.gamevertex_to_gamevertex].edge_attr
+    if hasattr(step, "use_for_train"):
+        del step.use_for_train
+
+
+def get_hetero_data(game_state: GameState, nn_output: list[list[float]]) -> HeteroData:
+    hetero_input, _ = convert_input_to_tensor(game_state)
+    nn_output = [[x] for x in nn_output[0]]
+    hetero_input["y_true"] = torch.Tensor(nn_output)
+    return hetero_input

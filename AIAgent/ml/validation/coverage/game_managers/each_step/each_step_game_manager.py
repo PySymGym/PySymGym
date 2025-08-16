@@ -27,6 +27,7 @@ from torch_geometric.data.hetero_data import HeteroData
 from websocket import WebSocket
 
 TimeDuration: TypeAlias = float
+# TODO: docs
 
 
 class EachStepGamePreparator(BaseGamePreparator):
@@ -48,8 +49,7 @@ class EachStepGameManager(BaseGameManager):
         steps_count = 0
         game_state = None
         actual_coverage = None
-        steps = with_connector.map.StepsToPlay
-
+        steps = with_connector.map.StepsToPlay + game_map2svm.GameMap.StepsToStart
         start_time = perf_counter()
 
         map_steps = []
@@ -60,8 +60,8 @@ class EachStepGameManager(BaseGameManager):
             map_steps.append(hetero_input)  # noqa: F821
 
         try:
-            for _ in range(with_connector.map.StepsToPlay):
-                if steps_count == 0:
+            while True:
+                if game_state is None:
                     game_state = with_connector.recv_state_or_throw_gameover()
                 else:
                     delta = with_connector.recv_state_or_throw_gameover()
@@ -82,9 +82,6 @@ class EachStepGameManager(BaseGameManager):
 
                 _ = with_connector.recv_reward_or_throw_gameover()
                 steps_count += 1
-
-            _ = with_connector.recv_state_or_throw_gameover()  # wait for gameover
-            steps_count += 1
         except Connector.GameOver as gameover:
             if game_state is None:
                 logging.warning(
@@ -98,6 +95,7 @@ class EachStepGameManager(BaseGameManager):
                 actual_coverage = gameover.actual_coverage
 
             tests_count = gameover.tests_count
+            steps_count = gameover.steps_count
             errors_count = gameover.errors_count
 
         end_time = perf_counter()
@@ -176,3 +174,6 @@ class EachStepGameManager(BaseGameManager):
         if str_game_map in self._game_states:
             steps = self._game_states.pop(str_game_map)
             del steps
+
+    def notify_steps_requirement(self, game_map: GameMap, required: bool):
+        return
