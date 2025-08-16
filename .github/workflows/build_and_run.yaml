@@ -3,10 +3,26 @@ name: Build SVM-s and maps + Run training
 on: [push, pull_request]
 
 jobs:
-  build-and-launch:
+  calculate-dockerfile-hash:
     runs-on: self-hosted
     container:
-      image: ghcr.io/pysymgym/pysymgym:${{ vars.HASH_DEPS_DOCKER_IMAGE }}
+      image: ubuntu:24.04
+    outputs:
+      dockerfile_hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Calculate Dockerfile hash
+        id: hash
+        run: |
+          HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+  build-and-launch:
+    needs: calculate-dockerfile-hash
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
     permissions:
       packages: read
     steps:

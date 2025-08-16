@@ -1,7 +1,9 @@
 name: Publish image to GHCR
 
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - ".github/docker/Dockerfile"
 
 jobs:
   publish-image:
@@ -45,4 +47,5 @@ jobs:
         with:
           context: .github/docker/
           push: true
-          tags: ghcr.io/pysymgym/pysymgym:${{ steps.hash.outputs.hash }}
+          tags: |
+            ghcr.io/pysymgym/pysymgym:${{ steps.hash.outputs.hash }}
