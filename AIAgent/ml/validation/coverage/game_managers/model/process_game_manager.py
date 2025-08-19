@@ -50,7 +50,7 @@ OUTPUT_DIR = "OutputDir"
 PORT = "Port"
 
 CURRENT_ONNX_MODEL_PATH = REPORT_PATH / "model.onnx"
-GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/7825_gameState.json"
+GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/4781_gameState.json"
 SVMS_OUTPUT_PATH = REPORT_PATH / "svms_output"
 
 FULL_COVERAGE_PERCENT = 100
