@@ -1681,14 +1681,14 @@ dev = ["meson-python (>=0.13.1,<0.17.0)", "pybind11 (>=2.13.2,!=2.13.3)", "setup
 
 [[package]]
 name = "mlflow"
-version = "3.3.0"
+version = "3.3.1"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "mlflow-3.3.0-py3-none-any.whl", hash = "sha256:f05786d5fcb45cf6fa21ea3c59116b58e47c2d3566e79651de229c29db70819c"},
-    {file = "mlflow-3.3.0.tar.gz", hash = "sha256:7699114135b1742c19565d531ece9aac4685cb5445660f46457d811f303f5b6e"},
+    {file = "mlflow-3.3.1-py3-none-any.whl", hash = "sha256:a78a032cf5392a608bba1a6ee59c9bbd6b1d29b2ea2598e4e2ce7a20ccaf1eea"},
+    {file = "mlflow-3.3.1.tar.gz", hash = "sha256:05159afb08e898f11b0f71f29d5b27e5e5248f0099c449567dcb8a52e9b07463"},
 ]
 
 [package.dependencies]
@@ -1699,8 +1699,8 @@ Flask = "<4"
 graphene = "<4"
 gunicorn = {version = "<24", markers = "platform_system != \"Windows\""}
 matplotlib = "<4"
-mlflow-skinny = "3.3.0"
-mlflow-tracing = "3.3.0"
+mlflow-skinny = "3.3.1"
+mlflow-tracing = "3.3.1"
 numpy = "<3"
 pandas = "<3"
 pyarrow = ">=4.0.0,<22"
@@ -1723,14 +1723,14 @@ sqlserver = ["mlflow-dbstore"]
 
 [[package]]
 name = "mlflow-skinny"
-version = "3.3.0"
+version = "3.3.1"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "mlflow_skinny-3.3.0-py3-none-any.whl", hash = "sha256:d059b4c520ef9b71063a57007e03f675b0a59fbeefac2bce2bc91910f522a0eb"},
-    {file = "mlflow_skinny-3.3.0.tar.gz", hash = "sha256:a7e8e811cd5cb6b69769f3cd88fe5e82da5de7d88995b2e2bc0689b4b1610d22"},
+    {file = "mlflow_skinny-3.3.1-py3-none-any.whl", hash = "sha256:0955568f6a97db9456314439fcf8392c9f9f24c8085948f45d2db933a7520eed"},
+    {file = "mlflow_skinny-3.3.1.tar.gz", hash = "sha256:1a95be40086a3d0f109ae918b214df3230199793afe10a42ddc7dc2176f8656c"},
 ]
 
 [package.dependencies]
@@ -1766,14 +1766,14 @@ sqlserver = ["mlflow-dbstore"]
 
 [[package]]
 name = "mlflow-tracing"
-version = "3.3.0"
+version = "3.3.1"
 description = "MLflow Tracing SDK is an open-source, lightweight Python package that only includes the minimum set of dependencies and functionality to instrument your code/models/agents with MLflow Tracing."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "mlflow_tracing-3.3.0-py3-none-any.whl", hash = "sha256:44057f267018bc224184ee034d76834d4c1cc66f04f38a024a2d90216c766838"},
-    {file = "mlflow_tracing-3.3.0.tar.gz", hash = "sha256:a64dd2a344b47ef1fa01fce1365c325678c78bab77a491506d72ecd68876baf2"},
+    {file = "mlflow_tracing-3.3.1-py3-none-any.whl", hash = "sha256:ab92e6287fdaac2940528b520f1728a300d02b5858052f0c5831df2b1bb4fbbc"},
+    {file = "mlflow_tracing-3.3.1.tar.gz", hash = "sha256:ba2973300836b8d656ec516f64145130bbe07332e43429765507234db8a8f632"},
 ]
 
 [package.dependencies]
@@ -4128,4 +4128,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "1ba4cff7d17aa5f10d43f3a3fb6832c7cf809265d4ddaea1cfa6e9a3eaf3a435"
+content-hash = "2aa4a3eedf5c2a0bc4d95ff82ba9cc80c288ad6d75ad98e981410862ec9ab53d"
