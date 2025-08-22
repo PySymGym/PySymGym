@@ -1,0 +1,116 @@
+name: Build SVM-s and maps + Run training (model validation)
+
+on: [push, pull_request]
+
+jobs:
+  calculate-dockerfile-hash:
+    runs-on: self-hosted
+    container:
+      image: ubuntu:24.04
+    outputs:
+      dockerfile_hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Calculate Dockerfile hash
+        id: hash
+        run: |
+          HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+  build-and-launch:
+    needs: calculate-dockerfile-hash
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+    permissions:
+      packages: read
+    steps:
+      - name: Download & install necessary dependencies
+        run: |
+          apt update
+          apt install -y git software-properties-common
+          add-apt-repository ppa:dotnet/backports
+          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-9.0 cmake clang
+
+      - name: Debug
+        run: |
+          printenv
+          dotnet --version
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+
+      - name: Install poetry
+        run: |
+          pip install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry --ansi install -q
+
+      - name: Build V# game server
+        working-directory: ./GameServers/VSharp/
+        run: |
+          dotnet build VSharp.ML.GameServer.Runner -c Release
+
+      - name: Build .NET game maps
+        working-directory: ./maps/DotNet/Maps
+        run: |
+          dotnet build Root -c Release
+
+      - name: Generate initial data for training
+        working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+        run: |
+          dotnet VSharp.ML.GameServer.Runner.dll \
+            --mode generator \
+            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net7.0 \
+            --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
+            --stepstoserialize 200
+
+      - name: Move SerializedEpisodes
+        working-directory: ./AIAgent
+        run: |
+          mkdir report
+          mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
+
+      - name: Run MLFlow server
+        working-directory: ./AIAgent
+        run: |
+          poetry --ansi run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts &
+          echo "Waiting for mlflow server to start..." && sleep 10
+
+      - name: Run training
+        working-directory: ./AIAgent
+        run: |
+          poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests_send_model_val.yml
+
+      - name: Upload mlartifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: AIAgent/mlartifacts/**/**/artifacts/**
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: AIAgent/*.log
+
+      - name: Sanity check
+        working-directory: ./AIAgent
+        run: |
+          if ls report/study.pkl 1> /dev/null 2>&1; then
+              echo "PKL files found."
+          else
+              echo "No PKL files found."
+              exit 1
+          fi
