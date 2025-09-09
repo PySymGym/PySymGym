@@ -218,6 +218,7 @@ class ModelGameManager(BaseGameManager):
         result_file = (
             output_dir / f"{map_name}result"
         )  # TODO: the path to result must be documented
+        logging.debug(f"Trying to read result_file={str(result_file)}")
         while True:
             try:
                 with open(result_file, "r") as f:
@@ -265,8 +266,8 @@ class ModelGameManager(BaseGameManager):
                     msg = f"Incorrect result of {map_name}"
                 else:
                     msg = f"The result of {map_name} cannot be found after completing the game?!"
-                logging.error(msg)
-                return GameFailed(msg)
+                logging.error(msg, exc_info=e)
+                raise RuntimeError(msg) from e
 
     def get_game_steps(self, game_map: GameMap) -> Optional[list[HeteroData]]:
         map_name = game_map.MapName
@@ -310,6 +311,8 @@ class ModelGameManager(BaseGameManager):
         def alert_svm_about_step_saving(conn: socket.socket, need_to_save_steps: bool):
             conn.sendall(bytes([1 if need_to_save_steps else 0]))
             conn.shutdown(socket.SHUT_WR)
+            logging.debug(f"--> {int(need_to_save_steps)}")
+            conn.close()
 
         conn = get_conn()
         alert_svm_about_step_saving(conn, required)
