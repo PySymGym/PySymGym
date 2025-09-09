@@ -3148,18 +3148,18 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pynvml"
-version = "12.0.0"
+version = "13.0.1"
 description = "Python utilities for the NVIDIA Management Library"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pynvml-12.0.0-py3-none-any.whl", hash = "sha256:fdff84b62a27dbe98e08e1a647eb77342bef1aebe0878bcd15e99a83fcbecb9e"},
-    {file = "pynvml-12.0.0.tar.gz", hash = "sha256:299ce2451a6a17e6822d6faee750103e25b415f06f59abb8db65d30f794166f5"},
+    {file = "pynvml-13.0.1-py3-none-any.whl", hash = "sha256:e2b20e0a501eeec951e2455b7ab444759cf048e0e13a57b08049fa2775266aa8"},
+    {file = "pynvml-13.0.1.tar.gz", hash = "sha256:1245991d9db786b4d2f277ce66869bd58f38ac654e38c9397d18f243c8f6e48f"},
 ]
 
 [package.dependencies]
-nvidia-ml-py = ">=12.0.0,<13.0.0a0"
+nvidia-ml-py = ">=12.0.0"
 
 [package.extras]
 test = ["pytest (>=3.6)", "pytest-cov", "pytest-runner"]
@@ -4187,4 +4187,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "fff92495684ad4363e6b99eb149f002eea5985a24e69dd9ac28c65df2b9ddf71"
+content-hash = "d3fe78a5eb1b451755c6098b8c78b4b20873f23345c834177529d091a2841af7"
