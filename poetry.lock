@@ -1278,14 +1278,14 @@ files = [
 
 [[package]]
 name = "httplib2"
-version = "0.30.2"
+version = "0.31.0"
 description = "A comprehensive HTTP client library."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "httplib2-0.30.2-py3-none-any.whl", hash = "sha256:62a665905c1f1d1069c34f933787d2a4435c67c0bc2b323645dcfbb64661b5ec"},
-    {file = "httplib2-0.30.2.tar.gz", hash = "sha256:050bde6a332824b05a3deef5238f2b0372f71af46f8ca2190c2cb1f66aa376cd"},
+    {file = "httplib2-0.31.0-py3-none-any.whl", hash = "sha256:b9cd78abea9b4e43a7714c6e0f8b6b8561a6fc1e95d5dbd367f5bf0ef35f5d24"},
+    {file = "httplib2-0.31.0.tar.gz", hash = "sha256:ac7ab497c50975147d4f7b1ade44becc7df2f8954d42b38b3d69c515f531135c"},
 ]
 
 [package.dependencies]
@@ -4187,4 +4187,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "c6bb30c17711130a505afa495c961abb0e61072ad04550ed0287ade025513845"
+content-hash = "3b15abdbf547ae0f0ce7ac36062a5068fe2305247f5f4b3a546701456f079c11"
