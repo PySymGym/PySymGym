@@ -28,7 +28,9 @@ def update_game_state(game_state: GameState, delta: GameState) -> GameState:
     ] + delta.States
     for s in new_states:
         s.Children = [c for c in s.Children if c in active_states]
-    new_path_condition_vertices = (
-        game_state.PathConditionVertices + delta.PathConditionVertices
-    )
+    new_path_condition_vertices = game_state.PathConditionVertices + [
+        x
+        for x in delta.PathConditionVertices
+        if x.Id not in list(map(lambda y: y.Id, game_state.PathConditionVertices))
+    ]
     return GameState(vertices, new_states, new_path_condition_vertices, edges)
