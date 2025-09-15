@@ -739,6 +739,5 @@ def remove_extra_attrs(step: HeteroData):
 
 def get_hetero_data(game_state: GameState, nn_output: list[list[float]]) -> HeteroData:
     hetero_input, _ = convert_input_to_tensor(game_state)
-    nn_output = [[x] for x in nn_output[0]]
     hetero_input["y_true"] = torch.Tensor(nn_output)
     return hetero_input
