@@ -58,6 +58,21 @@ jobs:
         run: |
           dotnet build Root -c Release
 
+      - name: Build manually collected Java game maps
+        working-directory: ./maps/Java/Maps
+        run: |
+          ./gradlew build
+
+      - name: Build Java game maps from LogicNG
+        working-directory: ./maps/Java/Maps/LogicNG
+        run: |
+          mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true
+
+      - name: Build Java game maps from jflex
+        working-directory: ./maps/Java/Maps/jflex
+        run: |
+          mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true -Dfmt.skip
+
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
         run: |
