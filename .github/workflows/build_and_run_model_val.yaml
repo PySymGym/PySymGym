@@ -101,9 +101,6 @@ jobs:
           poetry --ansi run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts &
           echo "Waiting for mlflow server to start..." && sleep 10
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: Run training
         working-directory: ./AIAgent
         run: |
