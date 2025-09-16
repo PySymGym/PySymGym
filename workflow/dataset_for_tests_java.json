@@ -1,6 +1,6 @@
 [
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
@@ -8,7 +8,7 @@
       "MapName": "Java.BubbleSort.sort_0"
    },
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 50,
       "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
@@ -16,7 +16,7 @@
       "MapName": "Java.BubbleSort.sort_50_BFS"
    },
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
@@ -24,7 +24,7 @@
       "MapName": "Java.BinarySearch.search_0"
    },
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
@@ -32,7 +32,7 @@
       "MapName": "Java.InsertionSort.sortBySwap_0"
    },
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
@@ -40,7 +40,7 @@
       "MapName": "Java.Dijsktra.shortestPath_0"
    },
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
@@ -48,7 +48,7 @@
       "MapName": "Java.TopologicalSorting.topSort_0"
    },
    {
-      "StepsToPlay": 400,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "LogicNG/target/logicng-2.5.0.jar",
@@ -56,7 +56,7 @@
       "MapName": "Java.ConnectedComponentsComputation.splitFormulasByComponent_0"
    },
    {
-      "StepsToPlay": 200,
+      "StepsToPlay": 100,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,
       "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
