@@ -30,6 +30,13 @@ jobs:
         with:
           submodules: true
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "21"
+          cache: "maven"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -61,7 +68,7 @@ jobs:
       - name: Build manually collected Java game maps
         working-directory: ./maps/Java/Maps
         run: |
-          ./gradlew build
+          ./gradlew build --no-daemon
 
       - name: Build Java game maps from LogicNG
         working-directory: ./maps/Java/Maps/LogicNG
