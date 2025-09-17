@@ -199,6 +199,7 @@ class ModelGameManager(BaseGameManager):
             cwd=Path(svm_info.server_working_dir).resolve(),
             encoding="utf-8",
         )
+        logging.info(f"Process {proc.pid} was started")
         return proc, port, server_socket
 
     def _kill_game_process(
@@ -327,8 +328,11 @@ class ModelGameManager(BaseGameManager):
     def delete_game_artifacts(self, game_map: GameMap):
         map_name = game_map.MapName
         dir = Path(SVMS_OUTPUT_PATH) / map_name
-        _ = delete_dir(dir)
-
+        try:
+            _ = delete_dir(dir)
+        except FileNotFoundError:
+            logging.info(f"There is no output {dir=} to delete")
+            pass
         if map_name in self._games_info:
             states = self._games_info.pop(map_name)
             del states
