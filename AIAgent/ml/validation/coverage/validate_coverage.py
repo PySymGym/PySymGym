@@ -1,9 +1,11 @@
 import logging
 import multiprocessing as mp
+from functools import wraps
 from multiprocessing.managers import SyncManager
-import random
+from time import perf_counter
 from typing import Optional
 
+import pandas as pd
 import torch
 import tqdm
 from common.classes import GameResult, Map2Result
@@ -25,6 +27,25 @@ from ml.validation.coverage.game_managers.model.process_game_manager import (
 from ml.validation.coverage.validate_coverage_utils import catch_return_exception
 
 
+def collect_evaluation_time(func):
+    @wraps(func)
+    def wrapper(self: "ValidationCoverage", game_map2svm: GameMap2SVM):
+        key = str(game_map2svm.GameMap.MapName)
+        start_time = perf_counter()
+        res: Map2Result | Exception = func(self, game_map2svm)
+        end_time = perf_counter()
+        time_res = end_time - start_time
+        self.res_table[self.current_epoch.value][key] = (
+            time_res
+            if not isinstance(res, Exception)
+            and isinstance(res.game_result, GameResult)
+            else None
+        )
+        return res
+
+    return wrapper
+
+
 class ValidationCoverage:
     """
     Performs coverage validation of a model using symbolic execution. This class manages the parallel execution
@@ -35,11 +56,48 @@ class ValidationCoverage:
         dataset (`Optional[TrainingDataset]`): The dataset to update with validation results. Can be `None` if dataset update is not required.
     """
 
+    res_table: pd.DataFrame = None  # type: ignore
+    current_epoch: int = None  # type: ignore
+    FILE_RES = "evaluation_time.csv"
+    FAILED_MAPS_COUNT_ALIAS = "failed_maps_count"
+    ALL_MAPS_ALIAS = "all_time"
+
+    @staticmethod
+    def save_res(failed_maps_count, all_time):
+        ValidationCoverage.res_table[ValidationCoverage.current_epoch][
+            ValidationCoverage.FAILED_MAPS_COUNT_ALIAS
+        ] = failed_maps_count
+        ValidationCoverage.res_table[ValidationCoverage.current_epoch][
+            ValidationCoverage.ALL_MAPS_ALIAS
+        ] = all_time
+        ValidationCoverage.current_epoch += 1
+        df = pd.DataFrame(ValidationCoverage.res_table)
+        df_for_stats = df.loc[
+            :,
+            df.columns != ValidationCoverage.FAILED_MAPS_COUNT_ALIAS,
+        ]
+        df_for_stats = df_for_stats.loc[
+            :, df_for_stats.columns != ValidationCoverage.ALL_MAPS_ALIAS
+        ]
+        mean, std = df_for_stats.mean(axis=1), df_for_stats.std(axis=1)
+        columns_list = list(df)
+        columns_list.pop(columns_list.index(ValidationCoverage.FAILED_MAPS_COUNT_ALIAS))
+        columns_list.pop(columns_list.index(ValidationCoverage.ALL_MAPS_ALIAS))
+        columns_list = [
+            ValidationCoverage.FAILED_MAPS_COUNT_ALIAS,
+            ValidationCoverage.ALL_MAPS_ALIAS,
+        ] + columns_list
+        df = df[columns_list]
+        df.insert(2, "mean", mean)
+        df.insert(3, "std", std)
+        df.to_csv(ValidationCoverage.FILE_RES)
+
     def __init__(self, model: torch.nn.Module, dataset: Optional[TrainingDataset]):
         self.model = model
         self.dataset = dataset
         self._game_manager: Optional[BaseGameManager] = None
 
+    @collect_evaluation_time
     def _evaluate_game_map(
         self,
         game_map2svm: GameMap2SVM,
@@ -100,9 +158,20 @@ class ValidationCoverage:
         progress_bar_colour : str
             Your favorite colour for progress bar.
         """
-        random.shuffle(maps)
         with mp.Manager() as sync_manager:
+            if ValidationCoverage.res_table is None:
+                self.res_table = sync_manager.list()
+                self.current_epoch = sync_manager.Value("i", 0)
+            else:
+                self.res_table = sync_manager.list(ValidationCoverage.res_table)
+                self.current_epoch = sync_manager.Value(
+                    "i", ValidationCoverage.current_epoch
+                )
+            logging.info(f"Epoch = {self.current_epoch.value}")
+            self.res_table.append(sync_manager.dict())
+
             self._game_manager = self._get_game_manager(validation_config, sync_manager)
+            t_start = perf_counter()
             with mp.Pool(validation_config.process_count) as p:
                 all_results: list[Map2Result | Exception] = list()
                 for result in tqdm.tqdm(
@@ -113,6 +182,16 @@ class ValidationCoverage:
                     colour=progress_bar_colour,
                 ):
                     all_results.append(result)
+            failed_maps_count = sum(
+                1
+                for result in all_results
+                if isinstance(result, Exception)
+                or isinstance(result.game_result, GameFailed)
+            )
+            all_time = perf_counter() - t_start
+            ValidationCoverage.res_table = list(map(dict, self.res_table))
+            ValidationCoverage.current_epoch = int(self.current_epoch.value)
+            ValidationCoverage.save_res(failed_maps_count, all_time)
         return all_results
 
     def _get_game_manager(
