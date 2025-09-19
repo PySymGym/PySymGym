@@ -8,7 +8,7 @@ from typing import Optional
 import pandas as pd
 import torch
 import tqdm
-from common.classes import GameResult, Map2Result
+from common.classes import GameFailed, GameResult, Map2Result
 from common.config.validation_config import (
     SVMValidation,
     SVMValidationSendEachStep,
