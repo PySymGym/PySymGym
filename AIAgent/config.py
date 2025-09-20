@@ -7,7 +7,7 @@ import torch
 
 
 class GeneralConfig:
-    LOGGER_LEVEL = logging.DEBUG
+    LOGGER_LEVEL = logging.INFO
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
