@@ -1,0 +1,1002 @@
+[
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinarySearch",
+      "MapName": "BinarySearch_0"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinarySearch",
+      "MapName": "BinarySearch_50_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinarySearch",
+      "MapName": "BinarySearch_100_DFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 150,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinarySearch",
+      "MapName": "BinarySearch_150_DFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "NestedFors",
+      "MapName": "NestedFors_0"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "SearchKMP",
+      "MapName": "SearchKMP_0"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "SearchKMP",
+      "MapName": "SearchKMP_1000_BFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "SearchKMP",
+      "MapName": "SearchKMP_1000_DFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BellmanFord",
+      "MapName": "BellmanFord_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 200,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BellmanFord",
+      "MapName": "BellmanFord_200_BFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 200,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BellmanFord",
+      "MapName": "BellmanFord_200_DFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "determinant",
+      "MapName": "determinant_0"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "determinant",
+      "MapName": "determinant_500_BFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 800,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "determinant",
+      "MapName": "determinant_800_BFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "determinant",
+      "MapName": "determinant_100_DFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "getCofactor",
+      "MapName": "getCofactor_0"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "getCofactor",
+      "MapName": "getCofactor_100_BFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "getCofactor",
+      "MapName": "getCofactor_100_DFS"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_0"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 200,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_200_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 400,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_400_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_500_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 700,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_700_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_1000_BFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "fillRemaining",
+      "MapName": "fillRemaining_500_DFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze1BFS",
+      "MapName": "BinaryMaze1BFS_0"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 300,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze1BFS",
+      "MapName": "BinaryMaze1BFS_300_BFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 600,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze1BFS",
+      "MapName": "BinaryMaze1BFS_600_BFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze1BFS",
+      "MapName": "BinaryMaze1BFS_1000_BFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 600,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze1BFS",
+      "MapName": "BinaryMaze1BFS_600_DFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "findShortestPathLength",
+      "MapName": "findShortestPathLength_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "findShortestPathLength",
+      "MapName": "findShortestPathLength_100_BFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 300,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "findShortestPathLength",
+      "MapName": "findShortestPathLength_300_BFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 200,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "findShortestPathLength",
+      "MapName": "findShortestPathLength_200_DFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "countIslands",
+      "MapName": "countIslands_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "countIslands",
+      "MapName": "countIslands_100_BFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 300,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "countIslands",
+      "MapName": "countIslands_300_BFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 300,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "countIslands",
+      "MapName": "countIslands_300_DFS"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "MatrixQueryModifyMatrix",
+      "MapName": "MatrixQueryModifyMatrix_0"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "MatrixQueryModifyMatrix",
+      "MapName": "MatrixQueryModifyMatrix_500_BFS"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "MatrixQueryModifyMatrix",
+      "MapName": "MatrixQueryModifyMatrix_1000_BFS"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "MatrixQueryModifyMatrix",
+      "MapName": "MatrixQueryModifyMatrix_1000_DFS"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "RedBlackTreeInsert",
+      "MapName": "RedBlackTreeInsert_0"
+   },
+   {
+      "StepsToPlay": 100,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "KMPSearchMain",
+      "MapName": "KMPSearchMain_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinSearchMain",
+      "MapName": "BinSearchMain_0"
+   },
+   {
+      "StepsToPlay": 300,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "MatrixMultiplicationMain",
+      "MapName": "MatrixMultiplicationMain_0"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze1Main",
+      "MapName": "BinaryMaze1Main_0"
+   },
+   {
+      "StepsToPlay": 100,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "BinaryMaze2Main",
+      "MapName": "BinaryMaze2Main_0"
+   },
+   {
+      "StepsToPlay": 100,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "IslandsMain",
+      "MapName": "IslandsMain_0"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "MatrixQueryMain",
+      "MapName": "MatrixQueryMain_0"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindArticulationPoints",
+      "MapName": "FindArticulationPoints_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindArticulationPoints",
+      "MapName": "FindArticulationPoints_500_BFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindArticulationPoints",
+      "MapName": "FindArticulationPoints_500_DFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindBridges",
+      "MapName": "FindBridges_0"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Gcd.Find",
+      "MapName": "Gcd.Find_0"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 100,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Gcd.Find",
+      "MapName": "Gcd.Find_100_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Gcd.Find",
+      "MapName": "Gcd.Find_500_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Gcd.Find",
+      "MapName": "Gcd.Find_1000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Gcd.Find",
+      "MapName": "Gcd.Find_2000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindIntersections",
+      "MapName": "FindIntersections_0"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindIntersections",
+      "MapName": "FindIntersections_1000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindIntersections",
+      "MapName": "FindIntersections_2000_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "JohnsonsShortestPath.FindAllPairShortestPaths",
+      "MapName": "JohnsonsShortestPath.FindAllPairShortestPaths_0"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "JohnsonsShortestPath.FindAllPairShortestPaths",
+      "MapName": "JohnsonsShortestPath.FindAllPairShortestPaths_1000_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "JohnsonsShortestPath.FindAllPairShortestPaths",
+      "MapName": "JohnsonsShortestPath.FindAllPairShortestPaths_2000_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 3000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "JohnsonsShortestPath.FindAllPairShortestPaths",
+      "MapName": "JohnsonsShortestPath.FindAllPairShortestPaths_3000_BFS"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Combination.Find",
+      "MapName": "Combination.Find_0"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Combination.Find",
+      "MapName": "Combination.Find_50_BFS"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Combination.Find",
+      "MapName": "Combination.Find_50_DFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Permutation.Find",
+      "MapName": "Permutation.Find_0"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Permutation.Find",
+      "MapName": "Permutation.Find_50_BFS"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Permutation.Find",
+      "MapName": "Permutation.Find_50_DFS"
+   },
+   {
+      "StepsToPlay": 100,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Subset.Find",
+      "MapName": "Subset.Find_0"
+   },
+   {
+      "StepsToPlay": 100,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Subset.Find",
+      "MapName": "Subset.Find_50_BFS"
+   },
+   {
+      "StepsToPlay": 100,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "Subset.Find",
+      "MapName": "Subset.Find_50_DFS"
+   },
+   {
+      "StepsToPlay": 6000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Insert",
+      "MapName": "SuffixTree.Insert_0"
+   },
+   {
+      "StepsToPlay": 6000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Insert",
+      "MapName": "SuffixTree.Insert_500_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Insert",
+      "MapName": "SuffixTree.Insert_1000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Insert",
+      "MapName": "SuffixTree.Insert_2000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Delete",
+      "MapName": "SuffixTree.Delete_0"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Delete",
+      "MapName": "SuffixTree.Delete_500_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Delete",
+      "MapName": "SuffixTree.Delete_1000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Delete",
+      "MapName": "SuffixTree.Delete_2000_BFS"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.Contains",
+      "MapName": "SuffixTree.Contains_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "SuffixTree.StartsWith",
+      "MapName": "SuffixTree.StartsWith_0"
+   },
+   {
+      "StepsToPlay": 200,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "BpTree.HasItem",
+      "MapName": "BpTree.HasItem_0"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 50,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "CollectionEx.ContentHashCode",
+      "MapName": "CollectionEx.ContentHashCode_50_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "CollectionEx.ContentHashCode",
+      "MapName": "CollectionEx.ContentHashCode_2000_DFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "CollectionEx.TryDequeue",
+      "MapName": "CollectionEx.TryDequeue_0"
+   },
+   {
+      "StepsToPlay": 500,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "CollectionEx.Enqueued",
+      "MapName": "CollectionEx.Enqueued_0"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.RunInCurrentStackframe",
+      "MapName": "SingleThreadScheduler.RunInCurrentStackframe_0"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.RunInCurrentStackframe",
+      "MapName": "SingleThreadScheduler.RunInCurrentStackframe_2000_BFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 5000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.RunInCurrentStackframe",
+      "MapName": "SingleThreadScheduler.RunInCurrentStackframe_5000_BFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.RunInCurrentStackframe",
+      "MapName": "SingleThreadScheduler.RunInCurrentStackframe_2000_DFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 5000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.RunInCurrentStackframe",
+      "MapName": "SingleThreadScheduler.RunInCurrentStackframe_5000_DFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.CreateOverExisting",
+      "MapName": "SingleThreadScheduler.CreateOverExisting_0"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 500,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.CreateOverExisting",
+      "MapName": "SingleThreadScheduler.CreateOverExisting_500_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.Queue",
+      "MapName": "SingleThreadScheduler.Queue_0"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.Queue",
+      "MapName": "SingleThreadScheduler.Queue_1000_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "JetBrains.Lifetimes.dll",
+      "NameOfObjectToCover": "SingleThreadScheduler.Queue",
+      "MapName": "SingleThreadScheduler.Queue_1000_DFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "ShaderStringBuilder.AppendLines",
+      "MapName": "ShaderStringBuilder.AppendLines_0"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "ShaderStringBuilder.AppendLines",
+      "MapName": "ShaderStringBuilder.AppendLines_1000_BFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "ShaderStringBuilder.AppendLines",
+      "MapName": "ShaderStringBuilder.AppendLines_1000_DFS"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "ShaderStringBuilder.Concat",
+      "MapName": "ShaderStringBuilder.Concat_0"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeBinaryFunc",
+      "MapName": "PartialDerivUtilWriter.MakeBinaryFunc_0"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeBinaryFunc",
+      "MapName": "PartialDerivUtilWriter.MakeBinaryFunc_1000_BFS"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 5000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeBinaryFunc",
+      "MapName": "PartialDerivUtilWriter.MakeBinaryFunc_5000_BFS"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeBinaryFunc",
+      "MapName": "PartialDerivUtilWriter.MakeBinaryFunc_1000_DFS"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 5000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeBinaryFunc",
+      "MapName": "PartialDerivUtilWriter.MakeBinaryFunc_5000_DFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeSingleFunc",
+      "MapName": "PartialDerivUtilWriter.MakeSingleFunc_0"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeSingleFunc",
+      "MapName": "PartialDerivUtilWriter.MakeSingleFunc_1000_BFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeSingleFunc",
+      "MapName": "PartialDerivUtilWriter.MakeSingleFunc_2000_BFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 3000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeSingleFunc",
+      "MapName": "PartialDerivUtilWriter.MakeSingleFunc_3000_BFS"
+   },
+   {
+      "StepsToPlay": 15000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 4000,
+      "AssemblyFullName": "Unity.dll",
+      "NameOfObjectToCover": "PartialDerivUtilWriter.MakeSingleFunc",
+      "MapName": "PartialDerivUtilWriter.MakeSingleFunc_4000_BFS"
+   },
+   {
+      "StepsToPlay": 3000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Algorithms.dll",
+      "NameOfObjectToCover": "BucketSorter.BucketSortAscending",
+      "MapName": "BucketSorter.BucketSortAscending_1000_DFS"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "BizHawk.Emulation.Cores.dll",
+      "NameOfObjectToCover": "AmstradCPC.OSD_ShowTapeStatus",
+      "MapName": "AmstradCPC.OSD_ShowTapeStatus_0"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "BizHawk.Emulation.Cores.dll",
+      "NameOfObjectToCover": "AmstradCPC.OSD_ShowTapeStatus",
+      "MapName": "AmstradCPC.OSD_ShowTapeStatus_2000_BFS"
+   },
+   {
+      "StepsToPlay": 10000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "BizHawk.Emulation.Cores.dll",
+      "NameOfObjectToCover": "AmstradCPC.OSD_ShowTapeStatus",
+      "MapName": "AmstradCPC.OSD_ShowTapeStatus_2000_DFS"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "BizHawk.Emulation.Cores.dll",
+      "NameOfObjectToCover": "AmstradCPC.CheckMessageSettings",
+      "MapName": "AmstradCPC.CheckMessageSettings_0"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindLongestPalindrome",
+      "MapName": "FindLongestPalindrome_0"
+   },
+   {
+      "StepsToPlay": 5000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindLongestPalindrome",
+      "MapName": "FindLongestPalindrome_1000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindLongestPalindrome",
+      "MapName": "FindLongestPalindrome_2000_BFS"
+   },
+   {
+      "StepsToPlay": 4000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 1000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindLongestPalindrome",
+      "MapName": "FindLongestPalindrome_1000_DFS"
+   },
+   {
+      "StepsToPlay": 1000,
+      "DefaultSearcher": "DFS",
+      "StepsToStart": 2000,
+      "AssemblyFullName": "Advanced.Algorithms.dll",
+      "NameOfObjectToCover": "FindLongestPalindrome",
+      "MapName": "FindLongestPalindrome_2000_DFS"
+   },
+   {
+      "StepsToPlay": 2000,
+      "DefaultSearcher": "BFS",
+      "StepsToStart": 0,
+      "AssemblyFullName": "ManuallyCollected.dll",
+      "NameOfObjectToCover": "mergeSort",
+      "MapName": "mergeSort_0"
+   }
+]
