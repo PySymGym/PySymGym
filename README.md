@@ -43,6 +43,14 @@ Then follow installation instructions provided on [torch](https://pytorch.org/ge
 
 ## Usage
 
+Before starting the server, build VSharp and maps:
+```sh
+cd GameServers/VSharp
+dotnet build VSharp.ML.GameServer.Runner -c Release
+cd maps/DotNet/Maps
+dotnet build Root -c Release
+```
+
 We use [**MLFlow**](https://mlflow.org/) to log hyper-parameters and training artifacts. Firstly, run MLFlow server:
 ```sh
 cd AIAgent
