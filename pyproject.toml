@@ -34,7 +34,7 @@ tqdm = "^4.67.1"
 websocket-client = "^1.8.0"
 mlflow = "^3.4.0"
 cattrs = "^25.2.0"
-attrs = "^25.3.0"
+attrs = "^25.4.0"
 pynvml = "^13.0.1"
 
 [tool.poetry.group.test.dependencies]
