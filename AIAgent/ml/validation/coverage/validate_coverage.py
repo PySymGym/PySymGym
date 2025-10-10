@@ -15,6 +15,7 @@ from common.config.validation_config import (
     SVMValidationSendModel,
 )
 from common.game import GameMap2SVM
+from func_timeout import FunctionTimedOut
 from ml.dataset import Result, TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
@@ -39,6 +40,8 @@ def collect_evaluation_time(func):
             time_res
             if not isinstance(res, Exception)
             and isinstance(res.game_result, GameResult)
+            else 1800
+            if isinstance(res, FunctionTimedOut)
             else None
         )
         return res
