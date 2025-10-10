@@ -16,7 +16,7 @@ ValidationConfig:
   validation_mode:
     val_type: svms_each_step
     process_count: 22
-    fail_immediately: True
+    fail_immediately: False
     PlatformsConfig:
       - name: java
         DatasetConfigs:
@@ -26,9 +26,9 @@ ValidationConfig:
           - name: usvm
             launch_command: java -jar app.jar _ --mode server --port {port}
             min_port: 35100
-            max_port: 35150
+            max_port: 36150
             server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/
 
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
-  experiment_name: SVM_PC_send_model_20.09.2025
+  experiment_name: SVM_PC_send_model_08.10.2025
