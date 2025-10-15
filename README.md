@@ -19,7 +19,7 @@ Because we use JSON-based format to transfer data between server and agent, incl
 This repository contains submodules, so use the following command to get sources locally.
 
 ```sh
-git clone https://github.com/gsvgit/PySymGym.git
+git clone https://github.com/PySymGym/PySymGym.git
 git submodule update --init --recursive
 ```
 
@@ -59,11 +59,22 @@ Before starting the _Main Loop_ you need to [generate initial dataset](#generate
 
 The main idea of alternation of two ways of running is to get better dataset and tune hyper-parameters taking into account changes in it. So you tune hyper-parameters, get the best neural network of current dataset (it's assumed that this neural network also is better in the symbolic execution than previous one) and then improve the dataset. After the improving dataset probably there are new the best hyper-parameters for the new dataset. So you need to tune it again. 
 
+### Build Symbolic Virtual Machines and maps
+
+To build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training you need to install .NET 7, cmake, clang, and maven and to run the following command:
+```sh
+make build_SVMs build_maps
+``` 
+Optionally add new maps to [maps](./maps/) and integrate the other SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)).
+
+
 ### Generate initial dataset
 To start supervised learning you need some initial data. It can be obtained using any path selection strategy. In our project we generate initial data with one of strategies from V#. To do it run:
 ```bash
 make init_data STEPS_TO_SERIALIZE=<MAX_STEPS>
 ```
+`STEPS_TO_SERIALIZE` is the optional parameter. Its default value is 200.
+
 Now initial dataset saved in the directory `./AIAgent/report/SerializedEpisodes`. Then it will be updated by neural network if it finds a better solution.
 
 ### Hyper-parameters tuning
@@ -99,11 +110,7 @@ We tune hyper-parameters with [**Optuna**](https://optuna.org/). This step is ne
 
 As the optimal sequence of symbolic execution steps is unknown we try to get relatively good ones using the best models from the previous step. To do it follow these steps: 
 
-1) Build Symbolic Virtual Machines ([V#](https://github.com/VSharp-team/VSharp) and [usvm](https://github.com/UnitTestBot/usvm)) and methods for training. To do this step, you need to install .NET 7, cmake, clang, and maven.
-    ```sh
-    make build_SVMs build_maps
-    ``` 
-    Optionally add new maps to [maps](./maps/) and integrate the other SVM (checkout [integration chapter](#integrate-a-new-symbolic-machine)).
+1) If you haven't built SVMs yet do it as described [here](#build-symbolic-virtual-machines-and-maps).
 2) Using [`example from workflow`](`./workflow/dataset_for_tests_java.json`) as a template, create your own configuration with maps to use for training or use the existing ones located in `maps/*/Maps/dataset.json`.
 3) Create configuration (specifying server's and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template. 
   Add to the configuration the best weights URI and appropriate trial URI (they were logged with MLFlow during hyper-parameters tuning):
@@ -114,15 +121,15 @@ As the optimal sequence of symbolic execution steps is unknown we try to get rel
       ...
       trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/<EPOCH>/model.pth
     ```
-4) Move to **AIAgent** directory
+1) Move to **AIAgent** directory
     ```sh
     cd AIAgent
     ```
-5) Launch the server manager.
+2) Launch the server manager.
     ```
     poetry run python3 launch_servers.py --config path/to/config.yml
     ```
-6) Run the training process.
+3) Run the training process.
     ```sh
     poetry run python3 run_training.py --config path/to/config.yml
     ```
