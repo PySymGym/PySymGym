@@ -35,7 +35,7 @@ websocket-client = "^1.8.0"
 mlflow = "^3.4.0"
 cattrs = "^25.2.0"
 attrs = "^25.4.0"
-pynvml = "^13.0.1"
+nvidia-ml-py = "^13.580.82"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.4.2"
