@@ -1,0 +1,34 @@
+OptunaConfig:
+  n_startup_trials: 10
+  n_trials: 20
+  n_jobs: 1
+  study_direction: "maximize"
+
+TrainingConfig:
+  dynamic_dataset: True
+  train_percentage: 1
+  threshold_coverage: 100
+  threshold_steps_number: 1000
+  load_to_cpu: False
+  epochs: 10
+
+ValidationConfig:
+  validation_mode:
+    val_type: svms_each_step
+    process_count: 30
+    fail_immediately: False
+    PlatformsConfig:
+      - name: java
+        DatasetConfigs:
+          - dataset_base_path: ../maps/Java/Maps/
+            dataset_description: ../excluded_dataset.json
+        SVMSInfo:
+          - name: usvm
+            launch_command: java -jar app.jar _ --mode server --port {port}
+            min_port: 35100
+            max_port: 35150
+            server_working_dir: ../GameServers/usvm/usvm-ml-gameserver/build/libs/
+
+MLFlowConfig:
+  tracking_uri: http://127.0.0.1:8080
+  experiment_name: usvm_each_step_10.10.2025

@@ -1,0 +1,306 @@
+[
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.BubbleSort.sort",
+        "MapName": "Java.BubbleSort.sort_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.BubbleSort.sortSimple",
+        "MapName": "Java.BubbleSort.sortSimple_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.BinarySearch.search",
+        "MapName": "Java.BinarySearch.search_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.BinarySearch.searchLowerBound",
+        "MapName": "Java.BinarySearch.searchLowerBound_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.BinarySearch.searchUpperBound",
+        "MapName": "Java.BinarySearch.searchUpperBound_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.InsertionSort.sort",
+        "MapName": "Java.InsertionSort.sort_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.InsertionSort.sortBySwap",
+        "MapName": "Java.InsertionSort.sortBySwap_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.InsertionSort.sortSimple",
+        "MapName": "Java.InsertionSort.sortSimple_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.QuickSort.main",
+        "MapName": "Java.QuickSort.main_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.Dijsktra.shortestPathOptimized",
+        "MapName": "Java.Dijsktra.shortestPathOptimized_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "manuallycollected/build/libs/manuallycollected.jar",
+        "NameOfObjectToCover": "maps.manuallycollected.PrimsMST.getMST",
+        "MapName": "Java.PrimsMST.getMST_0"
+    },
+    {
+        "StepsToPlay": 4000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "LogicNG/target/logicng-2.5.0.jar",
+        "NameOfObjectToCover": "org.logicng.graphs.algorithms.ConnectedComponentsComputation.splitFormulasByComponent",
+        "MapName": "Java.ConnectedComponentsComputation.splitFormulasByComponent_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.dfa.DfaFactory.createFromNfa",
+        "MapName": "Java.DfaFactory.createFromNfa_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.NFA.addEpsilonTransition",
+        "MapName": "Java.NFA.addEpsilonTransition_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.NFA.epsilonFill",
+        "MapName": "Java.NFA.epsilonFill_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.RegExp.isCharClass",
+        "MapName": "Java.RegExp.isCharClass_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.RegExp.size",
+        "MapName": "Java.RegExp.size_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.RegExp.normaliseMacros",
+        "MapName": "Java.RegExp.normaliseMacros_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.RegExp.normaliseCCLs",
+        "MapName": "Java.RegExp.normaliseCCLs_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.RegExp.expandPreClasses",
+        "MapName": "Java.RegExp.expandPreClasses_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.RegExp.makeCCLs",
+        "MapName": "Java.RegExp.makeCCLs_0"
+    },
+    {
+        "StepsToPlay": 10000,
+        "DefaultSearcher": "BFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "jflex/jflex/target/jflex-1.10.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "jflex.core.SemCheck.length",
+        "MapName": "Java.SemCheck.length_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.maths.CrossCorrelation.crossCorrelation",
+        "MapName": "Java.CrossCorrelation.crossCorrelation_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.divideandconquer.ClosestPair.closestPair",
+        "MapName": "Java.ClosestPair.closestPair_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.dynamicprogramming.AssignmentUsingBitmask.countWaysUntil",
+        "MapName": "Java.AssignmentUsingBitmask.countWaysUntil_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.stacks.MaximumMinimumWindow.calculateMaxOfMin",
+        "MapName": "Java.MaximumMinimumWindow.calculateMaxOfMin_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.backtracking.MazeRecursion.solveMazeUsingSecondStrategy",
+        "MapName": "Java.MazeRecursion.solveMazeUsingSecondStrategy_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.audiofilters.IIRFilter.process",
+        "MapName": "Java.IIRFilter.process_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.io.BufferedReader.readBlock",
+        "MapName": "Java.BufferedReader.readBlock_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.slidingwindow.MaxSumKSizeSubarray.maxSumKSizeSubarray",
+        "MapName": "Java.MaxSumKSizeSubarray.maxSumKSizeSubarray_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.geometry.MidpointCircle.generateCirclePoints",
+        "MapName": "Java.MidpointCircle.generateCirclePoints_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.graph.StronglyConnectedComponentOptimized.getOutput",
+        "MapName": "Java.StronglyConnectedComponentOptimized.getOutput_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.others.CRCAlgorithm.divideMessageWithP",
+        "MapName": "Java.CRCAlgorithm.divideMessageWithP_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.ciphers.a5.A5KeyStreamGenerator.getNextKeyStream",
+        "MapName": "Java.A5KeyStreamGenerator.getNextKeyStream_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.strings.zigZagPattern.ZigZagPattern.encode",
+        "MapName": "Java.ZigZagPattern.encode_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.datastructures.crdt.LWWElementSet.compareTimestamps",
+        "MapName": "Java.LWWElementSet.compareTimestamps_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.datastructures.dynamicarray.DynamicArray.put",
+        "MapName": "Java.DynamicArray.put_0"
+    },
+    {
+        "StepsToPlay": 20000,
+        "DefaultSearcher": "DFS",
+        "StepsToStart": 0,
+        "AssemblyFullName": "TheAlgorithms/target/Java-1.0-SNAPSHOT.jar",
+        "NameOfObjectToCover": "com.thealgorithms.datastructures.bags.Bag.contains",
+        "MapName": "Java.Bag.contains_0"
+    }
+]
