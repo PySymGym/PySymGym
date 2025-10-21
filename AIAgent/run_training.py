@@ -5,6 +5,7 @@ import json
 import logging
 import multiprocessing as mp
 import os
+import sys
 from dataclasses import asdict, dataclass
 from functools import partial
 from typing import Any, Callable, Optional
@@ -31,7 +32,6 @@ from config import GeneralConfig
 from ml.dataset import TrainingDataset, TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
-from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
 from ml.validation.loss.validate_loss import validate_loss
 from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
@@ -49,7 +49,6 @@ from paths import (
 from torch import nn
 from torch_geometric.data import Dataset
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
-from torch_geometric.loader import DataLoader
 
 logging.basicConfig(
     level=GeneralConfig.LOGGER_LEVEL,
@@ -204,6 +203,7 @@ def run_training(
         criterion_init=criterion_init,
         epochs=training_config.epochs,
         validate=validate,
+        training_config=training_config,
     )
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
@@ -247,19 +247,9 @@ def objective(
     validate: Callable[
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
+    training_config: TrainingConfig,
 ):
-    config = TrialSettings(
-        lr=trial.suggest_float("lr", 1e-7, 1e-3),
-        batch_size=trial.suggest_int("batch_size", 8, 32),
-        num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
-        hidden_channels=trial.suggest_int("hidden_channels", 64, 128),
-        num_hops_1=trial.suggest_int("num_hops_1", 2, 10),
-        num_hops_2=trial.suggest_int("num_hops_2", 2, 10),
-        num_pc_layers=trial.suggest_int("num_pc_layers", 1, 5),
-        normalization=True,
-        early_stopping_state_len=5,
-        tolerance=0.0001,
-    )
+    config = training_config
     early_stopping = EarlyStopping(
         state_len=config.early_stopping_state_len, tolerance=config.tolerance
     )
@@ -273,26 +263,26 @@ def objective(
     model: nn.Module = model_init(**model_kwargs)
     model.to(GeneralConfig.DEVICE)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    criterion = criterion_init()
+    # optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+    # criterion = criterion_init()
 
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
-            dataset.switch_to(TrainingDatasetMode.TRAINING)
-            train_dataloader = DataLoader(
-                dataset, config.batch_size, shuffle=False
-            )  # Shuffle leads to problems with GPU memory.
-            model.train()
-            train(
-                dataloader=train_dataloader,
-                model=model,
-                optimizer=optimizer,
-                criterion=criterion,
-            )
-            torch.cuda.empty_cache()
+            # dataset.switch_to(TrainingDatasetMode.TRAINING)
+            # train_dataloader = DataLoader(
+            #     dataset, config.batch_size, shuffle=False
+            # )  # Shuffle leads to problems with GPU memory.
+            # model.train()
+            # train(
+            #     dataloader=train_dataloader,
+            #     model=model,
+            #     optimizer=optimizer,
+            #     criterion=criterion,
+            # )
+            # torch.cuda.empty_cache()
             torch.save(model.state_dict(), CURRENT_MODEL_PATH)
-            mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
+            # mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
             with open(MODEL_KWARGS_PATH, "w") as outfile:
                 yaml.dump(model_kwargs, outfile)
@@ -307,6 +297,7 @@ def objective(
                 print(f"Training was stopped on {epoch} epoch.")
                 break
             torch.cuda.empty_cache()
+        sys.exit()
     return result
 
 

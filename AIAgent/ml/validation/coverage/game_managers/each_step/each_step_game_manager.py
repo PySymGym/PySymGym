@@ -1,4 +1,5 @@
 import logging
+import os
 import traceback
 from multiprocessing.managers import Namespace
 from time import perf_counter
@@ -11,6 +12,7 @@ from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.errors_connection import GameInterruptedError
 from connection.game_server_conn.connector import Connector
+from connection.game_server_conn.unsafe_json import asdict
 from func_timeout import FunctionTimedOut
 from ml.dataset import convert_input_to_tensor
 from ml.protocols import Predictor
@@ -35,6 +37,9 @@ class EachStepGamePreparator(BaseGamePreparator):
         return
 
 
+count_maps = 0
+
+
 class EachStepGameManager(BaseGameManager):
     def __init__(self, with_predictor: Predictor, namespace: Namespace):
         self._game_states: dict[str, list[HeteroData]] = {}
@@ -45,6 +50,9 @@ class EachStepGameManager(BaseGameManager):
     def _play_game_map_with_svm(
         self, game_map2svm: GameMap2SVM, ws: WebSocket
     ) -> tuple[GameResult, TimeDuration]:
+        global count_maps
+        os.makedirs("steps", exist_ok=True)
+
         with_connector = Connector(ws, game_map2svm.GameMap)
         steps_count = 0
         game_state = None
@@ -53,6 +61,7 @@ class EachStepGameManager(BaseGameManager):
         start_time = perf_counter()
 
         map_steps = []
+        count_maps += 1
 
         def add_single_step(input, output):
             hetero_input, _ = convert_input_to_tensor(input)
@@ -63,9 +72,14 @@ class EachStepGameManager(BaseGameManager):
             while True:
                 if game_state is None:
                     game_state = with_connector.recv_state_or_throw_gameover()
+                    with open(f"steps/{game_map2svm.GameMap.MapName}.out", "w") as f:
+                        f.write(str(asdict(game_state.PathConditionVertices)))
+                        f.write("\n")
                 else:
                     delta = with_connector.recv_state_or_throw_gameover()
-                    game_state = update_game_state(game_state, delta)
+                    game_state = update_game_state(
+                        game_state, delta, game_map2svm.GameMap.MapName
+                    )
 
                 predicted_state_id, nn_output = self._with_predictor.predict(game_state)
 

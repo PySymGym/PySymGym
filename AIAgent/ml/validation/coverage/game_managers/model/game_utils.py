@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 from common.game import GameMap
+from connection.game_server_conn.unsafe_json import asdict
 from ml.dataset import get_hetero_data
 from ml.validation.coverage.game_managers.each_step.game_states_utils import (
     update_game_state,
