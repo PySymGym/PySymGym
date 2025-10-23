@@ -22,10 +22,10 @@ jobs:
   build-and-launch:
     needs: calculate-dockerfile-hash
     runs-on: self-hosted
-    permissions:
-      packages: read
     container:
       image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+    permissions:
+      packages: read
     steps:
       - name: Debug
         run: |
