@@ -122,8 +122,9 @@ def run_training(
                 )
                 metric_name = (
                     str(criterion).replace("(", "_").replace(")", "_")
-                    + validation_mode.dataset
+                    + validation_mode.dataset.value
                 )
+
                 metrics = {metric_name: result}
                 return result, metrics
 
