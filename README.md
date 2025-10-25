@@ -26,7 +26,7 @@ git submodule update --init --recursive
 Setup environment:
 
 ```bash
-pip install poetry
+pip install poetry==2.2.1
 poetry install
 ```
 

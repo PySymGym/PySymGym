@@ -49,7 +49,7 @@ jobs:
 
       - name: Install poetry
         run: |
-          pip install --upgrade poetry
+          pip install poetry==2.2.1
 
       - name: Install dependencies
         run: |
