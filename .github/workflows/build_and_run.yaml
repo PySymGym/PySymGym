@@ -48,7 +48,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry --ansi install -q
+          poetry --ansi install
 
       - name: Run MLFlow server
         working-directory: ./AIAgent
