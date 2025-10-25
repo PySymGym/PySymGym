@@ -45,7 +45,7 @@ ruff = "^0.14.1"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+requires = ["poetry-core==2.2.1"]
 
 [tool.ruff]
 include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb"]
