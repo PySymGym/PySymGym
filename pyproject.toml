@@ -41,7 +41,7 @@ pynvml = "^13.0.1"
 pytest = "^9.0.1"
 
 [tool.poetry.group.formatter.dependencies]
-ruff = "^0.14.4"
+ruff = "^0.14.5"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
