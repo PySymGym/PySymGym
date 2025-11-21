@@ -188,7 +188,7 @@ def main():
         Args(
             strategy=BasePSStrategy.parse(args.strategy, model_path=args.model_path),
             timeout=args.timeout,
-            pysymgym_path=args.pysymgym_path,
+            pysymgym_path=getattr(args, "pysymgym-path"),
             savedir=default_savedir,
             assembly_infos=args.assembly_infos,
         )

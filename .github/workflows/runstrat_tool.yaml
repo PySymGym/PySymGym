@@ -11,7 +11,10 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
+      - name: Check initial disk space
+        run: df -h
+      
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -34,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: |
           poetry --ansi install -q
+      
+      - name: Check disk space after installations
+        run: df -h
       
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
