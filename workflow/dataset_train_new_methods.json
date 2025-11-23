@@ -1,0 +1,103 @@
+[
+  {
+    "StepsToPlay": 15000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "BurrowsWheeler.Program.Ibwt",
+    "MapName": "BurrowsWheeler.Ibwt_BFS_0"
+  },
+  {
+    "StepsToPlay": 15000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "BurrowsWheeler.Program.Ibwt",
+    "MapName": "BurrowsWheeler.Ibwt_DFS_100"
+  },
+
+  {
+    "StepsToPlay": 12000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "CombSortAscending",
+    "MapName": "CombSortAscending_BFS_0"
+  },
+  {
+    "StepsToPlay": 12000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "CombSortAscending",
+    "MapName": "CombSortAscending_DFS_100"
+  },
+
+  {
+    "StepsToPlay": 8000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance.GetMinDistance_BFS_0"
+  },
+  {
+    "StepsToPlay": 8000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance.GetMinDistance_DFS_50"
+  },
+
+  {
+    "StepsToPlay": 15000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "EulerGraph.getTranspose",
+    "MapName": "EulerGraph.getTranspose_BFS_0"
+  },
+  {
+    "StepsToPlay": 15000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "EulerGraph.getTranspose",
+    "MapName": "EulerGraph.getTranspose_DFS_100"
+  },
+
+  {
+    "StepsToPlay": 15000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "MatrixInverse.matrixInverse",
+    "MapName": "MatrixInverse.matrixInverse_BFS_0"
+  },
+  {
+    "StepsToPlay": 15000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "MatrixInverse.matrixInverse",
+    "MapName": "MatrixInverse.matrixInverse_DFS_100"
+  },
+
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "MatrixInverse.MatrixInverseMain",
+    "MapName": "MatrixInverse.MatrixInverseMain_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "MatrixInverse.MatrixInverseMain",
+    "MapName": "MatrixInverse.MatrixInverseMain_DFS_50"
+  }
+]

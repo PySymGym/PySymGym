@@ -1,0 +1,2 @@
+method,tests,errors,coverage,total_time_sec
+LoanExam.CalculateByAge,6,2,100.0,1

@@ -1,0 +1,7 @@
+dll,method
+ManuallyCollected.dll,BurrowsWheeler.Program.Ibwt
+Algorithms.dll,CombSortAscending
+Algorithms.dll,EditDistance.GetMinDistance
+ManuallyCollected.dll,EulerGraph.getTranspose
+ManuallyCollected.dll,MatrixInverse.matrixInverse
+ManuallyCollected.dll,MatrixInverse.MatrixInverseMain

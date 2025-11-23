@@ -1,0 +1,23 @@
+OptunaConfig:
+  n_startup_trials: 1
+  n_trials: 1
+  n_jobs: 1
+  study_direction: "maximize"
+
+TrainingConfig:
+  dynamic_dataset: False
+  train_percentage: 0.5
+  threshold_coverage: 40
+  load_to_cpu: True
+  epochs: 5
+
+ValidationConfig:
+  validation_mode:
+    val_type: svms_model
+    process_count: 1
+    fail_immediately: False
+    PlatformsConfig: []
+
+MLFlowConfig:
+  tracking_uri: http://127.0.0.1:8080
+  experiment_name: TRAIN_NO_VALIDATION

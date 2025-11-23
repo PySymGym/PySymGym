@@ -1,0 +1,18 @@
+[
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_DFS_50"
+  }
+]
