@@ -159,7 +159,7 @@ def main():
     parser.add_argument(
         "-ps",
         type=Path,
-        dest="pysymgym-path",
+        dest="pysymgym_path",
         required=False,
         help="Absolute path to PySymGym",
     )
@@ -188,7 +188,7 @@ def main():
         Args(
             strategy=BasePSStrategy.parse(args.strategy, model_path=args.model_path),
             timeout=args.timeout,
-            pysymgym_path=getattr(args, "pysymgym-path"),
+            pysymgym_path=args.pysymgym_path,
             savedir=default_savedir,
             assembly_infos=args.assembly_infos,
         )
