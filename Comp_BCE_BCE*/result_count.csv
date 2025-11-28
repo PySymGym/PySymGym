@@ -1,0 +1,8 @@
+,BCE_won,BCE*_won,eq
+coverage,28,3,134
+tests,14,31,120
+errors,36,28,101
+total_time_secs,50,25,90
+tests_eq_coverage,9,11,114
+errors_eq_coverage,20,23,91
+total_time_eq_coverage,42,15,77

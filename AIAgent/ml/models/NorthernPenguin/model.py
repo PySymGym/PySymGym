@@ -1,7 +1,7 @@
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv, GCN
-from torch.nn.functional import log_softmax
+#from torch.nn.functional import log_softmax
 from ml.dataset import NUM_PC_FEATURES
 
 
@@ -97,4 +97,5 @@ class StateModelEncoder(torch.nn.Module):
             edge_index_s_s,
         ).relu()
         state_x = self.lin(state_x).relu()
-        return log_softmax(self.lin_last(state_x), dim=0)
+        #return log_softmax(self.lin_last(state_x), dim=0)
+        return self.lin_last(state_x)

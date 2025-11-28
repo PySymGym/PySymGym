@@ -103,7 +103,8 @@ def run_training(
     weights_uri: Optional[str],
 ):
     def criterion_init():
-        return nn.KLDivLoss(reduction="batchmean")
+        #return nn.KLDivLoss(reduction="batchmean")
+        return nn.BCEWithLogitsLoss(reduction='sum')
 
     def get_validation(validation_mode: ValidationMode):
         if isinstance(validation_mode, CriterionValidation):
@@ -122,7 +123,7 @@ def run_training(
                 )
                 metric_name = (
                     str(criterion).replace("(", "_").replace(")", "_")
-                    + validation_mode.dataset
+                    + validation_mode.dataset.value
                 )
                 metrics = {metric_name: result}
                 return result, metrics
