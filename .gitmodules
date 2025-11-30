@@ -31,3 +31,6 @@
 [submodule "maps/Java/Maps/TheAlgorithms"]
 	path = maps/Java/Maps/TheAlgorithms
 	url = https://github.com/TheAlgorithms/Java.git
+[submodule "maps/DotNet/Maps/stralgo"]
+	path = maps/DotNet/Maps/stralgo
+	url = https://github.com/SaeedGz98/stralgo.git
