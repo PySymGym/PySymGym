@@ -28,3 +28,10 @@
 [submodule "GameServers/usvm"]
 	path = GameServers/usvm
 	url = https://github.com/gsvgit/usvm.git
+[submodule "maps/DotNet/Maps/stralgo"]
+	path = maps/DotNet/Maps/stralgo
+	url = https://github.com/SaeedGz98/stralgo.git
+[submodule "maps/DotNet/Maps/TheAlgorithms-CSharp"]
+	path = maps/DotNet/Maps/TheAlgorithms-CSharp
+	url = https://github.com/TheAlgorithms/C-Sharp.git
+
