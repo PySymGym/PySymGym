@@ -7,7 +7,7 @@ def get_states(game_state: GameState) -> set[int]:
 
 
 def update_game_state(
-    game_state: GameState, delta: GameState, map_name: str
+    game_state: GameState, delta: GameState
 ) -> GameState:
     if game_state is None:
         return delta
@@ -31,10 +31,6 @@ def update_game_state(
     ] + delta.States
     for s in new_states:
         s.Children = [c for c in s.Children if c in active_states]
-
-    with open(f"steps/{map_name}.out", "a") as f:
-        f.write(str(asdict(delta.PathConditionVertices)))
-        f.write("\n")
     new_path_condition_vertices = game_state.PathConditionVertices + [
         x
         for x in delta.PathConditionVertices
