@@ -38,7 +38,7 @@ attrs = "^25.4.0"
 pynvml = "^13.0.1"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^9.0.1"
+pytest = "^9.0.2"
 
 [tool.poetry.group.formatter.dependencies]
 ruff = "^0.14.8"
