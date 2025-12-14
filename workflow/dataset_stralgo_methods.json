@@ -1,0 +1,250 @@
+[
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.PermutationInString.PermutationInStringProblem.CheckInclusion",
+    "MapName": "CheckInclusion_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.PermutationInString.PermutationInStringProblem.CheckInclusion",
+    "MapName": "CheckInclusion_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "AdvancedGraphs.dll",
+    "NameOfObjectToCover": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice",
+    "MapName": "FindCheapestPrice_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "AdvancedGraphs.dll",
+    "NameOfObjectToCover": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice",
+    "MapName": "FindCheapestPrice_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.FloodFill.FloodFillProblem.FloodFillBfs",
+    "MapName": "FloodFillBfs_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.FloodFill.FloodFillProblem.FloodFillBfs",
+    "MapName": "FloodFillBfs_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "2D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
+    "MapName": "IsInterleave_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "2D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
+    "MapName": "IsInterleave_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.ValidSudoku.ValidSudokuProblem.IsValidSudoku",
+    "MapName": "IsValidSudoku_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.ValidSudoku.ValidSudokuProblem.IsValidSudoku",
+    "MapName": "IsValidSudoku_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Stack.dll",
+    "NameOfObjectToCover": "Stack.LargestRectangleInHistogram.LargestRectangleInHistogramProblem.LargestRectangleArea",
+    "MapName": "LargestRectangleArea_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Stack.dll",
+    "NameOfObjectToCover": "Stack.LargestRectangleInHistogram.LargestRectangleInHistogramProblem.LargestRectangleArea",
+    "MapName": "LargestRectangleArea_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "1D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_1D_DynamicProgramming.LongestIncreasingSubsequence.LongestIncreasingSubsequenceProblem.LengthOfLIS",
+    "MapName": "LongestIncreasingSubsequence_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "1D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_1D_DynamicProgramming.LongestIncreasingSubsequence.LongestIncreasingSubsequenceProblem.LengthOfLIS",
+    "MapName": "LongestIncreasingSubsequence_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.SlidingWindowMaximum.SlidingWindowMaximumProblem.MaxSlidingWindow",
+    "MapName": "MaxSlidingWindow_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.MinimumWindowSubstring.MinimumWindowSubstringProblem.MinWindow",
+    "MapName": "MinWindow_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.MinimumWindowSubstring.MinimumWindowSubstringProblem.MinWindow",
+    "MapName": "MinWindow_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.NQueens.NQueensProblem.SolveNQueens",
+    "MapName": "NQueens_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.NQueens.NQueensProblem.SolveNQueens",
+    "MapName": "NQueens_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.NumberOfIslands.NumberOfIslandsProblem.NumIslands",
+    "MapName": "NumIslands_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.NumberOfIslands.NumberOfIslandsProblem.NumIslands",
+    "MapName": "NumIslands_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.RottingOranges.RottingOrangesProblem.OrangesRotting",
+    "MapName": "OrangesRotting_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.RottingOranges.RottingOrangesProblem.OrangesRotting",
+    "MapName": "OrangesRotting_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Math&Geometry.dll",
+    "NameOfObjectToCover": "Math_Geometry.SpiralMatrix.SpiralMatrixProblem.SpiralOrder",
+    "MapName": "SpiralOrder_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Math&Geometry.dll",
+    "NameOfObjectToCover": "Math_Geometry.SpiralMatrix.SpiralMatrixProblem.SpiralOrder",
+    "MapName": "SpiralOrder_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TwoPointers.dll",
+    "NameOfObjectToCover": "TwoPointers.ThreeSum.ThreeSumProblem.ThreeSum",
+    "MapName": "ThreeSum_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TwoPointers.dll",
+    "NameOfObjectToCover": "TwoPointers.ThreeSum.ThreeSumProblem.ThreeSum",
+    "MapName": "ThreeSum_DFS_100"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.TopKFrequentElements.TopKFrequentElementsProblem.TopKFrequent",
+    "MapName": "TopKFrequent_BFS_0"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.TopKFrequentElements.TopKFrequentElementsProblem.TopKFrequent",
+    "MapName": "TopKFrequent_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.WordSearch.WordSearchProblem.Exist",
+    "MapName": "WordSearch_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.WordSearch.WordSearchProblem.Exist",
+    "MapName": "WordSearch_DFS_100"
+  }
+]
