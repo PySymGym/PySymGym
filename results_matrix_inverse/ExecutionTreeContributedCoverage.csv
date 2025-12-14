@@ -1,6 +1,0 @@
-method,tests,errors,coverage,total_time_sec
-MatrixInverse.getCofactor,4,4,100.0,0
-MatrixInverse.determinant,3,4,100.0,0
-MatrixInverse.adjoint,1,4,90.47619047619048,3
-MatrixInverse.matrixInverse,1,2,16.3265306122449,17
-MatrixInverse.MatrixInverseMain,1,2,80.95238095238095,20

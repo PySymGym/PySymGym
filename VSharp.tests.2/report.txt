@@ -1,2 +1,0 @@
-Total time: 00:08:00.223.
-Total coverage: 69,02654867256636

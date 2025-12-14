@@ -1,2 +1,0 @@
-Total time: 00:02:00.0.
-Total coverage: 0
