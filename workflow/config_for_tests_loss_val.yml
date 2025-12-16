@@ -1,0 +1,18 @@
+OptunaConfig:
+  n_startup_trials: 1
+  n_trials: 2
+  n_jobs: 1
+  study_direction: "minimize"
+TrainingConfig:
+  dynamic_dataset: False
+  train_percentage: 0.7
+  threshold_coverage: 100
+  load_to_cpu: False
+  epochs: 1
+ValidationConfig:
+  validation_mode:
+    val_type: loss
+    batch_size: 4
+MLFlowConfig:
+  tracking_uri: http://127.0.0.1:8080
+  experiment_name: CI

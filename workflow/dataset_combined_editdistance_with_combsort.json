@@ -1,0 +1,140 @@
+[
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_DFS_50"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_Short_BFS_0"
+  },
+
+  {
+    "StepsToPlay": 12000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "CombSortAscending",
+    "MapName": "CombSortAscending_BFS_0"
+  },
+  {
+    "StepsToPlay": 12000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "CombSortAscending",
+    "MapName": "CombSortAscending_DFS_100"
+  },
+
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "BinarySearch",
+    "MapName": "BinarySearch_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "BinarySearch",
+    "MapName": "BinarySearch_100_BFS"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "BinarySearch",
+    "MapName": "BinarySearch_100_DFS"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "ManuallyCollected.dll",
+    "NameOfObjectToCover": "NestedFors",
+    "MapName": "NestedFors_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Advanced.Algorithms.dll",
+    "NameOfObjectToCover": "Combination.Find",
+    "MapName": "Combination.Find_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Advanced.Algorithms.dll",
+    "NameOfObjectToCover": "BpTree.Delete",
+    "MapName": "BpTree.Delete_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "JetBrains.Lifetimes.dll",
+    "NameOfObjectToCover": "CompactList.LastIndexOf",
+    "MapName": "CompactList.LastIndexOf_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "JetBrains.Lifetimes.dll",
+    "NameOfObjectToCover": "CompactList.Add",
+    "MapName": "CompactList.Add_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "BubbleSorter.BubbleSortAscending",
+    "MapName": "BubbleSorter.BubbleSortAscending_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "BizHawk.Emulation.DiscSystem.dll",
+    "NameOfObjectToCover": "DiscHasher.OldHash",
+    "MapName": "DiscHasher.OldHash_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Virtu.dll",
+    "NameOfObjectToCover": "DiskIIController.ReadIoRegionC0C0",
+    "MapName": "DiskIIController.ReadIoRegionC0C0_0"
+  },
+  {
+    "StepsToPlay": 200,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Unity.dll",
+    "NameOfObjectToCover": "SlotValueHelper.AreCompatible",
+    "MapName": "SlotValueHelper.AreCompatible_0"
+  }
+]
