@@ -1,7 +1,10 @@
+from typing import TypeAlias
 from dataclasses import dataclass
 
 from common.validation_coverage.svm_info import SVMInfo
 from dataclasses_json import dataclass_json
+
+PathConditionVertexId: TypeAlias = int
 
 
 @dataclass_json
@@ -25,7 +28,7 @@ class PathConditionVertex:
 class State:
     Id: int
     Position: int
-    PathCondition: PathConditionVertex
+    PathCondition: list[PathConditionVertexId]
     VisitedAgainVertices: int
     VisitedNotCoveredVerticesInZone: int
     VisitedNotCoveredVerticesOutOfZone: int
