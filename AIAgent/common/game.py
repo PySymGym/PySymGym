@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from common.validation_coverage.svm_info import SVMInfo
 from dataclasses_json import dataclass_json
 
+from array import array
+from ..ml.dataset import PathConditionVertexId
+
 
 @dataclass_json
 @dataclass(slots=True)
@@ -25,7 +28,7 @@ class PathConditionVertex:
 class State:
     Id: int
     Position: int
-    PathCondition: PathConditionVertex
+    PathCondition: array[PathConditionVertexId]
     VisitedAgainVertices: int
     VisitedNotCoveredVerticesInZone: int
     VisitedNotCoveredVerticesOutOfZone: int
