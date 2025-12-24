@@ -570,7 +570,6 @@ def convert_input_to_tensor(
     vertex_map: Dict[VertexId, VertexIndex] = dict()
     vertex_index = 0
     state_index = 0
-    pc_index = 0
 
     def one_hot_encoding(pc_v: PathConditionVertex) -> np.ndarray:
         encoded = np.zeros(NUM_PC_FEATURES, dtype=int)
@@ -641,6 +640,7 @@ def convert_input_to_tensor(
                     ]
                 )
             )
+            
             # history edges: state -> vertex and back
             for h in s.History:
                 v_to = vertex_map[h.GraphVertexId]
@@ -651,13 +651,15 @@ def convert_input_to_tensor(
                 )
             state_index = state_index + 1
 
-            edge_index_pc_state.append(
-                [pc_map[s.PathCondition[pc_index]], state_map[state_id]]
-            )
-            edge_index_state_pc.append(
-                [state_map[state_id], pc_map[s.PathCondition[pc_index]]]
-            )
-            pc_index += 1
+            # pc edges: state -> pc vertex and back
+            for pcId in s.PathCondition:
+                edge_index_pc_state.append(
+                    [pc_map[pcId], state_map[state_id]]
+                )
+                edge_index_state_pc.append(
+                    [state_map[state_id], pc_map[pcId]]
+                )
+
         else:
             state_doubles += 1
 
