@@ -17,7 +17,7 @@ from src.subprocess_calls import call_test_runner
 from enum import Enum
 
 
-DOTNET_VERSION = "7.0"
+DOTNET_VERSION = "8.0"
 PATH_TO_VSHARP = Path(
     f"GameServers/VSharp/VSharp.Runner/bin/Release/net{DOTNET_VERSION}/VSharp.Runner.dll"
 )
