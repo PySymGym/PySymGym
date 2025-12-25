@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -23,6 +23,21 @@
       <ProjectReference Include="..\rd\rd-net\RdFramework.Reflection\RdFramework.Reflection.csproj" />
       <ProjectReference Include="..\rd\rd-net\RdFramework\RdFramework.csproj" />
       <ProjectReference Include="..\StandaloneUnity\Unity\Unity.csproj" />
+      <ProjectReference Include="..\stralgo\TwoPointers\TwoPointers.csproj" />
+      <ProjectReference Include="..\stralgo\LinkedList\LinkedList.csproj" />
+      <ProjectReference Include="..\stralgo\Trees\Trees.csproj" />
+      <ProjectReference Include="..\stralgo\Tries\Tries.csproj" />
+      <ProjectReference Include="..\stralgo\Graphs\Graphs.csproj" />
+      <ProjectReference Include="..\TheAlgorithms-CSharp\Utilities\Utilities.csproj" />
+      <ProjectReference Include="..\TheAlgorithms-CSharp\DataStructures\DataStructures.csproj" />
+      <ProjectReference Include="..\TheAlgorithms-CSharp\Algorithms\Algorithms.csproj" />
+      <ProjectReference Include="..\stralgo\1D_DynamicProgramming\1D_DynamicProgramming.csproj" />
+      <ProjectReference Include="..\stralgo\2D_DynamicProgramming\2D_DynamicProgramming.csproj" />
+      <ProjectReference Include="..\stralgo\AdvancedGraphs\AdvancedGraphs.csproj" />
+      <ProjectReference Include="..\stralgo\Arrays_Hashing\Arrays_Hashing.csproj" />
+      <ProjectReference Include="..\stralgo\Backtracking\Backtracking.csproj" />
+      <ProjectReference Include="..\stralgo\Greedy\Greedy.csproj" />
+      <ProjectReference Include="..\stralgo\Math&amp;Geometry\Math&amp;Geometry.csproj" />
     </ItemGroup>
 
 </Project>
