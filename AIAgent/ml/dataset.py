@@ -652,12 +652,12 @@ def convert_input_to_tensor(
             state_index = state_index + 1
 
             # pc edges: state -> pc vertex and back
-            for pcId in s.PathCondition:
+            for pc_id in s.PathCondition:
                 edge_index_pc_state.append(
-                    [pc_map[pcId], state_map[state_id]]
+                    [pc_map[pc_id], state_map[state_id]]
                 )
                 edge_index_state_pc.append(
-                    [state_map[state_id], pc_map[pcId]]
+                    [state_map[state_id], pc_map[pc_id]]
                 )
 
         else:
