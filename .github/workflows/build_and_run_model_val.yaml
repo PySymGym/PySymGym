@@ -84,7 +84,7 @@ jobs:
         working-directory: ./AIAgent
         run: |
           poetry --ansi run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts &
-          echo "Waiting for mlflow server to start..." && sleep 10
+          echo "Waiting for mlflow server to start..." && sleep 30
 
       - name: Run training
         working-directory: ./AIAgent
