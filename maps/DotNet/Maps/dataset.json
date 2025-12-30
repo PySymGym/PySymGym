@@ -4054,5 +4054,758 @@
       "AssemblyFullName":"ManuallyCollected.dll",
       "NameOfObjectToCover":"mergeSort",
       "MapName":"mergeSort_0"
-   }
+   },
+   {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.PermutationInString.PermutationInStringProblem.CheckInclusion",
+    "MapName": "CheckInclusion_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.PermutationInString.PermutationInStringProblem.CheckInclusion",
+    "MapName": "CheckInclusion_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "AdvancedGraphs.dll",
+    "NameOfObjectToCover": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice",
+    "MapName": "FindCheapestPrice_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "AdvancedGraphs.dll",
+    "NameOfObjectToCover": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice",
+    "MapName": "FindCheapestPrice_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.FloodFill.FloodFillProblem.FloodFillBfs",
+    "MapName": "FloodFillBfs_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.FloodFill.FloodFillProblem.FloodFillBfs",
+    "MapName": "FloodFillBfs_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "2D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
+    "MapName": "IsInterleave_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "2D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
+    "MapName": "IsInterleave_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.ValidSudoku.ValidSudokuProblem.IsValidSudoku",
+    "MapName": "IsValidSudoku_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.ValidSudoku.ValidSudokuProblem.IsValidSudoku",
+    "MapName": "IsValidSudoku_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Stack.dll",
+    "NameOfObjectToCover": "Stack.LargestRectangleInHistogram.LargestRectangleInHistogramProblem.LargestRectangleArea",
+    "MapName": "LargestRectangleArea_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Stack.dll",
+    "NameOfObjectToCover": "Stack.LargestRectangleInHistogram.LargestRectangleInHistogramProblem.LargestRectangleArea",
+    "MapName": "LargestRectangleArea_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "1D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_1D_DynamicProgramming.LongestIncreasingSubsequence.LongestIncreasingSubsequenceProblem.LengthOfLIS",
+    "MapName": "LongestIncreasingSubsequence_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "1D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_1D_DynamicProgramming.LongestIncreasingSubsequence.LongestIncreasingSubsequenceProblem.LengthOfLIS",
+    "MapName": "LongestIncreasingSubsequence_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.SlidingWindowMaximum.SlidingWindowMaximumProblem.MaxSlidingWindow",
+    "MapName": "MaxSlidingWindow_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.MinimumWindowSubstring.MinimumWindowSubstringProblem.MinWindow",
+    "MapName": "MinWindow_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "SlidingWindow.dll",
+    "NameOfObjectToCover": "SlidingWindow.MinimumWindowSubstring.MinimumWindowSubstringProblem.MinWindow",
+    "MapName": "MinWindow_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.NQueens.NQueensProblem.SolveNQueens",
+    "MapName": "NQueens_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.NQueens.NQueensProblem.SolveNQueens",
+    "MapName": "NQueens_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.NumberOfIslands.NumberOfIslandsProblem.NumIslands",
+    "MapName": "NumIslands_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.NumberOfIslands.NumberOfIslandsProblem.NumIslands",
+    "MapName": "NumIslands_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.RottingOranges.RottingOrangesProblem.OrangesRotting",
+    "MapName": "OrangesRotting_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.RottingOranges.RottingOrangesProblem.OrangesRotting",
+    "MapName": "OrangesRotting_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Math&Geometry.dll",
+    "NameOfObjectToCover": "Math_Geometry.SpiralMatrix.SpiralMatrixProblem.SpiralOrder",
+    "MapName": "SpiralOrder_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Math&Geometry.dll",
+    "NameOfObjectToCover": "Math_Geometry.SpiralMatrix.SpiralMatrixProblem.SpiralOrder",
+    "MapName": "SpiralOrder_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TwoPointers.dll",
+    "NameOfObjectToCover": "TwoPointers.ThreeSum.ThreeSumProblem.ThreeSum",
+    "MapName": "ThreeSum_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TwoPointers.dll",
+    "NameOfObjectToCover": "TwoPointers.ThreeSum.ThreeSumProblem.ThreeSum",
+    "MapName": "ThreeSum_DFS_100"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.TopKFrequentElements.TopKFrequentElementsProblem.TopKFrequent",
+    "MapName": "TopKFrequent_BFS_0"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Arrays_Hashing.dll",
+    "NameOfObjectToCover": "Arrays_Hashing.TopKFrequentElements.TopKFrequentElementsProblem.TopKFrequent",
+    "MapName": "TopKFrequent_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.WordSearch.WordSearchProblem.Exist",
+    "MapName": "WordSearch_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Backtracking.dll",
+    "NameOfObjectToCover": "Backtracking.WordSearch.WordSearchProblem.Exist",
+    "MapName": "WordSearch_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Graph.ArticulationPoints.Find",
+    "MapName": "ArticulationPoints_Find_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Graph.ArticulationPoints.Find",
+    "MapName": "ArticulationPoints_Find_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Search.AStar.AStar.Compute",
+    "MapName": "AStar_Compute_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Search.AStar.AStar.Compute",
+    "MapName": "AStar_Compute_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.DataCompression.BurrowsWheelerTransform.Decode",
+    "MapName": "BurrowsWheelerTransform_Decode_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.DataCompression.ShannonFanoCompressor.Compress",
+    "MapName": "Compress_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.DataCompression.ShannonFanoCompressor.Compress",
+    "MapName": "Compress_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.DamerauLevenshteinDistance.Calculate",
+    "MapName": "DamerauLevenshteinDistance_Calculate_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.DamerauLevenshteinDistance.Calculate",
+    "MapName": "DamerauLevenshteinDistance_Calculate_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Numeric.Decomposition.Lu.Decompose",
+    "MapName": "Decompose_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Numeric.Decomposition.Lu.Decompose",
+    "MapName": "Decompose_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Crypto.Digests.Md2Digest.Digest",
+    "MapName": "Digest_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Crypto.Digests.Md2Digest.Digest",
+    "MapName": "Digest_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.LinearAlgebra.Eigenvalue.PowerIteration.Dominant",
+    "MapName": "Dominant_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.LinearAlgebra.Eigenvalue.PowerIteration.Dominant",
+    "MapName": "Dominant_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Numeric.Decomposition.Lu.Eliminate",
+    "MapName": "Eliminate_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Numeric.Decomposition.Lu.Eliminate",
+    "MapName": "Eliminate_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.RabinKarp.FindAllOccurrences",
+    "MapName": "FindAllOccurrences_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.RabinKarp.FindAllOccurrences",
+    "MapName": "FindAllOccurrences_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.Bitap.FindExactPattern",
+    "MapName": "FindExactPattern_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.Bitap.FindExactPattern",
+    "MapName": "FindExactPattern_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.BoyerMoore.FindFirstOccurrence",
+    "MapName": "FindFirstOccurrence_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.BoyerMoore.FindFirstOccurrence",
+    "MapName": "FindFirstOccurrence_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Search.InterpolationSearch.FindIndex",
+    "MapName": "FindIndex_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Search.InterpolationSearch.FindIndex",
+    "MapName": "FindIndex_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.GeneralStringAlgorithms.FindLongestConsecutiveCharacters",
+    "MapName": "FindLongestConsecutiveCharacters_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.GeneralStringAlgorithms.FindLongestConsecutiveCharacters",
+    "MapName": "FindLongestConsecutiveCharacters_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.ManachersAlgorithm.FindLongestPalindromeWithDetails",
+    "MapName": "FindLongestPalindromeWithDetails_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.ManachersAlgorithm.FindLongestPalindromeWithDetails",
+    "MapName": "FindLongestPalindromeWithDetails_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Stack.NextGreaterElement.FindNextGreaterElement",
+    "MapName": "FindNextGreaterElement_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Stack.NextGreaterElement.FindNextGreaterElement",
+    "MapName": "FindNextGreaterElement_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.ZblockSubstringSearch.FindSubstring",
+    "MapName": "FindSubstring_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.ZblockSubstringSearch.FindSubstring",
+    "MapName": "FindSubstring_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Encoders.BlowfishEncoder.GenerateKey",
+    "MapName": "GenerateKey_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Encoders.BlowfishEncoder.GenerateKey",
+    "MapName": "GenerateKey_DFS_100"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Problems.DynamicProgramming.CoinChange.DynamicCoinChangeSolver.GenerateSingleCoinChanges",
+    "MapName": "GenerateSingleCoinChanges_BFS_0"
+  },
+  {
+    "StepsToPlay": 5000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Problems.DynamicProgramming.CoinChange.DynamicCoinChangeSolver.GenerateSingleCoinChanges",
+    "MapName": "GenerateSingleCoinChanges_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Permutation.GetEveryUniquePermutation",
+    "MapName": "GetEveryUniquePermutation_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Permutation.GetEveryUniquePermutation",
+    "MapName": "GetEveryUniquePermutation_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.CosineSimilarity.GetVectors",
+    "MapName": "GetVectors_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.CosineSimilarity.GetVectors",
+    "MapName": "GetVectors_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.BoyerMoore.GoodSuffixRule",
+    "MapName": "GoodSuffixRule_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.BoyerMoore.GoodSuffixRule",
+    "MapName": "GoodSuffixRule_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Stack.InfixToPostfix.InfixToPostfixConversion",
+    "MapName": "InfixToPostfixConversion_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Stack.InfixToPostfix.InfixToPostfixConversion",
+    "MapName": "InfixToPostfixConversion_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Graph.MinimumSpanningTree.Kruskal.Solve",
+    "MapName": "Kruskal_Solve_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Graph.MinimumSpanningTree.Kruskal.Solve",
+    "MapName": "Kruskal_Solve_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.MachineLearning.LinearRegression.Fit",
+    "MapName": "LinearRegression_Fit_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.MachineLearning.LinearRegression.Fit",
+    "MapName": "LinearRegression_Fit_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.MachineLearning.LogisticRegression.Fit",
+    "MapName": "LogisticRegression_Fit_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.MachineLearning.LogisticRegression.Fit",
+    "MapName": "LogisticRegression_Fit_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.WildCardMatcher.MatchPattern",
+    "MapName": "MatchPattern_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.PatternMatching.WildCardMatcher.MatchPattern",
+    "MapName": "MatchPattern_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.OptimalStringAlignment.CalculateDistance",
+    "MapName": "OptimalStringAlignment_CalculateDistance_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.OptimalStringAlignment.CalculateDistance",
+    "MapName": "OptimalStringAlignment_CalculateDistance_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Other.ParetoOptimization.Optimize",
+    "MapName": "ParetoOptimization_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Other.ParetoOptimization.Optimize",
+    "MapName": "ParetoOptimization_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Stack.InfixToPostfix.PostfixExpressionEvaluation",
+    "MapName": "PostfixExpressionEvaluation_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Stack.InfixToPostfix.PostfixExpressionEvaluation",
+    "MapName": "PostfixExpressionEvaluation_DFS_100"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Problems.TravelingSalesman.TravelingSalesmanSolver.SolveBruteForce",
+    "MapName": "SolveBruteForce_BFS_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Problems.TravelingSalesman.TravelingSalesmanSolver.SolveBruteForce",
+    "MapName": "SolveBruteForce_DFS_100"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_BFS_0"
+  },
+  {
+    "StepsToPlay": 10000,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 50,
+    "AssemblyFullName": "Algorithms.dll",
+    "NameOfObjectToCover": "EditDistance.GetMinDistance",
+    "MapName": "EditDistance_DFS_50"
+  },
 ]
+
