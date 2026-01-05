@@ -33,5 +33,4 @@
 	url = https://github.com/SaeedGz98/stralgo.git
 [submodule "maps/DotNet/Maps/TheAlgorithms-CSharp"]
 	path = maps/DotNet/Maps/TheAlgorithms-CSharp
-	url = https://github.com/TheAlgorithms/C-Sharp.git
-        
+	url = https://github.com/cat923/C-Sharp.git
