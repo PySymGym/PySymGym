@@ -13,7 +13,7 @@ readme = "README.md"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
-aiohttp = "^3.13.2"
+aiohttp = "^3.13.3"
 dataclasses-json = "^0.6.7"
 func-timeout = "^4.3.5"
 httplib2 = "^0.31.0"
