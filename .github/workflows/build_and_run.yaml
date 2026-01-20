@@ -53,8 +53,8 @@ jobs:
       - name: Run MLFlow server
         working-directory: ./AIAgent
         run: |
-          poetry --ansi run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts &
-          echo "Waiting for mlflow server to start..." && sleep 10
+          poetry --ansi run python -m mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts &
+          echo "Waiting for mlflow server to start..." && sleep 30
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
