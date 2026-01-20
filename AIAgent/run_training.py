@@ -16,7 +16,7 @@ import torch
 import yaml
 from common.classes import GameFailed
 from common.config.config import Config
-from common.config.optuna_config import OptunaConfig
+from common.config.optuna_config import OptimizationDirection, OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
     CriterionValidation,
@@ -205,6 +205,7 @@ def run_training(
         criterion_init=criterion_init,
         epochs=training_config.epochs,
         validate=validate,
+        direction=optuna_config.study_direction,
     )
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
@@ -220,7 +221,7 @@ def run_training(
                 mlflow.set_tag("best_trial_number", study.best_trial.number)
 
         study = optuna.create_study(
-            sampler=sampler, direction=optuna_config.study_direction
+            sampler=sampler, direction=optuna_config.study_direction.value
         )
         study.optimize(
             objective_partial,
@@ -248,6 +249,7 @@ def objective(
     validate: Callable[
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
+    direction: OptimizationDirection,
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
@@ -262,7 +264,9 @@ def objective(
         tolerance=0.0001,
     )
     early_stopping = EarlyStopping(
-        state_len=config.early_stopping_state_len, tolerance=config.tolerance
+        state_len=config.early_stopping_state_len,
+        tolerance=config.tolerance,
+        direction=direction,
     )
     model_kwargs_names = list(
         inspect.signature(StateModelEncoder.__init__).parameters.keys()
