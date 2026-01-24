@@ -1430,18 +1430,18 @@ files = [
 
 [[package]]
 name = "httplib2"
-version = "0.31.1"
+version = "0.31.2"
 description = "A comprehensive HTTP client library."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "httplib2-0.31.1-py3-none-any.whl", hash = "sha256:d520d22fa7e50c746a7ed856bac298c4300105d01bc2d8c2580a9b57fb9ed617"},
-    {file = "httplib2-0.31.1.tar.gz", hash = "sha256:21591655ac54953624c6ab8d587c71675e379e31e2cfe3147c83c11e9ef41f92"},
+    {file = "httplib2-0.31.2-py3-none-any.whl", hash = "sha256:dbf0c2fa3862acf3c55c078ea9c0bc4481d7dc5117cae71be9514912cf9f8349"},
+    {file = "httplib2-0.31.2.tar.gz", hash = "sha256:385e0869d7397484f4eab426197a4c020b606edd43372492337c0b4010ae5d24"},
 ]
 
 [package.dependencies]
-pyparsing = ">=3.0.4,<4"
+pyparsing = ">=3.1,<4"
 
 [[package]]
 name = "huey"
@@ -4733,4 +4733,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "4c1720d0269fac8df4f3f2fc2a05d841a8d3b9bea2c9fa3b1a639aa7a5a8aa46"
+content-hash = "85502e1367329a6e4a6fa36adaa66d35a16318f087c4222501910a7bb5f38c2e"
