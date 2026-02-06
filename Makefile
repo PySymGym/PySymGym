@@ -33,10 +33,10 @@ init_data: generate_init_data move_init_data
 STEPS_TO_SERIALIZE = 200
 
 generate_init_data:
-	cd ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0; \
-	dotnet VSharp.ML.GameServer.Runner.dll --mode generator --datasetbasepath $(TOPDIR)/maps/DotNet/Maps/Root/bin/Release/net7.0 --datasetdescription $(TOPDIR)/maps/DotNet/Maps/dataset.json --stepstoserialize $(STEPS_TO_SERIALIZE)
+	cd ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0; \
+	dotnet VSharp.ML.GameServer.Runner.dll --mode generator --datasetbasepath $(TOPDIR)/maps/DotNet/Maps/Root/bin/Release/net8.0 --datasetdescription $(TOPDIR)/maps/DotNet/Maps/dataset.json --stepstoserialize $(STEPS_TO_SERIALIZE)
 
 move_init_data:
 	cd ./AIAgent; \
 	mkdir -p report; \
-	mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
+	mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100/SerializedEpisodes/ report/
