@@ -4806,6 +4806,6 @@
     "AssemblyFullName": "Algorithms.dll",
     "NameOfObjectToCover": "EditDistance.GetMinDistance",
     "MapName": "EditDistance_DFS_50"
-  },
+  }
 ]
 
