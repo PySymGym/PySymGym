@@ -42,7 +42,7 @@ def heterodata_vesualizer(heterodata: HeteroData):
         node_type = attrs["type"]
         color = node_type_colors[node_type]
         node_colors.append(color)
-        
+
         if node_type == "game_vertex":
             labels[node] = f"G{node}"
         if node_type == "state_vertex":
@@ -77,10 +77,10 @@ def heterodata_vesualizer(heterodata: HeteroData):
     for node_type, color in node_type_colors.items():
         legend_patches.append(mpatches.Patch(color=color, label=node_type))
 
-    plt.legend(handles=legend_patches, loc='upper right')
+    plt.legend(handles=legend_patches, loc="upper right")
     plt.title("Heterodata")
-    plt.axis('off')
+    plt.axis("off")
     plt.tight_layout()
-    plt.savefig('graph_visualization.png', dpi=300, bbox_inches='tight')
+    plt.savefig("graph_visualization.png", dpi=300, bbox_inches="tight")
     plt.close()
     print("Граф сохранен в 'graph_visualization.png'")
