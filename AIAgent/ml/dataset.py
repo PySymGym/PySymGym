@@ -640,7 +640,7 @@ def convert_input_to_tensor(
                     ]
                 )
             )
-            
+
             # history edges: state -> vertex and back
             for h in s.History:
                 v_to = vertex_map[h.GraphVertexId]
@@ -653,12 +653,8 @@ def convert_input_to_tensor(
 
             # pc edges: state -> pc vertex and back
             for pc_id in s.PathCondition:
-                edge_index_pc_state.append(
-                    [pc_map[pc_id], state_map[state_id]]
-                )
-                edge_index_state_pc.append(
-                    [state_map[state_id], pc_map[pc_id]]
-                )
+                edge_index_pc_state.append([pc_map[pc_id], state_map[state_id]])
+                edge_index_state_pc.append([state_map[state_id], pc_map[pc_id]])
 
         else:
             state_doubles += 1
