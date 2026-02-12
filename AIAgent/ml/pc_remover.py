@@ -4,7 +4,7 @@ from torch_geometric.data import HeteroData
 from ml.inference import TORCH
 
 
-def remove_path_condition_root(hetero_data: HeteroData) -> HeteroData:
+def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
     """
     Removes the PathConditionRoot node from Heterodata and creates edges 
     between states and pathCondition instead.
@@ -19,7 +19,7 @@ def remove_path_condition_root(hetero_data: HeteroData) -> HeteroData:
     HeteroData
         New HeteroData without PathConditionRoot.
     """
-    new_heterodata = hetero_data.clone()
+    new_heterodata = heterodata.clone()
     
     path_condition_vertex = new_heterodata[TORCH.path_condition_vertex].x.detach().cpu().numpy()
     pathcondvertex_to_pathcondvertex = new_heterodata[TORCH.pathcondvertex_to_pathcondvertex].edge_index.detach().cpu().numpy()
@@ -27,7 +27,6 @@ def remove_path_condition_root(hetero_data: HeteroData) -> HeteroData:
     
     nodes_path_condition = []
     edge_index_pc_pc, edge_index_pc_state, edge_index_state_pc = [], [], []
-
 
     for vector in path_condition_vertex:
         new_vector = vector[:-1]
@@ -41,11 +40,11 @@ def remove_path_condition_root(hetero_data: HeteroData) -> HeteroData:
             pathcondvertex_to_pathcondvertex[1][i] not in statevertex_to_pathcondvertex[1]:
 
             k1 = 0
-            while pathcondvertex_to_pathcondvertex[0][i] > statevertex_to_pathcondvertex[1][k1]:
+            while k1 < len(statevertex_to_pathcondvertex[1]) and pathcondvertex_to_pathcondvertex[0][i] > statevertex_to_pathcondvertex[1][k1]:
                 k1 += 1
             
             k2 = 0
-            while pathcondvertex_to_pathcondvertex[1][i] > statevertex_to_pathcondvertex[1][k2]:
+            while k2 < len(statevertex_to_pathcondvertex[1]) and pathcondvertex_to_pathcondvertex[1][i] > statevertex_to_pathcondvertex[1][k2]:
                 k2 += 1
 
             edge_index_pc_pc.extend(
