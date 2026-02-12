@@ -47,7 +47,7 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
             nodes_path_condition.append(new_vector)
 
     i = 0
-    for pc_v in pathcondvertex_to_pathcondvertex[0]:
+    for _pc_v in pathcondvertex_to_pathcondvertex[0]:
         if (
             pathcondvertex_to_pathcondvertex[0][i]
             not in statevertex_to_pathcondvertex[1]
@@ -80,28 +80,28 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
             )
         i += 1
 
-    for pc_v in statevertex_to_pathcondvertex[1]:
-        ind = np.where(pathcondvertex_to_pathcondvertex[0] == pc_v)[0]
-        i = np.where(statevertex_to_pathcondvertex[1] == pc_v)[0][0]
+    for _pc_v in statevertex_to_pathcondvertex[1]:
+        ind = np.where(pathcondvertex_to_pathcondvertex[0] == _pc_v)[0]
+        i = np.where(statevertex_to_pathcondvertex[1] == _pc_v)[0][0]
 
-        for pc_v in ind:
+        for _pc_v in ind:
             k = 0
             while (
-                pathcondvertex_to_pathcondvertex[0][pc_v + 1]
+                pathcondvertex_to_pathcondvertex[0][_pc_v + 1]
                 > statevertex_to_pathcondvertex[1][k]
             ):
                 k += 1
 
             edge_index_pc_state.append(
                 [
-                    pathcondvertex_to_pathcondvertex[0][pc_v + 1] - k,
+                    pathcondvertex_to_pathcondvertex[0][_pc_v + 1] - k,
                     statevertex_to_pathcondvertex[0][i],
                 ]
             )
             edge_index_state_pc.append(
                 [
                     statevertex_to_pathcondvertex[0][i],
-                    pathcondvertex_to_pathcondvertex[0][pc_v + 1] - k,
+                    pathcondvertex_to_pathcondvertex[0][_pc_v + 1] - k,
                 ]
             )
 
