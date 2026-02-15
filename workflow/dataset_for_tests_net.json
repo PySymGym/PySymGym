@@ -110,5 +110,70 @@
       "AssemblyFullName": "LiteDB.dll",
       "NameOfObjectToCover": "LiteEngine.Delete",
       "MapName": "LiteEngine.Delete_0"
-   }
+   },
+   {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.DamerauLevenshteinDistance.Calculate",
+    "MapName": "DamerauLevenshteinDistance_Calculate_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Strings.Similarity.DamerauLevenshteinDistance.Calculate",
+    "MapName": "DamerauLevenshteinDistance_Calculate_100_DFS"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+
+    "NameOfObjectToCover": "Algorithms.Numeric.Decomposition.Lu.Decompose",
+    "MapName": "Decompose_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "TheAlgorithms.Algorithms.dll",
+    "NameOfObjectToCover": "Algorithms.Numeric.Decomposition.Lu.Decompose",
+    "MapName": "Decompose_100_DFS"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.FloodFill.FloodFillProblem.FloodFillBfs",
+    "MapName": "FloodFillBfs_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "Graphs.dll",
+    "NameOfObjectToCover": "Graphs.FloodFill.FloodFillProblem.FloodFillBfs",
+    "MapName": "FloodFillBfs_100_DFS"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "BFS",
+    "StepsToStart": 0,
+    "AssemblyFullName": "2D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
+    "MapName": "IsInterleave_0"
+  },
+  {
+    "StepsToPlay": 500,
+    "DefaultSearcher": "DFS",
+    "StepsToStart": 100,
+    "AssemblyFullName": "2D_DynamicProgramming.dll",
+    "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
+    "MapName": "IsInterleave_100_DFS"
+  }
 ]

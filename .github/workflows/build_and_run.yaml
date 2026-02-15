@@ -67,11 +67,11 @@ jobs:
           dotnet build Root -c Release
 
       - name: Generate initial data for training
-        working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+        working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0
         run: |
           dotnet VSharp.ML.GameServer.Runner.dll \
             --mode generator \
-            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net7.0 \
+            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net8.0 \
             --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
             --stepstoserialize 200
 
@@ -79,12 +79,13 @@ jobs:
         working-directory: ./AIAgent
         run: |
           mkdir report
-          mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
+          mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100/SerializedEpisodes/ report/
       
       - name: Run hyperparameters tuning
         working-directory: ./AIAgent
         run: |
           poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests_loss_val.yml
+
 
       - name: Launch application
         working-directory: ./AIAgent

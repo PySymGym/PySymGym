@@ -79,3 +79,25 @@ python3 compstrat.py \
 
 Output example
 ![resources/alpha_beta_comp_vis_example.png](resources/alpha_beta_comp_vis_example.png)
+
+
+## `generate_episodes` tool
+
+
+Docs:
+```bash
+usage: generate_episodes.py [-h] [-d DATASET]
+
+options:
+  -h, --help            show this help message and exit
+  -d DATASET, --dataset DATASET
+                        Path to the dataset JSON file 
+```
+Run:
+```bash
+Use custom dataset path:
+python3 generate_episodes.py -d <path-to-dataset>
+
+Use default dataset path (../maps/DotNet/Maps/dataset.json):
+python3 generate_episodes.py
+```

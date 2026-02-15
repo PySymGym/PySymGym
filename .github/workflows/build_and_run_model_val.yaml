@@ -30,7 +30,7 @@ jobs:
           apt update
           apt install -y git software-properties-common
           add-apt-repository ppa:dotnet/backports
-          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-9.0 cmake clang
+          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-8.0 dotnet-sdk-9.0 cmake clang
 
       - name: Debug
         run: |
@@ -66,11 +66,11 @@ jobs:
           dotnet build Root -c Release
 
       - name: Generate initial data for training
-        working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0
+        working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0
         run: |
           dotnet VSharp.ML.GameServer.Runner.dll \
             --mode generator \
-            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net7.0 \
+            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net8.0 \
             --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
             --stepstoserialize 200
 
@@ -78,7 +78,7 @@ jobs:
         working-directory: ./AIAgent
         run: |
           mkdir report
-          mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net7.0/8100/SerializedEpisodes/ report/
+          mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100/SerializedEpisodes/ report/
 
       - name: Run MLFlow server
         working-directory: ./AIAgent
