@@ -68,8 +68,8 @@ class Comparator:
         strat1: Strategy,
         strat2: Strategy,
         savedir: str,
-        eq_color: Color | None,
-        eq_ecolor: Color | None,
+        eq_color: Color | None = None,
+        eq_ecolor: Color | None = None,
     ) -> None:
         if eq_color is None:
             eq_color = Color("black", 0, 0, 0, 1)
