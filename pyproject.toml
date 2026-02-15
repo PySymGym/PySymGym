@@ -48,11 +48,11 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core==2.2.1"]
 
 [tool.ruff]
-include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb"]
+include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py"]
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["F", "E", "W", "B"]
+select = ["F", "E", "W", "B", "N"]
 ignore = ["E501"]
 extend-select = ["E226"]
 preview = true
