@@ -1,4 +1,4 @@
-name: Python linting
+name: Python linting and formatting
 
 on: [push, pull_request]
 
@@ -7,7 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: "Run ruff linter: check"
+      - name: "Run ruff: check"
         uses: astral-sh/ruff-action@v2
         with:
           args: "check"
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Run ruff: format"
+        uses: astral-sh/ruff-action@v2
+        with:
+          args: "format --check"
