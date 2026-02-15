@@ -68,9 +68,13 @@ class Comparator:
         strat1: Strategy,
         strat2: Strategy,
         savedir: str,
-        eq_color: Color = Color("black", 0, 0, 0, 1),
-        eq_ecolor: Color = Color("translucent_black", 0, 0, 0, 0.5),
+        eq_color: Color | None = None,
+        eq_ecolor: Color | None = None,
     ) -> None:
+        if eq_color is None:
+            eq_color = Color("black", 0, 0, 0, 1)
+        if eq_ecolor is None:
+            eq_ecolor = Color("translucent_black", 0, 0, 0, 0.5)
         self.savedir = savedir
         self.strat1 = strat1
         self.strat2 = strat2
@@ -165,7 +169,9 @@ class Comparator:
 
         # check if exp_name already exists in df:
         if config.exp_name in self.result_count_df.index:
-            warnings.warn(f"Overwriting {config.exp_name} in result_count_df")
+            warnings.warn(
+                f"Overwriting {config.exp_name} in result_count_df", stacklevel=2
+            )
 
         self.result_count_df.loc[config.exp_name] = [
             len(strat1_win),
