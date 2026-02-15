@@ -30,9 +30,11 @@ def get_svms_statistics(
     results_to_write = dict(
         list(
             map(
-                lambda map_name: (map_name, "DELETED")
-                if map_name not in maps_results
-                else (map_name, maps_results[map_name]),
+                lambda map_name: (
+                    (map_name, "DELETED")
+                    if map_name not in maps_results
+                    else (map_name, maps_results[map_name])
+                ),
                 header,
             )
         )
