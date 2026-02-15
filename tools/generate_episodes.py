@@ -21,9 +21,11 @@ def generate_steps(steps_to_play):
 
 def is_duplicate(episodes, method, strategy, steps_to_start):
     for game_map in episodes:
-        if (game_map.NameOfObjectToCover == method and
-            game_map.StepsToStart == steps_to_start and
-            game_map.DefaultSearcher == strategy):
+        if (
+            game_map.NameOfObjectToCover == method
+            and game_map.StepsToStart == steps_to_start
+            and game_map.DefaultSearcher == strategy
+        ):
             return True
     return False
 
@@ -40,12 +42,12 @@ def create_episode(base_episode, method, step, strategy):
         StepsToStart=step,
         AssemblyFullName=base_episode.AssemblyFullName,
         NameOfObjectToCover=method,
-        MapName=map_name
+        MapName=map_name,
     )
 
 
 def generate_episodes(dataset_path):
-    with open(dataset_path, 'r') as f:
+    with open(dataset_path, "r") as f:
         dataset = GameMap.schema().loads(f.read(), many=True)
 
     methods_dict = defaultdict(list)
@@ -63,7 +65,9 @@ def generate_episodes(dataset_path):
             for step in steps:
                 for strategy in ["BFS", "DFS"]:
                     if not is_duplicate(episodes, method, strategy, step):
-                        new_episode = create_episode(first_episode, method, step, strategy)
+                        new_episode = create_episode(
+                            first_episode, method, step, strategy
+                        )
                         new_episodes.append(new_episode)
 
             if not is_duplicate(episodes, method, "BFS", 0):
@@ -71,9 +75,11 @@ def generate_episodes(dataset_path):
                 new_episodes.append(new_episode)
 
     dataset.extend(new_episodes)
-    dataset.sort(key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher))
+    dataset.sort(
+        key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher)
+    )
 
-    with open(dataset_path, 'w') as f:
+    with open(dataset_path, "w") as f:
         f.write(GameMap.schema().dumps(dataset, many=True, indent=3))
 
 
@@ -84,7 +90,7 @@ def main():
         "--dataset",
         type=Path,
         default=Path("../maps/DotNet/Maps/dataset.json"),
-        help="Path to the dataset JSON file"
+        help="Path to the dataset JSON file",
     )
     args = parser.parse_args()
 
