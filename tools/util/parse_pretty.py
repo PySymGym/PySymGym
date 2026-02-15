@@ -15,12 +15,12 @@ class PrettyRunResult:
 
 
 def parse_stats(stats: str) -> tuple[int, int, int, float]:
-    steps = re.search("steps: (?P<count>.\d*),", stats).groupdict()["count"]
+    steps = re.search(r"steps: (?P<count>.\d*),", stats).groupdict()["count"]
     coverage = re.search(r"actual %: (?P<number>.\d*\.\d*),", stats).groupdict()[
         "number"
     ]
-    tests = re.search("test count: (?P<count>.\d*) ", stats).groupdict()["count"]
-    errors = re.search("error count: (?P<count>.\d*)", stats).groupdict()["count"]
+    tests = re.search(r"test count: (?P<count>.\d*) ", stats).groupdict()["count"]
+    errors = re.search(r"error count: (?P<count>.\d*)", stats).groupdict()["count"]
 
     return (int(steps), int(tests), int(errors), float(coverage))
 
@@ -39,10 +39,10 @@ def parse_pretty(data: list[str]) -> pd.DataFrame:
         lines.append(line_attribites)
 
     rst = []
-    for method_full_qual, stats in zip(*lines):
+    for method_full_qual, stats in zip(*lines, strict=True):
         assert isinstance(method_full_qual, str)
         method_full_qual = method_full_qual.replace("_Method_0", "")
-        rst.append(attrs.asdict(PrettyRunResult(method_full_qual, *parse_stats(stats))))
+        rst.append(PrettyRunResult(method_full_qual, *parse_stats(stats)))
 
     return pd.DataFrame.from_dict(rst)
 

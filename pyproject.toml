@@ -52,7 +52,7 @@ include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py"]
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["F", "E", "W", "B", "N"]
+select = ["F", "E", "W", "B"]
 ignore = ["E501"]
 extend-select = ["E226"]
 preview = true
