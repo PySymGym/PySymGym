@@ -19,7 +19,6 @@ def predict_state_with_dict(
 
     with torch.no_grad():
         out = infer(model, data)
-
     remapped = []
 
     for index, vector in enumerate(out):
@@ -28,5 +27,5 @@ def predict_state_with_dict(
             vector=(vector.detach().cpu().numpy()).tolist(),
         )
         remapped.append(state_vector_mapping)
-
-    return max(remapped, key=lambda mapping: sum(mapping.vector)).state, out
+    state_idx = torch.multinomial(torch.exp(out.reshape(-1)), 1).item()
+    return reversed_state_map[state_idx], out
