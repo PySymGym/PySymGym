@@ -84,6 +84,8 @@ Output example
 ## `generate_episodes` tool
 
 
+This tool expands the dataset by creating new  episodes for each method
+
 Docs:
 ```bash
 usage: generate_episodes.py [-h] [-d DATASET]
