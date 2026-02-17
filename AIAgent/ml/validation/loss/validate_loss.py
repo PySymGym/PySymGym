@@ -23,7 +23,9 @@ def validate_loss(
     ):
         batch.to(GeneralConfig.DEVICE)
         out = infer(model, batch)
+        batch.y_true[batch.y_true > 0] = 1
         loss: torch.Tensor = criterion(out, batch.y_true)
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
     return result
+validate_loss
