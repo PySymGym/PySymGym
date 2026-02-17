@@ -84,7 +84,7 @@ Output example
 ## `generate_episodes` tool
 
 
-This tool expands the dataset by creating new  episodes for each method
+This tool expands the dataset by creating new episodes for each method. The step sizes are chosen based on the method's StepsToPlay value. For each step, both BFS and DFS variants are added if missing.
 
 Docs:
 ```bash
