@@ -103,7 +103,7 @@ def run_training(
     weights_uri: Optional[str],
 ):
     def criterion_init():
-        return nn.BCEWithLogitsLoss(reduction='sum')
+        return nn.BCEWithLogitsLoss(reduction="sum")
 
     def get_validation(validation_mode: ValidationMode):
         if isinstance(validation_mode, CriterionValidation):
