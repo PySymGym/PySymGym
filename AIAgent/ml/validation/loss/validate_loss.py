@@ -28,6 +28,3 @@ def validate_loss(
         epoch_loss.append(loss.item())
     result = np.average(epoch_loss)
     return result
-
-
-validate_loss
