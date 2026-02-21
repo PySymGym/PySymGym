@@ -44,7 +44,9 @@ class TestONNXConversion:
 
     @pytest.fixture
     def game_states_fixture(request):
-        game_states_path = Path("../resources/onnx/reference_gamestates")
+        game_states_path = Path(
+            "../resources/onnx/reference_gamestates_without_pc_root"
+        )
         json_files = [
             game_states_path / file
             for file in os.listdir(game_states_path)
