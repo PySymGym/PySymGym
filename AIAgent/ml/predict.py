@@ -28,4 +28,6 @@ def predict_state_with_dict(
         )
         remapped.append(state_vector_mapping)
     state_idx = torch.multinomial(torch.exp(out.reshape(-1)), 1).item()
-    return reversed_state_map[state_idx], out
+    chosen_state_out = torch.zeros_like(out)
+    chosen_state_out[state_idx] = 1.
+    return reversed_state_map[state_idx], chosen_state_out
