@@ -13,13 +13,12 @@ class EarlyStopping:
         self._tolerance = tolerance
         match direction:
             case OptimizationDirection.MINIMIZE:
-                self._get_difference = (
-                    lambda state_value: (sum(self._state) / self._state_len)
-                    - state_value
+                self._get_difference = lambda state_value: (
+                    (sum(self._state) / self._state_len) - state_value
                 )
             case OptimizationDirection.MAXIMIZE:
-                self._get_difference = lambda state_value: state_value - (
-                    sum(self._state) / self._state_len
+                self._get_difference = lambda state_value: (
+                    state_value - (sum(self._state) / self._state_len)
                 )
 
     def is_continue(self, state_value) -> bool:

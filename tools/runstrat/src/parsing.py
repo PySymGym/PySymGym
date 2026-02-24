@@ -68,7 +68,7 @@ def load_config(dll_dir: pathlib.Path, config_csv_path: pathlib.Path):
 
     result = []
 
-    for dll, method in zip(df["dll"], df["method"]):
+    for dll, method in zip(df["dll"], df["method"], strict=True):
         result.append(LaunchInfo(dll_dir / dll, method))
 
     return result
