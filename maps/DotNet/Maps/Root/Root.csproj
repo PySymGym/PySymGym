@@ -32,8 +32,8 @@
       <ProjectReference Include="..\stralgo\Arrays_Hashing\Arrays_Hashing.csproj" />
       <ProjectReference Include="..\stralgo\Backtracking\Backtracking.csproj" />
       <ProjectReference Include="..\stralgo\Math&amp;Geometry\Math&amp;Geometry.csproj" />
-       <ProjectReference Include="..\stralgo\SlidingWindow\SlidingWindow.csproj" />
-       <ProjectReference Include="..\stralgo\Stack\Stack.csproj" />
+      <ProjectReference Include="..\stralgo\SlidingWindow\SlidingWindow.csproj" />
+      <ProjectReference Include="..\stralgo\Stack\Stack.csproj" />
     </ItemGroup>
 
 </Project>
