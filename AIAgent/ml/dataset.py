@@ -192,7 +192,10 @@ class TrainingDataset(Dataset):
         coverages = np.array(
             [map_result.coverage_percent for map_result in self.maps_results.values()]
         )
-        self.threshold_coverage = np.percentile(coverages, self.percentile).item()
+        if len(coverages) == 0:
+            self.threshold_coverage = 0
+        else:
+            self.threshold_coverage = np.percentile(coverages, self.percentile).item()
 
     def _get_processed_paths(self) -> List[str]:
         all_files = []
