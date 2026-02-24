@@ -7,7 +7,7 @@ import os
 import os.path as osp
 import random
 import shutil
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from functools import partial
@@ -17,6 +17,7 @@ from typing import (
     DefaultDict,
     Dict,
     List,
+    NamedTuple,
     Optional,
     Sequence,
     Tuple,
@@ -50,15 +51,15 @@ VertexIndex: TypeAlias = int
 VertexMap: TypeAlias = Dict[VertexId, VertexIndex]
 
 MapName: TypeAlias = str
-Result = namedtuple(
-    "Result",
-    [
-        "coverage_percent",
-        "negative_tests_number",
-        "negative_steps_number",
-        "errors_number",
-    ],
-)
+
+
+class Result(NamedTuple):
+    coverage_percent: int
+    negative_tests_number: int
+    negative_steps_number: int
+    errors_number: int
+
+
 StatesDistribution: TypeAlias = torch.tensor
 
 
@@ -110,6 +111,7 @@ class TrainingDataset(Dataset):
         similar_steps_save_prob=0,
         progress_bar_color: str = "#975cdb",
         n_jobs: int = mp.cpu_count() - 1,
+        percentile: int = 80,
     ):
         self.n_jobs = n_jobs
         self._raw_dir = raw_dir
@@ -129,6 +131,8 @@ class TrainingDataset(Dataset):
         self.train_percentage = train_percentage
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
         self.__indices = self.train_dataset_indices
+
+        self.percentile = percentile
         super().__init__()
 
     def _split_dataset(self) -> Tuple[List, List]:
@@ -180,8 +184,19 @@ class TrainingDataset(Dataset):
     def processed_dir(self):
         return self._processed_dir
 
+    def __count_coverage_threshold(self):
+        """
+        Computes coverage threshold according to given percentile and current results.
+        It's extremely private because it changes object's variable.
+        """
+        coverages = np.array(
+            [map_result.coverage_percent for map_result in self.maps_results.values()]
+        )
+        self.threshold_coverage = np.percentile(coverages, self.percentile).item()
+
     def _get_processed_paths(self) -> List[str]:
         all_files = []
+        self.__count_coverage_threshold()
         for map_name in os.listdir(self.processed_dir):
             if map_name in self.maps_results:
                 if (
@@ -406,41 +421,8 @@ class TrainingDataset(Dataset):
         map_result: Result,
         map_steps: list[HeteroData],
     ):
-        filtered_map_steps = self.remove_similar_steps(self.filter_map_steps(map_steps))
-        if map_name in self.maps_results.keys():
-            if (
-                self.maps_results[map_name] == map_result
-                and map_result.coverage_percent == 100
-            ):
-                init_steps_num = (
-                    len(os.listdir(os.path.join(self.processed_dir, map_name))) - 1
-                )
-                num_of_steps_to_merge = len(filtered_map_steps)
-                filtered_map_steps = self._merge_steps(filtered_map_steps, map_name)
-                new_steps_num = len(filtered_map_steps)
-                if init_steps_num < new_steps_num:
-                    logging.info(
-                        f"Steps on map {map_name} were merged with current steps with result {tuple(map_result)}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
-                    )
-                else:
-                    logging.info(
-                        f"Existing results reproduced on map {map_name} with result {tuple(map_result)}. {num_of_steps_to_merge} + {init_steps_num} -> {new_steps_num}. "
-                    )
-                self.maps_results[map_name] = map_result
-                self._save_steps(map_name, filtered_map_steps, map_result)
-            if self.maps_results[map_name] < map_result:
-                logging.info(
-                    f"The model with result = {tuple(self.maps_results[map_name])} was replaced with the model with "
-                    f"result = {tuple(map_result)} on the map {map_name}"
-                )
-                self.maps_results[map_name] = map_result
-                self._save_steps(map_name, filtered_map_steps, map_result)
-        else:
-            self.maps_results[map_name] = map_result
-            self._save_steps(map_name, filtered_map_steps, map_result)
-            logging.info(
-                f"New map with name {map_name} was saved with result {tuple(map_result)}"
-            )
+        filtered_map_steps = self.filter_map_steps(map_steps)
+        self._save_steps(map_name, filtered_map_steps, map_result)
         del filtered_map_steps
         del map_name
         del map_result
@@ -450,9 +432,8 @@ class TrainingDataset(Dataset):
         if path_to_map_steps.exists():
             shutil.rmtree(path_to_map_steps)
         os.makedirs(path_to_map_steps)
-        if map_result[0] >= self.threshold_coverage:
-            for idx, step in enumerate(steps):
-                torch.save(step, os.path.join(path_to_map_steps, str(idx) + ".pt"))
+        for idx, step in enumerate(steps):
+            torch.save(step, os.path.join(path_to_map_steps, str(idx) + ".pt"))
         result_file = open(os.path.join(path_to_map_steps, "result"), mode="x")
         result_file.write(str(tuple(map_result)))
         result_file.close()
