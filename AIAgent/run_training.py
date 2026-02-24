@@ -262,7 +262,9 @@ def run_training(
             model.eval()
             _, metrics = val_pipeline[0](model, dataset)
             dataset.update_meta_data()
-            mlflow.log_metric("threshold_coverage", dataset.threshold_coverage)
+            mlflow.log_metric(
+                "threshold_coverage", dataset.threshold_coverage, step=global_epoch
+            )
             torch.cuda.empty_cache()
             mlflow.log_metrics(metrics, step=global_epoch)
             _, model = objective(
@@ -274,6 +276,7 @@ def run_training(
                 epochs=training_config.epochs,
                 validate=val_pipeline[1],
                 direction=optuna_config.study_direction,
+                global_epoch=global_epoch,
             )
 
 
@@ -288,6 +291,7 @@ def objective(
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
     direction: OptimizationDirection,
+    global_epoch,
 ):
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
@@ -341,7 +345,7 @@ def objective(
         model.eval()
         dataset.switch_to(TrainingDatasetMode.VALIDATION)
         result, metrics = validate(model, dataset)
-        mlflow.log_metrics(metrics, step=epoch)
+        mlflow.log_metrics(metrics, step=epoch + global_epoch)
         if not early_stopping.is_continue(result):
             print(f"Training was stopped on {epoch} epoch.")
             break
