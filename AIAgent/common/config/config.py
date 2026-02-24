@@ -10,6 +10,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 @pydantic_dataclass
 class Config:
+    global_epochs: int
     optuna_config: OptunaConfig = Field(alias="OptunaConfig")
     training_config: TrainingConfig = Field(alias="TrainingConfig")
     validation_config: ValidationConfig = Field(alias="ValidationConfig")

@@ -11,4 +11,5 @@ class TrainingConfig:
     threshold_coverage: int
     load_to_cpu: bool
     epochs: int
+    percentile: int
     threshold_steps_number: Optional[int] = Field(default=None)

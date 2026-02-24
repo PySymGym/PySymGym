@@ -16,3 +16,4 @@ class OptunaConfig:
     n_jobs: int
     study_direction: OptimizationDirection
     trial_uri: Optional[str] = Field(default=None)
+    trial_path: Optional[str] = Field(default=None)
