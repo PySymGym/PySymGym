@@ -196,7 +196,6 @@ class TrainingDataset(Dataset):
 
     def _get_processed_paths(self) -> List[str]:
         all_files = []
-        self.__count_coverage_threshold()
         for map_name in os.listdir(self.processed_dir):
             if map_name in self.maps_results:
                 if (
@@ -221,6 +220,7 @@ class TrainingDataset(Dataset):
 
     def update_meta_data(self) -> None:
         self.maps_results = self._get_results()
+        self.__count_coverage_threshold()
         self._processed_paths = self._get_processed_paths()
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
         if self._load_to_cpu:
