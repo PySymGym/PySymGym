@@ -97,6 +97,7 @@ class TrialSettings:
 
 
 def run_training(
+    global_epochs: int,
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
@@ -184,6 +185,7 @@ def run_training(
         threshold_steps_number=training_config.threshold_steps_number,
         load_to_cpu=training_config.load_to_cpu,
         threshold_coverage=training_config.threshold_coverage,
+        percentile=training_config.percentile,
     )
 
     def model_init(**model_params) -> nn.Module:
@@ -201,7 +203,6 @@ def run_training(
         objective,
         dataset=dataset,
         dynamic_dataset=training_config.dynamic_dataset,
-        model_init=model_init,
         criterion_init=criterion_init,
         epochs=training_config.epochs,
         validate=validate,
@@ -210,7 +211,11 @@ def run_training(
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials
     )
-    if optuna_config.trial_uri is None and weights_uri is None:
+    if (
+        optuna_config.trial_uri is None
+        and weights_uri is None
+        and optuna_config.trial_path is None
+    ):
 
         def save_study_and_trial(study, trial):
             joblib.dump(study, CURRENT_STUDY_PATH)
@@ -231,19 +236,51 @@ def run_training(
             callbacks=[save_study_and_trial],
         )
     else:
-        downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-            optuna_config.trial_uri, dst_path=str(REPORT_PATH)
+        downloaded_artifact_path = (
+            mlflow.artifacts.download_artifacts(
+                optuna_config.trial_uri, dst_path=str(REPORT_PATH)
+            )
+            if optuna_config.trial_uri
+            else optuna_config.trial_path
         )
         trial: optuna.trial.FrozenTrial = joblib.load(downloaded_artifact_path)
-        for _ in range(optuna_config.n_trials):
-            objective_partial(trial)
+
+    model_kwargs_names = list(
+        inspect.signature(StateModelEncoder.__init__).parameters.keys()
+    )
+    model_kwargs_names.remove("self")
+    model_kwargs = dict(
+        [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
+    )
+
+    model = model_init(**model_kwargs)
+    assert len(val_pipeline) == 2
+
+    with mlflow.start_run():
+        for global_epoch in range(global_epochs):
+            model.eval()
+            _, metrics = val_pipeline[0](model, dataset)
+            dataset.update_meta_data()
+            mlflow.log_metric("threshold_coverage", dataset.threshold_coverage)
+            torch.cuda.empty_cache()
+            mlflow.log_metrics(metrics, step=global_epoch)
+            _, model = objective(
+                trial,
+                dataset,
+                dynamic_dataset=training_config.dynamic_dataset,
+                model=model,
+                criterion_init=criterion_init,
+                epochs=training_config.epochs,
+                validate=val_pipeline[1],
+                direction=optuna_config.study_direction,
+            )
 
 
 def objective(
-    trial: optuna.Trial,
+    trial: optuna.trial.FrozenTrial,
     dataset: TrainingDataset,
     dynamic_dataset: bool,
-    model_init: Callable[[Any], nn.Module],
+    model: nn.Module,
     criterion_init: Callable,
     epochs: int,
     validate: Callable[
@@ -275,44 +312,40 @@ def objective(
     model_kwargs = dict(
         [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
     )
-    model: nn.Module = model_init(**model_kwargs)
     model.to(GeneralConfig.DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
-    with mlflow.start_run(run_name=str(trial.number)):
-        mlflow.log_params(asdict(config))
-        for epoch in range(epochs):
-            dataset.switch_to(TrainingDatasetMode.TRAINING)
-            train_dataloader = DataLoader(
-                dataset, config.batch_size, shuffle=False
-            )  # Shuffle leads to problems with GPU memory.
-            model.train()
-            train(
-                dataloader=train_dataloader,
-                model=model,
-                optimizer=optimizer,
-                criterion=criterion,
-            )
-            torch.cuda.empty_cache()
-            torch.save(model.state_dict(), CURRENT_MODEL_PATH)
-            mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
+    mlflow.log_params(asdict(config))
+    for epoch in range(epochs):
+        dataset.switch_to(TrainingDatasetMode.TRAINING)
+        train_dataloader = DataLoader(
+            dataset, config.batch_size, shuffle=False
+        )  # Shuffle leads to problems with GPU memory.
+        model.train()
+        train(
+            dataloader=train_dataloader,
+            model=model,
+            optimizer=optimizer,
+            criterion=criterion,
+        )
+        torch.cuda.empty_cache()
+        torch.save(model.state_dict(), CURRENT_MODEL_PATH)
+        mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
 
-            with open(MODEL_KWARGS_PATH, "w") as outfile:
-                yaml.dump(model_kwargs, outfile)
+        with open(MODEL_KWARGS_PATH, "w") as outfile:
+            yaml.dump(model_kwargs, outfile)
 
-            model.eval()
-            dataset.switch_to(TrainingDatasetMode.VALIDATION)
-            result, metrics = validate(model, dataset)
-            mlflow.log_metrics(metrics, step=epoch)
-            if dynamic_dataset:
-                dataset.update_meta_data()
-            if not early_stopping.is_continue(result):
-                print(f"Training was stopped on {epoch} epoch.")
-                break
-            torch.cuda.empty_cache()
-    return result
+        model.eval()
+        dataset.switch_to(TrainingDatasetMode.VALIDATION)
+        result, metrics = validate(model, dataset)
+        mlflow.log_metrics(metrics, step=epoch)
+        if not early_stopping.is_continue(result):
+            print(f"Training was stopped on {epoch} epoch.")
+            break
+        torch.cuda.empty_cache()
+    return result, model
 
 
 def main(config: str):
@@ -333,6 +366,7 @@ def main(config: str):
     weights_uri = config.weights_uri
 
     run_training(
+        global_epochs=config.global_epochs,
         optuna_config=config.optuna_config,
         training_config=config.training_config,
         validation_config=config.validation_config,
