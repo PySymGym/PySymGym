@@ -248,9 +248,10 @@ def run_training(
     model_kwargs_names = list(
         inspect.signature(StateModelEncoder.__init__).parameters.keys()
     )
+    trial.params["normalization"] = True
     model_kwargs_names.remove("self")
     model_kwargs = dict(
-        [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
+        [(kwarg_name, trial.params[kwarg_name]) for kwarg_name in model_kwargs_names]
     )
 
     model = model_init(**model_kwargs)

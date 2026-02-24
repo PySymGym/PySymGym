@@ -40,7 +40,7 @@ class SVMValidationSendModel(SVMValidation):
 class CustomValidation(ValidationMode):
     val_type: Literal["custom"] = Field()
     val_sequence: list[
-        Union[CriterionValidation, SVMValidationSendEachStep, SVMValidationSendModel]
+        Union[SVMValidationSendEachStep, CriterionValidation, SVMValidationSendModel]
     ] = Field()
     process_count: int = Field()
 
