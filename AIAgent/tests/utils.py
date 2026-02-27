@@ -15,7 +15,7 @@ def read_configs(dir) -> list[Path]:
     ]
 
 
-def heterodata_vesualizer(heterodata: HeteroData):
+def heterodata_visualizer(heterodata: HeteroData):
     graph = to_networkx(heterodata, to_undirected=False)
 
     node_type_colors = {
