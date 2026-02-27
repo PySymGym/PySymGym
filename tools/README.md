@@ -118,12 +118,13 @@ options:
   -d DATASET, --dataset DATASET
                         Path to the dataset JSON file
   -l LOG, --log LOG 
-  Path to the log file
+                Path to the log file
 Use default paths (../maps/DotNet/Maps/dataset.json and ../AIAgent/ml_app.log):
 python3 clean.py
 
 Use custom log file:
-python3 clean.py -l ../AIAgent/ml_app_immediate.log
+python3 clean.py -l ../AIAgent/<name>.log
 
 Use custom dataset and log paths:
 python3 clean.py -d <path-to-dataset> -l <path-to-log>
+```
