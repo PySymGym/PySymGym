@@ -113,19 +113,19 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
         return tensor if tensor.numel() != 0 else torch.empty((2, 0), dtype=torch.int64)
 
     new_heterodata[TORCH.path_condition_vertex].x = torch.tensor(
-        np.array(nodes_path_condition), dtype=torch.float
+        nodes_path_condition, dtype=torch.float
     )
 
     new_heterodata[TORCH.pathcondvertex_to_pathcondvertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edge_index_pc_pc), dtype=torch.long).t().contiguous()
+        torch.tensor(edge_index_pc_pc, dtype=torch.long).t().contiguous()
     )
 
     new_heterodata[TORCH.pathcondvertex_to_statevertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edge_index_pc_state), dtype=torch.long).t().contiguous()
+        torch.tensor(edge_index_pc_state, dtype=torch.long).t().contiguous()
     )
 
     new_heterodata[TORCH.statevertex_to_pathcondvertex].edge_index = null_if_empty(
-        torch.tensor(np.array(edge_index_state_pc), dtype=torch.long).t().contiguous()
+        torch.tensor(edge_index_state_pc, dtype=torch.long).t().contiguous()
     )
 
     return new_heterodata
