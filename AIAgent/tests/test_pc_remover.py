@@ -4371,10 +4371,18 @@ def get_heterodata_from_json(path: Path):
 
 @pytest.fixture
 def test_data():
-    json_data_1 = Path("../resources/onnx/reference_gamestates/86_gameState.json")
-    json_data_2 = Path("../resources/onnx/reference_gamestates/4009_gameState.json")
-    json_data_3 = Path("../resources/onnx/reference_gamestates/4036_gameState.json")
-    json_data_4 = Path("../resources/onnx/reference_gamestates/4781_gameState.json")
+    json_data_1 = Path(
+        "tests/resources/reference_gamestates_with_root/86_gameState.json"
+    )
+    json_data_2 = Path(
+        "tests/resources/reference_gamestates_with_root/4009_gameState.json"
+    )
+    json_data_3 = Path(
+        "tests/resources/reference_gamestates_with_root/4036_gameState.json"
+    )
+    json_data_4 = Path(
+        "tests/resources/reference_gamestates_with_root/4781_gameState.json"
+    )
 
     heterodata1 = get_heterodata_from_json(json_data_1)
     heterodata2 = get_heterodata_from_json(json_data_2)
