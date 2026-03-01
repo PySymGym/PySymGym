@@ -4,34 +4,28 @@ import torch
 from pathlib import Path
 from ml.inference import TORCH
 from ml.pc_remover import remove_path_condition_root
-from tests.resources.heterodata_expected import (
-    expected1,
-    expected2,
-    expected3,
-    expected4,
-)
 
 
 @pytest.fixture
 def test_data():
-    heterodata1 = torch.load(
-        Path("tests/resources/heterodata_with_root1.pt"), weights_only=False
-    )
-    heterodata2 = torch.load(
-        Path("tests/resources/heterodata_with_root2.pt"), weights_only=False
-    )
-    heterodata3 = torch.load(
-        Path("tests/resources/heterodata_with_root3.pt"), weights_only=False
-    )
-    heterodata4 = torch.load(
-        Path("tests/resources/heterodata_with_root4.pt"), weights_only=False
-    )
-
     return [
-        (remove_path_condition_root(heterodata1), expected1),
-        (remove_path_condition_root(heterodata2), expected2),
-        (remove_path_condition_root(heterodata3), expected3),
-        (remove_path_condition_root(heterodata4), expected4),
+        (
+            remove_path_condition_root(
+                torch.load(
+                    Path(
+                        f"tests/resources/heterodata_for_pc_remover/heterodata_with_root{i}.pt"
+                    ),
+                    weights_only=False,
+                )
+            ),
+            torch.load(
+                Path(
+                    f"tests/resources/heterodata_for_pc_remover/heterodata_expected{i}.pt"
+                ),
+                weights_only=False,
+            ),
+        )
+        for i in range(1, 5)
     ]
 
 

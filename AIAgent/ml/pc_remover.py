@@ -37,75 +37,64 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
         .numpy()
     )
 
-    nodes_path_condition = []
     edge_index_pc_pc, edge_index_pc_state, edge_index_state_pc = [], [], []
 
-    for vector in path_condition_vertex:
-        new_vector = vector[:-1]
+    path_condition_vertex = path_condition_vertex[path_condition_vertex[:, -1] != 1.0][
+        :, :-1
+    ]
 
-        if vector[-1] != 1.0:
-            nodes_path_condition.append(new_vector)
-
-    for indexes_of_roots_in_states, _ in enumerate(pathcondvertex_to_pathcondvertex[0]):
-        if (
-            pathcondvertex_to_pathcondvertex[0][indexes_of_roots_in_states]
-            not in statevertex_to_pathcondvertex[1]
-            and pathcondvertex_to_pathcondvertex[1][indexes_of_roots_in_states]
-            not in statevertex_to_pathcondvertex[1]
+    def index_corrector(el):
+        shift = 0
+        while (
+            shift < len(statevertex_to_pathcondvertex[1])
+            and el > statevertex_to_pathcondvertex[1][shift]
         ):
-            shift1 = 0
-            while (
-                shift1 < len(statevertex_to_pathcondvertex[1])
-                and pathcondvertex_to_pathcondvertex[0][indexes_of_roots_in_states]
-                > statevertex_to_pathcondvertex[1][shift1]
-            ):
-                shift1 += 1
+            shift += 1
+        return shift
 
-            shift2 = 0
-            while (
-                shift2 < len(statevertex_to_pathcondvertex[1])
-                and pathcondvertex_to_pathcondvertex[1][indexes_of_roots_in_states]
-                > statevertex_to_pathcondvertex[1][shift2]
-            ):
-                shift2 += 1
+    for pc_vertex_from, pc_vertex_to in zip(*pathcondvertex_to_pathcondvertex):
+        if (
+            pc_vertex_from not in statevertex_to_pathcondvertex[1]
+            and pc_vertex_to not in statevertex_to_pathcondvertex[1]
+        ):
+            shift1 = index_corrector(pc_vertex_from)
+
+            shift2 = index_corrector(pc_vertex_to)
 
             edge_index_pc_pc.extend(
                 [
                     [
-                        pathcondvertex_to_pathcondvertex[0][indexes_of_roots_in_states]
-                        - shift1,
-                        pathcondvertex_to_pathcondvertex[1][indexes_of_roots_in_states]
-                        - shift2,
+                        pc_vertex_from - shift1,
+                        pc_vertex_to - shift2,
                     ],
                 ]
             )
 
     for _root_in_states in statevertex_to_pathcondvertex[1]:
-        indexes_of_roots_in_pathcond_to_pathcond = np.where(
+        index_of_roots_in_pathcond_to_pathcond = np.where(
             pathcondvertex_to_pathcondvertex[0] == _root_in_states
         )[0]
         indexes_of_roots_in_states = np.where(
             statevertex_to_pathcondvertex[1] == _root_in_states
         )[0][0]
 
-        for index in indexes_of_roots_in_pathcond_to_pathcond:
-            shift = 0
-            while (
-                pathcondvertex_to_pathcondvertex[0][index + 1]
-                > statevertex_to_pathcondvertex[1][shift]
-            ):
-                shift += 1
+        for index in index_of_roots_in_pathcond_to_pathcond:
+            pc_vertex = pathcondvertex_to_pathcondvertex[0][index + 1]
+            state_id = statevertex_to_pathcondvertex[0][indexes_of_roots_in_states]
+
+            shift = index_corrector(pc_vertex)
 
             edge_index_pc_state.append(
                 [
-                    pathcondvertex_to_pathcondvertex[0][index + 1] - shift,
-                    statevertex_to_pathcondvertex[0][indexes_of_roots_in_states],
+                    pc_vertex - shift,
+                    state_id,
                 ]
             )
+
             edge_index_state_pc.append(
                 [
-                    statevertex_to_pathcondvertex[0][indexes_of_roots_in_states],
-                    pathcondvertex_to_pathcondvertex[0][index + 1] - shift,
+                    state_id,
+                    pc_vertex - shift,
                 ]
             )
 
@@ -113,7 +102,7 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
         return tensor if tensor.numel() != 0 else torch.empty((2, 0), dtype=torch.int64)
 
     new_heterodata[TORCH.path_condition_vertex].x = torch.tensor(
-        nodes_path_condition, dtype=torch.float
+        path_condition_vertex, dtype=torch.float
     )
 
     new_heterodata[TORCH.pathcondvertex_to_pathcondvertex].edge_index = null_if_empty(

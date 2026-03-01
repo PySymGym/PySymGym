@@ -1,6 +1,7 @@
 from pathlib import Path
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import to_networkx
+from ml.inference import TORCH
 import os
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -15,25 +16,28 @@ def read_configs(dir) -> list[Path]:
     ]
 
 
-def heterodata_visualizer(heterodata: HeteroData):
+def heterodata_visualizer(heterodata: HeteroData, file_name: str):
+    if not file_name.endswith(".png"):
+        file_name += ".png"
+
     graph = to_networkx(heterodata, to_undirected=False)
 
     node_type_colors = {
-        "game_vertex": "#2C9BE6FF",
-        "state_vertex": "#ED8546",
-        "path_condition_vertex": "#70B349FF",
+        TORCH.game_vertex: "#2C9BE6FF",
+        TORCH.state_vertex: "#ED8546",
+        TORCH.path_condition_vertex: "#70B349FF",
     }
 
     edge_type_colors = {
-        ("game_vertex", "to", "game_vertex"): "#1D73ACFF",
-        ("state_vertex", "in", "game_vertex"): "#B68211FF",
-        ("game_vertex", "in", "state_vertex"): "#B68211FF",
-        ("state_vertex", "history", "game_vertex"): "#37C0FFFF",
-        ("game_vertex", "history", "state_vertex"): "#37C0FFFF",
-        ("state_vertex", "parent_of", "state_vertex"): "#DB5C5CFF",
-        ("path_condition_vertex", "to", "path_condition_vertex"): "#579434FF",
-        ("path_condition_vertex", "to", "state_vertex"): "#AB51FFFF",
-        ("state_vertex", "to", "path_condition_vertex"): "#AB51FFFF",
+        TORCH.gamevertex_to_gamevertex: "#1D73ACFF",
+        TORCH.statevertex_in_gamevertex: "#B68211FF",
+        TORCH.gamevertex_in_statevertex: "#B68211FF",
+        TORCH.statevertex_history_gamevertex: "#37C0FFFF",
+        TORCH.gamevertex_history_statevertex: "#37C0FFFF",
+        TORCH.statevertex_parentof_statevertex: "#DB5C5CFF",
+        TORCH.pathcondvertex_to_pathcondvertex: "#579434FF",
+        TORCH.pathcondvertex_to_statevertex: "#AB51FFFF",
+        TORCH.statevertex_to_pathcondvertex: "#AB51FFFF",
     }
 
     node_colors = []
@@ -43,11 +47,11 @@ def heterodata_visualizer(heterodata: HeteroData):
         color = node_type_colors[node_type]
         node_colors.append(color)
 
-        if node_type == "game_vertex":
+        if node_type == TORCH.game_vertex:
             labels[node] = f"G{node}"
-        if node_type == "state_vertex":
+        if node_type == TORCH.state_vertex:
             labels[node] = f"S{node}"
-        elif node_type == "path_condition_vertex":
+        elif node_type == TORCH.path_condition_vertex:
             labels[node] = f"PC{node}"
 
     edge_colors = []
@@ -81,6 +85,5 @@ def heterodata_visualizer(heterodata: HeteroData):
     plt.title("Heterodata")
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig("graph_visualization.png", dpi=300, bbox_inches="tight")
+    plt.savefig(file_name, dpi=300, bbox_inches="tight")
     plt.close()
-    print("Граф сохранен в 'graph_visualization.png'")
