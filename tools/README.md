@@ -80,7 +80,7 @@ python3 compstrat.py \
 Output example
 ![resources/alpha_beta_comp_vis_example.png](resources/alpha_beta_comp_vis_example.png)
 ## Dataset Management
-Tools for managing training episodes in dataset.json. generate_episodes expands the dataset by creating episodes with different starting points for diverse training data, analyzing existing episodes and adding new ones at regular intervals with both BFS and DFS variants while preserving all existing episodes. clean removes useless episodes by analyzing training logs for "immediate GameOver" entries — these occur when too many preliminary BFS/DFS steps complete the task during the StepsToStart phase before the neural network is needed. Since the neural network was simply not used in these episodes, they are worthless for training and are removed.
+Tools for managing training episodes in dataset.json. `generate_episodes` expands the dataset by creating episodes with different starting points for diverse training data, analyzing existing episodes and adding new ones at regular intervals with both BFS and DFS variants while preserving all existing episodes. `clean` removes useless episodes by analyzing training logs for "immediate GameOver" entries — these occur when too many preliminary BFS/DFS steps complete the task during the StepsToStart phase before the neural network is needed. Since the neural network was simply not used in these episodes, they are worthless for training and are removed.
 
 
 ## `generate_episodes` tool
