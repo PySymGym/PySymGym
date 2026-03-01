@@ -52,7 +52,9 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
             shift += 1
         return shift
 
-    for pc_vertex_from, pc_vertex_to in zip(*pathcondvertex_to_pathcondvertex):
+    for pc_vertex_from, pc_vertex_to in zip(
+        *pathcondvertex_to_pathcondvertex, strict=False
+    ):
         if (
             pc_vertex_from not in statevertex_to_pathcondvertex[1]
             and pc_vertex_to not in statevertex_to_pathcondvertex[1]
