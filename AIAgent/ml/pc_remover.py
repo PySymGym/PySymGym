@@ -61,9 +61,11 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
                         zip(
                             statevertex_to_pathcondvertex[0],
                             statevertex_to_pathcondvertex[1],
+                            strict=False,
                         ),
                         key=lambda x: x[1],
-                    )
+                    ),
+                    strict=False,
                 ),
             )
         )
