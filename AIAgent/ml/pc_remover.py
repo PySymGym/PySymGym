@@ -43,7 +43,7 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
         :, :-1
     ]
 
-    def index_corrector(el):
+    def id_corrector(el):
         shift = 0
         while (
             shift < len(statevertex_to_pathcondvertex[1])
@@ -78,9 +78,9 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
             pc_vertex_from not in statevertex_to_pathcondvertex_sorted[1]
             and pc_vertex_to not in statevertex_to_pathcondvertex_sorted[1]
         ):
-            shift1 = index_corrector(pc_vertex_from)
+            shift1 = id_corrector(pc_vertex_from)
 
-            shift2 = index_corrector(pc_vertex_to)
+            shift2 = id_corrector(pc_vertex_to)
 
             edge_index_pc_pc.append(
                 [
@@ -89,23 +89,23 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
                 ]
             )
 
-    for _root_in_states in statevertex_to_pathcondvertex_sorted[1]:
+    for root_in_states in statevertex_to_pathcondvertex_sorted[1]:
         indexes_of_each_root_in_pathcond_to_pathcond = np.where(
-            pathcondvertex_to_pathcondvertex[0] == _root_in_states
+            pathcondvertex_to_pathcondvertex[0] == root_in_states
         )[0]
         index_of_root_in_states = np.where(
-            statevertex_to_pathcondvertex_sorted[1] == _root_in_states
+            statevertex_to_pathcondvertex_sorted[1] == root_in_states
         )[0][0]
 
         for index in indexes_of_each_root_in_pathcond_to_pathcond:
-            child = pathcondvertex_to_pathcondvertex[1][index]
+            child_id = pathcondvertex_to_pathcondvertex[1][index]
             state_id = statevertex_to_pathcondvertex_sorted[0][index_of_root_in_states]
 
-            shift = index_corrector(child)
+            shift = id_corrector(child_id)
 
             edge_index_pc_state.append(
                 [
-                    child - shift,
+                    child_id - shift,
                     state_id,
                 ]
             )
@@ -113,7 +113,7 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
             edge_index_state_pc.append(
                 [
                     state_id,
-                    child - shift,
+                    child_id - shift,
                 ]
             )
 
