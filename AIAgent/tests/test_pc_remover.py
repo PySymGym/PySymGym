@@ -1,7 +1,7 @@
 import numpy as np
+import os
 import pytest
 import torch
-from pathlib import Path
 from ml.inference import TORCH
 from ml.pc_remover import remove_path_condition_root
 
@@ -12,15 +12,21 @@ def test_data():
         (
             remove_path_condition_root(
                 torch.load(
-                    Path(
-                        f"tests/resources/heterodata_for_pc_remover/heterodata_with_root{i}.pt"
+                    os.path.join(
+                        "tests",
+                        "resources",
+                        "heterodata_for_pc_remover",
+                        f"heterodata_with_root{i}.pt",
                     ),
                     weights_only=False,
                 )
             ),
             torch.load(
-                Path(
-                    f"tests/resources/heterodata_for_pc_remover/heterodata_expected{i}.pt"
+                os.path.join(
+                    "tests",
+                    "resources",
+                    "heterodata_for_pc_remover",
+                    f"heterodata_expected{i}.pt",
                 ),
                 weights_only=False,
             ),
