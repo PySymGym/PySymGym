@@ -53,23 +53,8 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
         return shift
 
     statevertex_to_pathcondvertex_sorted = np.array(
-        list(
-            map(
-                list,
-                zip(
-                    *sorted(
-                        zip(
-                            statevertex_to_pathcondvertex[0],
-                            statevertex_to_pathcondvertex[1],
-                            strict=False,
-                        ),
-                        key=lambda x: x[1],
-                    ),
-                    strict=False,
-                ),
-            )
-        )
-    )
+        sorted(statevertex_to_pathcondvertex.T, key=lambda x: x[1])
+    ).T
 
     for pc_vertex_from, pc_vertex_to in zip(
         *pathcondvertex_to_pathcondvertex, strict=False
