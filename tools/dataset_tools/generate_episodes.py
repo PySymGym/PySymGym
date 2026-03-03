@@ -1,9 +1,10 @@
 import sys
+import os
 from pathlib import Path
 from collections import defaultdict
 import argparse
 
-sys.path.append("../AIAgent")
+sys.path.append(os.path.join("..", "..", "AIAgent"))
 
 from common.game import GameMap
 
@@ -80,7 +81,7 @@ def generate_episodes(dataset_path):
     )
 
     with open(dataset_path, "w") as f:
-        f.write(GameMap.schema().dumps(dataset, many=True, indent=3))
+        f.write(GameMap.schema().dumps(dataset, many=True, indent=4))
 
 
 def main():
@@ -89,7 +90,9 @@ def main():
         "-d",
         "--dataset",
         type=Path,
-        default=Path("../maps/DotNet/Maps/dataset.json"),
+        default=Path(
+            os.path.join("..", "..", "maps", "DotNet", "Maps", "dataset.json")
+        ),
         help="Path to the dataset JSON file",
     )
     args = parser.parse_args()
