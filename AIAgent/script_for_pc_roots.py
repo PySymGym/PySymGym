@@ -19,7 +19,7 @@ for path in paths:
         os.makedirs(new_item_path, exist_ok=True)
 
     if path.is_file():
-        if path.suffix == '.pt':
+        if path.suffix == ".pt":
             hetero_data = torch.load(path, weights_only=False)
             new_heterodata = remove_path_condition_root(hetero_data)
             torch.save(new_heterodata, new_item_path)
