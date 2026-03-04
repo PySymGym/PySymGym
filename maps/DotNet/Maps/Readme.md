@@ -5,3 +5,5 @@
  * https://github.com/TASEmulators/BizHawk.git
  * https://github.com/mxprshn/StandaloneUnity.git
  * https://github.com/mbdavid/LiteDB.git
+ * https://github.com/SaeedGz98/stralgo.git
+ * https://github.com/cat923/C-Sharp.git
