@@ -143,7 +143,7 @@ After training choose the best model of those that was logged with MLFlow and ru
     - Place your model in `./VSharp/VSharp.Explorer/models/model.onnx`
     - Run 
       ```
-      dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net7.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage
+      dotnet GameServers/VSharp/VSharp.Runner/bin/Release/net8.0/VSharp.Runner.dll --method BinarySearch maps/DotNet/Maps/Root/bin/Release/net8.0/ManuallyCollected.dll --timeout 120 --strat AI --check-coverage
       ```
 
 ### Integrate a new symbolic machine
@@ -195,6 +195,7 @@ ruff format
 
 **Or** [integrate](https://docs.astral.sh/ruff/integrations/#vs-code-official) it with your favorite code editor (for example, [VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff))
 
+
 ## Results
 _Comparison of the selector based on our model (AI) with the best selector of V#. All metrics except coverage provided for methods with equal coverage._
 <div align="center">
@@ -208,3 +209,28 @@ _Comparison of the selector based on our model (AI) with the best selector of V#
 Both searchers were executed with a timeout of 180 seconds for each method.
 
 Our model demonstrates slightly better average coverage (87.97% vs 87.61%) in a slightly worse average time (22.8 sec vs 18.5 sec). Detailed analysis shows that the trained model generates significantly fewer tests (as expected with respect to an objective function) but reports fewer potential errors (which also correlates with the objective function).
+
+## Dataset Expansion
+
+To enhance the diversity and quality of training data, the dataset has been extended with additional C# methods sourced from popular open‑source algorithm repositories. 
+
+**Sources:**
+- [TheAlgorithms/C-Sharp](https://github.com/cat923/C-Sharp.git)
+- [Stralgo](https://github.com/SaeedGz98/stralgo.git)
+
+### Dataset Tools
+
+Two helper scripts are provided in `tools/dataset_tools/` to automate episode generation and dataset cleaning:
+
+- **`generate_episodes.py`**  
+  Automatically creates multiple training episodes for each method by varying the `StepsToStart` parameter. This yields a richer set of examples for the model to learn from.
+
+- **`clean.py`**  
+  Scans training logs and removes episodes where the baseline strategy (BFS/DFS) completed execution before the neural network could participate (indicated by `immediate GameOver`). Such episodes are not useful for training and are discarded.
+
+**Basic usage:**
+```bash
+cd tools/dataset_tools
+python3 generate_episodes.py
+python3 clean.py 
+```
