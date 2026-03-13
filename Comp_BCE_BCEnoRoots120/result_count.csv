@@ -1,0 +1,8 @@
+,BCE_won,BCEnoRoots_won,eq
+coverage,17,22,124
+tests,26,31,106
+errors,29,40,94
+total_time_secs,36,47,80
+tests_eq_coverage,11,14,99
+errors_eq_coverage,20,23,81
+total_time_eq_coverage,15,35,74
