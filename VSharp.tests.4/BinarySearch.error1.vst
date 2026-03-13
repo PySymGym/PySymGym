@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <assemblyName>ManuallyCollected, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null</assemblyName>
+  <moduleFullyQualifiedName>/home/ane4ka/PySymGym/maps/DotNet/Maps/Root/bin/Release/net7.0/ManuallyCollected.dll</moduleFullyQualifiedName>
+  <errorMessage>Index was outside the bounds of the array.</errorMessage>
+  <token>100663514</token>
+  <args>
+    <anyType xsi:type="referenceRepr">
+      <index>0</index>
+    </anyType>
+    <anyType xsi:type="xsd:int">0</anyType>
+    <anyType xsi:type="xsd:int">159391745</anyType>
+    <anyType xsi:type="xsd:int">1233133568</anyType>
+  </args>
+  <isError>true</isError>
+  <isFatalError>false</isFatalError>
+  <throwsException>
+    <assemblyName>System.Private.CoreLib, Version=7.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e</assemblyName>
+    <moduleFullyQualifiedName>/usr/lib/dotnet/shared/Microsoft.NETCore.App/7.0.19/System.Private.CoreLib.dll</moduleFullyQualifiedName>
+    <name>System.IndexOutOfRangeException</name>
+  </throwsException>
+  <classTypeParameters />
+  <methodTypeParameters />
+  <mockClassTypeParameters />
+  <mockMethodTypeParameters />
+  <memory>
+    <objects>
+      <anyType xsi:type="arrayRepr">
+        <typ>0</typ>
+        <indices />
+        <values />
+        <lengths>
+          <int>0</int>
+        </lengths>
+      </anyType>
+      <anyType xsi:type="stringRepr">
+        <content>SW5kZXggd2FzIG91dHNpZGUgdGhlIGJvdW5kcyBvZiB0aGUgYXJyYXku</content>
+      </anyType>
+    </objects>
+    <types>
+      <typeRepr>
+        <assemblyName>System.Private.CoreLib, Version=7.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e</assemblyName>
+        <moduleFullyQualifiedName>/usr/lib/dotnet/shared/Microsoft.NETCore.App/7.0.19/System.Private.CoreLib.dll</moduleFullyQualifiedName>
+        <name>System.Int32[]</name>
+      </typeRepr>
+    </types>
+  </memory>
+  <typeMocks />
+  <extraAssemblyLoadDirs>
+    <string>/home/ane4ka/PySymGym</string>
+  </extraAssemblyLoadDirs>
+  <externMocks />
+</testInfo>

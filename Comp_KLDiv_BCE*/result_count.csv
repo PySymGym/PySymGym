@@ -1,0 +1,8 @@
+,KLDiv_won,BCE*_won,eq
+coverage,19,17,131
+tests,19,28,120
+errors,30,30,107
+total_time_secs,37,29,101
+tests_eq_coverage,7,13,111
+errors_eq_coverage,16,23,92
+total_time_eq_coverage,31,20,80

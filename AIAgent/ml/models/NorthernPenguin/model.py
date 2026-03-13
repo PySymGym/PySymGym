@@ -63,7 +63,32 @@ class StateModelEncoder(torch.nn.Module):
 
         if edge_type_v_v.numel() != 0:
             game_x = self.conv1(game_x, edge_index_v_v, edge_type_v_v).relu()
-        pc_x = self.pc_conv(pc_x, edge_index_pc_pc).relu()
+
+        # self.pc_conv = GCN(
+        #     NUM_PC_FEATURES,
+        #     hidden_channels,
+        #     num_layers=num_pc_layers,
+        #     out_channels=hidden_channels,
+        # )
+
+        # print(f"\nedge_index_pc_pc: \n\033[94m{edge_index_pc_pc}\033[0m")
+        # print(f"\npc_x: \n\033[94m{pc_x}\033[0m")
+
+        # edge_index_pc_pcARR = edge_index_pc_pc.detach().cpu().numpy()[0]
+        # pc_xARR = pc_x.detach().cpu().numpy()
+        # min_id = min(edge_index_pc_pcARR)
+        # max_id = max(edge_index_pc_pcARR)
+        # a = len(pc_xARR)
+        # b = len(pc_xARR[0])
+
+        # print(f"\033[91m{min_id}\033[0m")
+        # print(f"\033[91m{max_id}\033[0m")
+        # print(f"\033[91m{a}\033[0m")
+        # print(f"\033[91m{b}\033[0m")
+
+        if edge_index_pc_pc.numel() != 0:
+            pc_x = self.pc_conv(pc_x, edge_index_pc_pc).relu()
+
         state_x = self.conv3(
             (game_x, state_x),
             edge_index_history_v_s,

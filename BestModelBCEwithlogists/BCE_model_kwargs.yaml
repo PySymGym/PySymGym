@@ -1,0 +1,6 @@
+hidden_channels: 98
+num_of_state_features: 62
+num_hops_1: 7
+num_hops_2: 4
+normalization: true
+num_pc_layers: 2

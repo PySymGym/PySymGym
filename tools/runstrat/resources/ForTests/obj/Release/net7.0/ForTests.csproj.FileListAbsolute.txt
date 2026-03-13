@@ -1,0 +1,12 @@
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/bin/Release/net7.0/ForTests.deps.json
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/bin/Release/net7.0/ForTests.dll
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/bin/Release/net7.0/ForTests.pdb
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.csproj.AssemblyReference.cache
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.GeneratedMSBuildEditorConfig.editorconfig
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.AssemblyInfoInputs.cache
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.AssemblyInfo.cs
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.csproj.CoreCompileInputs.cache
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.dll
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/refint/ForTests.dll
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ForTests.pdb
+/home/ane4ka/PySymGym/tools/runstrat/resources/ForTests/obj/Release/net7.0/ref/ForTests.dll
