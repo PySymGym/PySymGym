@@ -79,29 +79,25 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
                 [map_of_id[pc_vertex_from][1], map_of_id[pc_vertex_to][1]]
             )
 
-    print("path_condition_vertex old:")
-    print("num of features: ", len(path_condition_vertex[1]))
-    print("num of vertices: ", len(path_condition_vertex))
+    print("==path_condition_vertex old:")
+    if len(path_condition_vertex) > 1:
+        print("num of features: ", len(path_condition_vertex[1]))
+        print("num of vertices: ", len(path_condition_vertex))
 
-    print("path_condition_vertex new:")
-    print("num of features: ", len(pc_x[1]))
-    print("num of vertices: ", len(pc_x))
+    print("==pathcondvertex_to_pathcondvertex old:")
+    if pathcondvertex_to_pathcondvertex.size > 0:
+        print("max el: ", max(pathcondvertex_to_pathcondvertex[1]))
+        print("min el: ", min(pathcondvertex_to_pathcondvertex[1]))
 
-    print("pathcondvertex_to_pathcondvertex old:")
-    print("max el: ", max(pathcondvertex_to_pathcondvertex[1]))
-    print("min el: ", min(pathcondvertex_to_pathcondvertex[1]))
+    print("==path_condition_vertex new:")
+    if len(pc_x) > 0:
+        print("num of features: ", len(pc_x[1]))
+        print("num of vertices: ", len(pc_x))
 
-    print("pathcondvertex_to_pathcondvertex new:")
-    print("max el: ", max(edge_index_pc_pc[1]))
-    print("min el: ", min(edge_index_pc_pc[1]))
-
-    print("edge_index_state_pc old:")
-    print("max el: ", max(statevertex_to_pathcondvertex[1]))
-    print("min el: ", min(statevertex_to_pathcondvertex[1]))
-
-    print("edge_index_state_pc new:")
-    print("max el: ", max(edge_index_state_pc[1]))
-    print("min el: ", min(edge_index_state_pc[1]))
+    print("==pathcondvertex_to_pathcondvertex new:")
+    if len(edge_index_pc_pc) > 0:
+        print("max el: ", max(edge_index_pc_pc[1]))
+        print("min el: ", min(edge_index_pc_pc[1]))
 
     def null_if_empty(tensor):
         return tensor if tensor.numel() != 0 else torch.empty((2, 0), dtype=torch.int64)
