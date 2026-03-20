@@ -1,3 +1,5 @@
+## This function was written as part of a coursework assignment
+
 import numpy as np
 import torch
 from torch_geometric.data import HeteroData
