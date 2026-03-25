@@ -18,7 +18,7 @@ def read_configs(dir) -> list[Path]:
 
 def heterodata_visualizer(heterodata: HeteroData, file_name: str) -> None:
     """
-    Constructs a heterodata tensor graph.
+    Visualizes a heterogeneous graph (HeteroData) and saves it as a PNG image.
 
     Parameters
     ----------
