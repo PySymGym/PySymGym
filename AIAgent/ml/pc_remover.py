@@ -1,4 +1,4 @@
-## This function was written as part of a coursework assignment
+## This function was written to remove path_condition_root from a dataset.
 
 import numpy as np
 import torch
