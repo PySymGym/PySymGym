@@ -158,6 +158,7 @@ def main():
     )
     parser.add_argument(
         "-ps",
+        "--pysymgym-path",
         type=Path,
         dest="pysymgym_path",
         required=False,

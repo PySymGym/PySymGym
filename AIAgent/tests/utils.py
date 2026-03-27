@@ -16,7 +16,22 @@ def read_configs(dir) -> list[Path]:
     ]
 
 
-def heterodata_visualizer(heterodata: HeteroData, file_name: str):
+def heterodata_visualizer(heterodata: HeteroData, file_name: str) -> None:
+    """
+    Visualizes a heterogeneous graph (HeteroData) and saves it as a PNG image.
+
+    Parameters
+    ----------
+    hetero_data : HeteroData
+        The heterodata you want to visualize.
+    file_name: str:
+        The name you want to save the image under.
+
+    Returns
+    -------
+    None
+        Saves the generated graph image to the specified `file_name`.
+    """
     if not file_name.endswith(".png"):
         file_name += ".png"
 
