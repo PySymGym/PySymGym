@@ -4203,14 +4203,13 @@ optree = ["optree (>=0.13.0)"]
 
 [[package]]
 name = "torch-geometric"
-version = "2.7.0"
+version = "2.8.0"
 description = "Graph Neural Network Library for PyTorch"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "torch_geometric-2.7.0-py3-none-any.whl", hash = "sha256:6e0cd3ad824d484651ef5d308fc66c687bfcf5ba040d56d1e0fe0f81f365e292"},
-    {file = "torch_geometric-2.7.0.tar.gz", hash = "sha256:f9099e4aece1a9f618c84dbaac33a77f43139736698c7e8bddf3301ef1f2e8d4"},
+    {file = "torch_geometric-2.8.0-py3-none-any.whl", hash = "sha256:1f62e415a2e9ee69d34617d1b0b230e9d9040f51809b96e801e742770fd4dada"},
 ]
 
 [package.dependencies]
@@ -4230,7 +4229,7 @@ dev = ["ipython", "matplotlib-inline", "pre-commit", "torch_geometric[test]"]
 full = ["ase", "captum (<0.7.0)", "graphviz", "h5py", "matplotlib", "networkx", "numba (<0.60.0)", "opt_einsum", "pandas", "pynndescent", "pytorch-memlab", "rdflib", "rdkit", "scikit-image", "scikit-learn", "scipy", "statsmodels", "sympy", "tabulate", "torch_geometric[graphgym,modelhub]", "torchmetrics", "trimesh"]
 graphgym = ["protobuf (<4.21)", "pytorch-lightning", "yacs"]
 modelhub = ["huggingface_hub"]
-rag = ["accelerate", "datasets", "pandas", "pcst_fast", "sentencepiece", "torchmetrics", "transformers"]
+rag = ["PyYAML", "accelerate", "datasets", "faiss-cpu", "json-repair", "langgraph", "openai", "pandas", "pcst_fast", "peft", "sentencepiece", "torchmetrics", "transformers"]
 test = ["onnx", "onnxruntime", "onnxscript", "pytest", "pytest-cov"]
 
 [[package]]
