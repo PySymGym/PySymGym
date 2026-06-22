@@ -250,56 +250,57 @@ class TrainingDataset(Dataset):
         return results
 
     def process(self):
-        def process_result(map_name: MapName) -> Result:
-            f = open(os.path.join(self.raw_dir, map_name, "result"))
-            result = f.read()
-            f.close()
-            result = tuple(map(lambda x: int(x), result.split()))
-            return Result(
-                coverage_percent=result[0],
-                negative_tests_number=-result[1],
-                negative_steps_number=-result[2],
-                errors_number=result[3],
-            )
+        pass
+    #     def process_result(map_name: MapName) -> Result:
+    #         f = open(os.path.join(self.raw_dir, map_name, "result"))
+    #         result = f.read()
+    #         f.close()
+    #         result = tuple(map(lambda x: int(x), result.split()))
+    #         return Result(
+    #             coverage_percent=result[0],
+    #             negative_tests_number=-result[1],
+    #             negative_steps_number=-result[2],
+    #             errors_number=result[3],
+    #         )
 
-        def get_step_raw_ids(map_name: str) -> List[str]:
-            file_names = os.listdir(os.path.join(self.raw_dir, map_name))
-            step_ids = list(
-                set(map(lambda file_name: file_name.split("_")[0], file_names))
-            )
-            step_ids.remove("result")
-            return step_ids
+    #     def get_step_raw_ids(map_name: str) -> List[str]:
+    #         file_names = os.listdir(os.path.join(self.raw_dir, map_name))
+    #         step_ids = list(
+    #             set(map(lambda file_name: file_name.split("_")[0], file_names))
+    #         )
+    #         step_ids.remove("result")
+    #         return step_ids
 
-        with mp.Pool(self.n_jobs) as p:
-            for map_name in tqdm.tqdm(
-                os.listdir(self.raw_dir),
-                desc="Dataset processing",
-                ncols=100,
-                colour=self._progress_bar_color,
-            ):
-                raw_map_path = Path(self.raw_dir / map_name)
-                processed_map_path = Path(self.processed_dir / map_name)
-                if not processed_map_path.exists():
-                    os.makedirs(processed_map_path)
+    #     with mp.Pool(self.n_jobs) as p:
+    #         for map_name in tqdm.tqdm(
+    #             os.listdir(self.raw_dir),
+    #             desc="Dataset processing",
+    #             ncols=100,
+    #             colour=self._progress_bar_color,
+    #         ):
+    #             raw_map_path = Path(self.raw_dir / map_name)
+    #             processed_map_path = Path(self.processed_dir / map_name)
+    #             if not processed_map_path.exists():
+    #                 os.makedirs(processed_map_path)
 
-                process_and_save_step_task = partial(
-                    self.process_and_save_step, raw_map_path, processed_map_path
-                )
-                raw_ids = get_step_raw_ids(map_name)
-                tasks = list(
-                    (raw_step_id, processed_step_id)
-                    for processed_step_id, raw_step_id in enumerate(sorted(raw_ids))
-                )
-                is_successful: list[bool] = list(
-                    p.map(process_and_save_step_task, tasks)
-                )
-                if len(is_successful) != len(raw_ids):
-                    logging.warning(f"Processing of map {map_name} failed somewhere.")
-                result = process_result(map_name)
-                result_file = open(os.path.join(processed_map_path, "result"), mode="x")
-                result_file.write(str(tuple(result)))
-                result_file.close()
-        self.update_meta_data()
+    #             process_and_save_step_task = partial(
+    #                 self.process_and_save_step, raw_map_path, processed_map_path
+    #             )
+    #             raw_ids = get_step_raw_ids(map_name)
+    #             tasks = list(
+    #                 (raw_step_id, processed_step_id)
+    #                 for processed_step_id, raw_step_id in enumerate(sorted(raw_ids))
+    #             )
+    #             is_successful: list[bool] = list(
+    #                 p.map(process_and_save_step_task, tasks)
+    #             )
+    #             if len(is_successful) != len(raw_ids):
+    #                 logging.warning(f"Processing of map {map_name} failed somewhere.")
+    #             result = process_result(map_name)
+    #             result_file = open(os.path.join(processed_map_path, "result"), mode="x")
+    #             result_file.write(str(tuple(result)))
+    #             result_file.close()
+    #     self.update_meta_data()
 
     def process_and_save_step(
         self, raw_map_path: Path, processed_map_path: Path, ids: tuple[str, int]

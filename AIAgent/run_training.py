@@ -255,18 +255,18 @@ def run_training(
     )
 
     model = model_init(**model_kwargs)
-    assert len(val_pipeline) == 2
+    # assert len(val_pipeline) == 2
 
     with mlflow.start_run():
         for global_epoch in range(global_epochs):
             model.eval()
-            _, metrics = val_pipeline[0](model, dataset)
-            dataset.update_meta_data()
-            mlflow.log_metric(
-                "threshold_coverage", dataset.threshold_coverage, step=global_epoch
-            )
-            torch.cuda.empty_cache()
-            mlflow.log_metrics(metrics, step=global_epoch)
+            # _, metrics = val_pipeline[0](model, dataset)
+            # dataset.update_meta_data()
+            # mlflow.log_metric(
+            #     "threshold_coverage", dataset.threshold_coverage, step=global_epoch
+            # )
+            # torch.cuda.empty_cache()
+            # mlflow.log_metrics(metrics, step=global_epoch)
             _, model = objective(
                 trial,
                 dataset,
@@ -274,7 +274,7 @@ def run_training(
                 model=model,
                 criterion_init=criterion_init,
                 epochs=training_config.epochs,
-                validate=val_pipeline[1],
+                validate=validate,
                 direction=optuna_config.study_direction,
                 global_epoch=global_epoch,
             )
@@ -325,16 +325,16 @@ def objective(
     mlflow.log_params(asdict(config))
     for epoch in range(epochs):
         dataset.switch_to(TrainingDatasetMode.TRAINING)
-        train_dataloader = DataLoader(
-            dataset, config.batch_size, shuffle=False
-        )  # Shuffle leads to problems with GPU memory.
-        model.train()
-        train(
-            dataloader=train_dataloader,
-            model=model,
-            optimizer=optimizer,
-            criterion=criterion,
-        )
+        # train_dataloader = DataLoader(
+        #     dataset, config.batch_size, shuffle=False
+        # )  # Shuffle leads to problems with GPU memory.
+        # model.train()
+        # train(
+        #     dataloader=train_dataloader,
+        #     model=model,
+        #     optimizer=optimizer,
+        #     criterion=criterion,
+        # )
         torch.cuda.empty_cache()
         torch.save(model.state_dict(), CURRENT_MODEL_PATH)
         mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
