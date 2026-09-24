@@ -115,11 +115,11 @@ As the optimal sequence of symbolic execution steps is unknown we try to get rel
 3) Create configuration (specifying server's and training parameters). You can use [`./workflow/config_for_tests.yml`](./workflow/config_for_tests.yml) as a template. 
   Add to the configuration the best weights URI and appropriate trial URI (they were logged with MLFlow during hyper-parameters tuning):
     ```yml
-    weights_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
+    weights_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/<EPOCH>/model.pth
     
     OptunaConfig:
       ...
-      trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/<EPOCH>/model.pth
+      trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
     ```
 1) Move to **AIAgent** directory
     ```sh

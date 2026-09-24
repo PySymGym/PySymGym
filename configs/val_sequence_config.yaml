@@ -3,7 +3,8 @@ OptunaConfig:
   n_trials: 1
   n_jobs: 1
   study_direction: "minimize"
-  trial_path: "./report/trial.pkl"
+  trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
+
 TrainingConfig:
   dynamic_dataset: True
   train_percentage: 0.7
@@ -11,6 +12,7 @@ TrainingConfig:
   load_to_cpu: False
   epochs: 10
   percentile: 80
+
 ValidationConfig:
     val_type: custom
     val_sequence: 
@@ -31,7 +33,7 @@ ValidationConfig:
       - val_type: loss
         batch_size: 4
     process_count: 1
-          
+
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
   experiment_name: <YOUR_EXPERIMENT_NAME>
