@@ -43,6 +43,10 @@ pytest = "^9.0.3"
 [tool.poetry.group.formatter.dependencies]
 ruff = "^0.15.10"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = ">=7.2,<9"
+furo = ">=2024.1"
+
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core==2.2.1"]
