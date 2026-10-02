@@ -4,10 +4,34 @@ Developer Guide
 Contribution guidelines
 -----------------------
 
-**Branches.** Work on a feature branch created from ``main``; never commit
-directly to ``main``. Integration happens exclusively through a pull request
-targeting ``main``, merged with rebase and merge (fast-forward) so ``main``
-stays linear and the per-subtask commit structure is preserved.
+**Branches.** All work targets an *integration branch*. By default this is
+``main``; a developer redirects it to a personal, long-lived branch (for
+example ``gsv``) with a local, uncommitted git config key:
+
+.. code-block:: console
+
+    git config pysymgym.integrationBranch gsv
+
+When the key is unset the integration branch is ``main``. Each task is
+developed on its own feature branch created from the integration branch; never
+commit directly to the integration branch. Integration always uses rebase and
+merge (fast-forward) so history stays linear and the per-subtask commit
+structure is preserved. There are two modes:
+
+- **Direct mode** (integration branch is ``main``): each task is integrated by
+  a pull request targeting ``main``.
+- **Stacked mode** (integration branch is a personal branch): each task is
+  integrated by rebasing its feature branch onto the integration branch and
+  fast-forward merging it; **no pull request is opened**. Several tasks thus
+  accumulate on the integration branch. A single pull request from the
+  integration branch to ``main`` is opened only on the user's explicit
+  request.
+
+A personal integration branch is long-lived: it is never deleted and is
+periodically rebased onto ``main`` (at task boundaries and immediately before
+the final pull request) to limit divergence. Before the final pull request,
+the whole ``main...integration`` diff passes an aggregated code review and the
+quality gate.
 
 **Commit messages.** Conventional Commits with exactly one subtask identifier::
 
@@ -21,7 +45,12 @@ required.
 **Issue closing.** The last subtask's commit carries the closing keyword for
 the task's own issue (``Closes #<N>``) plus one per linked issue it fully
 resolves (``Fixes #N`` for defects, ``Closes #N`` otherwise), each on its own
-standalone line. A partially addressed linked issue uses a bare ``#N``.
+standalone line. A partially addressed linked issue uses a bare ``#N``. The
+closing keyword takes effect when the commit reaches ``main``: in stacked mode
+the issue stays open until the final pull request to ``main`` is merged.
+
+A task is done when its subtask commits are on the integration branch, even if
+the linked issue has not yet closed.
 
 **Quality gate.** No pull request is opened until the quality gate passes. See
 the `quality-gates` skill and the sections below.
