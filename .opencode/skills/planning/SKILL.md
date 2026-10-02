@@ -14,6 +14,8 @@ directly into implementation. First create a high-level global plan in
 The global plan must:
 
 - List all tasks to be done with their IDs and brief descriptions.
+- Record the integration branch the batch targets (see the "Contribution
+  guidelines" section of `docs/developer.rst`; `main` by default).
 - Identify dependencies between tasks (which must be done before which).
 - Identify potential conflicts or overlapping changes (e.g., two tasks
   modifying the same file).
@@ -29,8 +31,8 @@ The global plan must:
 - Align tasks with the project architecture.
 
 After the global plan is created, proceed with the normal working loop: one task
-at a time, feature branch per task, detailed plan in `tasks/detailed_plan.md`
-for each.
+at a time, a feature branch per task created from the integration branch, a
+detailed plan in `tasks/detailed_plan.md` for each.
 
 ## Detailed Plan (Atomic Subtasks)
 

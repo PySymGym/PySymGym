@@ -1,12 +1,14 @@
 ---
 name: quality-gates
-description: Use before merging a task. Defines the hard gate that must pass (tests + style + docs build) and how to interpret its result. References the CI workflows for the exact commands.
+description: Use before integrating a task. Defines the hard gate that must pass (tests + style + docs build) and how to interpret its result. References the CI workflows for the exact commands.
 ---
 
 # Quality Gates
 
-The hard gate a task must pass before merging. It has exactly two terminal
-states: **PASS** or **BLOCKED**. There is no "pass with exceptions".
+The hard gate a task must pass before integration. It has exactly two terminal
+states: **PASS** or **BLOCKED**. There is no "pass with exceptions". In stacked
+mode the same gate is also run over the whole `main...integration` diff
+immediately before the final pull request to `main`.
 
 ## What the gate is
 

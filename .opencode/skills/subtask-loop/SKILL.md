@@ -188,7 +188,8 @@ failing tests to make the suite green. Instead:
 
 This section is the **single source of truth** for what "done" means. Before
 a task is considered done — its last subtask's commit carries `Closes #<N>`
-(the task's own issue) and is merged to `main` — verify:
+(the task's own issue) and is merged to its integration branch (`main`, or the
+personal branch set via `pysymgym.integrationBranch`) — verify:
 
 - [ ] Every clause in the task description is traceable to implemented and
       committed code.
@@ -206,9 +207,16 @@ did" does not mean the task is done if other parts were reverted.
 ## Marking Complete
 
 A task is complete when its last subtask's commit carries `Closes #<N>` (the
-task's own issue number) as a standalone line; GitHub closes the issue when
-the PR containing the task lands on `main`. Never edit the issue body — it is
+task's own issue number) as a standalone line and that commit is on the
+integration branch. The closing keyword takes effect when the commit reaches
+`main`: in direct mode the task's own pull request carries it; in stacked mode
+the issue stays open until the final pull request to `main` (opened on the
+user's explicit request) lands. Never edit the issue body — it is
 user-authored and immutable.
+
+Commit hashes recorded in `tasks/detailed_plan.md` may change after an
+integration-branch rebase; the `(<issue>-S<n>)` commit subject is the stable
+key.
 
 Complete means COMPLETE: every requirement met, every test passing, every
 edge case handled. Never close a task with known failures or unresolved
