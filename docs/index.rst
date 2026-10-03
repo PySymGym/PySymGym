@@ -39,5 +39,6 @@ Documentation map
    architecture
    usage
    integration
+   results
    developer
    reference/index
