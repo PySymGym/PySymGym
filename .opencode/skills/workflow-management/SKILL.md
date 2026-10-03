@@ -31,7 +31,8 @@ step.
 - Commit messages must be detailed enough to understand the reasons for
   changes.
 - Documentation-only tasks (no `.py` files changed) skip code-specific gates
-  (tests, lint, format, docs build) but still follow all other workflow rules:
+  (tests, lint, format) but still run the docs build — for documentation
+  changes it is the relevant gate — and follow all other workflow rules:
   one task per branch, one commit per subtask, code review.
 
 ## Working Loop
