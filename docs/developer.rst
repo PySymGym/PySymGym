@@ -58,6 +58,13 @@ the linked issue has not yet closed.
 **Quality gate.** No pull request is opened until the quality gate passes. See
 the `quality-gates` skill and the sections below.
 
+**Pull requests.** Every change updates its documentation: user-visible
+behavior is documented under ``docs/`` (with the ``:description:`` and
+``:group:`` metadata the navigation map is generated from), and ``README.md``
+links must resolve. The pull request template lists these checks, and the docs
+build (``.github/workflows/docs.yaml``) enforces them. See ``CONTRIBUTING.md``
+for the pointers.
+
 Test pipeline
 -------------
 
