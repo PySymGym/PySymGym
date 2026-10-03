@@ -87,6 +87,11 @@ The ruff configuration (target version, enabled rule sets, included paths)
 lives in ``pyproject.toml``. CI runs the same two commands in
 ``.github/workflows/python_linting.yaml``.
 
+The `ruff editor integrations <https://docs.astral.sh/ruff/integrations/>`_
+(for example the `VSCode
+<https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff>`__
+extension) run the same checks on save.
+
 Docs build
 ----------
 
