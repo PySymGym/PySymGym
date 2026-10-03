@@ -17,7 +17,7 @@ Documentation map
 
 .. list-table::
    :header-rows: 1
-   :widths: 12 26 62
+   :widths: 14 24 62
 
    * - Group
      - Page
@@ -27,6 +27,19 @@ Documentation map
      - High-level map of the system and where to find things; the starting
        point for navigating the code.
    * - Guides
+     - :doc:`usage`
+     - Build the engines, run training and tuning, improve the dataset, and
+       execute with a trained model.
+   * - Guides
+     - :doc:`integration`
+     - Integrate a new symbolic engine and convert a trained model to ONNX.
+   * - Guides
+     - :doc:`dataset`
+     - Expand the training dataset and maintain it with helper tools.
+   * - Guides
+     - :doc:`results`
+     - Compare the trained AI selector with the best selector of V#.
+   * - Development
      - :doc:`developer`
      - Contribution model, tests, style checks, docs build, and CI.
    * - Reference
