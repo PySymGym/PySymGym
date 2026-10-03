@@ -61,3 +61,6 @@ ignore = ["E501"]
 extend-select = ["E226"]
 preview = true
 explicit-preview-rules = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

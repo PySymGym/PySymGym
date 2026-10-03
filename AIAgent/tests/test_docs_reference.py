@@ -1,5 +1,7 @@
 """Tests that keep the API reference in sync with the code it documents."""
 
+import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -55,3 +57,16 @@ def test_every_common_module_is_documented_or_excluded():
     assert not contradictory, (
         f"modules both documented and excluded: {sorted(contradictory)}"
     )
+
+
+def test_documented_modules_have_numpydoc_docstrings():
+    files = sorted(
+        str(COMMON_DIR / f"{module.split('.')[-1]}.py")
+        for module in _documented_modules()
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", "--select", "D", *files],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
