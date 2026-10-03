@@ -80,7 +80,7 @@ def _make_table(rows: list[tuple[str, str, str, str]]) -> nodes.table:
 
     thead = nodes.thead()
     tgroup += thead
-    thead += _make_row(("Group", "Page", "Description"), header=True)
+    thead += _make_row(("Group", "Page", "Description"))
 
     tbody = nodes.tbody()
     tgroup += tbody
@@ -91,9 +91,7 @@ def _make_table(rows: list[tuple[str, str, str, str]]) -> nodes.table:
     return table
 
 
-def _make_row(
-    cells: tuple[str, nodes.Node | str, str], header: bool = False
-) -> nodes.row:
+def _make_row(cells: tuple[str, nodes.Node | str, str]) -> nodes.row:
     row = nodes.row()
     for cell in cells:
         entry = nodes.entry()
