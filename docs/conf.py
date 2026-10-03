@@ -31,6 +31,8 @@ nitpicky = True
 
 nitpick_ignore = [
     ("py:class", "common.utils.T"),
+    ("py:class", "Path"),
+    ("py:class", "T"),
 ]
 
 autodoc_mock_imports = [
