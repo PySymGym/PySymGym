@@ -44,8 +44,7 @@ training, install .NET 7, cmake, clang, and maven, then run:
     make build_SVMs build_maps
 
 Optionally add new maps under ``maps/`` and integrate another engine (see
-`Integrate a new symbolic machine
-<https://pysymgym.github.io/PySymGym/integration.html#integrate-a-new-symbolic-machine>`_).
+:ref:`integrate-a-new-symbolic-machine`).
 
 Generate initial dataset
 ------------------------
@@ -129,16 +128,17 @@ from the previous step are used to obtain relatively good ones:
        poetry run python3 launch_servers.py --config path/to/config.yml
        poetry run python3 run_training.py --config path/to/config.yml
 
+.. _guide-symbolic-execution:
+
 Guide symbolic execution with a trained model
 ---------------------------------------------
 
 After training, choose the best MLflow-logged model and run symbolic execution:
 
-1. Convert the PyTorch model to ONNX with ``onyx.py`` (see `ONNX conversion
-   <https://pysymgym.github.io/PySymGym/integration.html#onnx-conversion>`_).
-2. Use the ONNX model to guide execution with your SVM (see `Integrate a new
-   symbolic machine
-   <https://pysymgym.github.io/PySymGym/integration.html#integrate-a-new-symbolic-machine>`_),
+1. Convert the PyTorch model to ONNX with ``onyx.py`` (see
+   :ref:`onnx-conversion`).
+2. Use the ONNX model to guide execution with your SVM (see
+   :ref:`integrate-a-new-symbolic-machine`),
    or use an existing engine extension in this repository:
 
    - Place the model at
