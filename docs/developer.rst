@@ -122,6 +122,27 @@ The built HTML is published to GitHub Pages at
 ``main``; pull requests build without deploying. Read the Docs is planned as a
 secondary mirror.
 
+Runner requirements
+-------------------
+
+Five workflows run on a self-hosted runner (``jbLabSelfHostedCI``) rather than
+on GitHub-hosted compute: ``build_and_run.yaml``,
+``build_and_run_model_val.yaml``, ``build_and_test_usvm.yaml``,
+``publish_image.yaml`` and ``runstrat_tool.yaml``. Most of their jobs also
+declare a ``container:``, so the work happens inside a container while the
+workflow itself is still driven by the runner.
+
+Every action referenced by ``.github/workflows/`` runs on Node.js 24, which
+requires Actions Runner ``v2.327.1`` or newer. The GitHub-hosted runners
+satisfy this by construction, but the self-hosted runner does not: on one older
+than ``v2.327.1`` every action in those five workflows fails to start, taking
+the whole training, image-publishing and tool-testing pipeline down with it.
+Keep that runner current before bumping an action to a release that raises its
+runtime requirement.
+
+The runner's installed version is not visible from the repository, so this is
+the one CI constraint that cannot be checked by reading the workflow files.
+
 CI as source of truth
 ---------------------
 
