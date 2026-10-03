@@ -98,6 +98,15 @@ The Sphinx sources live in ``docs/``. Build them locally with:
 The build runs under the no-warnings policy (``-W --keep-going``): any warning
 fails the build. CI runs the same command in ``.github/workflows/docs.yaml``.
 
+Published docs
+--------------
+
+The built HTML is published to GitHub Pages at
+`pysymgym.github.io/PySymGym <https://pysymgym.github.io/PySymGym/>`_. The
+``deploy`` job in ``.github/workflows/docs.yaml`` runs only for pushes to
+``main``; pull requests build without deploying. Read the Docs is planned as a
+secondary mirror.
+
 CI as source of truth
 ---------------------
 
