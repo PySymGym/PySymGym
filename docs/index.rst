@@ -37,5 +37,6 @@ Documentation map
    :hidden:
 
    architecture
+   usage
    developer
    reference/index
