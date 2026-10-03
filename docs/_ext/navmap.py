@@ -40,11 +40,7 @@ MAX_DESCRIPTION_LENGTH = 120
 
 _PLACEHOLDER_CLASS = "navmap-placeholder"
 
-# Documentation URLs in README.md look like
-# https://pysymgym.github.io/PySymGym/<slug>.html or .../PySymGym/reference/.
-_SITE_LINK_RE = re.compile(
-    r"https://pysymgym\.github\.io/PySymGym/(?P<slug>[A-Za-z0-9_./-]*?)/?(?:[#?].*)?$"
-)
+_SITE_URL_RE = re.compile(r"https://pysymgym\.github\.io/PySymGym/([^\s)\"'?#]*)")
 
 
 class NavMapDirective(Directive):
@@ -201,11 +197,40 @@ def _validate_metadata(app: Sphinx) -> None:
             )
 
 
+def _site_link_docnames(text: str) -> set[str]:
+    docnames: set[str] = set()
+    for raw in _SITE_URL_RE.findall(text):
+        slug = raw.strip("/")
+        if slug in ("", "index"):
+            docnames.add("index")
+        elif slug == "reference":
+            docnames.add("reference/index")
+        elif slug.endswith(".html"):
+            docnames.add(slug[: -len(".html")])
+        else:
+            docnames.add(slug)
+    return docnames
+
+
+def _validate_readme_links(app: Sphinx) -> None:
+    readme = Path(app.confdir).parent / "README.md"
+    if not readme.is_file():
+        return
+    for docname in sorted(_site_link_docnames(readme.read_text(encoding="utf-8"))):
+        if docname not in app.env.found_docs:
+            logger.warning(
+                "README.md links to documentation page %r, which does not "
+                "exist under docs/",
+                docname,
+            )
+
+
 def on_env_updated(app: Sphinx, env: BuildEnvironment) -> None:
     if getattr(app, "_navmap_validated", False):
         return
     app._navmap_validated = True  # type: ignore[attr-defined]
     _validate_metadata(app)
+    _validate_readme_links(app)
 
 
 def setup(app: Sphinx) -> dict[str, object]:
