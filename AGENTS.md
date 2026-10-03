@@ -1,14 +1,19 @@
 # AGENTS.md
 
-PySymGym is a Python gym to train AI-powered assistants that guide symbolic
-machines (symbolic execution engines). This file is an entrypoint/TOC only —
-details live in the skills linked below.
+This file is a short TOC of the agent workflow. The project itself is
+described in `README.md`, which is the entrypoint for navigating the
+repository.
 
 ## Start here
 
-At the start of every session, load the `workflow-management` skill
-(`.opencode/skills/workflow-management/SKILL.md`) first, before doing anything
-else.
+1. Load the `workflow-management` skill
+   (`.opencode/skills/workflow-management/SKILL.md`) first, before doing
+   anything else.
+2. Read `README.md` for project navigation.
+3. Before exploring code, load the `project-navigation` skill
+   (`.opencode/skills/project-navigation/SKILL.md`): navigate via
+   `docs/index.rst` and `docs/architecture.rst`, not by scanning the whole
+   repository.
 
 ## Main Principles
 
@@ -28,6 +33,7 @@ else.
 
 | Skill | When to use |
 |---|---|
+| `.opencode/skills/project-navigation` | Starting navigation before exploring code |
 | `.opencode/skills/run-tests` | Running the test suite |
 | `.opencode/skills/code-style` | Formatting / linting before commit |
 
