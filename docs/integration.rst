@@ -62,6 +62,5 @@ To convert a PyTorch model to ONNX, run ``onyx.py``:
 - ``import-model-fqn`` is the dotted path to the model class to convert, for
   example ``ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model.StateModelEncoder``.
 
-See `Guide symbolic execution with a trained model
-<https://pysymgym.github.io/PySymGym/usage.html#guide-symbolic-execution-with-a-trained-model>`__
-for how to run execution with the converted model.
+See :ref:`guide-symbolic-execution` for how to run execution with the
+converted model.

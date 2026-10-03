@@ -28,7 +28,9 @@ your task:
 
 - Missing or unclear structure -> extend `docs/architecture.rst`.
 - Undocumented workflow -> add or extend the relevant page under `docs/`.
-- New page -> register it (and its brief description) in `docs/index.rst`.
+- New page -> give it `:description:`/`:group:` metadata and add it to the
+  `docs/index.rst` toctree; the map is generated from that metadata and the
+  build fails without it.
 - Follow the `documentation` skill for conventions and completeness.
 
 ## Rules
