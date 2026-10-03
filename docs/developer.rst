@@ -1,7 +1,8 @@
+:description: Contribution model, tests, style checks, docs build, and CI.
+:group: Development
+
 Developer Guide
 ===============
-
-*Contribution model, tests, style checks, docs build, and CI.*
 
 Contribution guidelines
 -----------------------

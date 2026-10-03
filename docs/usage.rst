@@ -1,8 +1,8 @@
+:description: Build the engines, run training and tuning, improve the dataset, and execute with a trained model.
+:group: Guides
+
 Usage
 =====
-
-*How to build the engines, run training and tuning, improve the dataset, and
-execute with a trained model.*
 
 This guide assumes the environment is already set up as described in the
 `repository README <https://github.com/PySymGym/PySymGym#install>`__.

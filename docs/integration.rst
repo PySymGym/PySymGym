@@ -1,8 +1,8 @@
+:description: Integrate a new symbolic engine and convert a trained model to ONNX.
+:group: Guides
+
 Integration
 ===========
-
-*How to plug a new symbolic execution engine into the gym and how to convert a
-trained model to ONNX.*
 
 .. _integrate-a-new-symbolic-machine:
 

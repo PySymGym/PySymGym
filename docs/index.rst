@@ -15,36 +15,7 @@ The published documentation is hosted at
 Documentation map
 -----------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 14 24 62
-
-   * - Group
-     - Page
-     - Description
-   * - Overview
-     - :doc:`architecture`
-     - High-level map of the system and where to find things; the starting
-       point for navigating the code.
-   * - Guides
-     - :doc:`usage`
-     - Build the engines, run training and tuning, improve the dataset, and
-       execute with a trained model.
-   * - Guides
-     - :doc:`integration`
-     - Integrate a new symbolic engine and convert a trained model to ONNX.
-   * - Guides
-     - :doc:`dataset`
-     - Expand the training dataset and maintain it with helper tools.
-   * - Guides
-     - :doc:`results`
-     - Compare the trained AI selector with the best selector of V#.
-   * - Development
-     - :doc:`developer`
-     - Contribution model, tests, style checks, docs build, and CI.
-   * - Reference
-     - :doc:`reference/index`
-     - API reference for the shared, dependency-light helper modules.
+.. navmap::
 
 .. toctree::
    :hidden:
