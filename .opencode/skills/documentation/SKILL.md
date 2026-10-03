@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: Use when determining which docs to update for a code change. Maps source changes to required documentation actions and defines documentation completeness verification. The single source of truth for doc conventions in this project.
+description: Use when determining which docs to update for a code change. Maps source changes to required documentation actions and defines documentation completeness verification. The single source of truth for what documentation a code change requires.
 ---
 
 # Documentation
@@ -22,8 +22,12 @@ is **generated** from per-page file-wide metadata: every page starts with
 The `docs/_ext/navmap.py` Sphinx extension renders the map from that metadata
 and injects the description as the page's opening line. The docs build
 (`.github/workflows/docs.yaml`, warnings-as-errors) fails when a page lacks a
-valid description/group or when `README.md` links to a non-existent page. This
-skill is the single source of truth for *what* to update when code changes.
+valid description/group or when `README.md` links to a non-existent page.
+
+Division of truth: `docs/index.rst` and the `navmap` extension define *how the
+navigation map is expressed and generated* (the page-metadata convention);
+this skill is the single source of truth for *what documentation a code change
+requires*.
 
 ## Mapping: source change -> doc action
 
