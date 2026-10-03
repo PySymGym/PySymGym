@@ -32,8 +32,10 @@ Run through these before creating new material:
 - [ ] **Tests** — check the component's `tests/` directory (`AIAgent/tests`,
       `tools/*/tests`) for existing fixtures, helpers, or patterns to extend
       rather than duplicate.
-- [ ] **Docs** — check `docs/` and existing docstrings for a section to update
-      rather than add a new page.
+- [ ] **Docs** — check the navigation map (`docs/index.rst`) and
+      `docs/architecture.rst`, plus existing docstrings, for a section to
+      update rather than add a new page. New pages need `:description:` and
+      `:group:` metadata.
 
 ## Rules
 
