@@ -35,6 +35,14 @@ nitpick_ignore = [
     ("py:class", "T"),
 ]
 
+linkcheck_ignore = [
+    # GitHub README anchors are generated client-side and cannot be verified.
+    r"https://github\.com/PySymGym/PySymGym#",
+    # The published site is live only after the final merge/deploy; remove this
+    # entry once https://pysymgym.github.io/PySymGym/ is serving.
+    r"https://pysymgym\.github\.io/PySymGym/",
+]
+
 autodoc_mock_imports = [
     "aiohttp",
     "attrs",

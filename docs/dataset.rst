@@ -11,8 +11,8 @@ To enhance the diversity and quality of the training data, the dataset is
 extended with additional C# methods sourced from popular open-source algorithm
 repositories:
 
-- `TheAlgorithms/C-Sharp <https://github.com/cat923/C-Sharp.git>`_
-- `Stralgo <https://github.com/SaeedGz98/stralgo.git>`_
+- `TheAlgorithms/C-Sharp <https://github.com/cat923/C-Sharp>`_
+- `Stralgo <https://github.com/SaeedGz98/stralgo>`_
 
 Dataset tools
 -------------
