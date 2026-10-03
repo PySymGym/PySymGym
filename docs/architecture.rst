@@ -1,8 +1,8 @@
+:description: High-level map of the system and where to find things.
+:group: Overview
+
 Architecture
 ============
-
-*High-level map of the system and where to find things; the starting point for
-navigating the code.*
 
 What PySymGym is
 ----------------

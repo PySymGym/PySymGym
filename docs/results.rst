@@ -1,7 +1,8 @@
+:description: Compare the trained AI selector with the best selector of V#.
+:group: Guides
+
 Results
 =======
-
-*Comparison of the trained AI path selector with the best selector of V#.*
 
 The selector based on the model (AI) is compared with the best selector of V#.
 All metrics except coverage are reported for methods that reach equal coverage.

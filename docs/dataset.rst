@@ -1,8 +1,8 @@
+:description: Expand the training dataset and maintain it with helper tools.
+:group: Guides
+
 Dataset
 =======
-
-*How the training dataset is expanded with extra methods and maintained with
-helper tools.*
 
 Dataset expansion
 -----------------

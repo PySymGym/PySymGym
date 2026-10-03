@@ -169,10 +169,50 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
     _inject_description(app, doctree, docname)
 
 
+def _validate_metadata(app: Sphinx) -> None:
+    env = app.env
+    groups = list(app.config.navmap_groups)
+    for docname in sorted(env.found_docs):
+        if not _is_content_page(env, docname):
+            continue
+        metadata = _metadata(env, docname)
+        description = metadata.get("description", "").strip()
+        group = metadata.get("group", "").strip()
+        if not description:
+            logger.warning(
+                "documentation page %r has no ':description:' metadata; add a "
+                "one-line description so it appears in the navigation map",
+                docname,
+            )
+        elif "\n" in description or len(description) > MAX_DESCRIPTION_LENGTH:
+            logger.warning(
+                "documentation page %r has a description that must be a single "
+                "line of at most %d characters",
+                docname,
+                MAX_DESCRIPTION_LENGTH,
+            )
+        if group not in groups:
+            logger.warning(
+                "documentation page %r has missing or invalid ':group:' "
+                "metadata %r; expected one of %s",
+                docname,
+                group,
+                groups,
+            )
+
+
+def on_env_updated(app: Sphinx, env: BuildEnvironment) -> None:
+    if getattr(app, "_navmap_validated", False):
+        return
+    app._navmap_validated = True  # type: ignore[attr-defined]
+    _validate_metadata(app)
+
+
 def setup(app: Sphinx) -> dict[str, object]:
     app.add_directive("navmap", NavMapDirective)
     app.add_config_value("navmap_groups", DEFAULT_GROUPS, "html")
     app.connect("doctree-resolved", on_doctree_resolved)
+    app.connect("env-updated", on_env_updated)
     return {
         "version": "0.1",
         "parallel_read_safe": True,

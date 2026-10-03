@@ -1,3 +1,6 @@
+:description: API reference for the shared, dependency-light helper modules.
+:group: Reference
+
 API Reference
 =============
 
