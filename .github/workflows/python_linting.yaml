@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: "Run ruff: check"
-        uses: astral-sh/ruff-action@v4
+        uses: astral-sh/ruff-action@v4.1.0
         with:
           args: "check"
   format:
@@ -16,6 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: "Run ruff: format"
-        uses: astral-sh/ruff-action@v4
+        uses: astral-sh/ruff-action@v4.1.0
         with:
           args: "format --check"
