@@ -12,5 +12,6 @@ under ``tools/``.
    :maxdepth: 2
    :caption: Contents
 
+   architecture
    developer
    reference/index
