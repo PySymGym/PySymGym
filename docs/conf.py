@@ -3,6 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../AIAgent"))
+sys.path.insert(0, os.path.abspath("_ext"))
 
 project = "PySymGym"
 author = "PySymGym contributors"
@@ -15,6 +16,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "navmap",
 ]
 
 autosummary_generate = True
