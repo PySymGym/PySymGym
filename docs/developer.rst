@@ -1,6 +1,8 @@
 Developer Guide
 ===============
 
+*Contribution model, tests, style checks, docs build, and CI.*
+
 Contribution guidelines
 -----------------------
 
