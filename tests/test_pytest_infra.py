@@ -9,7 +9,10 @@ has a test directory wired into ``testpaths``.
 from pathlib import Path
 from typing import cast
 
+import pytest
 from pytest import Config
+
+pytestmark = pytest.mark.unit
 
 UNIT_MARKERS = {
     "unit",
