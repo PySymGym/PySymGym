@@ -14,7 +14,6 @@ import pytest
 import torch
 from torch_geometric.data import HeteroData
 
-import config
 from common.game import (
     GameEdgeLabel,
     GameMapEdge,
@@ -33,8 +32,8 @@ RANDOM_SEED = 0
 
 @pytest.fixture(autouse=True)
 def cpu_device(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Force the project device to CPU so tests never allocate on a GPU host."""
-    monkeypatch.setattr(config.GeneralConfig, "DEVICE", torch.device("cpu"))
+    """Make ``config.get_device()`` resolve to CPU so tests never use a GPU."""
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
 
 
 @pytest.fixture(autouse=True)

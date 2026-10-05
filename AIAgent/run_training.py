@@ -27,7 +27,7 @@ from common.config.validation_config import (
 )
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
-from config import GeneralConfig
+from config import GeneralConfig, get_device
 from ml.dataset import TrainingDataset, TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
@@ -266,7 +266,7 @@ def objective(
         [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
     )
     model: nn.Module = model_init(**model_kwargs)
-    model.to(GeneralConfig.DEVICE)
+    model.to(get_device())
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
@@ -319,7 +319,7 @@ def main(config: str):
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)
-    print(GeneralConfig.DEVICE)
+    print(get_device())
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage])
 
     mlflow_config = config.mlflow_config

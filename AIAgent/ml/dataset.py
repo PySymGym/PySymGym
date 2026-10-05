@@ -27,7 +27,7 @@ import numpy as np
 import torch
 import tqdm
 from common.game import GameState, PathConditionVertex
-from config import GeneralConfig
+from config import get_device
 from ml.inference import TORCH
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
@@ -150,9 +150,7 @@ class TrainingDataset(Dataset):
         if self._load_to_cpu:
             step = self._flattened_loaded_steps[idx]
         else:
-            step = torch.load(
-                self.processed_paths[idx], map_location=GeneralConfig.DEVICE
-            )
+            step = torch.load(self.processed_paths[idx], map_location=get_device())
         return step
 
     def switch_to(self, mode: TrainingDatasetMode) -> None:
@@ -376,7 +374,9 @@ class TrainingDataset(Dataset):
                 filtered_map_steps.append(step)
         return filtered_map_steps
 
-    def _get_map_steps(self, map_name, device=GeneralConfig.DEVICE) -> list[HeteroData]:
+    def _get_map_steps(self, map_name, device=None) -> list[HeteroData]:
+        if device is None:
+            device = get_device()
         path_to_map_steps = Path(os.path.join(self.processed_dir, map_name))
         map_steps = []
         all_steps_paths = [
