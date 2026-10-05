@@ -3,6 +3,7 @@
 import pytest
 import torch
 
+from ml.dataset import TrainingDataset
 from ml.inference import TORCH, infer
 from ml.models.NorthernPenguin.model import StateModelEncoder
 
@@ -49,3 +50,10 @@ def test_hetero_factory_drives_a_model_forward(hetero_factory):
 
     assert output.shape == (2, 1)
     assert torch.isfinite(output).all()
+
+
+@pytest.mark.unit
+def test_tmp_dataset_is_an_empty_training_dataset(tmp_dataset):
+    assert isinstance(tmp_dataset, TrainingDataset)
+    assert len(tmp_dataset) == 0
+    assert tmp_dataset.processed_paths == []
