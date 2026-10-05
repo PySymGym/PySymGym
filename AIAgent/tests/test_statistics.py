@@ -1,5 +1,4 @@
 import csv
-import shutil
 from pathlib import Path
 from random import choice
 
@@ -18,7 +17,13 @@ from ml.validation.statistics import (
 )
 from run_training import get_maps
 
-from tests.utils import read_configs
+from tests_utils import read_configs
+
+pytestmark = pytest.mark.integration
+
+SVMS_VALIDATION_CONFIGS_DIR = (
+    Path(__file__).resolve().parent / "resources" / "svms_validation_configs"
+)
 
 
 class TrainingDatasetMock:
@@ -36,18 +41,13 @@ class TestSVMsStatistics:
             )
             statistics_writer.writeheader()
 
-    def remove_tmp(self):
-        shutil.rmtree(self.tmp_dir)
-
     @pytest.fixture(autouse=True)
-    def mock_variables_and_create_tmp(self, monkeypatch):
-        self.tmp_dir = Path("./tests/tmp")
-        self.test_csv_file_path = Path(self.tmp_dir / "test_statistics.csv")
+    def mock_variables_and_create_tmp(self, monkeypatch, tmp_path):
+        self.tmp_dir = tmp_path
+        self.test_csv_file_path = tmp_path / "test_statistics.csv"
         monkeypatch.setattr(paths, "CURRENT_TABLE_PATH", self.test_csv_file_path)
-        yield
-        self.remove_tmp()
 
-    @pytest.fixture(params=read_configs("tests/resources/svms_validation_configs"))
+    @pytest.fixture(params=read_configs(SVMS_VALIDATION_CONFIGS_DIR))
     def get_args(self, request):
         with open(request.param) as file:
             val_config = ValidationConfig(**yaml.safe_load(file)).validation_mode
