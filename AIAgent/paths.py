@@ -1,5 +1,8 @@
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+RESOURCES_PATH = REPO_ROOT / "resources"
+
 # CWD-relative artifact root. Everything under it (models, trials, datasets,
 # study/trial pickles, the app log) is generated at runtime and git-ignored.
 REPORT_PATH = Path("./report")
