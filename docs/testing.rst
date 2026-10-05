@@ -108,8 +108,10 @@ and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
     ``hetero_factory`` converts it through the production
     ``convert_input_to_tensor`` (with feature-width overrides for legacy
     models), ``tmp_dataset`` yields an empty ``TrainingDataset`` in a
-    temporary directory, and ``fake_websocket`` returns a recording,
-    no-socket websocket for the connection tests.
+    temporary directory, ``fake_websocket`` returns a recording, no-socket
+    websocket for the connection tests, and ``fake_namespace``/``fake_proc``
+    provide the game managers' multiprocessing namespace and a
+    ``subprocess.Popen`` stand-in.
 
 ``tools/compstrat/conftest.py``
     Resource-directory and mock-run DataFrame fixtures.
@@ -155,6 +157,12 @@ Orchestration seams are tested with fakes, never real I/O:
   asserted without a server. ``game_server_socket_manager`` must call
   ``return_instance`` on **both** the success and failure paths — assert it
   explicitly rather than trusting the ``finally``.
+- **Subprocesses and files.** For the model game manager, patch
+  ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
+  (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
+  module path constants; point ``svms_output_path`` at ``tmp_path`` and write
+  the ``{MapName}result`` file directly. The manager is built with
+  ``fake_namespace`` (a real lock, no ``multiprocessing.Manager``).
 - **Cleanup invariants.** When a function acquires a resource (a socket, an
   instance, a process), test the success path and an exception in the body, and
   assert the release call in each.
