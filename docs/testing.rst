@@ -12,6 +12,23 @@ are selected explicitly and the full end-to-end pipeline stays in CI.
 This page is the single source of truth for the testing system; the developer
 guide and the agent skills point here.
 
+Test pyramid
+------------
+
+The suite is layered so most checks run fast and locally:
+
+- **Unit** (the base): pure, deterministic tests of isolated logic. No network,
+  GPU, subprocess, or binary fixtures. This is the default tier and must run in
+  seconds.
+- **Integration** (the middle): in-process tests that wire real components
+  together with fakes and golden fixtures (for example the ONNX export, the
+  pc-remover graph transform, and the compstrat pipeline).
+- **E2E** (the top): the full pipelines that need built servers, maps and the
+  ``.NET`` toolchain; they run in the existing self-hosted CI workflows.
+
+A change should add the lowest tier that can catch its regression; the higher
+tiers stay in CI where the required infrastructure is available.
+
 Test taxonomy
 -------------
 
@@ -57,6 +74,13 @@ invocations:
 The configuration lives in ``[tool.pytest.ini_options]`` in the root
 ``pyproject.toml``.
 
+To run a single component or a single test:
+
+.. code-block:: console
+
+    poetry run pytest AIAgent/tests/test_fixtures.py
+    poetry run pytest AIAgent/tests/test_onnx.py::TestONNXConversion -sv
+
 Migration note
 --------------
 
@@ -98,3 +122,27 @@ Adding a fixture
     building real project objects through production code over hand-rolled
     copies.
 
+Writing a test
+--------------
+
+- Put the test under the component it exercises (``AIAgent/tests``,
+  ``tools/*/tests``).
+- Mark it with exactly one of ``unit``/``integration``/``e2e`` (plus any
+  orthogonal ``gpu``/``network``/``slow``/``serial`` marker). An unmarked test
+  still runs in the fast tier, so an omitted marker silently changes the tier it
+  appears in.
+- Depend on the fixtures from your component's ``conftest.py`` and build project
+  objects through the production code paths so they cannot drift from the real
+  schema.
+- Write anything that touches disk under the ``tmp_path`` fixture.
+- Keep it deterministic: the autouse ``seeded_rng`` and ``cpu_device`` fixtures
+  make the ``AIAgent`` suite reproducible, but a test must still not rely on
+  wall-clock time or on iteration order.
+
+Coverage
+--------
+
+``pytest-cov`` is installed and ``make test-cov`` produces a terminal and XML
+report. There is no threshold yet: Phase 5 (#563) measures the baseline and
+turns it into a ratchet (``--cov-fail-under`` raised per pull request) so
+coverage never regresses without a deliberate decision.
