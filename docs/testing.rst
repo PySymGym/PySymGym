@@ -116,6 +116,11 @@ and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
 ``tools/runstrat/conftest.py``
     Temporary artifacts directory and the built ``ForTests`` map paths.
 
+``tools/dataset_tools`` and ``tools/util`` now have ``tests/unit/`` roots as
+well. They need no conftest of their own: the root ``conftest.py`` puts every
+tool directory on ``sys.path``, so ``clean``, ``generate_episodes`` and
+``parse_pretty`` import as top-level modules.
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer

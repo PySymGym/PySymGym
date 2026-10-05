@@ -28,6 +28,8 @@ COMPONENT_TEST_DIRS = [
     "AIAgent/tests",
     "tools/compstrat/tests",
     "tools/runstrat/tests",
+    "tools/dataset_tools/tests",
+    "tools/util/tests",
 ]
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,5 +55,5 @@ def test_every_component_test_dir_is_on_testpaths(pytestconfig: Config) -> None:
 def test_every_component_contributes_at_least_one_test() -> None:
     for component_dir in COMPONENT_TEST_DIRS:
         directory = ROOT / component_dir
-        test_files = list(directory.glob("test_*.py"))
+        test_files = list(directory.rglob("test_*.py"))
         assert test_files, f"{component_dir} has no test files"
