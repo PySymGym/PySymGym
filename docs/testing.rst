@@ -125,6 +125,9 @@ Adding a fixture
 Writing a test
 --------------
 
+- Prefer the cheapest tier that can catch the regression: cover pure logic with
+  plain unit tests (no I/O beyond ``tmp_path``) before reaching for a fixture or
+  an integration test.
 - Put the test under the component it exercises (``AIAgent/tests``,
   ``tools/*/tests``).
 - Mark it with exactly one of ``unit``/``integration``/``e2e`` (plus any
