@@ -18,6 +18,8 @@ from torch_geometric.data import HeteroData
 
 from common.game import (
     GameEdgeLabel,
+    GameMap,
+    GameMap2SVM,
     GameMapEdge,
     GameMapVertex,
     GameState,
@@ -25,6 +27,7 @@ from common.game import (
     State,
     StateHistoryElem,
 )
+from common.validation_coverage.svm_info import SVMInfo
 from ml.dataset import NUM_STATE_FEATURES, TrainingDataset, convert_input_to_tensor
 from ml.inference import TORCH
 
@@ -286,5 +289,49 @@ def fake_proc():
 
     def make(**kwargs) -> FakeProcess:
         return FakeProcess(**kwargs)
+
+    return make
+
+
+@pytest.fixture
+def game_map_factory():
+    """Return a factory building a :class:`GameMap` with sensible defaults."""
+
+    def make(
+        map_name: str = "Method_0",
+        steps_to_play: int = 10,
+        steps_to_start: int = 0,
+    ) -> GameMap:
+        return GameMap(
+            StepsToPlay=steps_to_play,
+            StepsToStart=steps_to_start,
+            AssemblyFullName="assembly",
+            NameOfObjectToCover="Method",
+            DefaultSearcher="BFS",
+            MapName=map_name,
+        )
+
+    return make
+
+
+@pytest.fixture
+def game_map2svm_factory(game_map_factory):
+    """Return a factory pairing a :class:`GameMap` with a synthetic ``SVMInfo``."""
+
+    def make(
+        map_name: str = "Method_0",
+        steps_to_play: int = 10,
+        steps_to_start: int = 0,
+    ) -> GameMap2SVM:
+        return GameMap2SVM(
+            GameMap=game_map_factory(map_name, steps_to_play, steps_to_start),
+            SVMInfo=SVMInfo(
+                name="svm",
+                launch_command="run",
+                server_working_dir="/tmp",
+                min_port=1,
+                max_port=2,
+            ),
+        )
 
     return make
