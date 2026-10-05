@@ -4,8 +4,6 @@ from pathlib import Path
 from collections import defaultdict
 import argparse
 
-sys.path.append(os.path.join("..", "..", "AIAgent"))
-
 from common.game import GameMap
 
 
