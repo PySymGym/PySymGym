@@ -24,6 +24,15 @@ pytestmark = pytest.mark.unit
 
 GAME_FEATURES_WITH_HISTORY = 7
 
+NORTHERN_PENGUIN_INIT_KWARGS = {
+    "hidden_channels": 8,
+    "num_of_state_features": 6,
+    "num_hops_1": 1,
+    "num_hops_2": 1,
+    "normalization": True,
+    "num_pc_layers": 1,
+}
+
 ModelCase = namedtuple(
     "ModelCase",
     ["module", "class_name", "init_kwargs", "game_features", "via_infer", "normalized"],
@@ -34,14 +43,7 @@ MODEL_CASES = [
         ModelCase(
             module="ml.models.NorthernPenguin.model",
             class_name="StateModelEncoder",
-            init_kwargs={
-                "hidden_channels": 8,
-                "num_of_state_features": 6,
-                "num_hops_1": 1,
-                "num_hops_2": 1,
-                "normalization": True,
-                "num_pc_layers": 1,
-            },
+            init_kwargs=NORTHERN_PENGUIN_INIT_KWARGS,
             game_features=GAME_FEATURES_WITH_HISTORY,
             via_infer=True,
             normalized=False,
@@ -138,23 +140,17 @@ def test_save_model_writes_a_reloadable_state_dict(monkeypatch, tmp_path) -> Non
         def fromtimestamp(cls, timestamp: float) -> str:
             return "TIMESTAMP"
 
-    init_kwargs = {
-        "hidden_channels": 8,
-        "num_of_state_features": 6,
-        "num_hops_1": 1,
-        "num_hops_2": 1,
-        "normalization": True,
-        "num_pc_layers": 1,
-    }
     monkeypatch.setattr(filemanager, "datetime", FixedDatetime)
     monkeypatch.chdir(tmp_path)
     save_dir = tmp_path / "ml" / "models" / "NorthernPenguin"
     save_dir.mkdir(parents=True)
-    model = NorthernPenguinEncoder(**init_kwargs)
+    model = NorthernPenguinEncoder(**NORTHERN_PENGUIN_INIT_KWARGS)
 
-    save_model(model, **init_kwargs)
+    save_model(model, **NORTHERN_PENGUIN_INIT_KWARGS)
 
-    initargs = "_".join(f"{name}_{value}" for name, value in init_kwargs.items())
+    initargs = "_".join(
+        f"{name}_{value}" for name, value in NORTHERN_PENGUIN_INIT_KWARGS.items()
+    )
     expected_file = save_dir / (
         f"{type(model).__module__}.{type(model).__name__}_{initargs}_TIMESTAMP.pt"
     )
