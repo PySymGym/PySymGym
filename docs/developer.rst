@@ -55,6 +55,14 @@ the issue stays open until the final pull request to ``main`` is merged.
 A task is done when its subtask commits are on the integration branch, even if
 the linked issue has not yet closed.
 
+**Task tracking.** Each task is a GitHub issue labeled ``task``. A set of
+related tasks is grouped under a **hub** issue labeled ``hub``: the task issues
+are attached to the hub as GitHub sub-issues (through the REST API, not a link
+in the body), the batch's global plan is mirrored onto the hub as a comment, and
+its progress is updated as tasks integrate. The hub closes with the last task of
+the batch (``Closes #<hub>`` in that task's final commit). The operational
+procedure lives in the ``workflow-management`` and ``planning`` skills.
+
 **Quality gate.** No pull request is opened until the quality gate passes. See
 the `quality-gates` skill and the sections below.
 
