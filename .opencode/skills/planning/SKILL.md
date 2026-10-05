@@ -7,13 +7,23 @@ description: Use when planning tasks: creating global plans across multiple task
 
 ## Multi-task Planning
 
-When the user asks to work on a **set of tasks** (several task IDs), do NOT jump
-directly into implementation. First create a high-level global plan in
-`tasks/global_plan.md`.
+When the user asks to work on a **set of related tasks**, do NOT jump directly
+into implementation. First set up the batch, then plan it:
+
+1. Create a **hub** issue (label `hub`) for the batch and one issue per task
+   (label `task`), and attach each task issue to the hub as a GitHub
+   **sub-issue** via the REST API (`POST repos/$REPO/issues/<HUB>/sub_issues`
+   with the task's database `id`); a link in the hub body is **not** a
+   sub-issue. The exact commands live in the `workflow-management` skill.
+2. Create the high-level global plan in `tasks/global_plan.md`, naming the hub
+   and listing each task with its issue number, then mirror it to the hub as a
+   comment whose first line is `<!-- global-plan -->`.
 
 The global plan must:
 
-- List all tasks to be done with their IDs and brief descriptions.
+- Name the **hub** issue it belongs to.
+- List all tasks to be done with their IDs, issue numbers (`#N`), brief
+  descriptions, and a **Status** (`[done #N]` once the task is integrated).
 - Record the integration branch the batch targets (see the "Contribution
   guidelines" section of `docs/developer.rst`; `main` by default).
 - Identify dependencies between tasks (which must be done before which).
@@ -30,9 +40,13 @@ The global plan must:
 - Propose an execution order that minimizes rework and avoids conflicts.
 - Align tasks with the project architecture.
 
-After the global plan is created, proceed with the normal working loop: one task
-at a time, a feature branch per task created from the integration branch, a
-detailed plan in `tasks/detailed_plan.md` for each.
+After the global plan is created and mirrored to the hub, proceed with the
+normal working loop: one task at a time, a feature branch per task created from
+the integration branch, a detailed plan in `tasks/detailed_plan.md` for each.
+After each task integrates, mark it `[done #N]` in `tasks/global_plan.md` and
+update the hub's `<!-- global-plan -->` comment. The local file is the single
+source of truth; the hub comment is a pure mirror (see the `workflow-management`
+skill).
 
 ## Detailed Plan (Atomic Subtasks)
 
