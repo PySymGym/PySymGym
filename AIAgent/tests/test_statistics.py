@@ -15,6 +15,7 @@ from ml.validation.statistics import (
     SVM_FAILED_MAPS_NUM_PREFIX,
     get_svms_statistics,
 )
+from paths import AI_AGENT_PATH
 from run_training import get_maps
 
 from tests_utils import read_configs
@@ -24,6 +25,24 @@ pytestmark = pytest.mark.integration
 SVMS_VALIDATION_CONFIGS_DIR = (
     Path(__file__).resolve().parent / "resources" / "svms_validation_configs"
 )
+
+
+def _load_validation_mode(config_path: Path):
+    """Load a validation-mode config with its paths anchored to the repository.
+
+    The test config uses the same repository-relative paths as the production
+    configs (``../maps/...`` as if the process ran from ``AIAgent/``). Resolve
+    them against the AIAgent directory explicitly so the test does not depend
+    on the current working directory.
+    """
+    raw = yaml.safe_load(config_path.read_text())
+    for platform in raw["validation_mode"]["PlatformsConfig"]:
+        for dataset_config in platform["DatasetConfigs"]:
+            for key in ("dataset_base_path", "dataset_description"):
+                dataset_config[key] = str(
+                    (AI_AGENT_PATH / dataset_config[key]).resolve()
+                )
+    return ValidationConfig(**raw).validation_mode
 
 
 class TrainingDatasetMock:
@@ -49,8 +68,7 @@ class TestSVMsStatistics:
 
     @pytest.fixture(params=read_configs(SVMS_VALIDATION_CONFIGS_DIR))
     def get_args(self, request):
-        with open(request.param) as file:
-            val_config = ValidationConfig(**yaml.safe_load(file)).validation_mode
+        val_config = _load_validation_mode(Path(request.param))
 
         dataset = TrainingDatasetMock(
             mock_maps_results={
