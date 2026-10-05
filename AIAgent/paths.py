@@ -1,6 +1,7 @@
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+AI_AGENT_PATH = Path(__file__).resolve().parent
+REPO_ROOT = AI_AGENT_PATH.parent
 RESOURCES_PATH = REPO_ROOT / "resources"
 
 REPORT_PATH = Path("./report")
