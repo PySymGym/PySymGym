@@ -8,8 +8,7 @@ built with the shared ``fake_namespace``/``fake_proc`` fixtures and a
 import pytest
 import torch
 from common.classes import GameFailed, GameResult
-from common.game import GameMap, GameMap2SVM
-from common.validation_coverage.svm_info import SVMInfo
+from common.game import GameMap
 from ml.validation.coverage.game_managers.model import process_game_manager as pgm
 from ml.validation.coverage.game_managers.model.classes import ModelGameMapInfo
 from ml.validation.coverage.game_managers.model.process_game_manager import (
@@ -19,50 +18,23 @@ from ml.validation.coverage.game_managers.model.process_game_manager import (
 pytestmark = [pytest.mark.unit, pytest.mark.serial]
 
 
-def _game_map(
-    map_name: str = "MapName", steps_to_play: int = 10, steps_to_start: int = 0
-) -> GameMap:
-    return GameMap(
-        StepsToPlay=steps_to_play,
-        StepsToStart=steps_to_start,
-        AssemblyFullName="assembly",
-        NameOfObjectToCover="Method",
-        DefaultSearcher="BFS",
-        MapName=map_name,
-    )
-
-
-def _game_map2svm(**kwargs) -> GameMap2SVM:
-    return GameMap2SVM(
-        GameMap=_game_map(**kwargs),
-        SVMInfo=SVMInfo(
-            name="svm",
-            launch_command="run",
-            server_working_dir="/tmp",
-            min_port=1,
-            max_port=2,
-        ),
-    )
-
-
 def _manager(fake_namespace, tmp_path) -> ModelGameManager:
     return ModelGameManager(
         fake_namespace, torch.nn.Linear(1, 1), svms_output_path=tmp_path
     )
 
 
-def _write_result(tmp_path, game_map: GameMap, content: str, exists: bool = True):
+def _write_result(tmp_path, game_map: GameMap, content: str) -> None:
     output_dir = tmp_path / game_map.MapName
     output_dir.mkdir(exist_ok=True)
-    if exists:
-        (output_dir / f"{game_map.MapName}result").write_text(content)
+    (output_dir / f"{game_map.MapName}result").write_text(content)
 
 
 def test_get_result_parses_and_subtracts_steps_to_start(
-    fake_namespace, tmp_path, fake_proc
+    fake_namespace, game_map2svm_factory, tmp_path, fake_proc
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map2svm = _game_map2svm(steps_to_play=10, steps_to_start=3)
+    game_map2svm = game_map2svm_factory(steps_to_play=10, steps_to_start=3)
     _write_result(tmp_path, game_map2svm.GameMap, "80 5 7 2")
 
     result = manager._get_result(game_map2svm, fake_proc())
@@ -76,10 +48,10 @@ def test_get_result_parses_and_subtracts_steps_to_start(
 
 
 def test_get_result_returns_full_coverage_result(
-    fake_namespace, tmp_path, fake_proc
+    fake_namespace, game_map2svm_factory, tmp_path, fake_proc
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map2svm = _game_map2svm()
+    game_map2svm = game_map2svm_factory()
     _write_result(tmp_path, game_map2svm.GameMap, "100 5 3 0")
 
     result = manager._get_result(game_map2svm, fake_proc())
@@ -90,10 +62,10 @@ def test_get_result_returns_full_coverage_result(
 
 
 def test_get_result_immediate_gameover_returns_full_steps(
-    fake_namespace, tmp_path, fake_proc
+    fake_namespace, game_map2svm_factory, tmp_path, fake_proc
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map2svm = _game_map2svm(steps_to_play=10)
+    game_map2svm = game_map2svm_factory(steps_to_play=10)
     _write_result(tmp_path, game_map2svm.GameMap, "0 0 0 0")
 
     result = manager._get_result(game_map2svm, fake_proc())
@@ -107,10 +79,10 @@ def test_get_result_immediate_gameover_returns_full_steps(
 
 
 def test_get_result_malformed_file_returns_game_failed(
-    fake_namespace, tmp_path, fake_proc
+    fake_namespace, game_map2svm_factory, tmp_path, fake_proc
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map2svm = _game_map2svm()
+    game_map2svm = game_map2svm_factory()
     _write_result(tmp_path, game_map2svm.GameMap, "not numbers")
 
     result = manager._get_result(game_map2svm, fake_proc(poll_result=0))
@@ -120,10 +92,10 @@ def test_get_result_malformed_file_returns_game_failed(
 
 
 def test_get_result_missing_file_after_exit_returns_game_failed(
-    fake_namespace, tmp_path, fake_proc
+    fake_namespace, game_map2svm_factory, tmp_path, fake_proc
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map2svm = _game_map2svm()
+    game_map2svm = game_map2svm_factory()
 
     result = manager._get_result(game_map2svm, fake_proc(poll_result=0))
 
@@ -132,10 +104,14 @@ def test_get_result_missing_file_after_exit_returns_game_failed(
 
 
 def test_get_result_retries_while_process_runs(
-    fake_namespace, tmp_path, fake_proc, monkeypatch: pytest.MonkeyPatch
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map2svm = _game_map2svm()
+    game_map2svm = game_map2svm_factory()
     sleeps: list[float] = []
 
     def write_on_sleep(seconds: float) -> None:
@@ -169,17 +145,19 @@ def test_get_and_log_proc_output_without_process(fake_namespace, tmp_path) -> No
     assert logged == ["There is no proc?! Can't log proc output."]
 
 
-def test_get_game_steps_unknown_map_returns_none(fake_namespace, tmp_path) -> None:
+def test_get_game_steps_unknown_map_returns_none(
+    fake_namespace, game_map_factory, tmp_path
+) -> None:
     manager = _manager(fake_namespace, tmp_path)
 
-    assert manager.get_game_steps(_game_map("Unknown")) is None
+    assert manager.get_game_steps(game_map_factory("Unknown")) is None
 
 
 def test_get_game_steps_converts_and_caches(
-    fake_namespace, tmp_path, monkeypatch: pytest.MonkeyPatch
+    fake_namespace, game_map_factory, tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map = _game_map("M")
+    game_map = game_map_factory("M")
     manager._games_info["M"] = ModelGameMapInfo(
         total_game_state=None, total_steps=[], proc=None, game_result=None
     )
@@ -191,10 +169,10 @@ def test_get_game_steps_converts_and_caches(
 
 
 def test_get_game_steps_returns_none_when_conversion_fails(
-    fake_namespace, tmp_path, monkeypatch: pytest.MonkeyPatch
+    fake_namespace, game_map_factory, tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map = _game_map("M")
+    game_map = game_map_factory("M")
     manager._games_info["M"] = ModelGameMapInfo(
         total_game_state=None, total_steps=[], proc=None, game_result=None
     )
@@ -207,11 +185,24 @@ def test_get_game_steps_returns_none_when_conversion_fails(
     assert manager.get_game_steps(game_map) is None
 
 
-def test_delete_game_artifacts_removes_dir_and_info(
-    fake_namespace, tmp_path, monkeypatch: pytest.MonkeyPatch
+def test_kill_game_process_kills_and_logs_output(
+    fake_namespace, tmp_path, fake_proc
 ) -> None:
     manager = _manager(fake_namespace, tmp_path)
-    game_map = _game_map("M")
+    proc = fake_proc(output=("out text", "err text"))
+    logged: list[str] = []
+
+    manager._kill_game_process(proc, logged.append)
+
+    assert proc.killed is True
+    assert logged == ["out:\nout text\nerr:\nerr text"]
+
+
+def test_delete_game_artifacts_removes_dir_and_info(
+    fake_namespace, game_map_factory, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map = game_map_factory("M")
     manager._games_info["M"] = ModelGameMapInfo(
         total_game_state=None, total_steps=[], proc=None, game_result=None
     )

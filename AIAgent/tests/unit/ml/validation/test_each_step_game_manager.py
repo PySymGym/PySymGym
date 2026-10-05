@@ -11,8 +11,7 @@ from contextlib import contextmanager
 import pytest
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
-from common.game import GameMap, GameMap2SVM, GameState
-from common.validation_coverage.svm_info import SVMInfo
+from common.game import GameMap, GameState
 from config import FeatureConfig
 from connection.game_server_conn.connector import Connector
 from ml.protocols import Predictor
@@ -104,30 +103,6 @@ def _patch_connector(monkeypatch: pytest.MonkeyPatch, fake: FakeConnector) -> No
     monkeypatch.setattr(esgm, "Connector", FakeConnectorFactory(fake))
 
 
-def _game_map(steps_to_play: int = 1, steps_to_start: int = 0) -> GameMap:
-    return GameMap(
-        StepsToPlay=steps_to_play,
-        StepsToStart=steps_to_start,
-        AssemblyFullName="assembly",
-        NameOfObjectToCover="Method",
-        DefaultSearcher="BFS",
-        MapName="Method_0",
-    )
-
-
-def _game_map2svm(**kwargs) -> GameMap2SVM:
-    return GameMap2SVM(
-        GameMap=_game_map(**kwargs),
-        SVMInfo=SVMInfo(
-            name="svm",
-            launch_command="run",
-            server_working_dir="/tmp",
-            min_port=1,
-            max_port=2,
-        ),
-    )
-
-
 def _manager(fake_namespace, predictor: FakePredictor) -> EachStepGameManager:
     return EachStepGameManager(predictor, fake_namespace)
 
@@ -142,9 +117,12 @@ def _gameover(coverage: int, tests: int, steps: int, errors: int) -> Connector.G
 
 
 def test_play_game_map_with_svm_returns_result_and_steps(
-    fake_namespace, gamestate_factory, monkeypatch: pytest.MonkeyPatch
+    fake_namespace,
+    game_map2svm_factory,
+    gamestate_factory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    game_map2svm = _game_map2svm(steps_to_play=2)
+    game_map2svm = game_map2svm_factory(steps_to_play=2)
     first = gamestate_factory()
     second = gamestate_factory()
     # update_game_state concatenates path-condition vertices, so the delta
@@ -180,9 +158,9 @@ def test_play_game_map_with_svm_returns_result_and_steps(
 
 
 def test_play_game_map_with_svm_immediate_gameover(
-    fake_namespace, monkeypatch: pytest.MonkeyPatch
+    fake_namespace, game_map2svm_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    game_map2svm = _game_map2svm(steps_to_play=5)
+    game_map2svm = game_map2svm_factory(steps_to_play=5)
     fake = FakeConnector(
         game_map2svm.GameMap,
         states=[],
@@ -203,9 +181,12 @@ def test_play_game_map_with_svm_immediate_gameover(
 
 
 def test_play_game_map_returns_map_result(
-    fake_namespace, gamestate_factory, monkeypatch: pytest.MonkeyPatch
+    fake_namespace,
+    game_map2svm_factory,
+    gamestate_factory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    game_map2svm = _game_map2svm(steps_to_play=1)
+    game_map2svm = game_map2svm_factory(steps_to_play=1)
     fake = FakeConnector(
         game_map2svm.GameMap,
         states=[gamestate_factory()],
@@ -231,9 +212,9 @@ def test_play_game_map_returns_map_result(
 
 
 def test_play_game_map_saves_model_on_failure(
-    fake_namespace, monkeypatch: pytest.MonkeyPatch
+    fake_namespace, game_map2svm_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    game_map2svm = _game_map2svm(steps_to_play=1)
+    game_map2svm = game_map2svm_factory(steps_to_play=1)
     fake = FakeConnector(
         game_map2svm.GameMap,
         states=[],
