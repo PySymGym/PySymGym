@@ -1,6 +1,6 @@
 ---
 name: quality-gates
-description: Use before integrating a task. Defines the hard gate that must pass (tests + style + docs build) and how to interpret its result. References the CI workflows for the exact commands.
+description: Use before integrating a task. Defines the hard gate that must pass (tests + style + coverage + docs build) and how to interpret its result. References the CI workflows for the exact commands.
 ---
 
 # Quality Gates
@@ -31,9 +31,10 @@ only defines the gate semantics. There is no type-check step.
 
 ## Procedure
 
-1. Run the tests (`poetry run pytest tests -sv`) from every component the
-   change touches (`AIAgent/`, `tools/compstrat/`, `tools/runstrat/`). 0
-   failures, 0 skipped.
+1. Run the tests and the coverage ratchet over the gated (`not e2e`) tier from
+   the repository root, as `.github/workflows/python_tests.yaml` does (see the
+   `run-tests` skill). 0 failures, 0 skipped, and the coverage total at or
+   above `[tool.coverage.report] fail_under`.
 2. Run `ruff check` and `ruff format --check` (see
    `.github/workflows/python_linting.yaml`). No errors.
 3. Build the docs (see `.github/workflows/docs.yaml`). It must exit 0
