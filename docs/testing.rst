@@ -44,6 +44,16 @@ Commands
     poetry run pytest -m integration
     poetry run pytest -m e2e
 
+The same tiers are wrapped in a root ``Makefile`` so nobody has to memorize the
+invocations:
+
+.. code-block:: console
+
+    make test-unit           # fast unit tier (same as `poetry run pytest`)
+    make test-integration    # -m integration
+    make test-all            # everything (e2e needs the built toolchain)
+    make test-cov            # unit tier with a coverage report
+
 The configuration lives in ``[tool.pytest.ini_options]`` in the root
 ``pyproject.toml``.
 
