@@ -7,8 +7,9 @@ from ml.dataset import TrainingDataset
 from ml.inference import TORCH, infer
 from ml.models.NorthernPenguin.model import StateModelEncoder
 
+pytestmark = pytest.mark.unit
 
-@pytest.mark.unit
+
 def test_hetero_factory_builds_every_node_and_edge_type(hetero_factory):
     data = hetero_factory()
 
@@ -27,14 +28,12 @@ def test_hetero_factory_builds_every_node_and_edge_type(hetero_factory):
         assert data[*edge_type].edge_index.shape[0] == 2
 
 
-@pytest.mark.unit
 def test_legacy_game_feature_width_override(hetero_factory):
     data = hetero_factory(game_features=5)
 
     assert data[TORCH.game_vertex].x.shape == (3, 5)
 
 
-@pytest.mark.unit
 def test_hetero_factory_drives_a_model_forward(hetero_factory):
     data = hetero_factory()
     model = StateModelEncoder(
@@ -52,7 +51,6 @@ def test_hetero_factory_drives_a_model_forward(hetero_factory):
     assert torch.isfinite(output).all()
 
 
-@pytest.mark.unit
 def test_tmp_dataset_is_an_empty_training_dataset(tmp_dataset):
     assert isinstance(tmp_dataset, TrainingDataset)
     assert len(tmp_dataset) == 0

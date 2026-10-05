@@ -9,7 +9,7 @@ from ml.pc_remover import remove_path_condition_root
 pytestmark = pytest.mark.integration
 
 HETERODATA_DIR = (
-    Path(__file__).resolve().parent / "resources" / "heterodata_for_pc_remover"
+    Path(__file__).resolve().parent.parent / "resources" / "heterodata_for_pc_remover"
 )
 
 
