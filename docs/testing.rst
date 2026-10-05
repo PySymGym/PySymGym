@@ -148,6 +148,10 @@ Writing a test
 - Depend on the fixtures from your component's ``conftest.py`` and build project
   objects through the production code paths so they cannot drift from the real
   schema.
+- For graph/dataset transforms, build the input through
+  ``ml.dataset.convert_input_to_tensor`` (via ``gamestate_factory`` /
+  ``hetero_factory``) and assert exact tensor contents; the ``tmp_dataset``
+  fixture yields an empty ``TrainingDataset`` for the filtering helpers.
 - Never open sockets in a unit test: drive the pure parsing helpers directly
   and patch process-global switches such as ``FeatureConfig.DISABLE_MESSAGE_CHECKS``
   with ``monkeypatch``.
