@@ -8,7 +8,7 @@ from src.config_extractor import read_configs
 pytestmark = pytest.mark.integration
 
 MOCK_COMPARE_CONFS_DIR = (
-    Path(__file__).resolve().parent / "resources" / "mock_compare_confs"
+    Path(__file__).resolve().parent.parent / "resources" / "mock_compare_confs"
 )
 
 
