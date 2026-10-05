@@ -30,4 +30,5 @@ Documentation map
    results
    setup
    developer
+   testing
    reference/index
