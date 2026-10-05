@@ -59,13 +59,15 @@ move_init_data:
 	mkdir -p report; \
 	mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100/SerializedEpisodes/ report/
 
+# Test system (see docs/testing.rst)
+
 POETRY ?= poetry
 PYTEST ?= $(POETRY) run pytest
 COV_ARGS = --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=xml
 
 .PHONY: test-unit test-integration test-all test-cov
 
-# Fast unit tier (the default): no network, GPU, .NET or binary fixtures.
+# Fast unit tier: no network, GPU, .NET or binary fixtures.
 test-unit:
 	$(PYTEST)
 
