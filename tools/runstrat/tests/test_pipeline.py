@@ -1,26 +1,28 @@
 from pathlib import Path
-import os
 
-from runstrat import Args, entrypoint, RunMode, DOTNET_VERSION
+import pytest
+
+from runstrat import Args, entrypoint, RunMode
 from src.psstrategy import ExecutionTreeContributedCoverageStrategy
 
-ARTIFACTS_DIR = "artifacts"
-os.makedirs(ARTIFACTS_DIR, exist_ok=True)
-PATH_TO_TEST_MAPS = Path(
-    f"./resources/ForTests/bin/Release/net{DOTNET_VERSION}"
-).resolve()
-PATH_TO_TEST_MAPS_DESCRIPTION = Path("./resources/for_tests.csv").resolve()
+pytestmark = pytest.mark.e2e
+
+PYSYMGYM_ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_pipeline_with_mock_data():
+def test_pipeline_with_mock_data(
+    artifacts_dir: Path,
+    for_tests_maps_dir: Path,
+    for_tests_maps_description: Path,
+):
     args = Args(
         strategy=ExecutionTreeContributedCoverageStrategy(
             name="ExecutionTreeContributedCoverage"
         ),
         timeout=100,
-        pysymgym_path=Path("../..").resolve(),
-        savedir=ARTIFACTS_DIR,
-        assembly_infos=[(PATH_TO_TEST_MAPS, PATH_TO_TEST_MAPS_DESCRIPTION)],
+        pysymgym_path=PYSYMGYM_ROOT,
+        savedir=artifacts_dir,
+        assembly_infos=[(for_tests_maps_dir, for_tests_maps_description)],
         run_mode=RunMode.DEBUG,
     )
     entrypoint(args)
