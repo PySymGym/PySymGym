@@ -39,7 +39,9 @@ def test_integration_tests_run_from_a_foreign_cwd(tmp_path: Path) -> None:
     """The coarse integration tier locates its resources from any CWD."""
     targets = [
         ROOT / "AIAgent" / "tests" / "integration" / "test_onnx.py",
+        ROOT / "AIAgent" / "tests" / "integration" / "test_pc_remover.py",
         ROOT / "AIAgent" / "tests" / "integration" / "test_statistics.py",
+        ROOT / "AIAgent" / "tests" / "integration" / "test_docs_reference.py",
     ]
     result = subprocess.run(
         [

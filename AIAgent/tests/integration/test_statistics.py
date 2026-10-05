@@ -18,13 +18,7 @@ from ml.validation.statistics import (
 from paths import AI_AGENT_PATH
 from run_training import get_maps
 
-from tests_utils import read_configs
-
 pytestmark = pytest.mark.integration
-
-SVMS_VALIDATION_CONFIGS_DIR = (
-    Path(__file__).resolve().parent.parent / "resources" / "svms_validation_configs"
-)
 
 
 def _load_validation_mode(config_path: Path):
@@ -66,7 +60,7 @@ class TestSVMsStatistics:
         self.test_csv_file_path = tmp_path / "test_statistics.csv"
         monkeypatch.setattr(paths, "CURRENT_TABLE_PATH", self.test_csv_file_path)
 
-    @pytest.fixture(params=read_configs(SVMS_VALIDATION_CONFIGS_DIR))
+    @pytest.fixture
     def get_args(self, request):
         val_config = _load_validation_mode(Path(request.param))
 

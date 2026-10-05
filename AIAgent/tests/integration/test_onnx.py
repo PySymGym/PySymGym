@@ -1,7 +1,7 @@
 import json
 import typing as t
-from pathlib import Path
 
+import paths
 import pytest
 import torch
 import yaml
@@ -10,19 +10,13 @@ from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
 from onyx import entrypoint
-from tests_utils import read_configs
 
 pytestmark = pytest.mark.integration
 
-TESTS_DIR = Path(__file__).resolve().parent.parent
-MODEL_CONFIGS_DIR = TESTS_DIR / "resources" / "model_configurations"
-REFERENCE_GAMESTATES_DIR = (
-    TESTS_DIR.parents[1] / "resources" / "onnx" / "reference_gamestates"
-)
+REFERENCE_GAMESTATES_DIR = paths.RESOURCES_PATH / "onnx" / "reference_gamestates"
 
 
 class TestONNXConversion:
-    @pytest.mark.parametrize("config", read_configs(MODEL_CONFIGS_DIR))
     def test_onnx_conversion_successful_on_real_randomized_model(
         self, tmp_path, game_states_fixture, config
     ):
