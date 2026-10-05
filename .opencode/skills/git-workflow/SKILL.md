@@ -60,8 +60,10 @@ git log "$INTEGRATION"..HEAD --format=%B | grep -cE '^(Fixes|Closes) #[0-9]+$'
 must print `0` before the last subtask's commit and, afterwards, exactly one
 line per fully resolved issue including the task's own (no more). A task that
 only partially addresses a linked issue uses a bare `#N` reference (no
-keyword). The model and closing timing live in the "Contribution guidelines"
-section of `docs/developer.rst`.
+keyword). The last task of a batch also carries `Closes #<hub>` once every
+sub-issue of the hub is fully resolved, so the hub closes when that commit
+reaches `main`. The model and closing timing live in the "Contribution
+guidelines" section of `docs/developer.rst`.
 
 ### Pre-commit checklist
 
