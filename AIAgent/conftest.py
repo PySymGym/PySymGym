@@ -7,7 +7,9 @@ instead of hand-rolled copies, so they cannot drift from the real schema.
 """
 
 import random
+import threading
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -229,3 +231,60 @@ class FakeWebSocket:
 def fake_websocket() -> FakeWebSocket:
     """Return a fresh :class:`FakeWebSocket` recording frames, no real socket."""
     return FakeWebSocket()
+
+
+class FakeNamespace:
+    """The multiprocessing namespace attributes the game managers read."""
+
+    def __init__(self) -> None:
+        self.shared_lock = threading.Lock()
+        self.is_prepared = SimpleNamespace(value=False)
+
+
+class FakeProcess:
+    """A ``subprocess.Popen`` stand-in recording kill/communicate calls.
+
+    ``poll_result`` is what :meth:`poll` returns; ``None`` means the process is
+    still running. Replaces a real game-server process in unit tests.
+    """
+
+    def __init__(
+        self,
+        poll_result: int | None = None,
+        output: tuple[str, str] = ("stdout", "stderr"),
+        pid: int = 4242,
+    ) -> None:
+        self.pid = pid
+        self._poll_result = poll_result
+        self._output = output
+        self.killed = False
+        self.waited = False
+
+    def poll(self) -> int | None:
+        return self._poll_result
+
+    def wait(self) -> int:
+        self.waited = True
+        return 0
+
+    def communicate(self) -> tuple[str, str]:
+        return self._output
+
+    def kill(self) -> None:
+        self.killed = True
+
+
+@pytest.fixture
+def fake_namespace() -> FakeNamespace:
+    """Return a fresh :class:`FakeNamespace` for the game-manager tests."""
+    return FakeNamespace()
+
+
+@pytest.fixture
+def fake_proc():
+    """Return a factory for :class:`FakeProcess` instances."""
+
+    def make(**kwargs) -> FakeProcess:
+        return FakeProcess(**kwargs)
+
+    return make
