@@ -123,10 +123,9 @@ tool directory on ``sys.path``, so ``clean``, ``generate_episodes`` and
 
 ``AIAgent/tests/unit/ml/`` is the unit root for the ML layer (dataset
 transforms, training and experiment helpers, model-forward smoke tests). It
-reuses the
-``AIAgent/conftest.py`` fixtures and builds every graph input through
-``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
-production tensor schema.
+reuses the ``AIAgent/conftest.py`` fixtures and builds every graph input
+through ``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from
+the production tensor schema.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
