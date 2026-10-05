@@ -247,7 +247,22 @@ Testability rules
 Coverage
 --------
 
-``pytest-cov`` is installed and ``make test-cov`` produces a terminal and XML
-report. There is no threshold yet: Phase 5 (#563) measures the baseline and
-turns it into a ratchet (``--cov-fail-under`` raised per pull request) so
-coverage never regresses without a deliberate decision.
+Coverage is measured over the production packages (``--cov=AIAgent
+--cov=tools``) with ``pytest-cov``. The ``tests/`` trees, ``conftest.py`` files
+and the test helpers are excluded from the measurement, as are ``__main__``
+guards, so the number reflects the code under test rather than the tests
+themselves.
+
+The gated tier is unit + integration:
+
+.. code-block:: console
+
+    poetry run pytest -m "not e2e" --cov=AIAgent --cov=tools --cov-report=term-missing
+    make test-cov     # same tier, plus XML and JSON reports
+
+The threshold is a ratchet: ``[tool.coverage.report] fail_under`` in
+``pyproject.toml`` is set to the measured baseline, floored to a whole percent.
+A pull request that drops coverage below it fails CI
+(``.github/workflows/python_tests.yaml``). Raise the value in the same pull
+request that improves coverage; never lower it without a deliberate decision
+recorded in the pull request.
