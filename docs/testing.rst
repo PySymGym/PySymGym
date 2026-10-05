@@ -121,6 +121,12 @@ well. They need no conftest of their own: the root ``conftest.py`` puts every
 tool directory on ``sys.path``, so ``clean``, ``generate_episodes`` and
 ``parse_pretty`` import as top-level modules.
 
+``AIAgent/tests/unit/ml/`` is the unit root for the ML layer (dataset
+transforms, training helpers, model-forward smoke tests). It reuses the
+``AIAgent/conftest.py`` fixtures and builds every graph input through
+``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
+production tensor schema.
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer
