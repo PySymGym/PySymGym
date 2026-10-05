@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import tqdm
 from torch_geometric.loader import DataLoader
 
-from config import GeneralConfig
+from config import get_device
 from ml.inference import infer
 
 BALANCE_DATASET = False
@@ -53,14 +53,14 @@ class HetGNNTestTrain:
         test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
         model = self.model_class(hidden_channels=self.hidden, out_channels=8).to(
-            GeneralConfig.DEVICE
+            get_device()
         )
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
         for epoch in range(1, epochs + 1):
-            self.train(model, train_loader, optimizer, GeneralConfig.DEVICE)
-            train_acc = self.tst(model, train_loader, GeneralConfig.DEVICE)
-            test_acc = self.tst(model, test_loader, GeneralConfig.DEVICE)
+            self.train(model, train_loader, optimizer, get_device())
+            train_acc = self.tst(model, train_loader, get_device())
+            test_acc = self.tst(model, test_loader, get_device())
             print(
                 f"Epoch: {epoch:03d}, Train Loss: {train_acc:.6f}, Test Loss: {test_acc:.6f}"
             )

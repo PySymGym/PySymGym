@@ -148,6 +148,10 @@ Testability rules
   guard). This keeps imports safe for tests, tooling and documentation builds;
   ``AIAgent/tests/unit/test_import_side_effects.py`` enforces it for the
   runnable AIAgent scripts.
+- **Device selection is lazy.** The torch device comes from
+  ``config.get_device()`` at call time, never from a module-level constant, so
+  importing AIAgent code never probes CUDA and tests can force CPU by patching
+  ``torch.cuda.is_available``.
 
 Coverage
 --------
