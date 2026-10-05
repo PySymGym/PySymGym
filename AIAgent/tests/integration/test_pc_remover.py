@@ -1,5 +1,4 @@
 import numpy as np
-from pathlib import Path
 
 import pytest
 import torch
@@ -8,23 +7,20 @@ from ml.pc_remover import remove_path_condition_root
 
 pytestmark = pytest.mark.integration
 
-HETERODATA_DIR = (
-    Path(__file__).resolve().parent.parent / "resources" / "heterodata_for_pc_remover"
-)
-
 
 @pytest.fixture
-def test_data():
+def test_data(resources_dir):
+    heterodata_dir = resources_dir / "heterodata_for_pc_remover"
     return [
         (
             remove_path_condition_root(
                 torch.load(
-                    HETERODATA_DIR / f"heterodata_with_root{i}.pt",
+                    heterodata_dir / f"heterodata_with_root{i}.pt",
                     weights_only=False,
                 )
             ),
             torch.load(
-                HETERODATA_DIR / f"heterodata_expected{i}.pt",
+                heterodata_dir / f"heterodata_expected{i}.pt",
                 weights_only=False,
             ),
         )
