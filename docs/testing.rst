@@ -102,7 +102,8 @@ explicitly per component (``-m "not e2e"`` for the AIAgent and compstrat jobs,
 ``integration`` and ``e2e``. A module may declare its tier once at module level
 (``pytestmark = pytest.mark.unit``) or per function; every ``test_*`` function
 must resolve to exactly one tier, which ``tests/test_pytest_infra.py`` enforces
-statically.
+statically together with the tier directory (``unit/``, ``integration/`` or
+``e2e/``) it lives in.
 
 Fixtures
 --------

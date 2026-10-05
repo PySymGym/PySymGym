@@ -124,7 +124,7 @@ def _test_modules() -> list[Path]:
 
 
 def test_every_test_has_exactly_one_tier_marker() -> None:
-    """Every test resolves to exactly one tier, from its decorators or module."""
+    """Every test resolves to exactly one tier, matching its tier directory."""
     problems: list[str] = []
     for path in _test_modules():
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -133,6 +133,7 @@ def test_every_test_has_exactly_one_tier_marker() -> None:
         if not functions:
             problems.append(f"{path}: no test functions")
             continue
+        expected_dir = path.parent.name if path.parent.name in TIERS else None
         for func in functions:
             decorator_tiers = {
                 tier
@@ -143,4 +144,9 @@ def test_every_test_has_exactly_one_tier_marker() -> None:
             if len(tiers) != 1:
                 label = sorted(tiers) if tiers else "no"
                 problems.append(f"{path}:{func.lineno} {func.name} has {label} tier")
+            elif expected_dir is not None and next(iter(tiers)) != expected_dir:
+                problems.append(
+                    f"{path}:{func.lineno} {func.name} is marked "
+                    f"{next(iter(tiers))} but lives in {expected_dir}/"
+                )
     assert not problems, "misclassified tests:\n" + "\n".join(problems)
