@@ -2,14 +2,13 @@ import copy
 import json
 import typing as t
 import warnings
-from pathlib import Path
 from types import SimpleNamespace
 
+import paths
 import pytest
 import torch
 import yaml
 from common.game import GameState
-from device import select_device
 from ml.dataset import convert_input_to_tensor
 from ml.inference import TORCH
 from ml.models.NorthernPenguin.model import (
@@ -17,19 +16,13 @@ from ml.models.NorthernPenguin.model import (
 )
 from ml.validation.coverage.game_managers.model import process_game_manager
 from onyx import create_torch_input, entrypoint, save_in_onnx
-from tests_utils import read_configs
 
 pytestmark = pytest.mark.integration
 
-TESTS_DIR = Path(__file__).resolve().parent.parent
-MODEL_CONFIGS_DIR = TESTS_DIR / "resources" / "model_configurations"
-REFERENCE_GAMESTATES_DIR = (
-    TESTS_DIR.parents[1] / "resources" / "onnx" / "reference_gamestates"
-)
+REFERENCE_GAMESTATES_DIR = paths.RESOURCES_PATH / "onnx" / "reference_gamestates"
 
 
 class TestONNXConversion:
-    @pytest.mark.parametrize("config", read_configs(MODEL_CONFIGS_DIR))
     def test_onnx_conversion_successful_on_real_randomized_model(
         self, tmp_path, game_states_fixture, config
     ):
@@ -61,10 +54,10 @@ class TestONNXConversion:
 
 
 class TestONNXExportWarnings:
-    def test_export_emits_no_warnings(self, tmp_path):
+    def test_export_emits_no_warnings(self, tmp_path, config):
         """save_in_onnx must not emit warnings from torch.onnx, PyG conv, or
         this repo (regression guard for #617)."""
-        with open(read_configs(MODEL_CONFIGS_DIR)[0]) as file:
+        with open(config) as file:
             model_kwargs = yaml.safe_load(file)
 
         first = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
@@ -98,12 +91,9 @@ class TestForwardOnCUDA:
     without an explicit device it lands on CPU and torch.where raises
     "Expected all tensors to be on the same device" for CUDA inputs."""
 
-    @pytest.mark.skipif(
-        select_device().type != "cuda",
-        reason="requires a CUDA device the installed torch build can run on",
-    )
-    def test_forward_matches_cpu_with_and_without_v_v_edges(self):
-        with open(read_configs(MODEL_CONFIGS_DIR)[0]) as file:
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
+    def test_forward_matches_cpu_with_and_without_v_v_edges(self, config):
+        with open(config) as file:
             model_kwargs = yaml.safe_load(file)
 
         first = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
@@ -130,8 +120,10 @@ class TestForwardOnCUDA:
 
 
 class TestModelGamePreparatorKwargs:
-    def test_create_onnx_model_uses_explicit_kwargs(self, tmp_path, monkeypatch):
-        with open(read_configs(MODEL_CONFIGS_DIR)[0]) as file:
+    def test_create_onnx_model_uses_explicit_kwargs(
+        self, tmp_path, monkeypatch, config
+    ):
+        with open(config) as file:
             model_kwargs = yaml.safe_load(file)
 
         captured = {}
