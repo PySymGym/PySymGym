@@ -129,6 +129,12 @@ and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
 ``tools/runstrat/conftest.py``
     Temporary artifacts directory and the built ``ForTests`` map paths.
 
+``AIAgent/tests/integration/conftest.py``
+    ``resources_dir`` exposes the absolute ``integration/resources/`` directory,
+    and its ``pytest_generate_tests`` hook parametrizes the config-driven tests
+    (the ONNX model configs and the SVMs validation configs) from that
+    directory, so no test computes a resource path itself.
+
 ``tools/dataset_tools`` and ``tools/util`` now have ``tests/unit/`` roots as
 well. They need no conftest of their own: the root ``conftest.py`` puts every
 tool directory on ``sys.path``, so ``clean``, ``generate_episodes`` and
@@ -155,6 +161,13 @@ Adding a fixture
     relative to ``__file__`` (never the current working directory), and prefer
     building real project objects through production code over hand-rolled
     copies.
+
+Integration fixtures live under ``<component>/tests/integration/resources/`` and
+reach the tests only through the component conftest (an absolute path resolved
+from ``conftest.py``), never through a path relative to the current working
+directory. Production inputs a test also consumes — such as the ONNX reference
+gamestates under ``resources/onnx/`` — are read through ``AIAgent/paths.py``
+instead of being copied into the test tree.
 
 Fakes and sockets
 -----------------
