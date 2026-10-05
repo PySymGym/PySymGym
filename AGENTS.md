@@ -25,6 +25,7 @@ repository.
   code: design decisions, non-trivial constraints. Skills stay thin pointers
   to docs, code, or CI — they never re-describe them.
 * Tools, not instructions. If you can do something with existing tool --- do it. No thinking, no long instructions, no manual analysis. You want to analyze code coverage? Just run coverage tool and analyze report. No workaround for regular tasks. If there is a tool for regular task it must be installed and configured appropriately.
+* Never stay silent about problems. Any problem discovered or detected must be addressed. If it is in current scope or the fix is easy (e.g. a misprint), fix it — even if pre-existing. If it is significantly out of scope, report it to the user and propose creating an issue.
 * Always learn, never forget — encode patterns before session ends
 
 ## Skills
