@@ -46,3 +46,32 @@ Commands
 
 The configuration lives in ``[tool.pytest.ini_options]`` in the root
 ``pyproject.toml``.
+
+Fixtures
+--------
+
+Shared fixtures live in a ``conftest.py`` next to the component they serve: the
+``AIAgent/conftest.py`` fixtures are visible to every test under ``AIAgent/``,
+and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
+
+``AIAgent/conftest.py``
+    ``cpu_device`` (autouse) forces ``GeneralConfig.DEVICE`` to CPU,
+    ``seeded_rng`` (autouse) seeds ``random``/``numpy``/``torch``,
+    ``gamestate_factory`` builds a synthetic ``GameState``,
+    ``hetero_factory`` converts it through the production
+    ``convert_input_to_tensor`` (with feature-width overrides for legacy
+    models), and ``tmp_dataset`` yields an empty ``TrainingDataset`` in a
+    temporary directory.
+
+``tools/compstrat/conftest.py``
+    Resource-directory and mock-run DataFrame fixtures.
+
+``tools/runstrat/conftest.py``
+    Temporary artifacts directory and the built ``ForTests`` map paths.
+
+Adding a fixture
+    Put it in the ``conftest.py`` of the component it serves, resolve resources
+    relative to ``__file__`` (never the current working directory), and prefer
+    building real project objects through production code over hand-rolled
+    copies.
+
