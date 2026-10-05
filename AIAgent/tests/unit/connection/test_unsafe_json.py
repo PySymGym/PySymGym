@@ -29,7 +29,7 @@ def test_asdict_inverts_obj_from_dict() -> None:
 
 
 def test_asdict_delegates_to_to_json_for_serializable_dataclasses() -> None:
-    assert asdict(_Serializable(value=3)) == _Serializable(value=3).to_json()
+    assert asdict(_Serializable(value=3)) == '{"value": 3}'
 
 
 @pytest.mark.parametrize("value", [1, 1.5, "text"])
