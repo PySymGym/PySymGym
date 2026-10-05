@@ -107,8 +107,9 @@ and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
     ``gamestate_factory`` builds a synthetic ``GameState``,
     ``hetero_factory`` converts it through the production
     ``convert_input_to_tensor`` (with feature-width overrides for legacy
-    models), and ``tmp_dataset`` yields an empty ``TrainingDataset`` in a
-    temporary directory.
+    models), ``tmp_dataset`` yields an empty ``TrainingDataset`` in a
+    temporary directory, and ``fake_websocket`` returns a recording,
+    no-socket websocket for the connection tests.
 
 ``tools/compstrat/conftest.py``
     Resource-directory and mock-run DataFrame fixtures.
@@ -140,6 +141,23 @@ Adding a fixture
     relative to ``__file__`` (never the current working directory), and prefer
     building real project objects through production code over hand-rolled
     copies.
+
+Fakes and sockets
+-----------------
+
+Orchestration seams are tested with fakes, never real I/O:
+
+- **Sockets.** Replace ``socket.socket``, ``httplib2.Http``, ``psutil`` and
+  ``websocket.WebSocket`` with recording fakes and drive the real client code.
+  The ``fake_websocket`` fixture records outgoing frames in ``sent`` and
+  replays queued ``incoming`` frames on ``recv`` (a queued exception is raised
+  instead of returned), so ``Connector``'s start/step/reward loop can be
+  asserted without a server. ``game_server_socket_manager`` must call
+  ``return_instance`` on **both** the success and failure paths — assert it
+  explicitly rather than trusting the ``finally``.
+- **Cleanup invariants.** When a function acquires a resource (a socket, an
+  instance, a process), test the success path and an exception in the body, and
+  assert the release call in each.
 
 Writing a test
 --------------
