@@ -16,8 +16,6 @@ from common.config.validation_config import (
     SVMValidationSendEachStep,
     SVMValidationSendModel,
 )
-from common.game import GameMap, GameMap2SVM
-from common.validation_coverage.svm_info import SVMInfo
 from ml.dataset import Result
 from ml.validation.coverage import validate_coverage as vc
 from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
@@ -84,45 +82,25 @@ class FakeSyncManager:
         return SimpleNamespace(value=value)
 
 
-def _game_map(map_name: str = "Method_0") -> GameMap:
-    return GameMap(
-        StepsToPlay=10,
-        StepsToStart=0,
-        AssemblyFullName="assembly",
-        NameOfObjectToCover="Method",
-        DefaultSearcher="BFS",
-        MapName=map_name,
-    )
-
-
-def _game_map2svm(map_name: str = "Method_0") -> GameMap2SVM:
-    return GameMap2SVM(
-        GameMap=_game_map(map_name),
-        SVMInfo=SVMInfo(
-            name="svm",
-            launch_command="run",
-            server_working_dir="/tmp",
-            min_port=1,
-            max_port=2,
-        ),
-    )
-
-
 def _coverage(manager: FakeGameManager, dataset) -> ValidationCoverage:
     coverage = ValidationCoverage(torch.nn.Linear(1, 1), dataset)
     coverage._game_manager = manager
     return coverage
 
 
-def test_evaluate_game_map_requires_an_initialized_manager() -> None:
+def test_evaluate_game_map_requires_an_initialized_manager(
+    game_map2svm_factory,
+) -> None:
     coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
 
     with pytest.raises(RuntimeError, match="not been initialized"):
-        coverage._evaluate_game_map(_game_map2svm())
+        coverage._evaluate_game_map(game_map2svm_factory())
 
 
-def test_evaluate_game_map_updates_dataset_when_required() -> None:
-    game_map2svm = _game_map2svm()
+def test_evaluate_game_map_updates_dataset_when_required(
+    game_map2svm_factory,
+) -> None:
+    game_map2svm = game_map2svm_factory()
     result = Map2Result(
         game_map2svm,
         GameResult(
@@ -143,8 +121,10 @@ def test_evaluate_game_map_updates_dataset_when_required() -> None:
     assert manager.deleted == [game_map2svm.GameMap]
 
 
-def test_evaluate_game_map_skips_update_when_not_required() -> None:
-    game_map2svm = _game_map2svm()
+def test_evaluate_game_map_skips_update_when_not_required(
+    game_map2svm_factory,
+) -> None:
+    game_map2svm = game_map2svm_factory()
     result = Map2Result(game_map2svm, GameResult(5, 2, 0, 90))
     manager = FakeGameManager(result, steps=["step"])
     dataset = FakeDataset(required=False)
@@ -157,8 +137,10 @@ def test_evaluate_game_map_skips_update_when_not_required() -> None:
     assert manager.deleted == [game_map2svm.GameMap]
 
 
-def test_evaluate_game_map_skips_update_when_steps_missing() -> None:
-    game_map2svm = _game_map2svm()
+def test_evaluate_game_map_skips_update_when_steps_missing(
+    game_map2svm_factory,
+) -> None:
+    game_map2svm = game_map2svm_factory()
     result = Map2Result(game_map2svm, GameResult(5, 2, 0, 90))
     manager = FakeGameManager(result, steps=None)
     dataset = FakeDataset(required=True)
@@ -170,8 +152,10 @@ def test_evaluate_game_map_skips_update_when_steps_missing() -> None:
     assert manager.deleted == [game_map2svm.GameMap]
 
 
-def test_evaluate_game_map_without_dataset_just_deletes() -> None:
-    game_map2svm = _game_map2svm()
+def test_evaluate_game_map_without_dataset_just_deletes(
+    game_map2svm_factory,
+) -> None:
+    game_map2svm = game_map2svm_factory()
     result = Map2Result(game_map2svm, GameResult(5, 2, 0, 90))
     manager = FakeGameManager(result)
     coverage = _coverage(manager, None)
@@ -182,8 +166,10 @@ def test_evaluate_game_map_without_dataset_just_deletes() -> None:
     assert manager.deleted == [game_map2svm.GameMap]
 
 
-def test_evaluate_game_map_skips_dataset_for_game_failed() -> None:
-    game_map2svm = _game_map2svm()
+def test_evaluate_game_map_skips_dataset_for_game_failed(
+    game_map2svm_factory,
+) -> None:
+    game_map2svm = game_map2svm_factory()
     result = Map2Result(game_map2svm, GameFailed("no game"))
     manager = FakeGameManager(result)
     dataset = FakeDataset(required=True)
@@ -195,8 +181,10 @@ def test_evaluate_game_map_skips_dataset_for_game_failed() -> None:
     assert manager.deleted == [game_map2svm.GameMap]
 
 
-def test_evaluate_game_map_returns_exception_and_deletes() -> None:
-    game_map2svm = _game_map2svm()
+def test_evaluate_game_map_returns_exception_and_deletes(
+    game_map2svm_factory,
+) -> None:
+    game_map2svm = game_map2svm_factory()
     error = RuntimeError("play failed")
     manager = FakeGameManager(result=None, error=error)
     dataset = FakeDataset(required=True)
@@ -262,14 +250,16 @@ class FakeManagerContext:
 
 
 def test_validate_coverage_collects_all_results(
+    game_map2svm_factory,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    maps = [_game_map2svm("Method_0"), _game_map2svm("Method_1")]
-    results = [Map2Result(game_map, GameResult(5, 1, 0, 100)) for game_map in maps]
+    maps = [game_map2svm_factory("Method_0"), game_map2svm_factory("Method_1")]
+    results = {
+        id(game_map): Map2Result(game_map, GameResult(5, 1, 0, 100))
+        for game_map in maps
+    }
     manager = FakeGameManager(result=None)
-    manager.play_game_map = lambda game_map2svm: results[
-        maps.index(game_map2svm) if game_map2svm in maps else 0
-    ]
+    manager.play_game_map = lambda game_map2svm: results[id(game_map2svm)]
     coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
     config = SVMValidationSendEachStep(
         val_type="svms_each_step", PlatformsConfig=[], process_count=2
@@ -284,4 +274,10 @@ def test_validate_coverage_collects_all_results(
 
     collected = coverage.validate_coverage(maps, config)
 
-    assert len(collected) == 2
+    assert {id(result) for result in collected} == {
+        id(result) for result in results.values()
+    }
+    assert {result.map.GameMap.MapName for result in collected} == {
+        "Method_0",
+        "Method_1",
+    }
