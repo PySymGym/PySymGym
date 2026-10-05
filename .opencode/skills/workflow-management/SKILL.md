@@ -14,6 +14,17 @@ step.
 - Log all tasks as GitHub issues with the `task` label (`gh issue create
   --label task`). Use the description exactly as the user provided it — minimal
   changes, only splitting and numbering. The task ID is the issue number.
+- A batch of **related** tasks is tracked by a single **hub** issue (label
+  `hub`). Hubs carry the global plan and are never chosen as tasks; task issues
+  keep the `task` label and are attached to the hub as GitHub **sub-issues**
+  through the REST API (`POST repos/$REPO/issues/<HUB>/sub_issues`). Listing the
+  task numbers inside the hub body is **not** a substitute for the sub-issue
+  relationship.
+- The global plan for the active batch lives in `tasks/global_plan.md` (single
+  source of truth) and is mirrored to the hub issue as a comment whose first
+  line is `<!-- global-plan -->`. Task progress is marked in the file and the
+  mirror is updated after each task integrates, exactly as the detailed plan is
+  mirrored to a task issue (see the `subtask-loop` skill).
 - Resolve the **integration branch** once per session:
   `INTEGRATION=$(git config --get pysymgym.integrationBranch || echo main)`.
   It is `main` in direct mode and a personal, long-lived branch in stacked
@@ -37,16 +48,35 @@ step.
 
 ## Working Loop
 
-0. If the user requests multiple tasks at once, first create one issue per
-   task, then create a global plan in `tasks/global_plan.md` referencing the
-   issue numbers (see the `planning` skill) before proceeding.
+0. If the user requests multiple related tasks at once, set up the batch before
+   any implementation:
+   a. Create the **hub** issue (`gh issue create --label hub`); it tracks the
+      batch and is not itself a task.
+   b. Create one issue per task (`gh issue create --label task`), then attach
+      each task issue to the hub as a GitHub **sub-issue** (mandatory, not a
+      body link):
+
+      ```bash
+      REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+      CHILD_ID=$(gh api "repos/$REPO/issues/<N>" --jq .id)
+      gh api -X POST "repos/$REPO/issues/<HUB>/sub_issues" -F sub_issue_id="$CHILD_ID"
+      ```
+
+      Verify the parent: `gh api "repos/$REPO/issues/<N>/parent" --jq .number`
+      must print the hub number.
+   c. Write the global plan in `tasks/global_plan.md` (see the `planning`
+      skill), naming the hub and listing each task with its issue number.
+   d. Post the global plan as a comment on the hub whose first line is
+      `<!-- global-plan -->` (a pure mirror of the file). A related task added
+      later is attached to the same hub and added to the plan.
 1. Ensure user-defined tasks, the global plan, and project architecture are
    aligned.
 2. Choose exactly ONE open `task`-labeled issue that is not yet done: a task
    is done when its subtask commits are on the integration branch
    (`git log "$INTEGRATION" --format=%s | grep -cE '\(<N>-S[0-9]+\):'` > 0,
    where N is the issue number). List candidates with
-   `gh issue list --label task --state open`.
+   `gh issue list --label task --state open`. Hubs carry `hub`, not `task`, so
+   this list never returns them.
 3. Rebase the integration branch onto `origin/main` (task-boundary refresh, see
    `git-workflow`), then create a feature branch from the integration branch for
    this single task (branching model: the "Contribution guidelines" section of
@@ -86,11 +116,25 @@ step.
    - **Stacked mode** (`$INTEGRATION` is a personal branch): rebase and
      fast-forward merge the feature branch into `$INTEGRATION`, then delete the
      feature branch. Do **not** push for a PR and do **not** open a PR.
-9. Verify the last subtask's commit carries `Closes #<N>` (the task's own
-   issue) as a standalone line — the issue closes when the commit reaches
-   `main`. See the Task Completeness Verification in the `subtask-loop` skill
-   (the single source of truth for what "done" means).
-10. Return to step 2 for the next task. In stacked mode, keep accumulating
+9. For a batch, update its progress: mark the integrated task `[done #<N>]` in
+   `tasks/global_plan.md`, then mirror the file to the hub's
+   `<!-- global-plan -->` comment (the same procedure as the detailed plan):
+
+   ```bash
+   REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+   CID=$(gh api "repos/$REPO/issues/<HUB>/comments" \
+     --jq '[.[] | select(.body | startswith("<!-- global-plan -->"))] | last.id')
+   { echo '<!-- global-plan -->'; cat tasks/global_plan.md; } > /tmp/global_plan_comment.md
+   gh api -X PATCH "repos/$REPO/issues/comments/$CID" \
+     --input <(jq -Rs '{body: .}' /tmp/global_plan_comment.md)
+   ```
+10. Verify the last subtask's commit carries `Closes #<N>` (the task's own
+    issue) as a standalone line — the issue closes when the commit reaches
+    `main`. For the last task of a batch, the same commit also carries
+    `Closes #<hub>` once every sub-issue is resolved, closing the hub when the
+    commit reaches `main`. See the Task Completeness Verification in the
+    `subtask-loop` skill (the single source of truth for what "done" means).
+11. Return to step 2 for the next task. In stacked mode, keep accumulating
     completed tasks on `$INTEGRATION`; open the request to `main` only via the
     finalize step below, on the user's explicit request.
 
