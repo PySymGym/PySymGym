@@ -1,7 +1,7 @@
 import argparse
 import re
 
-from attrs import define
+from attrs import asdict, define
 import pandas as pd
 
 
@@ -42,7 +42,7 @@ def parse_pretty(data: list[str]) -> pd.DataFrame:
     for method_full_qual, stats in zip(*lines, strict=True):
         assert isinstance(method_full_qual, str)
         method_full_qual = method_full_qual.replace("_Method_0", "")
-        rst.append(PrettyRunResult(method_full_qual, *parse_stats(stats)))
+        rst.append(asdict(PrettyRunResult(method_full_qual, *parse_stats(stats))))
 
     return pd.DataFrame.from_dict(rst)
 
