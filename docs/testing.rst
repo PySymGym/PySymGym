@@ -78,21 +78,31 @@ To run a single component or a single test:
 
 .. code-block:: console
 
-    poetry run pytest AIAgent/tests/test_fixtures.py
-    poetry run pytest AIAgent/tests/test_onnx.py::TestONNXConversion -sv
+    poetry run pytest AIAgent/tests/unit/test_fixtures.py
+    poetry run pytest AIAgent/tests/integration/test_onnx.py::TestONNXConversion -sv
 
-Migration note
---------------
+Layout
+------
 
-The pre-existing component tests are tagged coarsely: ``integration`` for the
-in-process suites and ``e2e`` for the full ``runstrat`` pipeline. Their resource
-paths are resolved relative to the test file (never the current working
-directory), so the whole repository can be collected from the root. CI selects
-the markers explicitly per component (``-m "not e2e"`` for the AIAgent and
-compstrat jobs, ``-m e2e`` for the runstrat job), so the global default filter
-never hides them. Phase 5 (#563) refines this by splitting each component suite
-into ``unit/`` and ``integration/`` directories, splitting large resources, and
-adding the coverage ratchet.
+Each component keeps its own test tree, split by tier into a directory named
+after the marker its tests carry:
+
+- ``unit/`` — the fast, isolated tests (``AIAgent/tests/unit/``,
+  ``tools/*/tests/unit/``).
+- ``integration/`` — the in-process tests that need golden fixtures
+  (``AIAgent/tests/integration/``, ``tools/compstrat/tests/integration/``).
+- ``e2e/`` — the full pipelines (``tools/runstrat/tests/e2e/``).
+
+A component only creates the tier directories it needs. The ``tests/`` tree at
+the repository root holds the cross-component infrastructure tests.
+
+The marker is the source of truth, not the directory: CI selects markers
+explicitly per component (``-m "not e2e"`` for the AIAgent and compstrat jobs,
+``-m e2e`` for the runstrat job) and the root default filter deselects
+``integration`` and ``e2e``. A module may declare its tier once at module level
+(``pytestmark = pytest.mark.unit``) or per function; every ``test_*`` function
+must resolve to exactly one tier, which ``tests/test_pytest_infra.py`` enforces
+statically.
 
 Fixtures
 --------
@@ -183,11 +193,12 @@ Writing a test
   plain unit tests (no I/O beyond ``tmp_path``) before reaching for a fixture or
   an integration test.
 - Put the test under the component it exercises (``AIAgent/tests``,
-  ``tools/*/tests``).
+  ``tools/*/tests``) and in the directory named after its tier (``unit/``,
+  ``integration/`` or ``e2e/``).
 - Mark it with exactly one of ``unit``/``integration``/``e2e`` (plus any
-  orthogonal ``gpu``/``network``/``slow``/``serial`` marker). An unmarked test
-  still runs in the fast tier, so an omitted marker silently changes the tier it
-  appears in.
+  orthogonal ``gpu``/``network``/``slow``/``serial`` marker). The directory must
+  match the tier marker; an unmarked test still runs in the fast tier, so an
+  omitted marker silently changes the tier it appears in.
 - Depend on the fixtures from your component's ``conftest.py`` and build project
   objects through the production code paths so they cannot drift from the real
   schema.
