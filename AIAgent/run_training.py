@@ -52,16 +52,6 @@ from torch_geometric.data import Dataset
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 from torch_geometric.loader import DataLoader
 
-logging.basicConfig(
-    level=GeneralConfig.LOGGER_LEVEL,
-    filename=LOG_PATH,
-    filemode="a",
-    format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
-)
-
-
-create_folders_if_necessary([PROCESSED_DATASET_PATH])
-
 # Tag the tuning run's MLflow runs carry: the number of the best trial among
 # those completed so far. Readers of the tuning artifacts (see
 # derive_dataset_improvement_config.py) locate the best trial's run through it.
@@ -370,6 +360,14 @@ def objective(
 
 
 def main(config: str):
+    logging.basicConfig(
+        level=GeneralConfig.LOGGER_LEVEL,
+        filename=LOG_PATH,
+        filemode="a",
+        format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
+    )
+    create_folders_if_necessary([PROCESSED_DATASET_PATH])
+
     with open(config, "r") as file:
         config: Config = Config(**yaml.safe_load(file))
     create_file(LOG_PATH)
