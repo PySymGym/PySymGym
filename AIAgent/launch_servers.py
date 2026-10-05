@@ -25,12 +25,6 @@ from connection.broker_conn.classes import (
 )
 
 routes = web.RouteTableDef()
-logging.basicConfig(
-    level=GeneralConfig.LOGGER_LEVEL,
-    filename="instance_manager.log",
-    filemode="w",
-    format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
-)
 
 FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
 avoid_same_free_port_lock = asyncio.Lock()
@@ -211,6 +205,13 @@ def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
 
 def main(config: str):
     global SERVER_INSTANCES, PROCS, RESULTS
+
+    logging.basicConfig(
+        level=GeneralConfig.LOGGER_LEVEL,
+        filename="instance_manager.log",
+        filemode="w",
+        format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
+    )
 
     # Queue[ServerInstanceInfo]
     SERVER_INSTANCES = Queue()

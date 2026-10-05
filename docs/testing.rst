@@ -139,6 +139,16 @@ Writing a test
   make the ``AIAgent`` suite reproducible, but a test must still not rely on
   wall-clock time or on iteration order.
 
+Testability rules
+-----------------
+
+- **No filesystem side effects at import.** Importing a module must never
+  create, move or delete files. Logging configuration, directory creation and
+  similar work belongs in ``main()`` (or the ``if __name__ == "__main__"``
+  guard). This keeps imports safe for tests, tooling and documentation builds;
+  ``AIAgent/tests/unit/test_import_side_effects.py`` enforces it for the
+  runnable AIAgent scripts.
+
 Coverage
 --------
 
