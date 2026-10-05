@@ -5,12 +5,20 @@ built with the shared ``fake_namespace``/``fake_proc`` fixtures and a
 ``tmp_path`` ``svms_output_path``.
 """
 
+import logging
+import socket
+
 import pytest
 import torch
 from common.classes import GameFailed, GameResult
 from common.game import GameMap
 from ml.validation.coverage.game_managers.model import process_game_manager as pgm
-from ml.validation.coverage.game_managers.model.classes import ModelGameMapInfo
+from ml.validation.coverage.game_managers.model.classes import (
+    GameFailedDetails,
+    GameResultDetails,
+    ModelGameMapInfo,
+    SVMConnectionInfo,
+)
 from ml.validation.coverage.game_managers.model.process_game_manager import (
     ModelGameManager,
 )
@@ -213,3 +221,115 @@ def test_delete_game_artifacts_removes_dir_and_info(
 
     assert removed == [tmp_path / "M"]
     assert "M" not in manager._games_info
+
+
+def test_run_game_process_formats_and_launches(
+    fake_namespace, game_map2svm_factory, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory(
+        map_name="Map1", steps_to_play=3, steps_to_start=1
+    )
+    game_map2svm.SVMInfo.launch_command = (
+        "run --port {Port} --map {MapName} --cover {NameOfObjectToCover}"
+    )
+    server_socket = object()
+    monkeypatch.setattr(
+        pgm, "look_for_free_port_locked", lambda lock, svm_info: (4000, server_socket)
+    )
+    popen_calls: list[tuple] = []
+
+    def fake_popen(args, **kwargs):
+        popen_calls.append((args, kwargs))
+        return "proc"
+
+    monkeypatch.setattr(pgm.subprocess, "Popen", fake_popen)
+
+    proc, port, returned_socket = manager._run_game_process(game_map2svm)
+
+    assert (proc, port, returned_socket) == ("proc", 4000, server_socket)
+    args, kwargs = popen_calls[0]
+    assert args == ["run", "--port", "4000", "--map", "Map1", "--cover", "Method"]
+    assert kwargs["encoding"] == "utf-8"
+
+
+class FakeConnectionSocket:
+    def __init__(self) -> None:
+        self.sent: list[bytes] = []
+        self.shutdowns: list[int] = []
+
+    def sendall(self, data: bytes) -> None:
+        self.sent.append(data)
+
+    def shutdown(self, how: int) -> None:
+        self.shutdowns.append(how)
+
+
+class FakeServerSocket:
+    def __init__(self, connection: FakeConnectionSocket) -> None:
+        self._connection = connection
+        self.accepted = 0
+
+    def accept(self):
+        self.accepted += 1
+        return self._connection, ("localhost", 0)
+
+
+def _game_result_details(server_socket) -> GameResultDetails:
+    return GameResultDetails(
+        game_result=GameResult(1, 0, 0, 100),
+        svm_connection_info=SVMConnectionInfo(occupied_port=1, socket=server_socket),
+    )
+
+
+def test_notify_steps_requirement_sends_the_flag(
+    fake_namespace, game_map_factory, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    connection = FakeConnectionSocket()
+    server_socket = FakeServerSocket(connection)
+    game_map = game_map_factory("M")
+    manager._games_info["M"] = ModelGameMapInfo(
+        total_game_state=None,
+        total_steps=[],
+        proc=None,
+        game_result=_game_result_details(server_socket),
+    )
+    monkeypatch.setattr(manager, "_get_and_log_proc_output", lambda proc, logger: None)
+
+    manager.notify_steps_requirement(game_map, True)
+    manager.notify_steps_requirement(game_map, False)
+
+    assert connection.sent == [bytes([1]), bytes([0])]
+    assert connection.shutdowns == [socket.SHUT_WR, socket.SHUT_WR]
+    assert server_socket.accepted == 2
+
+
+def test_notify_steps_requirement_unknown_map_is_a_noop(
+    fake_namespace, game_map_factory, tmp_path
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+
+    manager.notify_steps_requirement(game_map_factory("Unknown"), True)
+
+
+def test_notify_steps_requirement_failed_game_logs_output(
+    fake_namespace, game_map_factory, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    manager._games_info["M"] = ModelGameMapInfo(
+        total_game_state=None,
+        total_steps=[],
+        proc=None,
+        game_result=GameFailedDetails(game_failed=GameFailed("no game")),
+    )
+    logged: list[tuple] = []
+    monkeypatch.setattr(
+        manager,
+        "_get_and_log_proc_output",
+        lambda proc, logger: logged.append((proc, logger)),
+    )
+
+    manager.notify_steps_requirement(game_map_factory("M"), True)
+
+    assert logged == [(None, logging.error)]
