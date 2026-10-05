@@ -85,6 +85,10 @@ command from the repository root:
 
     poetry run pytest        # or: make test-unit
 
+CI (``.github/workflows/python_tests.yaml``) runs each component suite and then
+a repository-root coverage step that enforces the ratchet documented in
+:doc:`testing`.
+
 Quality checks
 --------------
 

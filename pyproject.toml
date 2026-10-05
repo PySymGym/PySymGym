@@ -88,3 +88,18 @@ markers = [
     "slow: takes noticeably long to run",
     "serial: must not run in parallel with other tests",
 ]
+
+[tool.coverage.run]
+source = ["AIAgent", "tools"]
+omit = [
+    "*/tests/*",
+    "*/conftest.py",
+    "AIAgent/tests_utils.py",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+]
+fail_under = 73

@@ -45,7 +45,7 @@ move_init_data:
 
 POETRY ?= poetry
 PYTEST ?= $(POETRY) run pytest
-COV_ARGS = --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=xml
+COV_ARGS = --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=xml --cov-report=json
 
 .PHONY: test-unit test-integration test-all test-cov
 
@@ -61,6 +61,6 @@ test-integration:
 test-all:
 	$(PYTEST) -o addopts="--import-mode=importlib"
 
-# Unit tier with a coverage report.
+# Unit + integration tier with the coverage ratchet (the gated tier).
 test-cov:
-	$(PYTEST) $(COV_ARGS)
+	$(PYTEST) -m "not e2e" $(COV_ARGS)
