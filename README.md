@@ -42,4 +42,5 @@ The documentation is the map for navigating the project. Start at the
 - [Dataset](https://pysymgym.github.io/PySymGym/dataset.html)
 - [Results](https://pysymgym.github.io/PySymGym/results.html)
 - [Developer guide](https://pysymgym.github.io/PySymGym/developer.html)
+- [Testing](https://pysymgym.github.io/PySymGym/testing.html)
 - [API reference](https://pysymgym.github.io/PySymGym/reference/)
