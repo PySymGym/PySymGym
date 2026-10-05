@@ -74,6 +74,8 @@ testpaths = [
     "AIAgent/tests",
     "tools/compstrat/tests",
     "tools/runstrat/tests",
+    "tools/dataset_tools/tests",
+    "tools/util/tests",
 ]
 addopts = "--import-mode=importlib -m \"not integration and not e2e\""
 timeout = 300
