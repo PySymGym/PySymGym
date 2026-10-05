@@ -125,10 +125,12 @@ tool directory on ``sys.path``, so ``clean``, ``generate_episodes`` and
 ``parse_pretty`` import as top-level modules.
 
 ``AIAgent/tests/unit/ml/`` is the unit root for the ML layer (dataset
-transforms, training and experiment helpers, model-forward smoke tests). It
-reuses the ``AIAgent/conftest.py`` fixtures and builds every graph input
-through ``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from
-the production tensor schema.
+transforms, training and experiment helpers, model-forward smoke tests) and
+``AIAgent/tests/unit/ml/validation/`` its orchestration subtree (game managers
+and the coverage-validation flow). They reuse the ``AIAgent/conftest.py``
+fixtures and build every graph input through
+``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
+production tensor schema.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
@@ -163,6 +165,13 @@ Orchestration seams are tested with fakes, never real I/O:
   module path constants; point ``svms_output_path`` at ``tmp_path`` and write
   the ``{MapName}result`` file directly. The manager is built with
   ``fake_namespace`` (a real lock, no ``multiprocessing.Manager``).
+- **Multiprocessing.** The each-step manager and ``ValidationCoverage`` are
+  tested by patching ``Connector`` (the fake must expose ``GameOver``) and
+  ``game_server_socket_manager``; for the public ``validate_coverage`` loop,
+  patch ``multiprocessing.Manager``/``Pool`` and ``tqdm`` and mark the test
+  ``serial``. A fake ``BaseGameManager`` subclass plus a fake dataset cover the
+  manager-unset, GameFailed, missing-steps and exception branches without
+  spawning a worker.
 - **Cleanup invariants.** When a function acquires a resource (a socket, an
   instance, a process), test the success path and an exception in the body, and
   assert the release call in each.
