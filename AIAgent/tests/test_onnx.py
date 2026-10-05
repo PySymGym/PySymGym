@@ -1,6 +1,5 @@
 import copy
 import json
-import os
 import typing as t
 import warnings
 from pathlib import Path
@@ -17,13 +16,19 @@ from ml.models.NorthernPenguin.model import (
 )
 from ml.validation.coverage.game_managers.model import process_game_manager
 from onyx import create_torch_input, entrypoint, save_in_onnx
-from tests.utils import read_configs
+from tests_utils import read_configs
+
+pytestmark = pytest.mark.integration
+
+TESTS_DIR = Path(__file__).resolve().parent
+MODEL_CONFIGS_DIR = TESTS_DIR / "resources" / "model_configurations"
+REFERENCE_GAMESTATES_DIR = (
+    TESTS_DIR.parents[1] / "resources" / "onnx" / "reference_gamestates"
+)
 
 
 class TestONNXConversion:
-    @pytest.mark.parametrize(
-        "config", read_configs("tests/resources/model_configurations")
-    )
+    @pytest.mark.parametrize("config", read_configs(MODEL_CONFIGS_DIR))
     def test_onnx_conversion_successful_on_real_randomized_model(
         self, tmp_path, game_states_fixture, config
     ):
@@ -49,26 +54,20 @@ class TestONNXConversion:
         )
 
     @pytest.fixture
-    def game_states_fixture(request):
-        game_states_path = Path("../resources/onnx/reference_gamestates")
-        json_files = [
-            game_states_path / file
-            for file in os.listdir(game_states_path)
-            if file.endswith(".json")
-        ]
-        return [_load_gamestate(it) for it in json_files]
+    def game_states_fixture(self):
+        json_files = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))
+        return [_load_gamestate(path) for path in json_files]
 
 
 class TestONNXExportWarnings:
     def test_export_emits_no_warnings(self, tmp_path):
         """save_in_onnx must not emit warnings from torch.onnx, PyG conv, or
         this repo (regression guard for #617)."""
-        with open(read_configs("tests/resources/model_configurations")[0]) as file:
+        with open(read_configs(MODEL_CONFIGS_DIR)[0]) as file:
             model_kwargs = yaml.safe_load(file)
 
-        game_states_dir = Path("../resources/onnx/reference_gamestates")
-        first = sorted(p for p in os.listdir(game_states_dir) if p.endswith(".json"))[0]
-        game_state = _load_gamestate(game_states_dir / first)
+        first = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
+        game_state = _load_gamestate(first)
 
         torch_model = RealStateModelEncoder(**model_kwargs).eval()
         hetero, _ = convert_input_to_tensor(game_state)
@@ -100,12 +99,11 @@ class TestForwardOnCUDA:
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
     def test_forward_matches_cpu_with_and_without_v_v_edges(self):
-        with open(read_configs("tests/resources/model_configurations")[0]) as file:
+        with open(read_configs(MODEL_CONFIGS_DIR)[0]) as file:
             model_kwargs = yaml.safe_load(file)
 
-        game_states_dir = Path("../resources/onnx/reference_gamestates")
-        first = sorted(p for p in os.listdir(game_states_dir) if p.endswith(".json"))[0]
-        game_state = _load_gamestate(game_states_dir / first)
+        first = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
+        game_state = _load_gamestate(first)
         hetero, _ = convert_input_to_tensor(game_state)
 
         empty_hetero = copy.deepcopy(hetero)
@@ -129,7 +127,7 @@ class TestForwardOnCUDA:
 
 class TestModelGamePreparatorKwargs:
     def test_create_onnx_model_uses_explicit_kwargs(self, tmp_path, monkeypatch):
-        with open(read_configs("tests/resources/model_configurations")[0]) as file:
+        with open(read_configs(MODEL_CONFIGS_DIR)[0]) as file:
             model_kwargs = yaml.safe_load(file)
 
         captured = {}
