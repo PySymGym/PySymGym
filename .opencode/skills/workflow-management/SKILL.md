@@ -117,17 +117,10 @@ step.
      fast-forward merge the feature branch into `$INTEGRATION`, then delete the
      feature branch. Do **not** push for a PR and do **not** open a PR.
 9. For a batch, update its progress: mark the integrated task `[done #<N>]` in
-   `tasks/global_plan.md`, then mirror the file to the hub's
-   `<!-- global-plan -->` comment (the same procedure as the detailed plan):
-
-   ```bash
-   REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-   CID=$(gh api "repos/$REPO/issues/<HUB>/comments" \
-     --jq '[.[] | select(.body | startswith("<!-- global-plan -->"))] | last.id')
-   { echo '<!-- global-plan -->'; cat tasks/global_plan.md; } > /tmp/global_plan_comment.md
-   gh api -X PATCH "repos/$REPO/issues/comments/$CID" \
-     --input <(jq -Rs '{body: .}' /tmp/global_plan_comment.md)
-   ```
+   `tasks/global_plan.md`, then mirror the file to the hub's global-plan
+   comment using the same procedure as the detailed plan (step 7 of the
+   `subtask-loop` skill), substituting the hub number for the task number and
+   the `<!-- global-plan -->` marker for `<!-- detailed-plan -->`.
 10. Verify the last subtask's commit carries `Closes #<N>` (the task's own
     issue) as a standalone line — the issue closes when the commit reaches
     `main`. For the last task of a batch, the same commit also carries
