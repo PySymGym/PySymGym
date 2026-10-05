@@ -137,6 +137,9 @@ Writing a test
 - Depend on the fixtures from your component's ``conftest.py`` and build project
   objects through the production code paths so they cannot drift from the real
   schema.
+- Never open sockets in a unit test: drive the pure parsing helpers directly
+  and patch process-global switches such as ``FeatureConfig.DISABLE_MESSAGE_CHECKS``
+  with ``monkeypatch``.
 - Write anything that touches disk under the ``tmp_path`` fixture.
 - Keep it deterministic: the autouse ``seeded_rng`` and ``cpu_device`` fixtures
   make the ``AIAgent`` suite reproducible, but a test must still not rely on
