@@ -4,6 +4,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMMON_DIR = REPO_ROOT / "AIAgent" / "common"
 REFERENCE = REPO_ROOT / "docs" / "reference" / "index.rst"
