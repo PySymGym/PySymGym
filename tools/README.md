@@ -100,10 +100,10 @@ options:
 Run:
 ```bash
 Use custom dataset path:
-python3 generate_episodes.py -d <path-to-dataset>
+PYTHONPATH=../../AIAgent python3 generate_episodes.py -d <path-to-dataset>
 
 Use default dataset path (../../maps/DotNet/Maps/dataset.json):
-python3 generate_episodes.py
+PYTHONPATH=../../AIAgent python3 generate_episodes.py
 ```
 ## `clean` tool
 
@@ -120,11 +120,11 @@ options:
   -l LOG, --log LOG 
                 Path to the log file
 Use default paths (../../maps/DotNet/Maps/dataset.json and ../../AIAgent/ml_app.log):
-python3 clean.py
+PYTHONPATH=../../AIAgent python3 clean.py
 
 Use custom log file:
-python3 clean.py -l ../../AIAgent/<name>.log
+PYTHONPATH=../../AIAgent python3 clean.py -l ../../AIAgent/<name>.log
 
 Use custom dataset and log paths:
-python3 clean.py -d <path-to-dataset> -l <path-to-log>
+PYTHONPATH=../../AIAgent python3 clean.py -d <path-to-dataset> -l <path-to-log>
 ```
