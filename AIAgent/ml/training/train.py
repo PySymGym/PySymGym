@@ -5,7 +5,7 @@ import tqdm
 import os
 from torch_geometric.loader import DataLoader
 
-from config import GeneralConfig
+from config import get_device
 from ml.inference import infer
 
 
@@ -22,7 +22,7 @@ def train(
         ncols=100,
         colour="#5c6fdb",
     ):
-        batch.to(GeneralConfig.DEVICE)
+        batch.to(get_device())
         optimizer.zero_grad()
         out = infer(model, batch)
         batch.y_true[batch.y_true > 0] = 1
