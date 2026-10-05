@@ -1,7 +1,7 @@
 """Unit tests for the ONNX naming contract in ``ml.inference``.
 
 ``infer`` itself is a thin wrapper already exercised by the fixture self-test
-in ``AIAgent/tests/test_fixtures.py``; here we pin the pure ``underscore_join``
+in ``AIAgent/tests/unit/test_fixtures.py``; here we pin the pure ``underscore_join``
 helper and the ONNX key derivation it drives.
 """
 

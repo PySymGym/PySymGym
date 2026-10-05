@@ -14,7 +14,7 @@ from tests_utils import read_configs
 
 pytestmark = pytest.mark.integration
 
-TESTS_DIR = Path(__file__).resolve().parent
+TESTS_DIR = Path(__file__).resolve().parent.parent
 MODEL_CONFIGS_DIR = TESTS_DIR / "resources" / "model_configurations"
 REFERENCE_GAMESTATES_DIR = (
     TESTS_DIR.parents[1] / "resources" / "onnx" / "reference_gamestates"

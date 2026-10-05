@@ -23,7 +23,7 @@ from tests_utils import read_configs
 pytestmark = pytest.mark.integration
 
 SVMS_VALIDATION_CONFIGS_DIR = (
-    Path(__file__).resolve().parent / "resources" / "svms_validation_configs"
+    Path(__file__).resolve().parent.parent / "resources" / "svms_validation_configs"
 )
 
 

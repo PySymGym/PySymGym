@@ -7,7 +7,7 @@ from src.psstrategy import ExecutionTreeContributedCoverageStrategy
 
 pytestmark = pytest.mark.e2e
 
-PYSYMGYM_ROOT = Path(__file__).resolve().parents[3]
+PYSYMGYM_ROOT = Path(__file__).resolve().parents[4]
 
 
 def test_pipeline_with_mock_data(

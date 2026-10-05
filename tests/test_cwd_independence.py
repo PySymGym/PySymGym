@@ -38,8 +38,8 @@ def test_dataset_tool_import_is_side_effect_free(
 def test_integration_tests_run_from_a_foreign_cwd(tmp_path: Path) -> None:
     """The coarse integration tier locates its resources from any CWD."""
     targets = [
-        ROOT / "AIAgent" / "tests" / "test_onnx.py",
-        ROOT / "AIAgent" / "tests" / "test_statistics.py",
+        ROOT / "AIAgent" / "tests" / "integration" / "test_onnx.py",
+        ROOT / "AIAgent" / "tests" / "integration" / "test_statistics.py",
     ]
     result = subprocess.run(
         [
