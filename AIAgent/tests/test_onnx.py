@@ -1,5 +1,4 @@
 import json
-import os
 import typing as t
 from pathlib import Path
 
@@ -11,13 +10,19 @@ from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
 from onyx import entrypoint
-from tests.utils import read_configs
+from tests_utils import read_configs
+
+pytestmark = pytest.mark.integration
+
+TESTS_DIR = Path(__file__).resolve().parent
+MODEL_CONFIGS_DIR = TESTS_DIR / "resources" / "model_configurations"
+REFERENCE_GAMESTATES_DIR = (
+    TESTS_DIR.parents[1] / "resources" / "onnx" / "reference_gamestates"
+)
 
 
 class TestONNXConversion:
-    @pytest.mark.parametrize(
-        "config", read_configs("tests/resources/model_configurations")
-    )
+    @pytest.mark.parametrize("config", read_configs(MODEL_CONFIGS_DIR))
     def test_onnx_conversion_successful_on_real_randomized_model(
         self, tmp_path, game_states_fixture, config
     ):
@@ -43,14 +48,9 @@ class TestONNXConversion:
         )
 
     @pytest.fixture
-    def game_states_fixture(request):
-        game_states_path = Path("../resources/onnx/reference_gamestates")
-        json_files = [
-            game_states_path / file
-            for file in os.listdir(game_states_path)
-            if file.endswith(".json")
-        ]
-        return [_load_gamestate(it) for it in json_files]
+    def game_states_fixture(self):
+        json_files = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))
+        return [_load_gamestate(path) for path in json_files]
 
 
 def _load_gamestate(path) -> dict[str, t.Any]:

@@ -47,6 +47,19 @@ Commands
 The configuration lives in ``[tool.pytest.ini_options]`` in the root
 ``pyproject.toml``.
 
+Migration note
+--------------
+
+The pre-existing component tests are tagged coarsely: ``integration`` for the
+in-process suites and ``e2e`` for the full ``runstrat`` pipeline. Their resource
+paths are resolved relative to the test file (never the current working
+directory), so the whole repository can be collected from the root. CI selects
+the markers explicitly per component (``-m "not e2e"`` for the AIAgent and
+compstrat jobs, ``-m e2e`` for the runstrat job), so the global default filter
+never hides them. Phase 5 (#563) refines this by splitting each component suite
+into ``unit/`` and ``integration/`` directories, splitting large resources, and
+adding the coverage ratchet.
+
 Fixtures
 --------
 

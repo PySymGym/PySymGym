@@ -26,9 +26,9 @@ jobs:
       - name: Run main repo tests
         working-directory: ./AIAgent
         run: |
-          poetry run pytest tests -sv
+          poetry run pytest tests -sv -m "not e2e"
       
       - name: Run compstrat tool tests
         working-directory: ./tools/compstrat
         run: |
-          poetry run pytest tests -sv
+          poetry run pytest tests -sv -m "not e2e"
