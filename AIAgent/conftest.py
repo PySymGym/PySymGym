@@ -179,3 +179,53 @@ def tmp_dataset(tmp_path: Path) -> TrainingDataset:
         train_percentage=1.0,
         n_jobs=1,
     )
+
+
+class FakeWebSocket:
+    """A recording websocket stand-in that never touches a real socket.
+
+    Outgoing frames are appended to :attr:`sent`; :meth:`recv` pops the next
+    frame from :attr:`incoming` (raising it instead when it is an exception).
+    Set :attr:`will_connect` to ``False`` to simulate a connection attempt that
+    never completes, and :attr:`connect_error` to raise on ``connect``.
+    """
+
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+        self.incoming: list[object] = []
+        self.connected = False
+        self.will_connect = True
+        self.connect_error: BaseException | None = None
+        self.timeout: float | None = None
+        self.closed = False
+        self.url: str | None = None
+
+    def settimeout(self, timeout: float) -> None:
+        self.timeout = timeout
+
+    def connect(self, url: str, skip_utf8_validation: bool = True) -> None:
+        self.url = url
+        if self.connect_error is not None:
+            raise self.connect_error
+        if self.will_connect:
+            self.connected = True
+
+    def send(self, message: str) -> None:
+        self.sent.append(message)
+
+    def recv(self) -> str:
+        if not self.incoming:
+            raise AssertionError("no incoming websocket frame was queued")
+        frame = self.incoming.pop(0)
+        if isinstance(frame, BaseException):
+            raise frame
+        return frame  # type: ignore[return-value]
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.fixture
+def fake_websocket() -> FakeWebSocket:
+    """Return a fresh :class:`FakeWebSocket` recording frames, no real socket."""
+    return FakeWebSocket()
