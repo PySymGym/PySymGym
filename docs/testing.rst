@@ -152,6 +152,9 @@ Testability rules
   ``config.get_device()`` at call time, never from a module-level constant, so
   importing AIAgent code never probes CUDA and tests can force CPU by patching
   ``torch.cuda.is_available``.
+- **Never depend on the current working directory.** Resolve resource paths
+  from ``__file__`` (or ``AIAgent/paths.py``), and make filesystem seams
+  injectable so tests can redirect them.
 
 Coverage
 --------
