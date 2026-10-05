@@ -128,6 +128,14 @@ reuses the
 ``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
 production tensor schema.
 
+Model smoke tests forward a synthetic ``hetero_factory`` graph through every
+model that still matches the production tensor schema (currently
+``NorthernPenguin`` and ``InvisibleCow``: game width 7 and six state features),
+asserting output dtype/shape and the ``log_softmax`` normalization;
+``modelop.filemanager.save_model`` is exercised with ``tmp_path`` and a patched
+``datetime``. Legacy architectures that cannot consume the current tensors are
+tracked in issues #571/#572 instead of being tested.
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer
