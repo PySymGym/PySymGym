@@ -7,7 +7,6 @@ file through a fake process.
 """
 
 import pytest
-from common.game import GameMap
 from ml.validation.coverage.game_managers.model import game_utils
 from ml.validation.coverage.game_managers.model.classes import (
     ModelGameMapInfo,
@@ -19,17 +18,6 @@ from ml.validation.coverage.game_managers.model.game_utils import (
 )
 
 pytestmark = [pytest.mark.unit, pytest.mark.serial]
-
-
-def _game_map(map_name: str = "MapName") -> GameMap:
-    return GameMap(
-        StepsToPlay=10,
-        StepsToStart=0,
-        AssemblyFullName="assembly",
-        NameOfObjectToCover="Method",
-        DefaultSearcher="BFS",
-        MapName=map_name,
-    )
 
 
 def _info(proc) -> ModelGameMapInfo:
@@ -75,17 +63,21 @@ def test_convert_steps_to_hetero_updates_state_between_steps(
 
 
 def test_get_steps_from_svm_reads_the_serialized_file(
-    gamestate_factory, tmp_path, fake_proc
+    gamestate_factory, game_map_factory, tmp_path, fake_proc
 ) -> None:
     steps = [ModelGameStep(GameState=gamestate_factory(), Output=[[0.1, 0.9]])]
     (tmp_path / "MapName_steps").write_text(
         ModelGameStep.schema().dumps(steps, many=True)
     )
+    proc = fake_proc()
 
-    result = get_steps_from_svm(_game_map("MapName"), _info(fake_proc()), tmp_path)
+    result = get_steps_from_svm(game_map_factory("MapName"), _info(proc), tmp_path)
 
     assert result == steps
+    assert proc.waited is True
 
 
-def test_get_steps_from_svm_returns_empty_without_a_process(tmp_path) -> None:
-    assert get_steps_from_svm(_game_map("MapName"), _info(None), tmp_path) == []
+def test_get_steps_from_svm_returns_empty_without_a_process(
+    game_map_factory, tmp_path
+) -> None:
+    assert get_steps_from_svm(game_map_factory("MapName"), _info(None), tmp_path) == []
