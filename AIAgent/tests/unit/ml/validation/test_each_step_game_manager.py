@@ -152,6 +152,7 @@ def test_play_game_map_with_svm_returns_result_and_steps(
         actual_coverage_percent=100,
     )
     assert duration >= 0
+    assert fake.sent_steps == [0, 0]
     steps = manager.get_game_steps(game_map2svm.GameMap)
     assert steps is not None
     assert len(steps) == 2
