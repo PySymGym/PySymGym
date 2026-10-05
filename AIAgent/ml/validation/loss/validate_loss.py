@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-from config import GeneralConfig
+from config import get_device
 from ml.inference import infer
 from ml.dataset import TrainingDataset
 from torch_geometric.loader import DataLoader
@@ -21,7 +21,7 @@ def validate_loss(
     for batch in tqdm.tqdm(
         dataloader, desc="test", ncols=100, colour=progress_bar_colour
     ):
-        batch.to(GeneralConfig.DEVICE)
+        batch.to(get_device())
         out = infer(model, batch)
         batch.y_true[batch.y_true > 0] = 1
         loss: torch.Tensor = criterion(out, batch.y_true)

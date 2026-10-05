@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 import torch
-from config import GeneralConfig
+from config import get_device
 from ml.inference import infer
 from torch_geometric.data import HeteroData
 
@@ -14,7 +14,7 @@ def predict_state_with_dict(
     """Gets state id from model and heterogeneous graph
     data.state_map - maps real state id to state index"""
 
-    data.to(GeneralConfig.DEVICE)
+    data.to(get_device())
     reversed_state_map = {v: k for k, v in state_map.items()}
 
     with torch.no_grad():
