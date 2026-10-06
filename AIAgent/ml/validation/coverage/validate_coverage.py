@@ -124,7 +124,11 @@ class ValidationCoverage:
         namespace.shared_lock = sync_manager.Lock()
         namespace.is_prepared = sync_manager.Value("b", False)
         if isinstance(validation_config, SVMValidationSendEachStep):
-            return EachStepGameManager(TrainingModelWrapper(self.model), namespace)
+            return EachStepGameManager(
+                TrainingModelWrapper(self.model),
+                namespace,
+                fail_on_unexhausted_steps=validation_config.fail_on_unexhausted_steps,
+            )
         elif isinstance(validation_config, SVMValidationSendModel):
             return ModelGameManager(
                 namespace,
