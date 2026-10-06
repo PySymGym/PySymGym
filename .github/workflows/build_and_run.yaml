@@ -1,6 +1,13 @@
 name: Build SVM-s and maps + Run training
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: build_and_run-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   calculate-dockerfile-hash:
