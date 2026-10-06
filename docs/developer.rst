@@ -154,10 +154,21 @@ the one CI constraint that cannot be checked by reading the workflow files.
 Self-hosted end-to-end workflows
 --------------------------------
 
-Three policies keep the long self-hosted pipelines deterministic and stop them
-from piling up on the single runner. The workflow files are the source of
-truth for the exact steps; this section only explains the non-obvious
-decisions behind them.
+The policies below keep the long self-hosted pipelines deterministic and stop
+them from piling up on the single runner. This section explains the
+non-obvious decisions behind the pipelines; the workflow files are the source
+of truth for the exact steps.
+
+**The two e2e workflows share one pipeline.** ``build_and_run.yaml`` and
+``build_and_run_model_val.yaml`` differ only in their name, concurrency group,
+and training inputs, so their common pipeline (Dockerfile hash, checkout,
+toolchain setup, V# and maps build, data generation, training with MLflow,
+artifact upload, sanity check) lives once in the reusable workflow
+``.github/workflows/e2e_build_and_run.yml`` (``workflow_call`` only — it never
+runs on its own). Each e2e workflow file is a thin caller that selects the
+pipeline mode through two inputs: ``training-config`` (the config of the main
+training run, relative to ``AIAgent/``) and the optional
+``improvement-base-config`` (see below).
 
 **Servers live in the step that uses them.** MLflow and the game-server
 broker are started inside the same step as the training command that talks to
@@ -178,12 +189,15 @@ runs for pull requests only: a new push to the same branch supersedes the
 stale run, while a run started by a push to ``main`` is never cancelled.
 
 **Dataset improvement continues from tuning.** In ``build_and_run.yaml`` the
-tuning run and the dataset-improvement run share one MLflow experiment; after
-tuning, ``derive_dataset_improvement_config.py`` queries the same-step server
-for the best trial's ``model.pth`` and ``trial.pkl`` artifact URIs and writes
-them into a copy of the base config that the improvement step consumes. The
-base config remains the single source of truth — the workflow derives the
-URIs from the tuning run instead of hard-coding them.
+tuning run and the dataset-improvement run share one MLflow experiment. The
+improvement is an optional mode of the shared pipeline, selected by that
+workflow's ``improvement-base-config`` input: after the main (tuning) run,
+``derive_dataset_improvement_config.py`` queries the same-step server for the
+best trial's ``model.pth`` and ``trial.pkl`` artifact URIs and writes them
+into a copy of the base config that the improvement step consumes. The base
+config remains the single source of truth — the pipeline derives the URIs from
+the tuning run instead of hard-coding them. ``build_and_run_model_val.yaml``
+leaves the input empty and runs only the main training run.
 
 **Unexhausted steps fail CI.** Both e2e validation workflows run with
 ``fail_on_unexhausted_steps`` enabled (flag semantics in
