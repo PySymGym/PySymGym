@@ -175,6 +175,7 @@ cython_debug/
 # MLFlow
 *mlartifacts/
 *mlruns/
+*mlflow.db
 
 .vscode/
 .idea/
