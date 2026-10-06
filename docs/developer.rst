@@ -167,14 +167,15 @@ step exits. A background process does not survive a step boundary, so a
 server started in an earlier step is gone by the time a later step needs it;
 a fixed sleep additionally races with the variable startup time.
 
-**Triggers and concurrency.** No self-hosted workflow runs on feature-branch
-pushes: ``push`` is restricted to ``main`` (plus ``pull_request``) in all of
-them, so a dependabot bump does not trigger the long e2e pipeline twice (push
-and pull request) and stale runs do not queue up. The two e2e workflows
-additionally use a per-workflow concurrency group keyed by ref that cancels
-in-progress runs for pull requests only: a new push to the same branch
-supersedes the stale run, while a run started by a push to ``main`` is never
-cancelled.
+**Triggers and concurrency.** The four self-hosted workflows that build or
+test code (``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
+``runstrat_tool.yaml``, ``build_and_test_usvm.yaml``) run only on pushes to
+``main`` and on pull requests — feature-branch pushes do not trigger them, so
+a dependabot bump does not trigger the long e2e pipeline twice (push and pull
+request) and stale runs do not queue up. The two e2e workflows additionally
+use a per-workflow concurrency group keyed by ref that cancels in-progress
+runs for pull requests only: a new push to the same branch supersedes the
+stale run, while a run started by a push to ``main`` is never cancelled.
 
 CI as source of truth
 ---------------------
