@@ -108,8 +108,17 @@ from the previous step are used to obtain relatively good ones:
    as a template, create a configuration with the maps to use, or reuse an
    existing ``maps/*/Maps/dataset.json``.
 3. Create a configuration (server and training parameters), again using
-   ``./workflow/config_for_tests.yml`` as a template. Add the best weights URI
-   and the appropriate trial URI logged by MLflow during tuning:
+   ``./workflow/config_for_tests.yml`` as a template. The improvement run must
+   start from the tuning run's best model, so the config needs two URIs: the
+   best weights and the trial that produced them. Derive both from MLflow
+   instead of copying them by hand — the script reads the server and experiment
+   from the config's ``MLFlowConfig`` section and writes the config plus:
+
+   .. code-block:: console
+
+       cd AIAgent
+       poetry run python3 derive_dataset_improvement_config.py \
+           --base-config path/to/config.yml --output-config path/to/derived.yml
 
    .. code-block:: yaml
 
@@ -120,13 +129,13 @@ from the previous step are used to obtain relatively good ones:
          trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
 
 4. Move to the ``AIAgent`` directory, launch the server manager, and run
-   training:
+   training with the derived config:
 
    .. code-block:: console
 
        cd AIAgent
-       poetry run python3 launch_servers.py --config path/to/config.yml
-       poetry run python3 run_training.py --config path/to/config.yml
+       poetry run python3 launch_servers.py --config path/to/derived.yml
+       poetry run python3 run_training.py --config path/to/derived.yml
 
 .. _guide-symbolic-execution:
 

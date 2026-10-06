@@ -61,6 +61,11 @@ logging.basicConfig(
 
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
 
+# Tag the tuning run's MLflow runs carry: the number of the best trial among
+# those completed so far. Readers of the tuning artifacts (see
+# derive_dataset_improvement_config.py) locate the best trial's run through it.
+BEST_TRIAL_NUMBER_TAG = "best_trial_number"
+
 
 def get_maps(validation_with_svms_config: SVMValidation):
     maps: list[GameMap2SVM] = list()
@@ -218,7 +223,7 @@ def run_training(
             with mlflow.start_run(mlflow.last_active_run().info.run_id):
                 mlflow.log_artifact(CURRENT_STUDY_PATH)
                 mlflow.log_artifact(CURRENT_TRIAL_PATH)
-                mlflow.set_tag("best_trial_number", study.best_trial.number)
+                mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
 
         study = optuna.create_study(
             sampler=sampler, direction=optuna_config.study_direction.value
