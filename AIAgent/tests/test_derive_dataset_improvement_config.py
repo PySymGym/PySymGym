@@ -162,9 +162,8 @@ class TestDeriveConfig:
             base = yaml.safe_load(file)
         assert derived["weights_uri"] == weights_uri
         assert derived["OptunaConfig"]["trial_uri"] == trial_uri
-        for section in ("OptunaConfig", "TrainingConfig", "ValidationConfig"):
-            if section != "OptunaConfig":
-                assert derived[section] == base[section]
+        assert derived["TrainingConfig"] == base["TrainingConfig"]
+        assert derived["ValidationConfig"] == base["ValidationConfig"]
         assert {
             key: value
             for key, value in derived["OptunaConfig"].items()
