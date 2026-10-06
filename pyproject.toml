@@ -39,6 +39,9 @@ pynvml = "^13.0.1"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.3"
+pytest-cov = "^7.1.0"
+pytest-timeout = "^2.4.0"
+pytest-xdist = "^3.8.0"
 
 [tool.poetry.group.formatter.dependencies]
 ruff = "^0.15.10"
@@ -52,7 +55,7 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core==2.2.1"]
 
 [tool.ruff]
-include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py", "docs/**/*.py"]
+include = ["pyproject.toml", "conftest.py", "tests/**/*.py", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py", "docs/**/*.py"]
 target-version = "py311"
 
 [tool.ruff.lint]
@@ -64,3 +67,39 @@ explicit-preview-rules = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "AIAgent/tests",
+    "tools/compstrat/tests",
+    "tools/runstrat/tests",
+    "tools/dataset_tools/tests",
+    "tools/util/tests",
+]
+addopts = "--import-mode=importlib -m \"not integration and not e2e\""
+timeout = 300
+markers = [
+    "unit: pure, deterministic tests with no network, GPU, subprocess, or binary fixtures",
+    "integration: in-process tests using fakes and golden fixtures",
+    "e2e: full pipeline tests that need built servers, maps, or the .NET toolchain",
+    "gpu: requires a CUDA device",
+    "network: requires network access",
+    "slow: takes noticeably long to run",
+    "serial: must not run in parallel with other tests",
+]
+
+[tool.coverage.run]
+source = ["AIAgent", "tools"]
+omit = [
+    "*/tests/*",
+    "*/conftest.py",
+    "AIAgent/tests_utils.py",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+]
+fail_under = 73

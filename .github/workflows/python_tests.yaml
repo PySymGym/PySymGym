@@ -26,9 +26,13 @@ jobs:
       - name: Run main repo tests
         working-directory: ./AIAgent
         run: |
-          poetry run pytest tests -sv
+          poetry run pytest tests -sv -m "not e2e"
       
       - name: Run compstrat tool tests
         working-directory: ./tools/compstrat
         run: |
-          poetry run pytest tests -sv
+          poetry run pytest tests -sv -m "not e2e"
+
+      - name: Enforce the coverage ratchet
+        run: |
+          poetry run pytest -m "not e2e" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json

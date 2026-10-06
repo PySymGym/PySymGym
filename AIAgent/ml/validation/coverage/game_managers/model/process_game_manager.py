@@ -35,7 +35,7 @@ from onyx import (
     load_gamestate,
     resolve_import_model,
 )
-from paths import CURRENT_MODEL_PATH, MODEL_KWARGS_PATH, REPORT_PATH
+from paths import CURRENT_MODEL_PATH, MODEL_KWARGS_PATH, REPORT_PATH, RESOURCES_PATH
 from torch_geometric.data.hetero_data import HeteroData
 
 # svm substituation variables
@@ -50,7 +50,9 @@ OUTPUT_DIR = "OutputDir"
 PORT = "Port"
 
 CURRENT_ONNX_MODEL_PATH = REPORT_PATH / "model.onnx"
-GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/4781_gameState.json"
+GAMESTATE_EXAMPLE_PATH = (
+    RESOURCES_PATH / "onnx" / "reference_gamestates" / "4781_gameState.json"
+)
 SVMS_OUTPUT_PATH = REPORT_PATH / "svms_output"
 
 FULL_COVERAGE_PERCENT = 100
@@ -68,9 +70,13 @@ class ModelGamePreparator(BaseGamePreparator):
         namespace: Namespace,
         model: torch.nn.Module,
         path_to_model: Path = CURRENT_MODEL_PATH,
+        gamestate_example_path: Path = GAMESTATE_EXAMPLE_PATH,
+        svms_output_path: Path = SVMS_OUTPUT_PATH,
     ):
         self._model = model
         self._path_to_model = path_to_model
+        self._gamestate_example_path = gamestate_example_path
+        self._svms_output_path = svms_output_path
         super().__init__(namespace)
 
     def _create_onnx_model(self):
@@ -80,7 +86,7 @@ class ModelGamePreparator(BaseGamePreparator):
         with open(MODEL_KWARGS_PATH, "r") as file:
             model_kwargs = yaml.safe_load(file)
 
-        with open(GAMESTATE_EXAMPLE_PATH) as gamestate_file:
+        with open(self._gamestate_example_path) as gamestate_file:
             save_torch_model_to_onnx_file(
                 sample_gamestate=load_gamestate(gamestate_file),
                 pytorch_model_path=self._path_to_model,
@@ -90,9 +96,9 @@ class ModelGamePreparator(BaseGamePreparator):
             )
 
     def _clean_output_folder(self):
-        svms_output_path = Path(SVMS_OUTPUT_PATH)
+        svms_output_path = Path(self._svms_output_path)
         if svms_output_path.exists():
-            return delete_dir(SVMS_OUTPUT_PATH)
+            return delete_dir(self._svms_output_path)
 
     def _prepare(self):
         self._clean_output_folder()
@@ -105,11 +111,13 @@ class ModelGameManager(BaseGameManager):
         namespace: Namespace,
         model: torch.nn.Module,
         path_to_model: Path = CURRENT_MODEL_PATH,
+        svms_output_path: Path = SVMS_OUTPUT_PATH,
     ):
         self._namespace = namespace
         self._shared_lock = namespace.shared_lock
         self._model = model
         self._path_to_model = path_to_model
+        self._svms_output_path = svms_output_path
         self._games_info: dict[str, ModelGameMapInfo] = dict()
         super().__init__(self._namespace)
 
@@ -172,7 +180,7 @@ class ModelGameManager(BaseGameManager):
         return Map2Result(game_map2svm, game_result)
 
     def _get_output_dir(self, game_map: GameMap) -> Path:
-        return SVMS_OUTPUT_PATH / f"{game_map.MapName}"
+        return self._svms_output_path / f"{game_map.MapName}"
 
     def _run_game_process(self, game_map2svm: GameMap2SVM):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
@@ -323,7 +331,7 @@ class ModelGameManager(BaseGameManager):
 
     def delete_game_artifacts(self, game_map: GameMap):
         map_name = game_map.MapName
-        dir = Path(SVMS_OUTPUT_PATH) / map_name
+        dir = self._svms_output_path / map_name
         _ = delete_dir(dir)
 
         if map_name in self._games_info:
@@ -350,4 +358,9 @@ class ModelGameManager(BaseGameManager):
         logger(f"out:\n{str(out)}\nerr:\n{str(err)}")
 
     def _create_preparator(self):
-        return ModelGamePreparator(self._namespace, self._model, self._path_to_model)
+        return ModelGamePreparator(
+            self._namespace,
+            self._model,
+            self._path_to_model,
+            svms_output_path=self._svms_output_path,
+        )

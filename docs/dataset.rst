@@ -18,7 +18,8 @@ Dataset tools
 -------------
 
 Two helper scripts under ``tools/dataset_tools/`` automate episode generation
-and dataset cleaning:
+and dataset cleaning. They import the agent package, so run them from that
+directory with ``AIAgent`` on ``PYTHONPATH``:
 
 ``generate_episodes.py``
     Creates multiple training episodes for each method by varying the
@@ -35,5 +36,5 @@ Basic usage:
 .. code-block:: console
 
     cd tools/dataset_tools
-    python3 generate_episodes.py
-    python3 clean.py
+    PYTHONPATH=../../AIAgent python3 generate_episodes.py
+    PYTHONPATH=../../AIAgent python3 clean.py

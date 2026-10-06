@@ -1,5 +1,4 @@
 import csv
-import shutil
 from pathlib import Path
 from random import choice
 
@@ -16,9 +15,28 @@ from ml.validation.statistics import (
     SVM_FAILED_MAPS_NUM_PREFIX,
     get_svms_statistics,
 )
+from paths import AI_AGENT_PATH
 from run_training import get_maps
 
-from tests.utils import read_configs
+pytestmark = pytest.mark.integration
+
+
+def _load_validation_mode(config_path: Path):
+    """Load a validation-mode config with its paths anchored to the repository.
+
+    The test config uses the same repository-relative paths as the production
+    configs (``../maps/...`` as if the process ran from ``AIAgent/``). Resolve
+    them against the AIAgent directory explicitly so the test does not depend
+    on the current working directory.
+    """
+    raw = yaml.safe_load(config_path.read_text())
+    for platform in raw["validation_mode"]["PlatformsConfig"]:
+        for dataset_config in platform["DatasetConfigs"]:
+            for key in ("dataset_base_path", "dataset_description"):
+                dataset_config[key] = str(
+                    (AI_AGENT_PATH / dataset_config[key]).resolve()
+                )
+    return ValidationConfig(**raw).validation_mode
 
 
 class TrainingDatasetMock:
@@ -36,21 +54,15 @@ class TestSVMsStatistics:
             )
             statistics_writer.writeheader()
 
-    def remove_tmp(self):
-        shutil.rmtree(self.tmp_dir)
-
     @pytest.fixture(autouse=True)
-    def mock_variables_and_create_tmp(self, monkeypatch):
-        self.tmp_dir = Path("./tests/tmp")
-        self.test_csv_file_path = Path(self.tmp_dir / "test_statistics.csv")
+    def mock_variables_and_create_tmp(self, monkeypatch, tmp_path):
+        self.tmp_dir = tmp_path
+        self.test_csv_file_path = tmp_path / "test_statistics.csv"
         monkeypatch.setattr(paths, "CURRENT_TABLE_PATH", self.test_csv_file_path)
-        yield
-        self.remove_tmp()
 
-    @pytest.fixture(params=read_configs("tests/resources/svms_validation_configs"))
+    @pytest.fixture
     def get_args(self, request):
-        with open(request.param) as file:
-            val_config = ValidationConfig(**yaml.safe_load(file)).validation_mode
+        val_config = _load_validation_mode(Path(request.param))
 
         dataset = TrainingDatasetMock(
             mock_maps_results={

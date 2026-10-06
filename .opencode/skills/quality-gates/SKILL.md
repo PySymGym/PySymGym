@@ -1,6 +1,6 @@
 ---
 name: quality-gates
-description: Use before integrating a task. Defines the hard gate that must pass (tests + style + docs build) and how to interpret its result. References the CI workflows for the exact commands.
+description: Use before integrating a task. Defines the hard gate that must pass (tests + style + coverage + docs build) and how to interpret its result. References the CI workflows for the exact commands.
 ---
 
 # Quality Gates
@@ -12,26 +12,29 @@ immediately before the final pull request to `main`.
 
 ## What the gate is
 
-The gate is the combination of the test suite, the style/lint checks, and the
-docs build:
+The gate is the combination of the test suite, the style/lint checks, the
+coverage ratchet, and the docs build:
 
 - **Tests** — see `.github/workflows/python_tests.yaml` for the exact command
   and working directories (see the `run-tests` skill). 0 failures, 0 skipped.
 - **Style/lint** — see `.github/workflows/python_linting.yaml` for the exact
   commands (`ruff check`, `ruff format --check`; see the `code-style` skill).
+- **Coverage** — the `not e2e` tier under `--cov=AIAgent --cov=tools` must meet
+  `[tool.coverage.report] fail_under` in `pyproject.toml`; the policy lives in
+  `docs/testing.rst`.
 - **Docs build** — see `.github/workflows/docs.yaml`. Sphinx builds under the
   no-warnings policy (`-W --keep-going`): any warning fails the build, so the
   exit code is sufficient.
 
 The CI workflows are the source of truth for the commands they run; this skill
-only defines the gate semantics. There is no type-check step and no coverage
-threshold in this project.
+only defines the gate semantics. There is no type-check step.
 
 ## Procedure
 
-1. Run the tests (`poetry run pytest tests -sv`) from every component the
-   change touches (`AIAgent/`, `tools/compstrat/`, `tools/runstrat/`). 0
-   failures, 0 skipped.
+1. Run the tests and the coverage ratchet over the gated (`not e2e`) tier from
+   the repository root, as `.github/workflows/python_tests.yaml` does (see the
+   `run-tests` skill). 0 failures, 0 skipped, and the coverage total at or
+   above `[tool.coverage.report] fail_under`.
 2. Run `ruff check` and `ruff format --check` (see
    `.github/workflows/python_linting.yaml`). No errors.
 3. Build the docs (see `.github/workflows/docs.yaml`). It must exit 0

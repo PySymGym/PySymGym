@@ -69,7 +69,7 @@ jobs:
       - name: Run tests
         working-directory: ./tools/runstrat
         run: |
-          poetry run pytest tests -sv -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
+          poetry run pytest tests -sv -m e2e -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
 
       - name: Upload artifacts
         if: always()
