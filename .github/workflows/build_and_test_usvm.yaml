@@ -18,12 +18,12 @@ jobs:
         run: apt update && apt install -y git
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
 
       - name: Setup Java
-        uses: actions/setup-java@v3.5.0
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: '11'

@@ -45,6 +45,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
 *.cover
 *.py,cover
 .hypothesis/
@@ -70,6 +71,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/reference/generated/
 
 # PyBuilder
 .pybuilder/
@@ -177,3 +179,6 @@ cython_debug/
 .vscode/
 .idea/
 *.pkl
+
+# Local task tracking (see the workflow-management skill)
+tasks/

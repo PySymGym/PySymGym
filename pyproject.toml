@@ -43,12 +43,16 @@ pytest = "^9.0.3"
 [tool.poetry.group.formatter.dependencies]
 ruff = "^0.15.10"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = ">=7.2,<9"
+furo = ">=2024.1"
+
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core==2.2.1"]
 
 [tool.ruff]
-include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py"]
+include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py", "docs/**/*.py"]
 target-version = "py311"
 
 [tool.ruff.lint]
@@ -57,3 +61,6 @@ ignore = ["E501"]
 extend-select = ["E226"]
 preview = true
 explicit-preview-rules = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

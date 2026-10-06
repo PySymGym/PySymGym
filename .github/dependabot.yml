@@ -4,3 +4,9 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+  # GitHub Actions used by the workflows in this directory. Submodules keep
+  # their own CI and are covered by their upstream repositories.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
