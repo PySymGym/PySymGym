@@ -137,6 +137,22 @@ from the previous step are used to obtain relatively good ones:
        poetry run python3 launch_servers.py --config path/to/derived.yml
        poetry run python3 run_training.py --config path/to/derived.yml
 
+SVM validation failure flags
+----------------------------
+
+The SVM validation section of the config (``val_type: svms_model`` or
+``svms_each_step``) has two opt-in failure flags, both off by default:
+
+- ``fail_immediately`` — fail the run if any map's game fails (timeout, engine
+  error, ...).
+- ``fail_on_unexhausted_steps`` — treat a game that ends before all planned
+  steps are played without reaching 100% coverage as a failed map. The
+  symbolic engine stopping that early is an engine defect, not a model quality
+  issue; by default it only produces a warning.
+
+The flags compose: ``fail_on_unexhausted_steps`` marks the map as failed, and
+``fail_immediately`` turns any failed map into a run failure (non-zero exit).
+
 .. _guide-symbolic-execution:
 
 Guide symbolic execution with a trained model
