@@ -154,7 +154,7 @@ the one CI constraint that cannot be checked by reading the workflow files.
 Self-hosted end-to-end workflows
 --------------------------------
 
-Two policies keep the long self-hosted pipelines deterministic and stop them
+Three policies keep the long self-hosted pipelines deterministic and stop them
 from piling up on the single runner. The workflow files are the source of
 truth for the exact steps; this section only explains the non-obvious
 decisions behind them.
@@ -176,6 +176,14 @@ request) and stale runs do not queue up. The two e2e workflows additionally
 use a per-workflow concurrency group keyed by ref that cancels in-progress
 runs for pull requests only: a new push to the same branch supersedes the
 stale run, while a run started by a push to ``main`` is never cancelled.
+
+**Dataset improvement continues from tuning.** In ``build_and_run.yaml`` the
+tuning run and the dataset-improvement run share one MLflow experiment; after
+tuning, ``derive_dataset_improvement_config.py`` queries the same-step server
+for the best trial's ``model.pth`` and ``trial.pkl`` artifact URIs and writes
+them into a copy of the base config that the improvement step consumes. The
+base config remains the single source of truth — the workflow derives the
+URIs from the tuning run instead of hard-coding them.
 
 CI as source of truth
 ---------------------

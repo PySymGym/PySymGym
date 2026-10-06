@@ -114,7 +114,17 @@ jobs:
 
           poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests_loss_val.yml
 
-          poetry --ansi run python3 launch_servers.py --config ../workflow/config_for_tests.yml > broker.log 2>&1 &
+          # The dataset-improvement run must continue from the tuning run above,
+          # not re-tune from scratch: derive its config from the best trial's
+          # artifacts (final model.pth weights and trial.pkl) as logged in the
+          # same-step MLflow server. The base config stays the single source of
+          # truth; only the two URIs are derived into a runtime file under
+          # report/.
+          poetry --ansi run python3 derive_dataset_improvement_config.py \
+            --base-config ../workflow/config_for_tests.yml \
+            --output-config report/config_for_tests_improved.yml
+
+          poetry --ansi run python3 launch_servers.py --config report/config_for_tests_improved.yml > broker.log 2>&1 &
           BROKER_PID=$!
 
           python3 - <<'PY'
@@ -133,7 +143,7 @@ jobs:
               time.sleep(2)
           PY
 
-          poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests.yml
+          poetry --ansi run python3 run_training.py --config report/config_for_tests_improved.yml
       
       - name: Upload mlartifacts
         if: always()
