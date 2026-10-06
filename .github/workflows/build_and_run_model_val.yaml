@@ -25,13 +25,6 @@ jobs:
     permissions:
       packages: read
     steps:
-      - name: Download & install necessary dependencies
-        run: |
-          apt update
-          apt install -y git software-properties-common
-          add-apt-repository ppa:dotnet/backports
-          apt-get update && apt-get install -y build-essential dotnet-sdk-7.0 dotnet-sdk-8.0 dotnet-sdk-9.0 cmake clang
-
       - name: Debug
         run: |
           printenv
@@ -80,15 +73,35 @@ jobs:
           mkdir report
           mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100/SerializedEpisodes/ report/
 
-      - name: Run MLFlow server
+      - name: Run training with MLflow
         working-directory: ./AIAgent
         run: |
-          poetry --ansi run python -m mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts &
-          echo "Waiting for mlflow server to start..." && sleep 30
+          # Same same-step + readiness pattern as build_and_run.yaml: a
+          # background process does not survive a step boundary, so the server
+          # must live in the step that uses it. Readiness is polled (stdlib
+          # only) instead of a fixed sleep, which races with the variable
+          # startup time.
+          poetry --ansi run python -m mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts > mlflow.log 2>&1 &
+          MLFLOW_PID=$!
+          trap 'kill $MLFLOW_PID 2>/dev/null || true' EXIT
 
-      - name: Run training
-        working-directory: ./AIAgent
-        run: |
+          python3 - <<'PY'
+          import time
+          import urllib.request
+
+          deadline = time.monotonic() + 120
+          while True:
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:8080/health", timeout=5) as response:
+                      if response.status == 200:
+                          break
+              except OSError:
+                  pass
+              if time.monotonic() >= deadline:
+                  raise SystemExit("MLflow server did not become ready on http://127.0.0.1:8080/health")
+              time.sleep(2)
+          PY
+
           poetry --ansi run python3 run_training.py --config ../workflow/config_for_tests_send_model_val.yml
 
       - name: Upload mlartifacts
