@@ -168,7 +168,9 @@ artifact upload, sanity check) lives once in the reusable workflow
 runs on its own). Each e2e workflow file is a thin caller that selects the
 pipeline mode through two inputs: ``training-config`` (the config of the main
 training run, relative to ``AIAgent/``) and the optional
-``improvement-base-config`` (see below).
+``improvement-base-config`` (see below). To add another e2e variant, create
+such a thin caller with its own name and concurrency group — do not copy the
+pipeline.
 
 **Servers live in the step that uses them.** MLflow and the game-server
 broker are started inside the same step as the training command that talks to
