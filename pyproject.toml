@@ -41,7 +41,7 @@ pynvml = "^13.0.1"
 pytest = "^9.0.3"
 
 [tool.poetry.group.formatter.dependencies]
-ruff = "^0.15.10"
+ruff = ">=0.15.10,<0.17.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = ">=7.2,<9"
