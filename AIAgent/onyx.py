@@ -12,6 +12,7 @@ import yaml
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH
+from torch_geometric import backend as pyg_backend
 from torch_geometric.data import HeteroData
 from ml.inference import infer
 
@@ -73,40 +74,54 @@ def save_in_onnx(
     save_path: pathlib.Path,
     verbose: bool = False,
 ):
-    torch.onnx.export(
-        model=model,
-        args=create_torch_input(sample_input),
-        f=save_path,
-        verbose=verbose,
-        dynamic_axes={
-            ONNX.game_vertex: [0],
-            ONNX.state_vertex: [0],
-            ONNX.path_condition_vertex: [0],
-            ONNX.gamevertex_to_gamevertex_index: [1],
-            ONNX.gamevertex_to_gamevertex_type: [0],
-            ONNX.gamevertex_history_statevertex_index: [1],
-            ONNX.gamevertex_history_statevertex_attrs: [0, 1],
-            ONNX.gamevertex_in_statevertex: [1],
-            ONNX.statevertex_parentof_statevertex: [1],
-            ONNX.pathcondvertex_to_pathcondvertex: [1],
-            ONNX.pathcondvertex_to_statevertex: [1],
-        },
-        input_names=[
-            ONNX.game_vertex,
-            ONNX.state_vertex,
-            ONNX.path_condition_vertex,
-            ONNX.gamevertex_to_gamevertex_index,
-            ONNX.gamevertex_to_gamevertex_type,
-            ONNX.gamevertex_history_statevertex_index,
-            ONNX.gamevertex_history_statevertex_attrs,
-            ONNX.gamevertex_in_statevertex,
-            ONNX.statevertex_parentof_statevertex,
-            ONNX.pathcondvertex_to_pathcondvertex,
-            ONNX.pathcondvertex_to_statevertex,
-        ],
-        output_names=["out"],
-        opset_version=ONNX_OPSET_VERSION,
-    )
+    # With use_segment_matmul unset (None), PyG's RGCNConv selects a kernel
+    # via a data-dependent heuristic on the input sizes, which torch.export
+    # (the default ONNX exporter backend since torch 2.13) cannot trace. The
+    # flag only takes effect when pyg-lib is installed, so disabling it for
+    # the export changes no runtime behavior here.
+    previous_use_segment_matmul = pyg_backend.use_segment_matmul
+    pyg_backend.use_segment_matmul = False
+    try:
+        torch.onnx.export(
+            model=model,
+            args=create_torch_input(sample_input),
+            f=save_path,
+            verbose=verbose,
+            dynamic_axes={
+                ONNX.game_vertex: [0],
+                ONNX.state_vertex: [0],
+                ONNX.path_condition_vertex: [0],
+                ONNX.gamevertex_to_gamevertex_index: [1],
+                ONNX.gamevertex_to_gamevertex_type: [0],
+                ONNX.gamevertex_history_statevertex_index: [1],
+                # Axis 1 is the fixed per-edge attribute vector
+                # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset.py),
+                # so only axis 0 is dynamic; torch.export rejects a
+                # user-specified dynamic dim that tracing infers as static.
+                ONNX.gamevertex_history_statevertex_attrs: [0],
+                ONNX.gamevertex_in_statevertex: [1],
+                ONNX.statevertex_parentof_statevertex: [1],
+                ONNX.pathcondvertex_to_pathcondvertex: [1],
+                ONNX.pathcondvertex_to_statevertex: [1],
+            },
+            input_names=[
+                ONNX.game_vertex,
+                ONNX.state_vertex,
+                ONNX.path_condition_vertex,
+                ONNX.gamevertex_to_gamevertex_index,
+                ONNX.gamevertex_to_gamevertex_type,
+                ONNX.gamevertex_history_statevertex_index,
+                ONNX.gamevertex_history_statevertex_attrs,
+                ONNX.gamevertex_in_statevertex,
+                ONNX.statevertex_parentof_statevertex,
+                ONNX.pathcondvertex_to_pathcondvertex,
+                ONNX.pathcondvertex_to_statevertex,
+            ],
+            output_names=["out"],
+            opset_version=ONNX_OPSET_VERSION,
+        )
+    finally:
+        pyg_backend.use_segment_matmul = previous_use_segment_matmul
 
 
 def onnx_run(ort_session: onnxruntime.InferenceSession, data: HeteroData) -> ...:
