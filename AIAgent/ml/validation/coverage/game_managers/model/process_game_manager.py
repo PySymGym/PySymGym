@@ -27,7 +27,10 @@ from ml.validation.coverage.game_managers.model.game_utils import (
     convert_steps_to_hetero,
     get_steps_from_svm,
 )
-from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
+from ml.validation.coverage.game_managers.utils import (
+    set_timeout_if_needed,
+    unexhausted_steps_failure,
+)
 from onyx import (
     entrypoint as save_torch_model_to_onnx_file,
 )
@@ -105,11 +108,13 @@ class ModelGameManager(BaseGameManager):
         namespace: Namespace,
         model: torch.nn.Module,
         path_to_model: Path = CURRENT_MODEL_PATH,
+        fail_on_unexhausted_steps: bool = False,
     ):
         self._namespace = namespace
         self._shared_lock = namespace.shared_lock
         self._model = model
         self._path_to_model = path_to_model
+        self._fail_on_unexhausted_steps = fail_on_unexhausted_steps
         self._games_info: dict[str, ModelGameMapInfo] = dict()
         super().__init__(self._namespace)
 
@@ -247,6 +252,15 @@ class ModelGameManager(BaseGameManager):
                     steps_count < game_map.StepsToPlay
                     and actual_coverage_percent != FULL_COVERAGE_PERCENT
                 ):
+                    if self._fail_on_unexhausted_steps:
+                        failure = unexhausted_steps_failure(
+                            map_name=map_name,
+                            steps_taken=steps_count,
+                            steps_expected=game_map.StepsToPlay,
+                            coverage=actual_coverage_percent,
+                        )
+                        logging.error(failure.reason)
+                        return failure
                     logging.warning(
                         f"Not all steps exhausted on {game_map.MapName} with non-100% coverage. Steps taken by oracle: {steps_count}, actual coverage: {actual_coverage_formatted}."
                     )
