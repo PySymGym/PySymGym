@@ -151,6 +151,31 @@ runtime requirement.
 The runner's installed version is not visible from the repository, so this is
 the one CI constraint that cannot be checked by reading the workflow files.
 
+Self-hosted end-to-end workflows
+--------------------------------
+
+Two policies keep the long self-hosted pipelines deterministic and stop them
+from piling up on the single runner. The workflow files are the source of
+truth for the exact steps; this section only explains the non-obvious
+decisions behind them.
+
+**Servers live in the step that uses them.** MLflow and the game-server
+broker are started inside the same step as the training command that talks to
+them, gated on readiness polling (an HTTP ``/health`` check for MLflow, a TCP
+connect to the broker port) instead of fixed sleeps, and cleaned up when the
+step exits. A background process does not survive a step boundary, so a
+server started in an earlier step is gone by the time a later step needs it;
+a fixed sleep additionally races with the variable startup time.
+
+**Triggers and concurrency.** No self-hosted workflow runs on feature-branch
+pushes: ``push`` is restricted to ``main`` (plus ``pull_request``) in all of
+them, so a dependabot bump does not trigger the long e2e pipeline twice (push
+and pull request) and stale runs do not queue up. The two e2e workflows
+additionally use a per-workflow concurrency group keyed by ref that cancels
+in-progress runs for pull requests only: a new push to the same branch
+supersedes the stale run, while a run started by a push to ``main`` is never
+cancelled.
+
 CI as source of truth
 ---------------------
 
