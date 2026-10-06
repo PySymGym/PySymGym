@@ -185,6 +185,13 @@ them into a copy of the base config that the improvement step consumes. The
 base config remains the single source of truth — the workflow derives the
 URIs from the tuning run instead of hard-coding them.
 
+**Unexhausted steps fail CI.** Both e2e validation workflows run with
+``fail_on_unexhausted_steps`` enabled (flag semantics in
+:doc:`usage`, "SVM validation failure flags"). The symbolic engine ending a
+map before all planned steps are played without 100% coverage is an engine
+defect; in CI it must fail the run instead of being swallowed by a warning,
+while local runs keep the default warning-only behavior.
+
 CI as source of truth
 ---------------------
 

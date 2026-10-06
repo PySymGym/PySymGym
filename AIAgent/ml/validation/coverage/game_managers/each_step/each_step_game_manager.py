@@ -22,7 +22,10 @@ from ml.validation.coverage.game_managers.each_step.game_states_utils import (
     get_states,
     update_game_state,
 )
-from ml.validation.coverage.game_managers.utils import set_timeout_if_needed
+from ml.validation.coverage.game_managers.utils import (
+    set_timeout_if_needed,
+    unexhausted_steps_failure,
+)
 from torch_geometric.data.hetero_data import HeteroData
 from websocket import WebSocket
 
@@ -36,15 +39,21 @@ class EachStepGamePreparator(BaseGamePreparator):
 
 
 class EachStepGameManager(BaseGameManager):
-    def __init__(self, with_predictor: Predictor, namespace: Namespace):
+    def __init__(
+        self,
+        with_predictor: Predictor,
+        namespace: Namespace,
+        fail_on_unexhausted_steps: bool = False,
+    ):
         self._game_states: dict[str, list[HeteroData]] = {}
         self._with_predictor = with_predictor
+        self._fail_on_unexhausted_steps = fail_on_unexhausted_steps
         super().__init__(namespace)
 
     @set_timeout_if_needed
     def _play_game_map_with_svm(
         self, game_map2svm: GameMap2SVM, ws: WebSocket
-    ) -> tuple[GameResult, TimeDuration]:
+    ) -> tuple[GameResult | GameFailed, TimeDuration]:
         with_connector = Connector(ws, game_map2svm.GameMap)
         steps_count = 0
         game_state = None
@@ -100,8 +109,17 @@ class EachStepGameManager(BaseGameManager):
 
         end_time = perf_counter()
         if actual_coverage != 100 and steps_count != steps:
+            if self._fail_on_unexhausted_steps:
+                failure = unexhausted_steps_failure(
+                    map_name=with_connector.map.MapName,
+                    steps_taken=steps_count,
+                    steps_expected=steps,
+                    coverage=actual_coverage,
+                )
+                logging.error(failure.reason)
+                return failure, end_time - start_time
             logging.warning(
-                f"<{self._with_predictor.name()}>: not all steps exshausted on {with_connector.map.MapName} with non-100% coverage"
+                f"<{self._with_predictor.name()}>: not all steps exhausted on {with_connector.map.MapName} with non-100% coverage"
                 f"steps taken: {steps_count}, actual coverage: {actual_coverage:.2f}"
             )
             steps_count = steps
@@ -127,11 +145,17 @@ class EachStepGameManager(BaseGameManager):
         try:
             with game_server_socket_manager(game_map2svm.SVMInfo) as ws:
                 game_result, time = self._play_game_map_with_svm(game_map2svm, ws)
-            logging.info(
-                f"<{self._with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
-                f"in {game_result.steps_count} steps, {time} seconds, "
-                f"actual coverage: {game_result.actual_coverage_percent:.2f}"
-            )
+            if isinstance(game_result, GameResult):
+                logging.info(
+                    f"<{self._with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
+                    f"in {game_result.steps_count} steps, {time} seconds, "
+                    f"actual coverage: {game_result.actual_coverage_percent:.2f}"
+                )
+            else:
+                logging.warning(
+                    f"<{self._with_predictor.name()}> failed map {game_map2svm.GameMap.MapName} "
+                    f"after {time} seconds: {game_result.reason}"
+                )
         except FunctionTimedOut as error:
             need_to_save = True
             logging.warning(
