@@ -133,18 +133,21 @@ secondary mirror.
 Runner requirements
 -------------------
 
-Five workflows run on a self-hosted runner (``jbLabSelfHostedCI``) rather than
-on GitHub-hosted compute: ``build_and_run.yaml``,
-``build_and_run_model_val.yaml``, ``build_and_test_usvm.yaml``,
-``publish_image.yaml`` and ``runstrat_tool.yaml``. Most of their jobs also
-declare a ``container:``, so the work happens inside a container while the
-workflow itself is still driven by the runner.
+Four workflow files contain jobs that run on a self-hosted runner
+(``jbLabSelfHostedCI``) rather than on GitHub-hosted compute:
+``e2e_build_and_run.yml`` (the shared pipeline called by
+``build_and_run.yaml`` and ``build_and_run_model_val.yaml``),
+``build_and_test_usvm.yaml``, ``publish_image.yaml`` and
+``runstrat_tool.yaml``. All of those jobs also declare a ``container:``, so
+the work happens inside a container while the workflow itself is still driven
+by the runner.
 
 Every action referenced by ``.github/workflows/`` runs on Node.js 24, which
 requires Actions Runner ``v2.327.1`` or newer. The GitHub-hosted runners
 satisfy this by construction, but the self-hosted runner does not: on one older
-than ``v2.327.1`` every action in those five workflows fails to start, taking
-the whole training, image-publishing and tool-testing pipeline down with it.
+than ``v2.327.1`` every action in those four workflow files fails to start,
+taking the whole training, image-publishing and tool-testing pipeline down with
+it.
 Keep that runner current before bumping an action to a release that raises its
 runtime requirement.
 
