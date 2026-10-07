@@ -100,6 +100,26 @@ class TestFindBestTrialRun:
         with pytest.raises(SystemExit, match="best_trial_number"):
             find_best_trial_run(client, experiment.experiment_id)
 
+    def test_ignores_tagged_run_that_never_ended(self, tmp_path):
+        experiment, client = log_tuning_structure(
+            tmp_path, values=[0.5, 0.9], epochs_per_trial=[2, 1]
+        )
+        mlflow.start_run(run_name="2")
+        mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, "0")
+        best_run = find_best_trial_run(client, experiment.experiment_id)
+        assert best_run.info.run_name == "0"
+        mlflow.end_run()
+
+    def test_only_unended_tagged_run_fails_cleanly(self, tmp_path):
+        mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+        experiment = mlflow.set_experiment("CI")
+        mlflow.start_run(run_name="0")
+        mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, "0")
+        client = MlflowClient()
+        with pytest.raises(SystemExit, match="best_trial_number"):
+            find_best_trial_run(client, experiment.experiment_id)
+        mlflow.end_run()
+
 
 class TestFindLastModelEpoch:
     def test_highest_epoch_of_the_given_run(self, tmp_path):
