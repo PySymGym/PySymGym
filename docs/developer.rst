@@ -253,6 +253,42 @@ CPU baseline (two runs):
      - 131.7
      - 742
 
+GPU run (one run, device ``cuda:0``):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 25 50
+
+   * - training step (s)
+     - peak RSS (MiB)
+     - peak VRAM (MiB)
+   * - 134.0
+     - 863
+     - 296 total (~72 torch; 224 is the desktop compositor baseline)
+
+The workload fits in the 2 GB card with a wide margin (~1.8 GB free after
+the compositor), so "does it fit" is not the constraint. The question is
+speed, and the answer is no: the GPU run (134.0 s) is not faster than the
+CPU baseline (130.6 / 131.7 s) — a difference within run-to-run noise.
+
+Why the GPU does not help here: the training step is dominated by the
+``svms_each_step`` validation (~54–56 s of the ~132 s): a .NET game server
+plays each of the 35 maps for 200–500 steps, and at every step the model
+picks the next action — one small graph forward pass with a CPU<->GPU round
+trip per step (see ``ml/predict.py``). The training epochs themselves are
+no-ops in this workload: the dataset only keeps maps that reached 100%
+coverage (``threshold_coverage: 100``), which a fresh random model never
+does. So the entire torch-bound part is per-step micro-batch inference,
+where the transfer and kernel-launch overhead cancels the GP108's compute
+advantage — not faster on the GPU.
+
+**Decision: drop.** Running the e2e training on the host GPU is not worth
+it: no measured speedup (slightly slower within noise), the torch-bound part
+is a minority of the wall time, and enabling it would add a host
+prerequisite and passthrough fragility for zero benefit. The CI image keeps
+the CUDA-enabled torch it already ships (harmless without a device); no
+workflow change is made.
+
 CI as source of truth
 ---------------------
 
