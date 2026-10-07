@@ -208,6 +208,51 @@ map before all planned steps are played without 100% coverage is an engine
 defect; in CI it must fail the run instead of being swallowed by a warning,
 while local runs keep the default warning-only behavior.
 
+**Host GPU spike (#567).** Issue #567 asked whether the end-to-end training
+should run on the self-hosted runner's host GPU (reported: NVIDIA GT 1030,
+Pascal, ~2 GB VRAM). Dedicated self-hosted e2e runs were off the table for
+this batch, so the spike was measured locally on a dev machine with an NVIDIA
+GeForce MX150 (GP108M — the same Pascal chip class and 2 GB VRAM as the GT
+1030), which makes the measurement representative of the runner.
+
+Two findings frame the measurement:
+
+- The CI environment already ships a CUDA-enabled torch. The Docker image
+  (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
+  Python dependencies are installed at runtime by ``poetry install`` from the
+  lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
+  with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...). So
+  "provide a CUDA-enabled torch build inside the CI image" required no image
+  change; the only missing piece for GPU use is device passthrough to the job
+  container.
+- Device selection needs no code change either: ``AIAgent/config.py`` picks
+  ``cuda:0`` when available and falls back to CPU, so a run without GPU
+  passthrough is exactly what CI does today (CUDA-capable wheel, no device).
+
+The measurement replicates the shared e2e pipeline step for step (V# server
+and maps build, data generation, MLflow + game-server broker with readiness
+polling, ``run_training.py --config ../workflow/config_for_tests.yml`` from
+``AIAgent/``) in the locked environment (torch 2.7.1+cu126). The CPU baseline
+hides the GPU with ``CUDA_VISIBLE_DEVICES=""``; the GPU run leaves it
+visible. Wall times below cover the training step — the phase a GPU could
+affect; builds and data generation are device-independent.
+
+CPU baseline (two runs):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 30 25
+
+   * - run
+     - training step (s)
+     - peak RSS (MiB)
+   * - 1
+     - 130.6
+     - 742
+   * - 2
+     - 131.7
+     - 742
+
 CI as source of truth
 ---------------------
 
