@@ -289,6 +289,22 @@ prerequisite and passthrough fragility for zero benefit. The CI image keeps
 the CUDA-enabled torch it already ships (harmless without a device); no
 workflow change is made.
 
+No code change accompanies this decision: the shared e2e pipeline gains no
+GPU passthrough, and the Dockerfile is untouched. Wiring ``--gpus all`` into
+the build-and-launch container would add a host prerequisite
+(nvidia-container-toolkit) and a new failure mode to a long self-hosted
+pipeline for zero measured benefit.
+
+If this is ever revisited, the opt-in point is the ``container.options`` of
+the build-and-launch job in ``.github/workflows/e2e_build_and_run.yml``
+(``--gpus all``, default off so CPU runs are unaffected). The passthrough
+flag itself can be host-dependent: on the dev machine used for this
+measurement, docker rejects CDI mode (``--gpus all``) and requires
+``--runtime nvidia`` instead, so a revisit must check the runner host's
+docker configuration first. Re-measure before wiring if a future workload
+makes the torch-bound part dominant in wall time (larger models or datasets),
+or if the runner's GPU class changes.
+
 CI as source of truth
 ---------------------
 
