@@ -7,6 +7,7 @@ import multiprocessing as mp
 import os
 from dataclasses import asdict, dataclass
 from functools import partial
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import joblib
@@ -39,13 +40,13 @@ from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
 from paths import (
     CURRENT_MODEL_PATH,
     CURRENT_STUDY_PATH,
-    CURRENT_TABLE_PATH,
     CURRENT_TRIAL_PATH,
     LOG_PATH,
     MODEL_KWARGS_PATH,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
+    trial_dir,
 )
 from torch import nn
 from torch_geometric.data import Dataset
@@ -117,7 +118,7 @@ def run_training(
             # In short, this setting allows to optimize memory usage.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-            def validate(model, dataset: TrainingDataset):
+            def validate(model, dataset: TrainingDataset, trial_directory: Path):
                 dataset.switch_to(validation_mode.dataset)
                 criterion = criterion_init()
                 result = validate_loss(
@@ -142,19 +143,28 @@ def run_training(
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:False"
 
             maps: list[GameMap2SVM] = get_maps(validation_mode)
-            with open(CURRENT_TABLE_PATH, "w") as statistics_file:
-                statistics_writer = csv.DictWriter(
-                    statistics_file,
-                    sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
-                )
-                statistics_writer.writeheader()
+            table_columns = sorted(
+                [game_map2svm.GameMap.MapName for game_map2svm in maps]
+            )
 
-            def validate(model, dataset: TrainingDataset):
+            def validate(model, dataset: TrainingDataset, trial_directory: Path):
+                # Per-trial statistics table: each trial appends one row per
+                # epoch to its own file, so concurrent trials cannot interleave.
+                table_path = trial_directory / "svms_result_table.csv"
+                if not table_path.exists():
+                    with open(table_path, "w") as statistics_file:
+                        statistics_writer = csv.DictWriter(
+                            statistics_file, table_columns
+                        )
+                        statistics_writer.writeheader()
+
                 map2results = ValidationCoverage(model, dataset).validate_coverage(
                     maps, validation_mode
                 )
-                metrics = get_svms_statistics(map2results, validation_mode, dataset)
-                mlflow.log_artifact(CURRENT_TABLE_PATH)
+                metrics = get_svms_statistics(
+                    map2results, validation_mode, dataset, table_path
+                )
+                mlflow.log_artifact(table_path)
 
                 for map2result in map2results:
                     if (
@@ -173,11 +183,13 @@ def run_training(
         for val_mode in validation_config.validation_mode.val_sequence:
             val_pipeline.append(get_validation(val_mode))
 
-        def validate(model, dataset: TrainingDataset):
+        def validate(model, dataset: TrainingDataset, trial_directory: Path):
             metrics = dict()
             results = list()
             for val_func in val_pipeline:
-                single_val_result, single_val_metrics = val_func(model, dataset)
+                single_val_result, single_val_metrics = val_func(
+                    model, dataset, trial_directory
+                )
                 results.append(single_val_result)
                 metrics.update(single_val_metrics)
                 torch.cuda.empty_cache()
@@ -299,6 +311,9 @@ def objective(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
+    trial_directory = trial_dir(trial.number)
+    trial_directory.mkdir(parents=True, exist_ok=True)
+
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         for epoch in range(epochs):
@@ -322,7 +337,7 @@ def objective(
 
             model.eval()
             dataset.switch_to(TrainingDatasetMode.VALIDATION)
-            result, metrics = validate(model, dataset)
+            result, metrics = validate(model, dataset, trial_directory)
             mlflow.log_metrics(metrics, step=epoch)
             if dynamic_dataset:
                 dataset.update_meta_data()
