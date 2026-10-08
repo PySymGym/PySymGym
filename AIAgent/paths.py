@@ -6,10 +6,8 @@ RAW_DATASET_PATH = REPORT_PATH / "SerializedEpisodes"
 PROCESSED_DATASET_PATH = REPORT_PATH / "dataset_path_condition"
 LOG_PATH = Path("./ml_app.log")
 MODEL_FILE_NAME = "model.pth"
-CURRENT_MODEL_PATH = REPORT_PATH / MODEL_FILE_NAME
 CURRENT_STUDY_PATH = REPORT_PATH / "study.pkl"
 CURRENT_TRIAL_PATH = REPORT_PATH / "trial.pkl"
-MODEL_KWARGS_PATH = REPORT_PATH / "model_kwargs.yaml"
 TRIALS_PATH = REPORT_PATH / "trials"
 
 

@@ -9,6 +9,7 @@ CI) instead of the condition being swallowed by a warning.
 
 import contextlib
 import multiprocessing as mp
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -304,3 +305,29 @@ class TestGameManagerWiring:
                 config, sync_manager
             )
         assert manager._fail_on_unexhausted_steps is True
+
+    def test_sendmodel_manager_receives_kwargs_and_trial_dir(self):
+        config = ValidationConfig(
+            validation_mode=svms_validation_mode("svms_model")
+        ).validation_mode
+        model_kwargs = {"hidden_channels": 64}
+        trial_directory = Path("/tmp/trials/7")
+        with mp.Manager() as sync_manager:
+            manager = ValidationCoverage(
+                None, None, model_kwargs=model_kwargs, trial_dir=trial_directory
+            )._get_game_manager(config, sync_manager)
+        assert manager._model_kwargs == model_kwargs
+        assert manager._trial_dir == trial_directory
+        assert manager._path_to_model == trial_directory / "model.pth"
+        assert manager._onnx_path == trial_directory / "model.onnx"
+
+    def test_sendmodel_manager_falls_back_to_report_root(self):
+        config = ValidationConfig(
+            validation_mode=svms_validation_mode("svms_model")
+        ).validation_mode
+        with mp.Manager() as sync_manager:
+            manager = ValidationCoverage(None, None)._get_game_manager(
+                config, sync_manager
+            )
+        assert manager._path_to_model.name == "model.pth"
+        assert manager._onnx_path.name == "model.onnx"
