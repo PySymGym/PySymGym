@@ -44,6 +44,10 @@ jobs:
       image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
     permissions:
       packages: read
+    env:
+      # Pinned so that Python string hashing (and any code path that depends
+      # on it) is identical between runs; part of the #583 reproducibility fix.
+      PYTHONHASHSEED: "0"
     steps:
       - name: Debug
         run: |
