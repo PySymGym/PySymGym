@@ -4,10 +4,9 @@ import subprocess
 import time
 from multiprocessing.managers import Namespace
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import torch
-import yaml
 from common.classes import GameFailed, GameResult, Map2Result
 from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM
@@ -38,7 +37,7 @@ from onyx import (
     load_gamestate,
     resolve_import_model,
 )
-from paths import CURRENT_MODEL_PATH, MODEL_KWARGS_PATH, REPORT_PATH
+from paths import MODEL_FILE_NAME, REPORT_PATH
 from torch_geometric.data.hetero_data import HeteroData
 
 # svm substituation variables
@@ -52,7 +51,7 @@ NAME_OF_OBJECT_TO_COVER = "NameOfObjectToCover"
 OUTPUT_DIR = "OutputDir"
 PORT = "Port"
 
-CURRENT_ONNX_MODEL_PATH = REPORT_PATH / "model.onnx"
+ONNX_MODEL_FILE_NAME = "model.onnx"
 GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/4781_gameState.json"
 SVMS_OUTPUT_PATH = REPORT_PATH / "svms_output"
 
@@ -70,26 +69,27 @@ class ModelGamePreparator(BaseGamePreparator):
         self,
         namespace: Namespace,
         model: torch.nn.Module,
-        path_to_model: Path = CURRENT_MODEL_PATH,
+        path_to_model: Path,
+        onnx_path: Path,
+        model_kwargs: dict[str, Any],
     ):
         self._model = model
         self._path_to_model = path_to_model
+        self._onnx_path = onnx_path
+        self._model_kwargs = model_kwargs
         super().__init__(namespace)
 
     def _create_onnx_model(self):
         import_model_fqn = (
             f"{self._model.__class__.__module__}.{self._model.__class__.__name__}"
         )
-        with open(MODEL_KWARGS_PATH, "r") as file:
-            model_kwargs = yaml.safe_load(file)
-
         with open(GAMESTATE_EXAMPLE_PATH) as gamestate_file:
             save_torch_model_to_onnx_file(
                 sample_gamestate=load_gamestate(gamestate_file),
                 pytorch_model_path=self._path_to_model,
-                onnx_savepath=CURRENT_ONNX_MODEL_PATH,
+                onnx_savepath=self._onnx_path,
                 model_def=resolve_import_model(import_model_fqn),
-                model_kwargs=model_kwargs,
+                model_kwargs=self._model_kwargs,
             )
 
     def _clean_output_folder(self):
@@ -107,16 +107,29 @@ class ModelGameManager(BaseGameManager):
         self,
         namespace: Namespace,
         model: torch.nn.Module,
-        path_to_model: Path = CURRENT_MODEL_PATH,
+        trial_dir: Optional[Path] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
         fail_on_unexhausted_steps: bool = False,
     ):
         self._namespace = namespace
         self._shared_lock = namespace.shared_lock
         self._model = model
-        self._path_to_model = path_to_model
+        # Per-trial artifacts (model weights and the exported ONNX) live in the
+        # trial's directory so concurrent trials cannot overwrite each other;
+        # without a trial dir they fall back to the report root.
+        self._trial_dir = trial_dir
+        self._model_kwargs = model_kwargs
         self._fail_on_unexhausted_steps = fail_on_unexhausted_steps
         self._games_info: dict[str, ModelGameMapInfo] = dict()
         super().__init__(self._namespace)
+
+    @property
+    def _path_to_model(self) -> Path:
+        return (self._trial_dir or REPORT_PATH) / MODEL_FILE_NAME
+
+    @property
+    def _onnx_path(self) -> Path:
+        return (self._trial_dir or REPORT_PATH) / ONNX_MODEL_FILE_NAME
 
     def _play_game_map(self, game_map2svm: GameMap2SVM) -> Map2Result:
         game_map = game_map2svm.GameMap
@@ -191,7 +204,7 @@ class ModelGameManager(BaseGameManager):
                 ASSEMBLY_FULL_NAME: game_map.AssemblyFullName,
                 NAME_OF_OBJECT_TO_COVER: game_map.NameOfObjectToCover,
                 MAP_NAME: game_map.MapName,
-                MODEL_PATH: Path(CURRENT_ONNX_MODEL_PATH).absolute(),
+                MODEL_PATH: self._onnx_path.absolute(),
                 OUTPUT_DIR: self._get_output_dir(game_map2svm.GameMap).absolute(),
                 PORT: port,
             },
@@ -364,4 +377,10 @@ class ModelGameManager(BaseGameManager):
         logger(f"out:\n{str(out)}\nerr:\n{str(err)}")
 
     def _create_preparator(self):
-        return ModelGamePreparator(self._namespace, self._model, self._path_to_model)
+        return ModelGamePreparator(
+            self._namespace,
+            self._model,
+            self._path_to_model,
+            self._onnx_path,
+            self._model_kwargs,
+        )

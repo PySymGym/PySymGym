@@ -16,7 +16,7 @@ import mlflow
 import yaml
 from common.config.config import Config
 from mlflow.tracking import MlflowClient
-from paths import CURRENT_MODEL_PATH, CURRENT_TRIAL_PATH
+from paths import MODEL_FILE_NAME, CURRENT_TRIAL_PATH
 from run_training import BEST_TRIAL_NUMBER_TAG
 
 
@@ -133,16 +133,14 @@ def find_last_model_epoch(client: MlflowClient, run_id: str) -> int:
     SystemExit
         If the run has no ``<epoch>/model.pth`` artifacts.
     """
-    pattern = re.compile(rf"(\d+)/{re.escape(CURRENT_MODEL_PATH.name)}")
+    pattern = re.compile(rf"(\d+)/{re.escape(MODEL_FILE_NAME)}")
     epochs = [
         int(match.group(1))
         for path in _artifact_paths(client, run_id)
         if (match := pattern.fullmatch(path))
     ]
     if not epochs:
-        raise SystemExit(
-            f"no {CURRENT_MODEL_PATH.name!r} artifact found in run {run_id}"
-        )
+        raise SystemExit(f"no {MODEL_FILE_NAME!r} artifact found in run {run_id}")
     return max(epochs)
 
 
@@ -184,7 +182,7 @@ def derive_config(base_config_path: Path, output_config_path: Path) -> tuple[str
     epoch = find_last_model_epoch(client, best_run.info.run_id)
     weights_uri = (
         f"mlflow-artifacts:/{experiment.experiment_id}/{best_run.info.run_id}"
-        f"/artifacts/{epoch}/{CURRENT_MODEL_PATH.name}"
+        f"/artifacts/{epoch}/{MODEL_FILE_NAME}"
     )
     trial_uri = (
         f"mlflow-artifacts:/{experiment.experiment_id}/{best_run.info.run_id}"

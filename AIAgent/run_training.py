@@ -38,11 +38,10 @@ from ml.validation.coverage.validate_coverage import ValidationCoverage
 from ml.validation.loss.validate_loss import validate_loss
 from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
 from paths import (
-    CURRENT_MODEL_PATH,
     CURRENT_STUDY_PATH,
     CURRENT_TRIAL_PATH,
     LOG_PATH,
-    MODEL_KWARGS_PATH,
+    MODEL_FILE_NAME,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
@@ -118,7 +117,12 @@ def run_training(
             # In short, this setting allows to optimize memory usage.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-            def validate(model, dataset: TrainingDataset, trial_directory: Path):
+            def validate(
+                model,
+                dataset: TrainingDataset,
+                trial_directory: Path,
+                model_kwargs: dict,
+            ):
                 dataset.switch_to(validation_mode.dataset)
                 criterion = criterion_init()
                 result = validate_loss(
@@ -147,7 +151,12 @@ def run_training(
                 [game_map2svm.GameMap.MapName for game_map2svm in maps]
             )
 
-            def validate(model, dataset: TrainingDataset, trial_directory: Path):
+            def validate(
+                model,
+                dataset: TrainingDataset,
+                trial_directory: Path,
+                model_kwargs: dict,
+            ):
                 # Per-trial statistics table: each trial appends one row per
                 # epoch to its own file, so concurrent trials cannot interleave.
                 table_path = trial_directory / "svms_result_table.csv"
@@ -158,9 +167,12 @@ def run_training(
                         )
                         statistics_writer.writeheader()
 
-                map2results = ValidationCoverage(model, dataset).validate_coverage(
-                    maps, validation_mode
-                )
+                map2results = ValidationCoverage(
+                    model,
+                    dataset,
+                    model_kwargs=model_kwargs,
+                    trial_dir=trial_directory,
+                ).validate_coverage(maps, validation_mode)
                 metrics = get_svms_statistics(
                     map2results, validation_mode, dataset, table_path
                 )
@@ -183,12 +195,17 @@ def run_training(
         for val_mode in validation_config.validation_mode.val_sequence:
             val_pipeline.append(get_validation(val_mode))
 
-        def validate(model, dataset: TrainingDataset, trial_directory: Path):
+        def validate(
+            model,
+            dataset: TrainingDataset,
+            trial_directory: Path,
+            model_kwargs: dict,
+        ):
             metrics = dict()
             results = list()
             for val_func in val_pipeline:
                 single_val_result, single_val_metrics = val_func(
-                    model, dataset, trial_directory
+                    model, dataset, trial_directory, model_kwargs
                 )
                 results.append(single_val_result)
                 metrics.update(single_val_metrics)
@@ -313,9 +330,17 @@ def objective(
 
     trial_directory = trial_dir(trial.number)
     trial_directory.mkdir(parents=True, exist_ok=True)
+    model_path = trial_directory / MODEL_FILE_NAME
 
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
+        # The kwargs are constant within a trial: persist them once to the
+        # trial dir and log them as an artifact, instead of rewriting a shared
+        # side-effect file every epoch for the ONNX export to read back.
+        with open(trial_directory / "model_kwargs.yaml", "w") as outfile:
+            yaml.dump(model_kwargs, outfile)
+        mlflow.log_artifact(trial_directory / "model_kwargs.yaml")
+
         for epoch in range(epochs):
             dataset.switch_to(TrainingDatasetMode.TRAINING)
             train_dataloader = DataLoader(
@@ -329,15 +354,12 @@ def objective(
                 criterion=criterion,
             )
             torch.cuda.empty_cache()
-            torch.save(model.state_dict(), CURRENT_MODEL_PATH)
-            mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
-
-            with open(MODEL_KWARGS_PATH, "w") as outfile:
-                yaml.dump(model_kwargs, outfile)
+            torch.save(model.state_dict(), model_path)
+            mlflow.log_artifact(model_path, str(epoch))
 
             model.eval()
             dataset.switch_to(TrainingDatasetMode.VALIDATION)
-            result, metrics = validate(model, dataset, trial_directory)
+            result, metrics = validate(model, dataset, trial_directory, model_kwargs)
             mlflow.log_metrics(metrics, step=epoch)
             if dynamic_dataset:
                 dataset.update_meta_data()
