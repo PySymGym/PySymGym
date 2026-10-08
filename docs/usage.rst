@@ -95,6 +95,11 @@ improving the dataset in the other kind of run.
     seeded with the study seed — so two runs of the same configuration produce
     identical splits, samples, and hyper-parameter suggestions.
 
+    Each trial writes its artifacts to ``report/trials/<trial_number>/``
+    (model weights, model kwargs, and the SVM statistics table for SVM
+    validation), so parallel trials cannot overwrite each other; the study
+    snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
+
 2. Move to the ``AIAgent`` directory and run training:
 
    .. code-block:: console
