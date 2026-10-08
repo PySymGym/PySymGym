@@ -331,15 +331,16 @@ def objective(
     trial_directory = trial_dir(trial.number)
     trial_directory.mkdir(parents=True, exist_ok=True)
     model_path = trial_directory / MODEL_FILE_NAME
+    kwargs_path = trial_directory / "model_kwargs.yaml"
 
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         # The kwargs are constant within a trial: persist them once to the
         # trial dir and log them as an artifact, instead of rewriting a shared
         # side-effect file every epoch for the ONNX export to read back.
-        with open(trial_directory / "model_kwargs.yaml", "w") as outfile:
+        with open(kwargs_path, "w") as outfile:
             yaml.dump(model_kwargs, outfile)
-        mlflow.log_artifact(trial_directory / "model_kwargs.yaml")
+        mlflow.log_artifact(kwargs_path)
 
         for epoch in range(epochs):
             dataset.switch_to(TrainingDatasetMode.TRAINING)
