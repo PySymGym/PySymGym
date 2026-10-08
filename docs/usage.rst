@@ -78,15 +78,22 @@ improving the dataset in the other kind of run.
            val_type: loss
            batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
 
-   Configure Optuna, for example:
+    Configure Optuna, for example:
 
-   .. code-block:: yaml
+    .. code-block:: yaml
 
-       OptunaConfig:
-         n_startup_trials: 10
-         n_trials: 30
-         n_jobs: 1
-         study_direction: "minimize"
+        OptunaConfig:
+          n_startup_trials: 10
+          n_trials: 30
+          n_jobs: 1
+          study_direction: "minimize"
+
+    The ``TrainingConfig`` section requires a ``seed``. It makes the run
+    reproducible: the dataset split, step sampling, validation map order, and
+    model weight initialization are seeded with it, each trial re-seeds from a
+    seed derived from (study seed, trial number), and the Optuna sampler is
+    seeded with the study seed — so two runs of the same configuration produce
+    identical splits, samples, and hyper-parameter suggestions.
 
 2. Move to the ``AIAgent`` directory and run training:
 

@@ -11,6 +11,7 @@ TrainingConfig:
   threshold_coverage: 100
   load_to_cpu: False
   epochs: 10
+  seed: 42
   percentile: 80
 
 ValidationConfig:
