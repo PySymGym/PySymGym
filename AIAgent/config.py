@@ -43,12 +43,8 @@ class OnGameServerRestartFeature:
 class FeatureConfig:
     VERBOSE_TABLES = True
     DISABLE_MESSAGE_CHECKS = True
-    # Per-map validation timeout. Complex maps (e.g. FindCheapestPrice, which runs a
-    # 500-550 step budget of symbolic execution) legitimately take well over 30 minutes
-    # to play in each-step mode, so the timeout must exceed their full run time or they
-    # are killed mid-game and reported as failures.
     SAVE_IF_FAIL_OR_TIMEOUT = SaveIfFailOrTimeout(
-        enabled=True, timeout_sec=3600, save_path=Path("./report/timeouted_agents/")
+        enabled=True, timeout_sec=1800, save_path=Path("./report/timeouted_agents/")
     )
     ON_GAME_SERVER_RESTART = OnGameServerRestartFeature(
         enabled=True, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1
