@@ -31,6 +31,7 @@ from config import GeneralConfig
 from ml.dataset import TrainingDataset, TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
+from ml.training.seeds import derive_trial_seed, seed_everything
 from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
 from ml.validation.loss.validate_loss import validate_loss
@@ -182,6 +183,9 @@ def run_training(
                 torch.cuda.empty_cache()
             return results[0], metrics
 
+    # Study-level seed: the dataset split and any step sampling done at
+    # construction must be identical between runs of the same config.
+    seed_everything(training_config.seed)
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
         PROCESSED_DATASET_PATH,
@@ -211,9 +215,13 @@ def run_training(
         epochs=training_config.epochs,
         validate=validate,
         direction=optuna_config.study_direction,
+        seed=training_config.seed,
     )
+    # TPE keeps its own RNG (global seeding does not reach it), so the sampler
+    # must be seeded explicitly or suggested hyper-parameters differ per run.
     sampler = optuna.samplers.TPESampler(
-        n_startup_trials=optuna_config.n_startup_trials
+        n_startup_trials=optuna_config.n_startup_trials,
+        seed=training_config.seed,
     )
     if optuna_config.trial_uri is None and weights_uri is None:
 
@@ -255,7 +263,12 @@ def objective(
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
     direction: OptimizationDirection,
+    seed: int,
 ):
+    # Per-trial seed: weight init and every sampling site (step sampling,
+    # similar-step dedup, validation map order) draw from these globals, so
+    # seeding before any of them makes the trial reproducible.
+    seed_everything(derive_trial_seed(seed, trial.number))
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 8, 32),

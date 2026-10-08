@@ -1,11 +1,14 @@
 """Tests for the training seed helpers and the required config seed field."""
 
 import random
+from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 from common.config.training_config import TrainingConfig
+from ml.dataset import TrainingDataset
+from ml.inference import TORCH
 from ml.training.seeds import derive_trial_seed, seed_everything
 from pydantic import ValidationError
 
@@ -78,3 +81,102 @@ class TestTrainingConfigSeed:
     def test_valid_config_accepts_seed(self):
         config = TrainingConfig(**make_training_config())
         assert config.seed == 42
+
+
+def make_processed_dataset(directory: Path, maps: int = 2, steps_per_map: int = 10):
+    """A minimal processed dataset: map dirs with a result file and dummy steps."""
+    for i in range(maps):
+        map_dir = directory / f"map{i}"
+        map_dir.mkdir(parents=True)
+        (map_dir / "result").write_text("(100, -1, -5, 0)")
+        for j in range(steps_per_map):
+            (map_dir / f"{j}.pt").write_bytes(b"")
+    return directory
+
+
+def make_similar_steps(count: int) -> list:
+    """Steps that are all similar to each other (equal states and vertices)."""
+    from torch_geometric.data import HeteroData
+
+    steps = []
+    for _ in range(count):
+        data = HeteroData()
+        data[TORCH.state_vertex].x = torch.zeros(3, 6)
+        data[TORCH.game_vertex].x = torch.zeros(4, 7)
+        y_true = torch.zeros(3, 1)
+        y_true[0] = 1.0
+        data["y_true"] = y_true
+        steps.append(data)
+    return steps
+
+
+def dedup_pattern(steps: list, kept: list) -> list[int]:
+    """Which input positions survived dedup (kept holds references to inputs)."""
+    kept_ids = {id(step) for step in kept}
+    return [1 if id(step) in kept_ids else 0 for step in steps]
+
+
+class TestDatasetDeterminism:
+    def _build(self, tmp_path: Path, processed_dir: Path, seed: int, **kwargs):
+        seed_everything(seed)
+        return TrainingDataset(
+            raw_dir=tmp_path / "raw",
+            processed_dir=processed_dir,
+            train_percentage=0.5,
+            threshold_coverage=100,
+            **kwargs,
+        )
+
+    @pytest.fixture
+    def processed_dir(self, tmp_path):
+        return make_processed_dataset(tmp_path / "processed")
+
+    def test_same_seed_gives_identical_split(self, tmp_path, processed_dir):
+        first = self._build(tmp_path, processed_dir, 42)
+        second = self._build(tmp_path, processed_dir, 42)
+        assert (
+            first.train_dataset_indices.indices == second.train_dataset_indices.indices
+        )
+        assert first.test_dataset_indices.indices == second.test_dataset_indices.indices
+
+    def test_different_seeds_give_different_splits(self, tmp_path, processed_dir):
+        first = self._build(tmp_path, processed_dir, 42)
+        second = self._build(tmp_path, processed_dir, 43)
+        assert (
+            first.train_dataset_indices.indices != second.train_dataset_indices.indices
+        )
+
+    def test_same_seed_gives_identical_step_sampling(self, tmp_path):
+        processed_dir = make_processed_dataset(
+            tmp_path / "processed", maps=1, steps_per_map=10
+        )
+        first = self._build(tmp_path, processed_dir, 42, threshold_steps_number=4)
+        second = self._build(tmp_path, processed_dir, 42, threshold_steps_number=4)
+        assert first.processed_paths == second.processed_paths
+        assert len(first.processed_paths) == 4
+
+    def test_same_seed_gives_identical_dedup(self, tmp_path, processed_dir):
+        first = self._build(tmp_path, processed_dir, 42, similar_steps_save_prob=0.5)
+        second = self._build(tmp_path, processed_dir, 42, similar_steps_save_prob=0.5)
+        seed_everything(derive_trial_seed(42, 0))
+        pattern_a = dedup_pattern(
+            steps_a := make_similar_steps(30), first.remove_similar_steps(steps_a)
+        )
+        seed_everything(derive_trial_seed(42, 0))
+        pattern_b = dedup_pattern(
+            steps_b := make_similar_steps(30), second.remove_similar_steps(steps_b)
+        )
+        assert pattern_a == pattern_b
+
+    def test_different_seeds_give_different_dedup(self, tmp_path, processed_dir):
+        first = self._build(tmp_path, processed_dir, 42, similar_steps_save_prob=0.5)
+        second = self._build(tmp_path, processed_dir, 43, similar_steps_save_prob=0.5)
+        seed_everything(derive_trial_seed(42, 0))
+        pattern_a = dedup_pattern(
+            steps_a := make_similar_steps(30), first.remove_similar_steps(steps_a)
+        )
+        seed_everything(derive_trial_seed(43, 0))
+        pattern_b = dedup_pattern(
+            steps_b := make_similar_steps(30), second.remove_similar_steps(steps_b)
+        )
+        assert pattern_a != pattern_b
