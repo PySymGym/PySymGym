@@ -1,6 +1,7 @@
 """Tests for the training seed helpers and the required config seed field."""
 
 import random
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -144,6 +145,19 @@ class TestDatasetDeterminism:
         second = self._build(tmp_path, processed_dir, 43)
         assert (
             first.train_dataset_indices.indices != second.train_dataset_indices.indices
+        )
+
+    def test_processed_paths_stable_across_directory_recreation(self, tmp_path):
+        # Regression: listdir/glob order changes when a directory is recreated,
+        # which used to silently re-shuffle the seeded train/test split.
+        processed_dir = make_processed_dataset(tmp_path / "processed")
+        first = self._build(tmp_path, processed_dir, 42)
+        shutil.rmtree(processed_dir)
+        make_processed_dataset(processed_dir)
+        second = self._build(tmp_path, processed_dir, 42)
+        assert first.processed_paths == second.processed_paths
+        assert (
+            first.train_dataset_indices.indices == second.train_dataset_indices.indices
         )
 
     def test_same_seed_gives_identical_step_sampling(self, tmp_path):
