@@ -52,6 +52,8 @@ jobs:
           # the container then starts device-less and AIAgent/config.py falls
           # back to CPU at runtime.
           echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
+          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
+          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
           for flag in "--gpus all" "--runtime nvidia"; do
               if err=$(docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 2>&1); then
                   echo "options=$flag" >> "$GITHUB_OUTPUT"
@@ -144,22 +146,8 @@ jobs:
           BROKER_PID=""
           trap 'kill $MLFLOW_PID $BROKER_PID 2>/dev/null || true' EXIT
 
-          python3 - <<'PY'
-          import time
-          import urllib.request
-
-          deadline = time.monotonic() + 120
-          while True:
-              try:
-                  with urllib.request.urlopen("http://127.0.0.1:8080/health", timeout=5) as response:
-                      if response.status == 200:
-                          break
-              except OSError:
-                  pass
-              if time.monotonic() >= deadline:
-                  raise SystemExit("MLflow server did not become ready on http://127.0.0.1:8080/health")
-              time.sleep(2)
-          PY
+          python3 wait_for_service.py http --url http://127.0.0.1:8080/health \
+            --name "MLflow server"
 
           poetry --ansi run python3 run_training.py --config ${{ inputs.training-config }}
 
@@ -178,21 +166,8 @@ jobs:
               poetry --ansi run python3 launch_servers.py --config report/config_for_tests_improved.yml > broker.log 2>&1 &
               BROKER_PID=$!
 
-              python3 - <<'PY'
-          import socket
-          import time
-
-          deadline = time.monotonic() + 120
-          while True:
-              try:
-                  with socket.create_connection(("127.0.0.1", 35000), timeout=5):
-                      break
-              except OSError:
-                  pass
-              if time.monotonic() >= deadline:
-                  raise SystemExit("game-server broker did not become ready on tcp://127.0.0.1:35000")
-              time.sleep(2)
-          PY
+               python3 wait_for_service.py tcp --host 127.0.0.1 --port 35000 \
+                 --name "game-server broker"
 
               poetry --ansi run python3 run_training.py --config report/config_for_tests_improved.yml
           fi
