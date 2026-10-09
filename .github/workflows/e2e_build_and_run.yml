@@ -51,14 +51,16 @@ jobs:
           # flag works (no GPU, broken driver, missing toolkit) pass nothing:
           # the container then starts device-less and AIAgent/config.py falls
           # back to CPU at runtime.
+          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
           for flag in "--gpus all" "--runtime nvidia"; do
-              if docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 > /dev/null 2>&1; then
+              if err=$(docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 2>&1); then
                   echo "options=$flag" >> "$GITHUB_OUTPUT"
                   exit 0
               fi
               # Log why the flag failed so a host misconfiguration is
               # diagnosable from the CI log without runner access.
-              echo "probe failed for $flag: $(docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 2>&1 | tail -1)"
+              echo "probe failed for $flag:"
+              echo "$err" | tail -3
           done
           # A GPU device node without a working docker passthrough is a host
           # misconfiguration (e.g. nvidia-container-toolkit not installed):
