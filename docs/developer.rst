@@ -181,7 +181,9 @@ them, gated on readiness polling (an HTTP ``/health`` check for MLflow, a TCP
 connect to the broker port) instead of fixed sleeps, and cleaned up when the
 step exits. A background process does not survive a step boundary, so a
 server started in an earlier step is gone by the time a later step needs it;
-a fixed sleep additionally races with the variable startup time.
+a fixed sleep additionally races with the variable startup time. The polling
+itself is ``AIAgent/wait_for_service.py`` (stdlib only, ``http`` and ``tcp``
+subcommands), called from the workflow step.
 
 **Triggers and concurrency.** The four self-hosted workflows that build or
 test code (``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
