@@ -37,11 +37,40 @@ jobs:
           HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
           echo "hash=$HASH" >> $GITHUB_OUTPUT
 
+  detect-gpu:
+    runs-on: self-hosted
+    outputs:
+      container-options: ${{ steps.detect.outputs.options }}
+    steps:
+      - name: Detect host GPU passthrough
+        id: detect
+        run: |
+          # The runner host may expose the GPU to docker through either
+          # nvidia-container-toolkit configuration; probe both and verify the
+          # device is actually injected into a disposable container. When no
+          # flag works (no GPU, broken driver, missing toolkit) pass nothing:
+          # the container then starts device-less and AIAgent/config.py falls
+          # back to CPU at runtime.
+          for flag in "--gpus all" "--runtime nvidia"; do
+              if docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 > /dev/null 2>&1; then
+                  echo "options=$flag" >> "$GITHUB_OUTPUT"
+                  exit 0
+              fi
+          done
+          # A GPU device node without a working docker passthrough is a host
+          # misconfiguration (e.g. nvidia-container-toolkit not installed):
+          # surface it loudly, then degrade to CPU instead of failing the run.
+          if [ -e /dev/nvidia0 ]; then
+              echo "WARNING: /dev/nvidia0 exists but no docker GPU passthrough works; running on CPU"
+          fi
+          echo "options=" >> "$GITHUB_OUTPUT"
+
   build-and-launch:
-    needs: calculate-dockerfile-hash
+    needs: [calculate-dockerfile-hash, detect-gpu]
     runs-on: self-hosted
     container:
       image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+      options: ${{ needs.detect-gpu.outputs.container-options }}
     permissions:
       packages: read
     env:

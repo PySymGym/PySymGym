@@ -211,102 +211,35 @@ map before all planned steps are played without 100% coverage is an engine
 defect; in CI it must fail the run instead of being swallowed by a warning,
 while local runs keep the default warning-only behavior.
 
-**Host GPU spike (#567).** Issue #567 asked whether the end-to-end training
-should run on the self-hosted runner's host GPU (reported: NVIDIA GT 1030,
-Pascal, ~2 GB VRAM). Dedicated self-hosted e2e runs were off the table for
-this batch, so the spike was measured locally on a dev machine with an NVIDIA
-GeForce MX150 (GP108M — the same Pascal chip class and 2 GB VRAM as the GT
-1030), which makes the measurement representative of the runner.
+**Host GPU in e2e CI (#567).** The real-world pipeline runs on a GPU, so the
+self-hosted e2e run exercises the GPU path as its primary mode and falls back
+to CPU when the runner host has no usable GPU. (The original #567 spike
+measured no speedup and concluded DROP; the decision was overridden because
+the value of the GPU path in CI is correctness coverage of the real-world
+device, not speed — measurement history in issue #567.)
 
-Two findings frame the measurement:
+Two properties make this a workflow-only change:
 
 - The CI environment already ships a CUDA-enabled torch. The Docker image
   (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
   Python dependencies are installed at runtime by ``poetry install`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
-  with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...). So
-  "provide a CUDA-enabled torch build inside the CI image" required no image
-  change; the only missing piece for GPU use is device passthrough to the job
-  container.
-- Device selection needs no code change either: ``AIAgent/config.py`` picks
-  ``cuda:0`` when available and falls back to CPU, so a run without GPU
-  passthrough is exactly what CI does today (CUDA-capable wheel, no device).
+  with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
+- Device selection needs no code change: ``AIAgent/config.py`` picks
+  ``cuda:0`` when available and falls back to CPU, and the training step
+  prints the selected device at startup — every CI run logs which path it
+  took.
 
-The measurement replicates the shared e2e pipeline step for step (V# server
-and maps build, data generation, MLflow + game-server broker with readiness
-polling, ``run_training.py --config ../workflow/config_for_tests.yml`` from
-``AIAgent/``) in the locked environment (torch 2.7.1+cu126). The CPU baseline
-hides the GPU with ``CUDA_VISIBLE_DEVICES=""``; the GPU run leaves it
-visible. Wall times below cover the training step — the phase a GPU could
-affect; builds and data generation are device-independent.
-
-CPU baseline (two runs):
-
-.. list-table::
-   :header-rows: 1
-   :widths: 15 30 25
-
-   * - run
-     - training step (s)
-     - peak RSS (MiB)
-   * - 1
-     - 130.6
-     - 742
-   * - 2
-     - 131.7
-     - 742
-
-GPU run (one run, device ``cuda:0``):
-
-.. list-table::
-   :header-rows: 1
-   :widths: 25 25 50
-
-   * - training step (s)
-     - peak RSS (MiB)
-     - peak VRAM (MiB)
-   * - 134.0
-     - 863
-     - 296 total (~72 torch; 224 is the desktop compositor baseline)
-
-The workload fits in the 2 GB card with a wide margin (~1.8 GB free after
-the compositor), so "does it fit" is not the constraint. The question is
-speed, and the answer is no: the GPU run (134.0 s) is not faster than the
-CPU baseline (130.6 / 131.7 s) — a difference within run-to-run noise.
-
-Why the GPU does not help here: the training step is dominated by the
-``svms_each_step`` validation (~54–56 s of the ~132 s): a .NET game server
-plays each of the 35 maps for 200–500 steps, and at every step the model
-picks the next action — one small graph forward pass with a CPU<->GPU round
-trip per step (see ``ml/predict.py``). The training epochs themselves are
-no-ops in this workload: the dataset only keeps maps that reached 100%
-coverage (``threshold_coverage: 100``), which a fresh random model never
-does. So the entire torch-bound part is per-step micro-batch inference,
-where the transfer and kernel-launch overhead cancels the GP108's compute
-advantage — not faster on the GPU.
-
-**Decision: drop.** Running the e2e training on the host GPU is not worth
-it: no measured speedup (slightly slower within noise), the torch-bound part
-is a minority of the wall time, and enabling it would add a host
-prerequisite and passthrough fragility for zero benefit. The CI image keeps
-the CUDA-enabled torch it already ships (harmless without a device); no
-workflow change is made.
-
-No code change accompanies this decision: the shared e2e pipeline gains no
-GPU passthrough, and the Dockerfile is untouched. Wiring ``--gpus all`` into
-the build-and-launch container would add a host prerequisite
-(nvidia-container-toolkit) and a new failure mode to a long self-hosted
-pipeline for zero measured benefit.
-
-If this is ever revisited, the opt-in point is the ``container.options`` of
-the build-and-launch job in ``.github/workflows/e2e_build_and_run.yml``
-(``--gpus all``, default off so CPU runs are unaffected). The passthrough
-flag itself can be host-dependent: on the dev machine used for this
-measurement, docker rejects CDI mode (``--gpus all``) and requires
-``--runtime nvidia`` instead, so a revisit must check the runner host's
-docker configuration first. Re-measure before wiring if a future workload
-makes the torch-bound part dominant in wall time (larger models or datasets),
-or if the runner's GPU class changes.
+The only missing piece was device passthrough to the job container, and the
+right docker flag is host-dependent (``--gpus all`` vs ``--runtime nvidia``,
+two configurations of nvidia-container-toolkit). The shared pipeline's
+``detect-gpu`` job probes the runner host before the build-and-launch job:
+it tries each flag with a disposable ``ubuntu:24.04`` container and checks
+that ``/dev/nvidia0`` was actually injected, then passes the first working
+flag to the build-and-launch job as ``container.options``. When no flag
+works (no GPU, broken driver, missing toolkit) it passes nothing: the
+container starts device-less and the Python side runs on CPU — the e2e run
+degrades instead of failing.
 
 CI as source of truth
 ---------------------
