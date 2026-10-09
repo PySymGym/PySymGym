@@ -1,6 +1,6 @@
 import csv
+from pathlib import Path
 
-import paths
 from common.classes import GameFailed, Map2Result
 from common.config.validation_config import SVMValidation
 from ml.dataset import TrainingDataset
@@ -18,8 +18,9 @@ def get_svms_statistics(
     results: list[Map2Result],
     validation_config: SVMValidation,
     dataset: TrainingDataset,
+    table_path: Path,
 ):
-    with open(paths.CURRENT_TABLE_PATH, "r") as statistics_file:
+    with open(table_path, "r") as statistics_file:
         header = next(iter(csv.reader(statistics_file)))
     maps_results = dict(
         [
@@ -39,7 +40,7 @@ def get_svms_statistics(
             )
         )
     )
-    with open(paths.CURRENT_TABLE_PATH, "a") as statistics_file:
+    with open(table_path, "a") as statistics_file:
         statistics_writer = csv.DictWriter(
             statistics_file, sorted(results_to_write.keys())
         )

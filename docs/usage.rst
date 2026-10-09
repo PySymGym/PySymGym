@@ -78,15 +78,27 @@ improving the dataset in the other kind of run.
            val_type: loss
            batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
 
-   Configure Optuna, for example:
+    Configure Optuna, for example:
 
-   .. code-block:: yaml
+    .. code-block:: yaml
 
-       OptunaConfig:
-         n_startup_trials: 10
-         n_trials: 30
-         n_jobs: 1
-         study_direction: "minimize"
+        OptunaConfig:
+          n_startup_trials: 10
+          n_trials: 30
+          n_jobs: 1
+          study_direction: "minimize"
+
+    The ``TrainingConfig`` section requires a ``seed``. It makes the run
+    reproducible: the dataset split, step sampling, validation map order, and
+    model weight initialization are seeded with it, each trial re-seeds from a
+    seed derived from (study seed, trial number), and the Optuna sampler is
+    seeded with the study seed — so two runs of the same configuration produce
+    identical splits, samples, and hyper-parameter suggestions.
+
+    Each trial writes its artifacts to ``report/trials/<trial_number>/``
+    (model weights, model kwargs, and the SVM statistics table for SVM
+    validation), so parallel trials cannot overwrite each other; the study
+    snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
 
 2. Move to the ``AIAgent`` directory and run training:
 
@@ -108,8 +120,17 @@ from the previous step are used to obtain relatively good ones:
    as a template, create a configuration with the maps to use, or reuse an
    existing ``maps/*/Maps/dataset.json``.
 3. Create a configuration (server and training parameters), again using
-   ``./workflow/config_for_tests.yml`` as a template. Add the best weights URI
-   and the appropriate trial URI logged by MLflow during tuning:
+   ``./workflow/config_for_tests.yml`` as a template. The improvement run must
+   start from the tuning run's best model, so the config needs two URIs: the
+   best weights and the trial that produced them. Derive both from MLflow
+   instead of copying them by hand — the script reads the server and experiment
+   from the config's ``MLFlowConfig`` section and writes the config plus:
+
+   .. code-block:: console
+
+       cd AIAgent
+       poetry run python3 derive_dataset_improvement_config.py \
+           --base-config path/to/config.yml --output-config path/to/derived.yml
 
    .. code-block:: yaml
 
@@ -120,13 +141,29 @@ from the previous step are used to obtain relatively good ones:
          trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
 
 4. Move to the ``AIAgent`` directory, launch the server manager, and run
-   training:
+   training with the derived config:
 
    .. code-block:: console
 
        cd AIAgent
-       poetry run python3 launch_servers.py --config path/to/config.yml
-       poetry run python3 run_training.py --config path/to/config.yml
+       poetry run python3 launch_servers.py --config path/to/derived.yml
+       poetry run python3 run_training.py --config path/to/derived.yml
+
+SVM validation failure flags
+----------------------------
+
+The SVM validation section of the config (``val_type: svms_model`` or
+``svms_each_step``) has two opt-in failure flags, both off by default:
+
+- ``fail_immediately`` — fail the run if any map's game fails (timeout, engine
+  error, ...).
+- ``fail_on_unexhausted_steps`` — treat a game that ends before all planned
+  steps are played without reaching 100% coverage as a failed map. The
+  symbolic engine stopping that early is an engine defect, not a model quality
+  issue; by default it only produces a warning.
+
+The flags compose: ``fail_on_unexhausted_steps`` marks the map as failed, and
+``fail_immediately`` turns any failed map into a run failure (non-zero exit).
 
 .. _guide-symbolic-execution:
 

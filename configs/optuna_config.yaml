@@ -11,6 +11,7 @@ TrainingConfig:
   # threshold_steps_number: 1000
   load_to_cpu: True
   epochs: 300
+  seed: 42
 
 ValidationConfig:
   validation_mode:

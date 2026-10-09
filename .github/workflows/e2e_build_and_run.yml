@@ -1,0 +1,197 @@
+name: E2E build and run (shared pipeline)
+
+on:
+  workflow_call:
+    inputs:
+      training-config:
+        description: >-
+          Config for the main training run, relative to AIAgent/ (the working
+          directory of the training step).
+        required: true
+        type: string
+      improvement-base-config:
+        description: >-
+          Optional base config for dataset improvement. When non-empty, after
+          the main run the pipeline derives report/config_for_tests_improved.yml
+          from it (derive_dataset_improvement_config.py), starts the
+          game-server broker on the derived config, and runs a second training
+          with the derived config.
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  calculate-dockerfile-hash:
+    runs-on: self-hosted
+    container:
+      image: ubuntu:24.04
+    outputs:
+      dockerfile_hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Calculate Dockerfile hash
+        id: hash
+        run: |
+          HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+  detect-gpu:
+    runs-on: self-hosted
+    outputs:
+      container-options: ${{ steps.detect.outputs.options }}
+    steps:
+      - name: Detect host GPU passthrough
+        id: detect
+        run: |
+          # The runner host may expose the GPU to docker through either
+          # nvidia-container-toolkit configuration; probe both and verify the
+          # device is actually injected into a disposable container. When no
+          # flag works (no GPU, broken driver, missing toolkit) pass nothing:
+          # the container then starts device-less and AIAgent/config.py falls
+          # back to CPU at runtime.
+          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
+          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
+          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
+          for flag in "--gpus all" "--runtime nvidia"; do
+              if err=$(docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 2>&1); then
+                  echo "options=$flag" >> "$GITHUB_OUTPUT"
+                  exit 0
+              fi
+              # Log why the flag failed so a host misconfiguration is
+              # diagnosable from the CI log without runner access.
+              echo "probe failed for $flag:"
+              echo "$err" | tail -3
+          done
+          # A GPU device node without a working docker passthrough is a host
+          # misconfiguration (e.g. nvidia-container-toolkit not installed):
+          # surface it loudly, then degrade to CPU instead of failing the run.
+          if [ -e /dev/nvidia0 ]; then
+              echo "WARNING: /dev/nvidia0 exists but no docker GPU passthrough works; running on CPU"
+          fi
+          echo "options=" >> "$GITHUB_OUTPUT"
+
+  build-and-launch:
+    needs: [calculate-dockerfile-hash, detect-gpu]
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+      options: ${{ needs.detect-gpu.outputs.container-options }}
+    permissions:
+      packages: read
+    env:
+      # Pinned so that Python string hashing (and any code path that depends
+      # on it) is identical between runs; part of the #583 reproducibility fix.
+      PYTHONHASHSEED: "0"
+    steps:
+      - name: Debug
+        run: |
+          printenv
+          dotnet --version
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11.8"
+
+      - name: Install poetry
+        run: |
+          pip install poetry==2.2.1
+
+      - name: Install dependencies
+        run: |
+          poetry --ansi install
+
+      - name: Build V# game server
+        working-directory: ./GameServers/VSharp/
+        run: |
+          dotnet build VSharp.ML.GameServer.Runner -c Release
+
+      - name: Build .NET game maps
+        working-directory: ./maps/DotNet/Maps
+        run: |
+          dotnet build Root -c Release
+
+      - name: Generate initial data for training
+        working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0
+        run: |
+          dotnet VSharp.ML.GameServer.Runner.dll \
+            --mode generator \
+            --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net8.0 \
+            --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
+            --stepstoserialize 200
+
+      - name: Move SerializedEpisodes
+        working-directory: ./AIAgent
+        run: |
+          mkdir report
+          mv ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100/SerializedEpisodes/ report/
+
+      - name: Run training with MLflow
+        working-directory: ./AIAgent
+        run: |
+          # The servers must live inside the step that uses them: a background
+          # process does not survive a step boundary, so starting MLflow in an
+          # earlier step leaves the tuning step without a server. Readiness is
+          # polled (stdlib only) instead of a fixed sleep, which races with the
+          # variable startup time.
+          poetry --ansi run python -m mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts > mlflow.log 2>&1 &
+          MLFLOW_PID=$!
+          BROKER_PID=""
+          trap 'kill $MLFLOW_PID $BROKER_PID 2>/dev/null || true' EXIT
+
+          python3 wait_for_service.py http --url http://127.0.0.1:8080/health \
+            --name "MLflow server"
+
+          poetry --ansi run python3 run_training.py --config ${{ inputs.training-config }}
+
+          # Dataset improvement (optional, selected by the caller via
+          # improvement-base-config): the improvement run must continue from
+          # the tuning run above, not re-tune from scratch: derive its config
+          # from the best trial's artifacts (final model.pth weights and
+          # trial.pkl) as logged in the same-step MLflow server. The base
+          # config stays the single source of truth; only the two URIs are
+          # derived into a runtime file under report/.
+          if [ -n "${{ inputs.improvement-base-config }}" ]; then
+              poetry --ansi run python3 derive_dataset_improvement_config.py \
+                --base-config ${{ inputs.improvement-base-config }} \
+                --output-config report/config_for_tests_improved.yml
+
+              poetry --ansi run python3 launch_servers.py --config report/config_for_tests_improved.yml > broker.log 2>&1 &
+              BROKER_PID=$!
+
+               python3 wait_for_service.py tcp --host 127.0.0.1 --port 35000 \
+                 --name "game-server broker"
+
+              poetry --ansi run python3 run_training.py --config report/config_for_tests_improved.yml
+          fi
+
+      - name: Upload mlartifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifacts
+          path: AIAgent/mlartifacts/**/**/artifacts/**
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs
+          path: AIAgent/*.log
+
+      - name: Sanity check
+        working-directory: ./AIAgent
+        run: |
+          if ls report/study.pkl 1> /dev/null 2>&1; then
+              echo "PKL files found."
+          else
+              echo "No PKL files found."
+              exit 1
+          fi

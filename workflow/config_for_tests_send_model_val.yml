@@ -9,11 +9,13 @@ TrainingConfig:
   threshold_coverage: 100
   load_to_cpu: False
   epochs: 2
+  seed: 99
 ValidationConfig:
   validation_mode:
     val_type: svms_model
     process_count: 1
     fail_immediately: True
+    fail_on_unexhausted_steps: True
     PlatformsConfig:
       - name: dotnet
         DatasetConfigs:

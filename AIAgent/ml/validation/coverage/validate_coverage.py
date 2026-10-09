@@ -2,7 +2,8 @@ import logging
 import multiprocessing as mp
 from multiprocessing.managers import SyncManager
 import random
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
 
 import torch
 import tqdm
@@ -33,11 +34,21 @@ class ValidationCoverage:
     Attributes:
         model (`torch.nn.Module`): The model to be validated.
         dataset (`Optional[TrainingDataset]`): The dataset to update with validation results. Can be `None` if dataset update is not required.
+        model_kwargs (`Optional[dict[str, Any]]`): Constructor kwargs of the model, passed explicitly to the ONNX export (svms_model mode) instead of being read from a shared file.
+        trial_dir (`Optional[Path]`): The per-trial artifact directory; the model weights and the exported ONNX are resolved inside it.
     """
 
-    def __init__(self, model: torch.nn.Module, dataset: Optional[TrainingDataset]):
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        dataset: Optional[TrainingDataset],
+        model_kwargs: Optional[dict[str, Any]] = None,
+        trial_dir: Optional[Path] = None,
+    ):
         self.model = model
         self.dataset = dataset
+        self._model_kwargs = model_kwargs
+        self._trial_dir = trial_dir
         self._game_manager: Optional[BaseGameManager] = None
 
     def _evaluate_game_map(
@@ -124,7 +135,17 @@ class ValidationCoverage:
         namespace.shared_lock = sync_manager.Lock()
         namespace.is_prepared = sync_manager.Value("b", False)
         if isinstance(validation_config, SVMValidationSendEachStep):
-            return EachStepGameManager(TrainingModelWrapper(self.model), namespace)
+            return EachStepGameManager(
+                TrainingModelWrapper(self.model),
+                namespace,
+                fail_on_unexhausted_steps=validation_config.fail_on_unexhausted_steps,
+            )
         elif isinstance(validation_config, SVMValidationSendModel):
-            return ModelGameManager(namespace, self.model)
+            return ModelGameManager(
+                namespace,
+                self.model,
+                trial_dir=self._trial_dir,
+                model_kwargs=self._model_kwargs,
+                fail_on_unexhausted_steps=validation_config.fail_on_unexhausted_steps,
+            )
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")

@@ -24,6 +24,7 @@ class SVMValidation(ValidationMode, ABC):
     platforms_config: list[Platform] = Field(alias="PlatformsConfig")
     process_count: int = Field()
     fail_immediately: bool = Field(default=False)
+    fail_on_unexhausted_steps: bool = Field(default=False)
 
 
 @pydantic_dataclass

@@ -133,23 +133,115 @@ secondary mirror.
 Runner requirements
 -------------------
 
-Five workflows run on a self-hosted runner (``jbLabSelfHostedCI``) rather than
-on GitHub-hosted compute: ``build_and_run.yaml``,
-``build_and_run_model_val.yaml``, ``build_and_test_usvm.yaml``,
-``publish_image.yaml`` and ``runstrat_tool.yaml``. Most of their jobs also
-declare a ``container:``, so the work happens inside a container while the
-workflow itself is still driven by the runner.
+Four workflow files contain jobs that run on a self-hosted runner
+(``jbLabSelfHostedCI``) rather than on GitHub-hosted compute:
+``e2e_build_and_run.yml`` (the shared pipeline called by
+``build_and_run.yaml`` and ``build_and_run_model_val.yaml``),
+``build_and_test_usvm.yaml``, ``publish_image.yaml`` and
+``runstrat_tool.yaml``. All of those jobs also declare a ``container:``, so
+the work happens inside a container while the workflow itself is still driven
+by the runner.
 
 Every action referenced by ``.github/workflows/`` runs on Node.js 24, which
 requires Actions Runner ``v2.327.1`` or newer. The GitHub-hosted runners
 satisfy this by construction, but the self-hosted runner does not: on one older
-than ``v2.327.1`` every action in those five workflows fails to start, taking
-the whole training, image-publishing and tool-testing pipeline down with it.
+than ``v2.327.1`` every action in those four workflow files fails to start,
+taking the whole training, image-publishing and tool-testing pipeline down with
+it.
 Keep that runner current before bumping an action to a release that raises its
 runtime requirement.
 
 The runner's installed version is not visible from the repository, so this is
 the one CI constraint that cannot be checked by reading the workflow files.
+
+Self-hosted end-to-end workflows
+--------------------------------
+
+The policies below keep the long self-hosted pipelines deterministic and stop
+them from piling up on the single runner. This section explains the
+non-obvious decisions behind the pipelines; the workflow files are the source
+of truth for the exact steps.
+
+**The two e2e workflows share one pipeline.** ``build_and_run.yaml`` and
+``build_and_run_model_val.yaml`` differ only in their name, concurrency group,
+and training inputs, so their common pipeline (Dockerfile hash, checkout,
+toolchain setup, V# and maps build, data generation, training with MLflow,
+artifact upload, sanity check) lives once in the reusable workflow
+``.github/workflows/e2e_build_and_run.yml`` (``workflow_call`` only — it never
+runs on its own). Each e2e workflow file is a thin caller that selects the
+pipeline mode through two inputs: ``training-config`` (the config of the main
+training run, relative to ``AIAgent/``) and the optional
+``improvement-base-config`` (see below). To add another e2e variant, create
+such a thin caller with its own name and concurrency group — do not copy the
+pipeline.
+
+**Servers live in the step that uses them.** MLflow and the game-server
+broker are started inside the same step as the training command that talks to
+them, gated on readiness polling (an HTTP ``/health`` check for MLflow, a TCP
+connect to the broker port) instead of fixed sleeps, and cleaned up when the
+step exits. A background process does not survive a step boundary, so a
+server started in an earlier step is gone by the time a later step needs it;
+a fixed sleep additionally races with the variable startup time. The polling
+itself is ``AIAgent/wait_for_service.py`` (stdlib only, ``http`` and ``tcp``
+subcommands), called from the workflow step.
+
+**Triggers and concurrency.** The four self-hosted workflows that build or
+test code (``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
+``runstrat_tool.yaml``, ``build_and_test_usvm.yaml``) run only on pushes to
+``main`` and on pull requests — feature-branch pushes do not trigger them, so
+a dependabot bump does not trigger the long e2e pipeline twice (push and pull
+request) and stale runs do not queue up. The two e2e workflows additionally
+use a per-workflow concurrency group keyed by ref that cancels in-progress
+runs for pull requests only: a new push to the same branch supersedes the
+stale run, while a run started by a push to ``main`` is never cancelled.
+
+**Dataset improvement continues from tuning.** In ``build_and_run.yaml`` the
+tuning run and the dataset-improvement run share one MLflow experiment. The
+improvement is an optional mode of the shared pipeline, selected by that
+workflow's ``improvement-base-config`` input: after the main (tuning) run,
+``derive_dataset_improvement_config.py`` queries the same-step server for the
+best trial's ``model.pth`` and ``trial.pkl`` artifact URIs and writes them
+into a copy of the base config that the improvement step consumes. The base
+config remains the single source of truth — the pipeline derives the URIs from
+the tuning run instead of hard-coding them. ``build_and_run_model_val.yaml``
+leaves the input empty and runs only the main training run.
+
+**Unexhausted steps fail CI.** Both e2e validation workflows run with
+``fail_on_unexhausted_steps`` enabled (flag semantics in
+:doc:`usage`, "SVM validation failure flags"). The symbolic engine ending a
+map before all planned steps are played without 100% coverage is an engine
+defect; in CI it must fail the run instead of being swallowed by a warning,
+while local runs keep the default warning-only behavior.
+
+**Host GPU in e2e CI (#567).** The real-world pipeline runs on a GPU, so the
+self-hosted e2e run exercises the GPU path as its primary mode and falls back
+to CPU when the runner host has no usable GPU. (The original #567 spike
+measured no speedup and concluded DROP; the decision was overridden because
+the value of the GPU path in CI is correctness coverage of the real-world
+device, not speed — measurement history in issue #567.)
+
+Two properties make this a workflow-only change:
+
+- The CI environment already ships a CUDA-enabled torch. The Docker image
+  (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
+  Python dependencies are installed at runtime by ``poetry install`` from the
+  lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
+  with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
+- Device selection needs no code change: ``AIAgent/config.py`` picks
+  ``cuda:0`` when available and falls back to CPU, and the training step
+  prints the selected device at startup — every CI run logs which path it
+  took.
+
+The only missing piece was device passthrough to the job container, and the
+right docker flag is host-dependent (``--gpus all`` vs ``--runtime nvidia``,
+two configurations of nvidia-container-toolkit). The shared pipeline's
+``detect-gpu`` job probes the runner host before the build-and-launch job:
+it tries each flag with a disposable ``ubuntu:24.04`` container and checks
+that ``/dev/nvidia0`` was actually injected, then passes the first working
+flag to the build-and-launch job as ``container.options``. When no flag
+works (no GPU, broken driver, missing toolkit) it passes nothing: the
+container starts device-less and the Python side runs on CPU — the e2e run
+degrades instead of failing.
 
 CI as source of truth
 ---------------------

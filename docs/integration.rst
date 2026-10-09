@@ -37,7 +37,8 @@ Integration examples live under ``GameServers/``. Two machines are integrated:
   `its maps <https://github.com/PySymGym/PySymGym/tree/main/maps/Java>`__.
 
 V# is the primary game server. A typical end-to-end workflow is automated in
-``.github/workflows/build_and_run.yaml``.
+``.github/workflows/build_and_run.yaml``, whose pipeline steps live in the
+shared reusable workflow ``.github/workflows/e2e_build_and_run.yml``.
 
 .. _onnx-conversion:
 

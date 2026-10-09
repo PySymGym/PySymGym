@@ -39,8 +39,9 @@ The repository separates the engine, the agent, the inputs, and the tooling.
         hyper-parameter tuning), validation, and inference.
 
     Main entrypoints: ``run_training.py`` (training and tuning),
-    ``launch_servers.py`` (server manager), and ``onyx.py`` (PyTorch-to-ONNX
-    conversion and verification).
+    ``derive_dataset_improvement_config.py`` (derives the dataset-improvement
+    config from a tuning run's MLflow artifacts), ``launch_servers.py`` (server
+    manager), and ``onyx.py`` (PyTorch-to-ONNX conversion and verification).
 
 ``GameServers/``
     Symbolic execution engines extended to speak the game protocol, kept as

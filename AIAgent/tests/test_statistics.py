@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from random import choice
 
-import paths
 import pytest
 import yaml
 from common.classes import GameFailed, GameResult, Map2Result
@@ -40,10 +39,9 @@ class TestSVMsStatistics:
         shutil.rmtree(self.tmp_dir)
 
     @pytest.fixture(autouse=True)
-    def mock_variables_and_create_tmp(self, monkeypatch):
+    def create_tmp(self):
         self.tmp_dir = Path("./tests/tmp")
         self.test_csv_file_path = Path(self.tmp_dir / "test_statistics.csv")
-        monkeypatch.setattr(paths, "CURRENT_TABLE_PATH", self.test_csv_file_path)
         yield
         self.remove_tmp()
 
@@ -76,7 +74,10 @@ class TestSVMsStatistics:
             for game_map2svm in maps
         ]
 
-        assert get_svms_statistics(results, val_config, dataset) == metrics
+        assert (
+            get_svms_statistics(results, val_config, dataset, self.test_csv_file_path)
+            == metrics
+        )
 
     def test_csv_updating_with_two_epochs_with_removed_maps(self, get_args):
         val_config, dataset, maps = get_args
@@ -88,9 +89,9 @@ class TestSVMsStatistics:
             )
             for game_map2svm in maps
         ]
-        get_svms_statistics(results, val_config, dataset)
+        get_svms_statistics(results, val_config, dataset, self.test_csv_file_path)
         results = results[0 : int(len(results) * 0.5)]
-        get_svms_statistics(results, val_config, dataset)
+        get_svms_statistics(results, val_config, dataset, self.test_csv_file_path)
         with open(self.test_csv_file_path) as f:
             reader = iter(csv.reader(f))
             header_len = len(next(reader))
