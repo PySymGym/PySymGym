@@ -121,11 +121,15 @@ jobs:
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0
         run: |
+          # The generator's exploration order is driven by an unseeded RNG by
+          # default, so the dataset (and e2e outcome) varies per run (#618).
+          # Pin the seed — same value as the training seed — for reproducibility.
           dotnet VSharp.ML.GameServer.Runner.dll \
             --mode generator \
             --datasetbasepath ${GITHUB_WORKSPACE}/maps/DotNet/Maps/Root/bin/Release/net8.0 \
             --datasetdescription ${GITHUB_WORKSPACE}/workflow/dataset_for_tests_net.json \
-            --stepstoserialize 200
+            --stepstoserialize 200 \
+            --randomseed 99
 
       - name: Move SerializedEpisodes
         working-directory: ./AIAgent
