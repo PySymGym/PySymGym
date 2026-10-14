@@ -53,6 +53,8 @@ requires = ["poetry-core==2.2.1"]
 
 [tool.ruff]
 include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py", "docs/**/*.py"]
+# Third-party submodule trees (checked out locally for builds, absent in CI)
+extend-exclude = ["GameServers/", "maps/"]
 target-version = "py311"
 
 [tool.ruff.lint]
