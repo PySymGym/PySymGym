@@ -41,3 +41,5 @@ restore it before running anything:
 - Test dependency group: `test` in `pyproject.toml` (`pytest`).
 - No coverage gate is configured; the suite is expected to report 0 failures
   and 0 skipped.
+- The runstrat suite needs two pre-built .NET artifacts first — see the
+  "Per-component build prerequisites" section of `docs/setup.rst`.
