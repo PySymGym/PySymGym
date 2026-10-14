@@ -28,6 +28,24 @@ build_jflex:
 	cd ./maps/Java/Maps/jflex; \
 	mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true -Dfmt.skip
 
+check_submodules:
+	@fail=0; \
+	for path in $$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$$' | awk '{print $$2}'); do \
+		if [ ! -e "$$path/.git" ]; then \
+			echo "UNINITIALIZED: $$path"; \
+			fail=1; \
+			continue; \
+		fi; \
+		deleted=$$(git -C "$$path" status --porcelain | grep -c '^D\|^ D' || true); \
+		if [ "$$deleted" -gt 0 ]; then \
+			echo "CORRUPTED: $$path ($$deleted deleted file(s); repair with: git -C $$path reset --hard HEAD)"; \
+			fail=1; \
+		else \
+			echo "OK: $$path"; \
+		fi; \
+	done; \
+	exit $$fail
+
 init_data: generate_init_data move_init_data
 
 STEPS_TO_SERIALIZE = 200
