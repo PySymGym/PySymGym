@@ -16,7 +16,10 @@ jobs:
       image: ubuntu:24.04
     steps:
       - name: Download & install necessary dependencies
-        run: apt update && apt install -y git
+        # nodejs/npm are required by :usvm-ts-fast-check (npm ci/build of the
+        # fast-check adapter); ubuntu 24.04 ships node 22, which satisfies
+        # the adapter's engines requirement (>=18.18.0)
+        run: apt update && apt install -y git nodejs npm
 
       - name: Checkout repository
         uses: actions/checkout@v7
