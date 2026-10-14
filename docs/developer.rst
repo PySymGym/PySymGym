@@ -73,6 +73,25 @@ links must resolve. The pull request template lists these checks, and the docs
 build (``.github/workflows/docs.yaml``) enforces them. See ``CONTRIBUTING.md``
 for the pointers.
 
+Submodules
+----------
+
+The repository pins third-party code as submodules; ``.gitmodules`` is the
+source of truth for their URLs and paths.
+
+**Pointer bumps.** Moving a submodule to a new commit is an explicit task, not
+an incidental change: the bump must pass the matching build target (for maps,
+``make build_maps``) and CI before it lands.
+
+**.NET map forks.** The .NET map repositories are forks in the PySymGym org:
+they are pinned data sources for training, not dependencies to track. Syncing
+a fork to newer upstream content is an explicit task and must keep the fork's
+``TargetFramework`` compatible with ``maps/DotNet/Maps/Root`` (net8.0).
+
+**Health.** Submodule worktrees can arrive wiped on a fresh clone; detection
+and repair are documented on the :doc:`setup` page
+(``make check_submodules``).
+
 Test pipeline
 -------------
 
