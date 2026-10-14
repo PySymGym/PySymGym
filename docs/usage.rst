@@ -5,7 +5,7 @@ Usage
 =====
 
 This guide assumes the environment is already set up as described in the
-`repository README <https://github.com/PySymGym/PySymGym#install>`__.
+:doc:`setup` page.
 
 Main loop
 ---------
@@ -37,7 +37,7 @@ Build symbolic virtual machines and maps
 
 To build the symbolic virtual machines (`V# <https://github.com/VSharp-team/VSharp>`_
 and `usvm <https://github.com/UnitTestBot/usvm>`_) and the methods used for
-training, install .NET 7, cmake, clang, and maven, then run:
+training, set up the toolchain as described in the :doc:`setup` page, then run:
 
 .. code-block:: console
 
