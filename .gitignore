@@ -172,6 +172,10 @@ cython_debug/
 
 *.jar
 
+# .NET build output
+bin/
+obj/
+
 # MLFlow
 *mlartifacts/
 *mlruns/
