@@ -29,4 +29,5 @@ Documentation map
    dataset
    results
    developer
+   testing
    reference/index

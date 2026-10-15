@@ -76,18 +76,18 @@ for the pointers.
 Test pipeline
 -------------
 
-Tests are run per component with pytest:
+The testing system — the ``unit``/``integration``/``e2e`` taxonomy, the exact
+commands, the fixtures, and the coverage policy — is documented in
+:doc:`testing`, which is the single source of truth. The fast tier is one
+command from the repository root:
 
 .. code-block:: console
 
-    poetry run pytest tests -sv
+    poetry run pytest        # or: make test-unit
 
-from ``AIAgent/``, ``tools/compstrat/``, and ``tools/runstrat/``. CI runs the
-same commands in the "Run main repo tests" and "Run compstrat tool tests"
-steps of ``.github/workflows/python_tests.yaml``.
-
-There is no coverage threshold; the suite is expected to report 0 failures and
-0 skipped.
+CI (``.github/workflows/python_tests.yaml``) runs each component suite and then
+a repository-root coverage step that enforces the ratchet documented in
+:doc:`testing`.
 
 Quality checks
 --------------

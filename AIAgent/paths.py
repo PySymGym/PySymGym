@@ -1,5 +1,9 @@
 from pathlib import Path
 
+AI_AGENT_PATH = Path(__file__).resolve().parent
+REPO_ROOT = AI_AGENT_PATH.parent
+RESOURCES_PATH = REPO_ROOT / "resources"
+
 REPORT_PATH = Path("./report")
 PRETRAINED_MODEL_PATH = REPORT_PATH / "models"
 RAW_DATASET_PATH = REPORT_PATH / "SerializedEpisodes"
