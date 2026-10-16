@@ -60,7 +60,6 @@ autodoc_mock_imports = [
     "pandas",
     "psutil",
     "pydantic",
-    "pynvml",
     "tabulate",
     "torch",
     "torch_geometric",
