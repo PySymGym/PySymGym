@@ -138,7 +138,7 @@ class ValidationCoverage:
             return EachStepGameManager(
                 TrainingModelWrapper(self.model),
                 namespace,
-                fail_on_unexhausted_steps=validation_config.fail_on_unexhausted_steps,
+                fail_immediately=validation_config.fail_immediately,
             )
         elif isinstance(validation_config, SVMValidationSendModel):
             return ModelGameManager(
@@ -146,6 +146,6 @@ class ValidationCoverage:
                 self.model,
                 trial_dir=self._trial_dir,
                 model_kwargs=self._model_kwargs,
-                fail_on_unexhausted_steps=validation_config.fail_on_unexhausted_steps,
+                fail_immediately=validation_config.fail_immediately,
             )
         raise RuntimeError(f"There is no game manager suitable to {validation_config}")

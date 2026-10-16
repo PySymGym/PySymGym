@@ -43,11 +43,11 @@ class EachStepGameManager(BaseGameManager):
         self,
         with_predictor: Predictor,
         namespace: Namespace,
-        fail_on_unexhausted_steps: bool = False,
+        fail_immediately: bool = False,
     ):
         self._game_states: dict[str, list[HeteroData]] = {}
         self._with_predictor = with_predictor
-        self._fail_on_unexhausted_steps = fail_on_unexhausted_steps
+        self._fail_immediately = fail_immediately
         super().__init__(namespace)
 
     @set_timeout_if_needed
@@ -109,7 +109,7 @@ class EachStepGameManager(BaseGameManager):
 
         end_time = perf_counter()
         if actual_coverage != 100 and steps_count != steps:
-            if self._fail_on_unexhausted_steps:
+            if self._fail_immediately:
                 failure = unexhausted_steps_failure(
                     map_name=with_connector.map.MapName,
                     steps_taken=steps_count,

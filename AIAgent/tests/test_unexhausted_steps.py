@@ -2,9 +2,9 @@
 
 The symbolic engine can end a game before all planned steps are played without
 reaching 100% coverage; that is an engine defect, not a model quality issue.
-With ``fail_on_unexhausted_steps`` set in the validation config such a map must
-come back as ``GameFailed`` so that ``fail_immediately`` can fail the run (and
-CI) instead of the condition being swallowed by a warning.
+With ``fail_immediately`` set in the validation config such a map must come
+back as ``GameFailed`` and fail the run (and CI) instead of the condition being
+swallowed by a warning.
 """
 
 import contextlib
@@ -69,16 +69,14 @@ class TestConfigFlag:
             validation_mode=svms_validation_mode(val_type)
         ).validation_mode
         assert isinstance(mode, expected_cls)
-        assert mode.fail_on_unexhausted_steps is False
+        assert mode.fail_immediately is False
 
     @pytest.mark.parametrize("val_type", ["svms_model", "svms_each_step"])
     def test_explicit_true(self, val_type):
         mode = ValidationConfig(
-            validation_mode=svms_validation_mode(
-                val_type, fail_on_unexhausted_steps=True
-            )
+            validation_mode=svms_validation_mode(val_type, fail_immediately=True)
         ).validation_mode
-        assert mode.fail_on_unexhausted_steps is True
+        assert mode.fail_immediately is True
 
 
 class TestUnexhaustedStepsFailure:
@@ -125,7 +123,7 @@ def make_model_manager(
 ) -> process_game_manager.ModelGameManager:
     monkeypatch.setattr(process_game_manager, "SVMS_OUTPUT_PATH", tmp_path)
     return process_game_manager.ModelGameManager(
-        FakeNamespace(), None, fail_on_unexhausted_steps=flag
+        FakeNamespace(), None, fail_immediately=flag
     )
 
 
@@ -232,7 +230,7 @@ def make_each_step_manager(monkeypatch, flag, coverage, steps):
         each_step_game_manager, "convert_input_to_tensor", lambda state: (dict(), {})
     )
     return each_step_game_manager.EachStepGameManager(
-        FakePredictor(), FakeNamespace(), fail_on_unexhausted_steps=flag
+        FakePredictor(), FakeNamespace(), fail_immediately=flag
     )
 
 
@@ -284,27 +282,25 @@ class TestEachStepGameManagerUnexhaustedSteps:
 class TestGameManagerWiring:
     def test_sendmodel_manager_receives_flag(self):
         config = ValidationConfig(
-            validation_mode=svms_validation_mode(
-                "svms_model", fail_on_unexhausted_steps=True
-            )
+            validation_mode=svms_validation_mode("svms_model", fail_immediately=True)
         ).validation_mode
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(None, None)._get_game_manager(
                 config, sync_manager
             )
-        assert manager._fail_on_unexhausted_steps is True
+        assert manager._fail_immediately is True
 
     def test_each_step_manager_receives_flag(self):
         config = ValidationConfig(
             validation_mode=svms_validation_mode(
-                "svms_each_step", fail_on_unexhausted_steps=True
+                "svms_each_step", fail_immediately=True
             )
         ).validation_mode
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(None, None)._get_game_manager(
                 config, sync_manager
             )
-        assert manager._fail_on_unexhausted_steps is True
+        assert manager._fail_immediately is True
 
     def test_sendmodel_manager_receives_kwargs_and_trial_dir(self):
         config = ValidationConfig(
