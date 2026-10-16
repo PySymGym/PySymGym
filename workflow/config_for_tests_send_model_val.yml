@@ -15,7 +15,6 @@ ValidationConfig:
     val_type: svms_model
     process_count: 1
     fail_immediately: True
-    fail_on_unexhausted_steps: True
     PlatformsConfig:
       - name: dotnet
         DatasetConfigs:

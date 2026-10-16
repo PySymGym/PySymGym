@@ -207,11 +207,11 @@ the tuning run instead of hard-coding them. ``build_and_run_model_val.yaml``
 leaves the input empty and runs only the main training run.
 
 **Unexhausted steps fail CI.** Both e2e validation workflows run with
-``fail_on_unexhausted_steps`` enabled (flag semantics in
-:doc:`usage`, "SVM validation failure flags"). The symbolic engine ending a
-map before all planned steps are played without 100% coverage is an engine
-defect; in CI it must fail the run instead of being swallowed by a warning,
-while local runs keep the default warning-only behavior.
+``fail_immediately`` enabled (flag semantics in :doc:`usage`, "SVM validation
+failure flag"). The symbolic engine ending a map before all planned steps are
+played without 100% coverage is an engine defect; in CI it must fail the run
+instead of being swallowed by a warning, while local runs keep the default
+warning-only behavior.
 
 **Host GPU in e2e CI (#567).** The real-world pipeline runs on a GPU, so the
 self-hosted e2e run exercises the GPU path as its primary mode and falls back
