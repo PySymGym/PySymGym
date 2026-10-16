@@ -109,7 +109,7 @@ class ModelGameManager(BaseGameManager):
         model: torch.nn.Module,
         trial_dir: Optional[Path] = None,
         model_kwargs: Optional[dict[str, Any]] = None,
-        fail_on_unexhausted_steps: bool = False,
+        fail_immediately: bool = False,
     ):
         self._namespace = namespace
         self._shared_lock = namespace.shared_lock
@@ -119,7 +119,7 @@ class ModelGameManager(BaseGameManager):
         # without a trial dir they fall back to the report root.
         self._trial_dir = trial_dir
         self._model_kwargs = model_kwargs
-        self._fail_on_unexhausted_steps = fail_on_unexhausted_steps
+        self._fail_immediately = fail_immediately
         self._games_info: dict[str, ModelGameMapInfo] = dict()
         super().__init__(self._namespace)
 
@@ -265,7 +265,7 @@ class ModelGameManager(BaseGameManager):
                     steps_count < game_map.StepsToPlay
                     and actual_coverage_percent != FULL_COVERAGE_PERCENT
                 ):
-                    if self._fail_on_unexhausted_steps:
+                    if self._fail_immediately:
                         failure = unexhausted_steps_failure(
                             map_name=map_name,
                             steps_taken=steps_count,
