@@ -182,7 +182,9 @@ class TrainingDataset(Dataset):
 
     def _get_processed_paths(self) -> List[str]:
         all_files = []
-        for map_name in os.listdir(self.processed_dir):
+        # Sorted enumeration: listdir/glob order changes when the directory is
+        # recreated, which would silently re-shuffle the seeded train/test split.
+        for map_name in sorted(os.listdir(self.processed_dir)):
             if map_name in self.maps_results:
                 if (
                     self.maps_results[map_name].coverage_percent
@@ -190,8 +192,10 @@ class TrainingDataset(Dataset):
                 ):
                     all_steps_paths = [
                         file_path
-                        for file_path in glob.glob(
-                            os.path.join(self.processed_dir, map_name, "*.pt")
+                        for file_path in sorted(
+                            glob.glob(
+                                os.path.join(self.processed_dir, map_name, "*.pt")
+                            )
                         )
                     ]
                     if (self.threshold_steps_number is None) or len(
@@ -220,7 +224,7 @@ class TrainingDataset(Dataset):
 
     def _get_results(self) -> Dict[str, Result]:
         results = dict()
-        for map_name in os.listdir(self.processed_dir):
+        for map_name in sorted(os.listdir(self.processed_dir)):
             path_to_map_steps = Path(
                 os.path.join(self.processed_dir, map_name, "result")
             )
@@ -254,7 +258,7 @@ class TrainingDataset(Dataset):
 
         with mp.Pool(self.n_jobs) as p:
             for map_name in tqdm.tqdm(
-                os.listdir(self.raw_dir),
+                sorted(os.listdir(self.raw_dir)),
                 desc="Dataset processing",
                 ncols=100,
                 colour=self._progress_bar_color,
@@ -381,7 +385,7 @@ class TrainingDataset(Dataset):
         map_steps = []
         all_steps_paths = [
             file_path
-            for file_path in glob.glob(os.path.join(path_to_map_steps, "*"))
+            for file_path in sorted(glob.glob(os.path.join(path_to_map_steps, "*")))
             if not file_path.endswith("result")
         ]
         for path in all_steps_paths:

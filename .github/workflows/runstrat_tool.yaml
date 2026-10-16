@@ -1,11 +1,12 @@
 name: Test runstrat tool
 
-on: 
+on:
   push:
-    paths: 
+    branches: [main]
+    paths:
       - 'tools/runstrat/**'
   pull_request:
-    paths: 
+    paths:
       - 'tools/runstrat/**'
 
 jobs:

@@ -7,6 +7,7 @@ import multiprocessing as mp
 import os
 from dataclasses import asdict, dataclass
 from functools import partial
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import joblib
@@ -31,20 +32,20 @@ from config import GeneralConfig
 from ml.dataset import TrainingDataset, TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.training.early_stopping import EarlyStopping
+from ml.training.seeds import derive_trial_seed, seed_everything
 from ml.training.train import train
 from ml.validation.coverage.validate_coverage import ValidationCoverage
 from ml.validation.loss.validate_loss import validate_loss
 from ml.validation.statistics import AVERAGE_COVERAGE, get_svms_statistics
 from paths import (
-    CURRENT_MODEL_PATH,
     CURRENT_STUDY_PATH,
-    CURRENT_TABLE_PATH,
     CURRENT_TRIAL_PATH,
     LOG_PATH,
-    MODEL_KWARGS_PATH,
+    MODEL_FILE_NAME,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
+    trial_dir,
 )
 from torch import nn
 from torch_geometric.data import Dataset
@@ -60,6 +61,11 @@ logging.basicConfig(
 
 
 create_folders_if_necessary([PROCESSED_DATASET_PATH])
+
+# Tag the tuning run's MLflow runs carry: the number of the best trial among
+# those completed so far. Readers of the tuning artifacts (see
+# derive_dataset_improvement_config.py) locate the best trial's run through it.
+BEST_TRIAL_NUMBER_TAG = "best_trial_number"
 
 
 def get_maps(validation_with_svms_config: SVMValidation):
@@ -111,7 +117,12 @@ def run_training(
             # In short, this setting allows to optimize memory usage.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-            def validate(model, dataset: TrainingDataset):
+            def validate(
+                model,
+                dataset: TrainingDataset,
+                trial_directory: Path,
+                model_kwargs: dict,
+            ):
                 dataset.switch_to(validation_mode.dataset)
                 criterion = criterion_init()
                 result = validate_loss(
@@ -136,19 +147,36 @@ def run_training(
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:False"
 
             maps: list[GameMap2SVM] = get_maps(validation_mode)
-            with open(CURRENT_TABLE_PATH, "w") as statistics_file:
-                statistics_writer = csv.DictWriter(
-                    statistics_file,
-                    sorted([game_map2svm.GameMap.MapName for game_map2svm in maps]),
-                )
-                statistics_writer.writeheader()
+            table_columns = sorted(
+                [game_map2svm.GameMap.MapName for game_map2svm in maps]
+            )
 
-            def validate(model, dataset: TrainingDataset):
-                map2results = ValidationCoverage(model, dataset).validate_coverage(
-                    maps, validation_mode
+            def validate(
+                model,
+                dataset: TrainingDataset,
+                trial_directory: Path,
+                model_kwargs: dict,
+            ):
+                # Per-trial statistics table: each trial appends one row per
+                # epoch to its own file, so concurrent trials cannot interleave.
+                table_path = trial_directory / "svms_result_table.csv"
+                if not table_path.exists():
+                    with open(table_path, "w") as statistics_file:
+                        statistics_writer = csv.DictWriter(
+                            statistics_file, table_columns
+                        )
+                        statistics_writer.writeheader()
+
+                map2results = ValidationCoverage(
+                    model,
+                    dataset,
+                    model_kwargs=model_kwargs,
+                    trial_dir=trial_directory,
+                ).validate_coverage(maps, validation_mode)
+                metrics = get_svms_statistics(
+                    map2results, validation_mode, dataset, table_path
                 )
-                metrics = get_svms_statistics(map2results, validation_mode, dataset)
-                mlflow.log_artifact(CURRENT_TABLE_PATH)
+                mlflow.log_artifact(table_path)
 
                 for map2result in map2results:
                     if (
@@ -167,16 +195,26 @@ def run_training(
         for val_mode in validation_config.validation_mode.val_sequence:
             val_pipeline.append(get_validation(val_mode))
 
-        def validate(model, dataset: TrainingDataset):
+        def validate(
+            model,
+            dataset: TrainingDataset,
+            trial_directory: Path,
+            model_kwargs: dict,
+        ):
             metrics = dict()
             results = list()
             for val_func in val_pipeline:
-                single_val_result, single_val_metrics = val_func(model, dataset)
+                single_val_result, single_val_metrics = val_func(
+                    model, dataset, trial_directory, model_kwargs
+                )
                 results.append(single_val_result)
                 metrics.update(single_val_metrics)
                 torch.cuda.empty_cache()
             return results[0], metrics
 
+    # Study-level seed: the dataset split and any step sampling done at
+    # construction must be identical between runs of the same config.
+    seed_everything(training_config.seed)
     dataset = TrainingDataset(
         RAW_DATASET_PATH,
         PROCESSED_DATASET_PATH,
@@ -206,9 +244,13 @@ def run_training(
         epochs=training_config.epochs,
         validate=validate,
         direction=optuna_config.study_direction,
+        seed=training_config.seed,
     )
+    # TPE keeps its own RNG (global seeding does not reach it), so the sampler
+    # must be seeded explicitly or suggested hyper-parameters differ per run.
     sampler = optuna.samplers.TPESampler(
-        n_startup_trials=optuna_config.n_startup_trials
+        n_startup_trials=optuna_config.n_startup_trials,
+        seed=training_config.seed,
     )
     if optuna_config.trial_uri is None and weights_uri is None:
 
@@ -218,7 +260,7 @@ def run_training(
             with mlflow.start_run(mlflow.last_active_run().info.run_id):
                 mlflow.log_artifact(CURRENT_STUDY_PATH)
                 mlflow.log_artifact(CURRENT_TRIAL_PATH)
-                mlflow.set_tag("best_trial_number", study.best_trial.number)
+                mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
 
         study = optuna.create_study(
             sampler=sampler, direction=optuna_config.study_direction.value
@@ -250,7 +292,12 @@ def objective(
         [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
     ],
     direction: OptimizationDirection,
+    seed: int,
 ):
+    # Per-trial seed: weight init and every sampling site (step sampling,
+    # similar-step dedup, validation map order) draw from these globals, so
+    # seeding before any of them makes the trial reproducible.
+    seed_everything(derive_trial_seed(seed, trial.number))
     config = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 8, 32),
@@ -281,8 +328,20 @@ def objective(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     criterion = criterion_init()
 
+    trial_directory = trial_dir(trial.number)
+    trial_directory.mkdir(parents=True, exist_ok=True)
+    model_path = trial_directory / MODEL_FILE_NAME
+    kwargs_path = trial_directory / "model_kwargs.yaml"
+
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
+        # The kwargs are constant within a trial: persist them once to the
+        # trial dir and log them as an artifact, instead of rewriting a shared
+        # side-effect file every epoch for the ONNX export to read back.
+        with open(kwargs_path, "w") as outfile:
+            yaml.dump(model_kwargs, outfile)
+        mlflow.log_artifact(kwargs_path)
+
         for epoch in range(epochs):
             dataset.switch_to(TrainingDatasetMode.TRAINING)
             train_dataloader = DataLoader(
@@ -296,15 +355,12 @@ def objective(
                 criterion=criterion,
             )
             torch.cuda.empty_cache()
-            torch.save(model.state_dict(), CURRENT_MODEL_PATH)
-            mlflow.log_artifact(CURRENT_MODEL_PATH, str(epoch))
-
-            with open(MODEL_KWARGS_PATH, "w") as outfile:
-                yaml.dump(model_kwargs, outfile)
+            torch.save(model.state_dict(), model_path)
+            mlflow.log_artifact(model_path, str(epoch))
 
             model.eval()
             dataset.switch_to(TrainingDatasetMode.VALIDATION)
-            result, metrics = validate(model, dataset)
+            result, metrics = validate(model, dataset, trial_directory, model_kwargs)
             mlflow.log_metrics(metrics, step=epoch)
             if dynamic_dataset:
                 dataset.update_meta_data()

@@ -2,6 +2,7 @@ import json
 import os
 import typing as t
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -10,6 +11,7 @@ from common.game import GameState
 from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
+from ml.validation.coverage.game_managers.model import process_game_manager
 from onyx import entrypoint
 from tests.utils import read_configs
 
@@ -51,6 +53,47 @@ class TestONNXConversion:
             if file.endswith(".json")
         ]
         return [_load_gamestate(it) for it in json_files]
+
+
+class TestModelGamePreparatorKwargs:
+    def test_create_onnx_model_uses_explicit_kwargs(self, tmp_path, monkeypatch):
+        with open(read_configs("tests/resources/model_configurations")[0]) as file:
+            model_kwargs = yaml.safe_load(file)
+
+        captured = {}
+
+        def fake_export(
+            sample_gamestate,
+            pytorch_model_path,
+            onnx_savepath,
+            model_def,
+            model_kwargs,
+            verification_gamestates=None,
+        ):
+            captured["model_kwargs"] = model_kwargs
+            captured["pytorch_model_path"] = pytorch_model_path
+            captured["onnx_savepath"] = onnx_savepath
+
+        monkeypatch.setattr(
+            process_game_manager, "save_torch_model_to_onnx_file", fake_export
+        )
+        model_path = tmp_path / "model.pth"
+        onnx_path = tmp_path / "model.onnx"
+        namespace = SimpleNamespace(
+            shared_lock=None, is_prepared=SimpleNamespace(value=False)
+        )
+        preparator = process_game_manager.ModelGamePreparator(
+            namespace,
+            RealStateModelEncoder(**model_kwargs),
+            model_path,
+            onnx_path,
+            model_kwargs,
+        )
+        preparator._create_onnx_model()
+
+        assert captured["model_kwargs"] == model_kwargs
+        assert captured["pytorch_model_path"] == model_path
+        assert captured["onnx_savepath"] == onnx_path
 
 
 def _load_gamestate(path) -> dict[str, t.Any]:
