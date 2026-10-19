@@ -385,6 +385,13 @@ def main(config: str):
         mlflow.set_tracking_uri(uri=mlflow_config.tracking_uri)
     mlflow.set_experiment(mlflow_config.experiment_name)
     mlflow.set_experiment_tags(asdict(config))
+    # On some GPUs/drivers the NVML power query returns "Not Supported" and
+    # mlflow's GPU monitor logs a warning every collection interval for the
+    # whole training run. It is harmless (only the power metric is affected),
+    # so silence that logger; other mlflow logs are untouched.
+    logging.getLogger("mlflow.system_metrics.metrics.gpu_monitor").setLevel(
+        logging.ERROR
+    )
     mlflow.enable_system_metrics_logging()
     weights_uri = config.weights_uri
 

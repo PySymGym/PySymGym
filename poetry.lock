@@ -2705,6 +2705,18 @@ files = [
 ]
 
 [[package]]
+name = "nvidia-ml-py"
+version = "13.615.71"
+description = "Python Bindings for the NVIDIA Management Library"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "nvidia_ml_py-13.615.71-py3-none-any.whl", hash = "sha256:959bf4adf6fe1308e4bd739e722236b0d1ec8392e2cefad33ff70c311380b9b6"},
+    {file = "nvidia_ml_py-13.615.71.tar.gz", hash = "sha256:bebe4e48f51b1dc75028c0815cb7bfa14a31a5bb80be70c9d980c6036953fc3d"},
+]
+
+[[package]]
 name = "nvidia-nccl-cu12"
 version = "2.26.2"
 description = "NVIDIA Collective Communication Library (NCCL) Runtime"
@@ -5129,4 +5141,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "22a64bd2ce523f4ef4474154156ac3d63d0ac265088b76e79bffbbfd92871da4"
+content-hash = "b304b6f8ccf6d12580fd90f6d74a20388a7d4c99f7962eec159922958c754608"

@@ -55,7 +55,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry --ansi install -q
+          # --sync: self-hosted runners cache poetry's venv across runs; a
+          # plain install never removes packages dropped from the lockfile.
+          poetry --ansi install -q --sync
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/

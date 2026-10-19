@@ -106,7 +106,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry --ansi install
+          # Self-hosted runners cache poetry's venv across runs, and a plain
+          # install never removes packages dropped from the lockfile (stale
+          # pynvml kept leaking into the env after #617-S1 removed it).
+          # --sync purges them.
+          poetry --ansi install --sync
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
