@@ -87,22 +87,34 @@ def save_in_onnx(
             args=create_torch_input(sample_input),
             f=save_path,
             verbose=verbose,
+            # Axis names are required: torch.onnx.utils._validate_dynamic_axes
+            # warns once per input whose value is an axis list ("No names were
+            # found for specified dynamic axes") and auto-generates the dim
+            # params instead. Names must be unique per distinct size — ONNX
+            # treats equal dim_param strings as the same symbolic dimension —
+            # except that an edge type's index (axis 1) and its per-edge
+            # attributes (axis 0) always hold the same number of edges, so
+            # they share a name.
             dynamic_axes={
-                ONNX.game_vertex: [0],
-                ONNX.state_vertex: [0],
-                ONNX.path_condition_vertex: [0],
-                ONNX.gamevertex_to_gamevertex_index: [1],
-                ONNX.gamevertex_to_gamevertex_type: [0],
-                ONNX.gamevertex_history_statevertex_index: [1],
+                ONNX.game_vertex: {0: "num_game_vertices"},
+                ONNX.state_vertex: {0: "num_state_vertices"},
+                ONNX.path_condition_vertex: {0: "num_pc_vertices"},
+                ONNX.gamevertex_to_gamevertex_index: {1: "num_gv_gv_edges"},
+                ONNX.gamevertex_to_gamevertex_type: {0: "num_gv_gv_edges"},
+                ONNX.gamevertex_history_statevertex_index: {
+                    1: "num_gv_history_sv_edges"
+                },
                 # Axis 1 is the fixed per-edge attribute vector
                 # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset.py),
                 # so only axis 0 is dynamic; torch.export rejects a
                 # user-specified dynamic dim that tracing infers as static.
-                ONNX.gamevertex_history_statevertex_attrs: [0],
-                ONNX.gamevertex_in_statevertex: [1],
-                ONNX.statevertex_parentof_statevertex: [1],
-                ONNX.pathcondvertex_to_pathcondvertex: [1],
-                ONNX.pathcondvertex_to_statevertex: [1],
+                ONNX.gamevertex_history_statevertex_attrs: {
+                    0: "num_gv_history_sv_edges"
+                },
+                ONNX.gamevertex_in_statevertex: {1: "num_gv_in_sv_edges"},
+                ONNX.statevertex_parentof_statevertex: {1: "num_sv_parentof_sv_edges"},
+                ONNX.pathcondvertex_to_pathcondvertex: {1: "num_pc_pc_edges"},
+                ONNX.pathcondvertex_to_statevertex: {1: "num_pc_sv_edges"},
             },
             input_names=[
                 ONNX.game_vertex,
