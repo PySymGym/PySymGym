@@ -1,6 +1,7 @@
 import os
 import pathlib
 import tempfile
+import warnings
 
 import pytest
 
@@ -28,4 +29,12 @@ def test_pipeline_with_mock_data(configs_path: pathlib.Path):
             configs=read_configs(configs_path),
             savedir=tmpdirname,
         )
-        entrypoint(args)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            entrypoint(args)
+
+    # The mock data contains single-row groups, which make matplotlib call
+    # float() on length-1 Series/ndarrays and emit a FutureWarning or
+    # DeprecationWarning (#617). Guard against that regression.
+    matplotlib_warnings = [w for w in caught if "matplotlib" in (w.filename or "")]
+    assert not matplotlib_warnings, [str(w.message) for w in matplotlib_warnings]

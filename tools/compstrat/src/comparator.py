@@ -178,16 +178,22 @@ class Comparator:
             len(strat2_win),
             len(eq),
         ]
+        # x/y as numpy arrays, err as lists of Python floats: matplotlib's
+        # _upcast_err calls math.isfinite() on each err element, which warns
+        # for single-element Series ("Calling float on a single element
+        # Series is deprecated") and for single-element ndarrays ("Conversion
+        # of an array with ndim > 0 to a scalar is deprecated"); plain lists
+        # raise TypeError there instead, which matplotlib handles silently.
         plt.errorbar(
-            x=strat1_win[strat2_col],
-            y=strat1_win[strat1_col],
+            x=strat1_win[strat2_col].to_numpy(),
+            y=strat1_win[strat1_col].to_numpy(),
             xerr=[
-                strat1_win[strat2_col] - strat1_win[strat2_min_col],
-                strat1_win[strat2_max_col] - strat1_win[strat2_col],
+                (strat1_win[strat2_col] - strat1_win[strat2_min_col]).tolist(),
+                (strat1_win[strat2_max_col] - strat1_win[strat2_col]).tolist(),
             ],
             yerr=[
-                strat1_win[strat1_col] - strat1_win[strat1_min_col],
-                strat1_win[strat1_max_col] - strat1_win[strat1_col],
+                (strat1_win[strat1_col] - strat1_win[strat1_min_col]).tolist(),
+                (strat1_win[strat1_max_col] - strat1_win[strat1_col]).tolist(),
             ],
             ecolor=self.strat1.ecolor.to_rgba(),
             ls="none",
@@ -196,15 +202,15 @@ class Comparator:
             color=self.strat1.color.to_rgba(),
         )
         plt.errorbar(
-            x=strat2_win[strat2_col],
-            y=strat2_win[strat1_col],
+            x=strat2_win[strat2_col].to_numpy(),
+            y=strat2_win[strat1_col].to_numpy(),
             xerr=[
-                strat2_win[strat2_col] - strat2_win[strat2_min_col],
-                strat2_win[strat2_max_col] - strat2_win[strat2_col],
+                (strat2_win[strat2_col] - strat2_win[strat2_min_col]).tolist(),
+                (strat2_win[strat2_max_col] - strat2_win[strat2_col]).tolist(),
             ],
             yerr=[
-                strat2_win[strat1_col] - strat2_win[strat1_min_col],
-                strat2_win[strat1_max_col] - strat2_win[strat1_col],
+                (strat2_win[strat1_col] - strat2_win[strat1_min_col]).tolist(),
+                (strat2_win[strat1_max_col] - strat2_win[strat1_col]).tolist(),
             ],
             ecolor=self.strat2.ecolor.to_rgba(),
             ls="none",
@@ -213,15 +219,15 @@ class Comparator:
             color=self.strat2.color.to_rgba(),
         )
         plt.errorbar(
-            x=eq[strat2_col],
-            y=eq[strat1_col],
+            x=eq[strat2_col].to_numpy(),
+            y=eq[strat1_col].to_numpy(),
             xerr=[
-                eq[strat2_col] - eq[strat2_min_col],
-                eq[strat2_max_col] - eq[strat2_col],
+                (eq[strat2_col] - eq[strat2_min_col]).tolist(),
+                (eq[strat2_max_col] - eq[strat2_col]).tolist(),
             ],
             yerr=[
-                eq[strat1_col] - eq[strat1_min_col],
-                eq[strat1_max_col] - eq[strat1_col],
+                (eq[strat1_col] - eq[strat1_min_col]).tolist(),
+                (eq[strat1_max_col] - eq[strat1_col]).tolist(),
             ],
             ecolor=self.eq_ecolor.to_rgba(),
             ls="none",
