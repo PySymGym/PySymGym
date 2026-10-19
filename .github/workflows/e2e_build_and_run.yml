@@ -104,22 +104,6 @@ jobs:
         run: |
           pip install poetry==2.2.1
 
-      - name: Purge polluted cached venv if needed
-        run: |
-          # Self-hosted runners cache poetry's venv across runs. This one
-          # accumulated a foreign CUDA-13 stack (nvidia-*-cu13, cuda-toolkit
-          # 13) from another torch install; its files overlap our
-          # nvidia-*-cu12 packages (both own e.g. nvidia/cudnn/lib/
-          # libcudnn.so.9), so --sync's removal of the foreign stack deletes
-          # the shared libraries and breaks `import torch`. If the pollution
-          # is present, drop the venv so the install below rebuilds it
-          # cleanly from the lockfile; --sync keeps it clean afterwards.
-          VENV_DIR=$(poetry env info -p 2>/dev/null || true)
-          if [ -n "$VENV_DIR" ] && ls "$VENV_DIR"/lib/python*/site-packages/ 2>/dev/null | grep -q "cu13"; then
-              echo "Foreign CUDA-13 packages detected in cached venv — removing it"
-              rm -rf "$VENV_DIR"
-          fi
-
       - name: Install dependencies
         run: |
           # Self-hosted runners cache poetry's venv across runs, and a plain
@@ -127,6 +111,22 @@ jobs:
           # pynvml kept leaking into the env after #617-S1 removed it).
           # --sync purges them.
           poetry --ansi install --sync
+
+      - name: Verify cached venv integrity
+        run: |
+          # The cached venv can be file-broken even when poetry considers it
+          # complete: a foreign CUDA stack (nvidia-*-cu13) that once lived
+          # here shares site-packages paths with our nvidia-*-cu12 packages
+          # (both own e.g. nvidia/cudnn/lib/libcudnn.so.9), and --sync's
+          # removal of the foreign stack deletes the shared libraries,
+          # breaking 'import torch'. If torch cannot import, rebuild the
+          # venv from scratch once; --sync keeps it clean afterwards.
+          if ! poetry run python -c "import torch" 2>/dev/null; then
+              echo "torch import failed — rebuilding cached venv from scratch"
+              rm -rf "$(poetry env info -p)"
+              poetry --ansi install --sync
+              poetry run python -c "import torch"
+          fi
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/
