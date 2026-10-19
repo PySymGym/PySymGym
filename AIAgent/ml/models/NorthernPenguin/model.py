@@ -61,8 +61,18 @@ class StateModelEncoder(torch.nn.Module):
     ):
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 
-        if edge_type_v_v.numel() != 0:
-            game_x = self.conv1(game_x, edge_index_v_v, edge_type_v_v).relu()
+        # RGCNConv on empty edges is not the identity (it returns x@root+bias),
+        # and empty v-v edges are realistic (null_if_empty in ml/dataset.py),
+        # so skipping conv1 must stay data-driven. A Python `if` on a tensor
+        # property makes the ONNX tracer bake the sample's value in with a
+        # TracerWarning; torch.where keeps the skip data-driven (the exporter
+        # traces the condition as a Shape-based op) without one.
+        has_v_v_edges = (edge_type_v_v.numel() > 0) * torch.ones(1).to(torch.bool)
+        game_x = torch.where(
+            has_v_v_edges,
+            self.conv1(game_x, edge_index_v_v, edge_type_v_v).relu(),
+            game_x,
+        )
         pc_x = self.pc_conv(pc_x, edge_index_pc_pc).relu()
         state_x = self.conv3(
             (game_x, state_x),
