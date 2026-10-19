@@ -104,8 +104,10 @@ def remove_path_condition_root(heterodata: HeteroData) -> HeteroData:
     def null_if_empty(tensor):
         return tensor if tensor.numel() != 0 else torch.empty((2, 0), dtype=torch.int64)
 
+    # np.array first: torch.tensor on a list of ndarrays is extremely slow
+    # and warns (see the python_tests CI log).
     new_heterodata[TORCH.path_condition_vertex].x = torch.tensor(
-        pc_x, dtype=torch.float
+        np.array(pc_x), dtype=torch.float
     )
 
     new_heterodata[TORCH.pathcondvertex_to_pathcondvertex].edge_index = null_if_empty(
