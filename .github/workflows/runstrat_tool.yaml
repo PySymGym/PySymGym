@@ -53,6 +53,17 @@ jobs:
         run: |
           pip install poetry
 
+      - name: Purge polluted cached venv if needed
+        run: |
+          # Same shared self-hosted venv as the e2e workflows: see the
+          # matching step in e2e_build_and_run.yml for why a foreign
+          # CUDA-13 stack must be purged before --sync.
+          VENV_DIR=$(poetry env info -p 2>/dev/null || true)
+          if [ -n "$VENV_DIR" ] && ls "$VENV_DIR"/lib/python*/site-packages/ 2>/dev/null | grep -q "cu13"; then
+              echo "Foreign CUDA-13 packages detected in cached venv — removing it"
+              rm -rf "$VENV_DIR"
+          fi
+
       - name: Install dependencies
         run: |
           # --sync: self-hosted runners cache poetry's venv across runs; a

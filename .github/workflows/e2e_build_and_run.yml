@@ -104,6 +104,22 @@ jobs:
         run: |
           pip install poetry==2.2.1
 
+      - name: Purge polluted cached venv if needed
+        run: |
+          # Self-hosted runners cache poetry's venv across runs. This one
+          # accumulated a foreign CUDA-13 stack (nvidia-*-cu13, cuda-toolkit
+          # 13) from another torch install; its files overlap our
+          # nvidia-*-cu12 packages (both own e.g. nvidia/cudnn/lib/
+          # libcudnn.so.9), so --sync's removal of the foreign stack deletes
+          # the shared libraries and breaks `import torch`. If the pollution
+          # is present, drop the venv so the install below rebuilds it
+          # cleanly from the lockfile; --sync keeps it clean afterwards.
+          VENV_DIR=$(poetry env info -p 2>/dev/null || true)
+          if [ -n "$VENV_DIR" ] && ls "$VENV_DIR"/lib/python*/site-packages/ 2>/dev/null | grep -q "cu13"; then
+              echo "Foreign CUDA-13 packages detected in cached venv — removing it"
+              rm -rf "$VENV_DIR"
+          fi
+
       - name: Install dependencies
         run: |
           # Self-hosted runners cache poetry's venv across runs, and a plain
