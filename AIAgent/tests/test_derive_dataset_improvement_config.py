@@ -32,13 +32,13 @@ WORKFLOW_CONFIG = AIAgent_DIR.parent / "workflow" / "config_for_tests.yml"
 def log_tuning_structure(
     tmp_path: Path, values: list[float], epochs_per_trial: list[int]
 ):
-    """Log a fake tuning run to a file-based MLflow store in ``tmp_path``.
+    """Log a fake tuning run to a sqlite-backed MLflow store in ``tmp_path``.
 
     Mirrors the mlflow calls of ``run_training.py`` (per-trial runs, per-epoch
     model artifacts, and the ``save_study_and_trial`` callback re-entering the
     just finished trial's run). Returns the experiment and a client.
     """
-    mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+    mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
     experiment = mlflow.set_experiment("CI")
     study = optuna.create_study(direction="minimize")
     for number, (value, epochs) in enumerate(
@@ -71,7 +71,7 @@ def base_config_pointing_at(tmp_path: Path) -> Path:
     """Copy the real workflow config, retargeted at the test's MLflow store."""
     with open(WORKFLOW_CONFIG) as file:
         data = yaml.safe_load(file)
-    data["MLFlowConfig"]["tracking_uri"] = f"file://{tmp_path / 'mlruns'}"
+    data["MLFlowConfig"]["tracking_uri"] = f"sqlite:///{tmp_path / 'mlflow.db'}"
     path = tmp_path / "base_config.yml"
     with open(path, "w") as file:
         yaml.safe_dump(data, file, sort_keys=False)
@@ -94,7 +94,7 @@ class TestFindBestTrialRun:
         assert best_run.info.run_name == "0"
 
     def test_no_tagged_runs(self, tmp_path):
-        mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+        mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
         experiment = mlflow.set_experiment("CI")
         client = MlflowClient()
         with pytest.raises(SystemExit, match="best_trial_number"):
@@ -111,7 +111,7 @@ class TestFindBestTrialRun:
         mlflow.end_run()
 
     def test_only_unended_tagged_run_fails_cleanly(self, tmp_path):
-        mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+        mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
         experiment = mlflow.set_experiment("CI")
         mlflow.start_run(run_name="0")
         mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, "0")
@@ -133,7 +133,7 @@ class TestFindLastModelEpoch:
         assert find_last_model_epoch(client, runs["1"].info.run_id) == 0
 
     def test_run_without_model_artifacts(self, tmp_path):
-        mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+        mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
         experiment = mlflow.set_experiment("CI")
         client = MlflowClient()
         with mlflow.start_run(run_name="0"):
@@ -147,7 +147,7 @@ class TestFindLastModelEpoch:
 
 class TestFindExperiment:
     def test_missing_experiment(self, tmp_path):
-        mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+        mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
         client = MlflowClient()
         with pytest.raises(SystemExit, match="not found"):
             find_experiment(client, "no-such-experiment")
@@ -191,7 +191,7 @@ class TestDeriveConfig:
         } == base["OptunaConfig"]
 
     def test_missing_experiment_fails_without_writing(self, tmp_path):
-        mlflow.set_tracking_uri(f"file://{tmp_path / 'mlruns'}")
+        mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
         base = base_config_pointing_at(tmp_path)
         with open(base) as file:
             data = yaml.safe_load(file)
