@@ -1,6 +1,7 @@
 import json
 import os
 import typing as t
+import warnings
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,11 +9,12 @@ import pytest
 import torch
 import yaml
 from common.game import GameState
+from ml.dataset import convert_input_to_tensor
 from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
 from ml.validation.coverage.game_managers.model import process_game_manager
-from onyx import entrypoint
+from onyx import entrypoint, save_in_onnx
 from tests.utils import read_configs
 
 
@@ -53,6 +55,39 @@ class TestONNXConversion:
             if file.endswith(".json")
         ]
         return [_load_gamestate(it) for it in json_files]
+
+
+class TestONNXExportWarnings:
+    def test_export_emits_no_warnings(self, tmp_path):
+        """save_in_onnx must not emit warnings from torch.onnx, PyG conv, or
+        this repo (regression guard for #617)."""
+        with open(read_configs("tests/resources/model_configurations")[0]) as file:
+            model_kwargs = yaml.safe_load(file)
+
+        game_states_dir = Path("../resources/onnx/reference_gamestates")
+        first = sorted(p for p in os.listdir(game_states_dir) if p.endswith(".json"))[0]
+        game_state = _load_gamestate(game_states_dir / first)
+
+        torch_model = RealStateModelEncoder(**model_kwargs).eval()
+        hetero, _ = convert_input_to_tensor(game_state)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            save_in_onnx(torch_model, hetero, tmp_path / "model.onnx")
+
+        offenders = [
+            w
+            for w in caught
+            if (
+                "torch/onnx/" in (w.filename or "")
+                or "torch_geometric/nn/conv/" in (w.filename or "")
+                or "/AIAgent/" in (w.filename or "")
+            )
+        ]
+        assert not offenders, [
+            f"{w.category.__name__} @ {w.filename}:{w.lineno}: {w.message}"
+            for w in offenders
+        ]
 
 
 class TestModelGamePreparatorKwargs:
