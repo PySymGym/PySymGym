@@ -3,12 +3,14 @@ import importlib
 import json
 import pathlib
 import typing as t
+import warnings
 from textwrap import dedent
 
 import onnx
 import onnxruntime
 import torch
 import yaml
+from torch.jit import TracerWarning
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH
@@ -82,56 +84,81 @@ def save_in_onnx(
     previous_use_segment_matmul = pyg_backend.use_segment_matmul
     pyg_backend.use_segment_matmul = False
     try:
-        torch.onnx.export(
-            model=model,
-            args=create_torch_input(sample_input),
-            f=save_path,
-            verbose=verbose,
-            # Axis names are required: torch.onnx.utils._validate_dynamic_axes
-            # warns once per input whose value is an axis list ("No names were
-            # found for specified dynamic axes") and auto-generates the dim
-            # params instead. Names must be unique per distinct size — ONNX
-            # treats equal dim_param strings as the same symbolic dimension —
-            # except that an edge type's index (axis 1) and its per-edge
-            # attributes (axis 0) always hold the same number of edges, so
-            # they share a name.
-            dynamic_axes={
-                ONNX.game_vertex: {0: "num_game_vertices"},
-                ONNX.state_vertex: {0: "num_state_vertices"},
-                ONNX.path_condition_vertex: {0: "num_pc_vertices"},
-                ONNX.gamevertex_to_gamevertex_index: {1: "num_gv_gv_edges"},
-                ONNX.gamevertex_to_gamevertex_type: {0: "num_gv_gv_edges"},
-                ONNX.gamevertex_history_statevertex_index: {
-                    1: "num_gv_history_sv_edges"
+        with warnings.catch_warnings():
+            # Dependency-internal warnings that torch.onnx.export emits for
+            # this model; each is safe to suppress (see comments). Scoped to
+            # the export call only.
+            # PyG RGCNConv's masked_edge_index indexes edge_index with a 1-D
+            # boolean mask — exactly the supported case per the warning text.
+            warnings.filterwarnings(
+                "ignore", category=UserWarning, module=r"torch\.onnx\.symbolic_opset9"
+            )
+            # PyG MessagePassing._set_size consistency check; the traced
+            # value is baked in as a constant, which is correct for a fixed
+            # graph.
+            warnings.filterwarnings(
+                "ignore",
+                category=TracerWarning,
+                module=r"torch_geometric\.nn\.conv\.message_passing",
+            )
+            # setup_onnx_logging is @deprecated and called by
+            # torch.onnx.export itself on the legacy exporter path —
+            # unavoidable from here.
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, module=r"torch\.onnx\.utils"
+            )
+            torch.onnx.export(
+                model=model,
+                args=create_torch_input(sample_input),
+                f=save_path,
+                verbose=verbose,
+                # Axis names are required: torch.onnx.utils._validate_dynamic_axes
+                # warns once per input whose value is an axis list ("No names were
+                # found for specified dynamic axes") and auto-generates the dim
+                # params instead. Names must be unique per distinct size — ONNX
+                # treats equal dim_param strings as the same symbolic dimension —
+                # except that an edge type's index (axis 1) and its per-edge
+                # attributes (axis 0) always hold the same number of edges, so
+                # they share a name.
+                dynamic_axes={
+                    ONNX.game_vertex: {0: "num_game_vertices"},
+                    ONNX.state_vertex: {0: "num_state_vertices"},
+                    ONNX.path_condition_vertex: {0: "num_pc_vertices"},
+                    ONNX.gamevertex_to_gamevertex_index: {1: "num_gv_gv_edges"},
+                    ONNX.gamevertex_to_gamevertex_type: {0: "num_gv_gv_edges"},
+                    ONNX.gamevertex_history_statevertex_index: {
+                        1: "num_gv_history_sv_edges"
+                    },
+                    # Axis 1 is the fixed per-edge attribute vector
+                    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset.py),
+                    # so only axis 0 is dynamic; torch.export rejects a
+                    # user-specified dynamic dim that tracing infers as static.
+                    ONNX.gamevertex_history_statevertex_attrs: {
+                        0: "num_gv_history_sv_edges"
+                    },
+                    ONNX.gamevertex_in_statevertex: {1: "num_gv_in_sv_edges"},
+                    ONNX.statevertex_parentof_statevertex: {
+                        1: "num_sv_parentof_sv_edges"
+                    },
+                    ONNX.pathcondvertex_to_pathcondvertex: {1: "num_pc_pc_edges"},
+                    ONNX.pathcondvertex_to_statevertex: {1: "num_pc_sv_edges"},
                 },
-                # Axis 1 is the fixed per-edge attribute vector
-                # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset.py),
-                # so only axis 0 is dynamic; torch.export rejects a
-                # user-specified dynamic dim that tracing infers as static.
-                ONNX.gamevertex_history_statevertex_attrs: {
-                    0: "num_gv_history_sv_edges"
-                },
-                ONNX.gamevertex_in_statevertex: {1: "num_gv_in_sv_edges"},
-                ONNX.statevertex_parentof_statevertex: {1: "num_sv_parentof_sv_edges"},
-                ONNX.pathcondvertex_to_pathcondvertex: {1: "num_pc_pc_edges"},
-                ONNX.pathcondvertex_to_statevertex: {1: "num_pc_sv_edges"},
-            },
-            input_names=[
-                ONNX.game_vertex,
-                ONNX.state_vertex,
-                ONNX.path_condition_vertex,
-                ONNX.gamevertex_to_gamevertex_index,
-                ONNX.gamevertex_to_gamevertex_type,
-                ONNX.gamevertex_history_statevertex_index,
-                ONNX.gamevertex_history_statevertex_attrs,
-                ONNX.gamevertex_in_statevertex,
-                ONNX.statevertex_parentof_statevertex,
-                ONNX.pathcondvertex_to_pathcondvertex,
-                ONNX.pathcondvertex_to_statevertex,
-            ],
-            output_names=["out"],
-            opset_version=ONNX_OPSET_VERSION,
-        )
+                input_names=[
+                    ONNX.game_vertex,
+                    ONNX.state_vertex,
+                    ONNX.path_condition_vertex,
+                    ONNX.gamevertex_to_gamevertex_index,
+                    ONNX.gamevertex_to_gamevertex_type,
+                    ONNX.gamevertex_history_statevertex_index,
+                    ONNX.gamevertex_history_statevertex_attrs,
+                    ONNX.gamevertex_in_statevertex,
+                    ONNX.statevertex_parentof_statevertex,
+                    ONNX.pathcondvertex_to_pathcondvertex,
+                    ONNX.pathcondvertex_to_statevertex,
+                ],
+                output_names=["out"],
+                opset_version=ONNX_OPSET_VERSION,
+            )
     finally:
         pyg_backend.use_segment_matmul = previous_use_segment_matmul
 
