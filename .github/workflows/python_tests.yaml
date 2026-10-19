@@ -20,6 +20,21 @@ jobs:
           cache: "poetry"
 
       - name: Install dependencies
+        env:
+          # Upstream packaging noise that current poetry emits while
+          # installing the lock file (both unfixable from here on py3.11):
+          # - func-timeout 4.3.5 is sdist-only and its setup.py uses the
+          #   deprecated LGPLv2 license classifier; setuptools >=77 emits a
+          #   deprecation in the build subprocess, which pyproject-hooks
+          #   >=1.3 (used by current poetry) re-emits here as
+          #   BuildBackendWarning, a UserWarning subclass.
+          # - numpy's cp311 wheels ship a stray
+          #   numpy/distutils/__pycache__/*.pyc that poetry's installer
+          #   flags with a RuntimeWarning.
+          # A [tool.poetry.build-constraints] pin of setuptools <77 would fix
+          # the first at the root, but e2e's pinned poetry 2.2.1 rejects the
+          # key, so suppress for a clean install log instead (#617).
+          PYTHONWARNINGS: "ignore::UserWarning,ignore::RuntimeWarning"
         run: |
           poetry install
 
