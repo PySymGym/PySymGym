@@ -20,6 +20,10 @@ httplib2 = ">=0.31.2,<0.33.0"
 joblib = "^1.5.3"
 matplotlib = "^3.10.8"
 natsort = "^8.4.0"
+# Successor of the deprecated `pynvml` package (same `pynvml` module); torch
+# and mlflow's GPU monitor import it. The old package emits a deprecation
+# FutureWarning on every CUDA init.
+nvidia-ml-py = "^13.0.1"
 onnx = "^1.21.0"
 onnxruntime = "^1.24.4"
 optuna = "^4.8.0"
