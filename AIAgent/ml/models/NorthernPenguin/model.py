@@ -66,8 +66,13 @@ class StateModelEncoder(torch.nn.Module):
         # so skipping conv1 must stay data-driven. A Python `if` on a tensor
         # property makes the ONNX tracer bake the sample's value in with a
         # TracerWarning; torch.where keeps the skip data-driven (the exporter
-        # traces the condition as a Shape-based op) without one.
-        has_v_v_edges = (edge_type_v_v.numel() > 0) * torch.ones(1).to(torch.bool)
+        # traces the condition as a Shape-based op) without one. numel() is a
+        # Python int, so the condition tensor must be created on the input's
+        # device explicitly — torch.where rejects a CPU condition with CUDA
+        # operands.
+        has_v_v_edges = (edge_type_v_v.numel() > 0) * torch.ones(
+            1, dtype=torch.bool, device=edge_type_v_v.device
+        )
         game_x = torch.where(
             has_v_v_edges,
             self.conv1(game_x, edge_index_v_v, edge_type_v_v).relu(),

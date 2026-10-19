@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import typing as t
@@ -10,11 +11,12 @@ import torch
 import yaml
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
+from ml.inference import TORCH
 from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
 )
 from ml.validation.coverage.game_managers.model import process_game_manager
-from onyx import entrypoint, save_in_onnx
+from onyx import create_torch_input, entrypoint, save_in_onnx
 from tests.utils import read_configs
 
 
@@ -88,6 +90,41 @@ class TestONNXExportWarnings:
             f"{w.category.__name__} @ {w.filename}:{w.lineno}: {w.message}"
             for w in offenders
         ]
+
+
+class TestForwardOnCUDA:
+    """Regression guard for #617: StateModelEncoder.forward must run on CUDA.
+    The v-v skip condition is a Python-int-derived tensor; if it is created
+    without an explicit device it lands on CPU and torch.where raises
+    "Expected all tensors to be on the same device" for CUDA inputs."""
+
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
+    def test_forward_matches_cpu_with_and_without_v_v_edges(self):
+        with open(read_configs("tests/resources/model_configurations")[0]) as file:
+            model_kwargs = yaml.safe_load(file)
+
+        game_states_dir = Path("../resources/onnx/reference_gamestates")
+        first = sorted(p for p in os.listdir(game_states_dir) if p.endswith(".json"))[0]
+        game_state = _load_gamestate(game_states_dir / first)
+        hetero, _ = convert_input_to_tensor(game_state)
+
+        empty_hetero = copy.deepcopy(hetero)
+        empty_hetero[TORCH.gamevertex_to_gamevertex].edge_index = torch.empty(
+            (2, 0), dtype=torch.long
+        )
+        empty_hetero[TORCH.gamevertex_to_gamevertex].edge_type = torch.empty(
+            (0,), dtype=torch.long
+        )
+
+        cpu_model = RealStateModelEncoder(**model_kwargs).eval()
+        cuda_model = copy.deepcopy(cpu_model).cuda()
+
+        for sample in (hetero, empty_hetero):
+            args = create_torch_input(sample)
+            expected = cpu_model(*args)
+            cuda_args = tuple(arg.to("cuda") for arg in args)
+            actual = cuda_model(*cuda_args)
+            assert torch.allclose(expected, actual.cpu(), atol=1e-4)
 
 
 class TestModelGamePreparatorKwargs:
