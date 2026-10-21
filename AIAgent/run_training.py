@@ -246,8 +246,6 @@ def run_training(
         direction=optuna_config.study_direction,
         seed=training_config.seed,
     )
-    # TPE keeps its own RNG (global seeding does not reach it), so the sampler
-    # must be seeded explicitly or suggested hyper-parameters differ per run.
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials,
         seed=training_config.seed,
