@@ -1,5 +1,7 @@
 from pathlib import Path
 
+# CWD-relative artifact root. Everything under it (models, trials, datasets,
+# study/trial pickles, the app log) is generated at runtime and git-ignored.
 REPORT_PATH = Path("./report")
 PRETRAINED_MODEL_PATH = REPORT_PATH / "models"
 RAW_DATASET_PATH = REPORT_PATH / "SerializedEpisodes"

@@ -164,7 +164,7 @@ cython_debug/
 
 # MacOS specific
 .DS_Store
-*report/
+report/
 
 .mono/
 
