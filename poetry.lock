@@ -4106,6 +4106,7 @@ description = "Most extensible Python build backend with support for C/C++ exten
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
+markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\" or python_version >= \"3.12\""
 files = [
     {file = "setuptools-84.1.0-py3-none-any.whl", hash = "sha256:5231689c6ac8156cd155cfb98c3fd6fb252c3e7e9bd3d78b64d3c55f132624c9"},
     {file = "setuptools-84.1.0.tar.gz", hash = "sha256:23657205b63d4d31395ab917815247f694aafad28cd21316bf5fd45a51048ea0"},
@@ -4584,13 +4585,14 @@ optree = ["optree (>=0.13.0)"]
 
 [[package]]
 name = "torch-geometric"
-version = "2.8.0"
+version = "2.8.1"
 description = "Graph Neural Network Library for PyTorch"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "torch_geometric-2.8.0-py3-none-any.whl", hash = "sha256:1f62e415a2e9ee69d34617d1b0b230e9d9040f51809b96e801e742770fd4dada"},
+    {file = "torch_geometric-2.8.1-py3-none-any.whl", hash = "sha256:b628de243c0893f3435b6eca9a7bbc07f3219293ed27c974b8929aaae42e65d0"},
+    {file = "torch_geometric-2.8.1.tar.gz", hash = "sha256:3d4431567fcf4865a29cfec25c52484382dd38fd46a45fb4f9d473545d64b812"},
 ]
 
 [package.dependencies]
