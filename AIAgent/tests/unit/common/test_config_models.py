@@ -41,6 +41,7 @@ def _training() -> TrainingConfig:
         threshold_coverage=80,
         load_to_cpu=True,
         epochs=10,
+        seed=99,
     )
 
 
@@ -197,5 +198,6 @@ def test_training_config_threshold_steps_defaults_to_none() -> None:
         threshold_coverage=90,
         load_to_cpu=False,
         epochs=3,
+        seed=99,
     )
     assert config.threshold_steps_number is None
