@@ -9,6 +9,8 @@ import pytest
 
 from wait_for_service import main, wait_for_http, wait_for_tcp
 
+pytestmark = pytest.mark.integration
+
 
 class _Handler(http.server.BaseHTTPRequestHandler):
     status_code = 200

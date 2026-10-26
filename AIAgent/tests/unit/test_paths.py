@@ -2,7 +2,11 @@
 
 from pathlib import Path
 
+import pytest
+
 from paths import REPORT_PATH, TRIALS_PATH, trial_dir
+
+pytestmark = pytest.mark.unit
 
 
 class TestTrialDir:
