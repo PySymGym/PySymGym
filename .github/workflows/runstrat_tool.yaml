@@ -55,9 +55,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # --sync: self-hosted runners cache poetry's venv across runs; a
-          # plain install never removes packages dropped from the lockfile.
-          poetry --ansi install -q --sync
+          # Same shared self-hosted venv as the e2e workflows: see the
+          # matching step in e2e_build_and_run.yml for why --sync is needed
+          # and why it must survive a cross-device downgrade failure
+          # ("Cannot install mlflow-skinny", #656) via TMPDIR on the venv's
+          # filesystem plus a from-scratch rebuild.
+          export TMPDIR="$(poetry config cache-dir)/pip-tmp"
+          mkdir -p "$TMPDIR"
+          if ! poetry --ansi install -q --sync; then
+              echo "poetry install --sync failed — rebuilding cached venv from scratch"
+              # env info -p fails when no venv exists yet (fresh runner);
+              # guard so the rebuild still proceeds.
+              venv_path="$(poetry env info -p 2>/dev/null || true)"
+              [ -n "$venv_path" ] && rm -rf "$venv_path"
+              poetry --ansi install -q --sync
+          fi
 
       - name: Verify cached venv integrity
         run: |
