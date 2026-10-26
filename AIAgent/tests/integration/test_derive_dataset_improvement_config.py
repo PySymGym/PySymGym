@@ -25,7 +25,9 @@ from derive_dataset_improvement_config import (
 )
 from run_training import BEST_TRIAL_NUMBER_TAG
 
-AIAgent_DIR = Path(__file__).parent.parent
+pytestmark = pytest.mark.integration
+
+AIAgent_DIR = Path(__file__).resolve().parent.parent.parent
 WORKFLOW_CONFIG = AIAgent_DIR.parent / "workflow" / "config_for_tests.yml"
 
 
