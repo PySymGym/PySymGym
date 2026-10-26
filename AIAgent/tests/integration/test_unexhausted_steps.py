@@ -27,6 +27,8 @@ from ml.validation.coverage.game_managers.model import process_game_manager
 from ml.validation.coverage.game_managers.utils import unexhausted_steps_failure
 from ml.validation.coverage.validate_coverage import ValidationCoverage
 
+pytestmark = pytest.mark.integration
+
 
 def svms_validation_mode(val_type: str, **extra) -> dict:
     return {
