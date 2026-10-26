@@ -110,7 +110,26 @@ jobs:
           # install never removes packages dropped from the lockfile (stale
           # pynvml kept leaking into the env after #617-S1 removed it).
           # --sync purges them.
-          poetry --ansi install --sync
+          #
+          # --sync can also fail outright when it must downgrade a cached
+          # package: pip's uninstall renames the old files into a temp dir,
+          # and on this runner /tmp is on a different filesystem than the
+          # venv, so the rename dies with "Invalid cross-device link"
+          # ("Cannot install mlflow-skinny" after #654 bumped mlflow on
+          # main while older branches still lock 3.11.1). Pointing TMPDIR
+          # at the venv's own filesystem keeps the rename on-device; if the
+          # install fails for any other reason, rebuild the venv from
+          # scratch — a fresh install never uninstalls.
+          export TMPDIR="$(poetry config cache-dir)/pip-tmp"
+          mkdir -p "$TMPDIR"
+          if ! poetry --ansi install --sync; then
+              echo "poetry install --sync failed — rebuilding cached venv from scratch"
+              # env info -p fails when no venv exists yet (fresh runner);
+              # guard so the rebuild still proceeds.
+              venv_path="$(poetry env info -p 2>/dev/null || true)"
+              [ -n "$venv_path" ] && rm -rf "$venv_path"
+              poetry --ansi install --sync
+          fi
 
       - name: Verify cached venv integrity
         run: |
