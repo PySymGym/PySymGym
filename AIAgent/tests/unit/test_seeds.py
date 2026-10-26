@@ -13,6 +13,8 @@ from ml.inference import TORCH
 from ml.training.seeds import derive_trial_seed, seed_everything
 from pydantic import ValidationError
 
+pytestmark = pytest.mark.unit
+
 
 def make_training_config(**overrides) -> dict:
     base = {
