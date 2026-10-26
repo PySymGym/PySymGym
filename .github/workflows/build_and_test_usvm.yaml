@@ -11,20 +11,20 @@ on:
 
 jobs:
   build-and-test:
+    # Runs on the host, not in a container: the usvm test suite kills
+    # orphaned descendants and asserts they are gone, which requires a
+    # reaping init. A container's PID 1 does not reap orphans, so the
+    # killed descendants linger as zombies — visible to both
+    # kill(pid, 0) (JS tests) and ProcessHandle.isAlive()/onExit() (JVM
+    # tests) — and the process-management tests fail. The host's systemd
+    # reaps immediately. See #659.
     runs-on: self-hosted
-    container:
-      image: ubuntu:24.04
     steps:
-      - name: Download & install necessary dependencies
-        # git is required for the submodule checkout; node/npm come from
-        # setup-node below
-        run: apt update && apt install -y git
-
       - name: Setup Node.js
         # :usvm-ts-fast-check runs the fast-check adapter's JS tests, whose
-        # TS entry-point loading needs node >= 20-class CJS/ESM interop.
-        # ubuntu 24.04's apt node is 18.19.1, which breaks it
-        # (entrypoint.export.not-found, 41/138 tests) — see #659.
+        # TS entry-point loading needs node >= 20-class CJS/ESM interop
+        # (node 18 breaks it: entrypoint.export.not-found, 41/138 tests).
+        # See #659.
         uses: actions/setup-node@v4
         with:
           node-version: '22'
