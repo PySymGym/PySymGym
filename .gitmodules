@@ -1,6 +1,6 @@
 [submodule "GameServers/VSharp"]
 	path = GameServers/VSharp
-	url = https://github.com/gsvgit/VSharp.git
+	url = https://github.com/PySymGym/VSharp.git
 [submodule "maps/DotNet/Maps/LiteDB"]
 	path = maps/DotNet/Maps/LiteDB
 	url = https://github.com/PySymGym/LiteDB.git
