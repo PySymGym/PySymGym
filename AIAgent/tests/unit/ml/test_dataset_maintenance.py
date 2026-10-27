@@ -376,3 +376,94 @@ def test_update_map_updates_the_load_to_cpu_cache(tmp_path, step_factory, serial
     assert torch.equal(
         ds._loaded_to_cpu["mapA"][0]["y_true"], torch.tensor([[1.0], [0.0]])
     )
+
+
+# ---------------------------------------------------------------------------
+# _get_map_steps / _merge_steps
+#
+# ``_merge_steps`` reads the old steps from disk through
+# ``_get_map_steps(map_name, device="cpu")``, so the old steps are placed on
+# disk via ``update_map`` first. Unlike ``update_map``, ``_merge_steps``
+# uses the passed ``y_true`` tensors as-is (no binarization).
+# ---------------------------------------------------------------------------
+
+
+def test_get_map_steps_loads_sorted_pt_files_on_cpu(
+    tmp_dataset, step_factory, serial_pool
+):
+    tmp_dataset.update_map(
+        "mapA",
+        Result(100, -1, -5, 0),
+        [
+            step_factory(torch.tensor([[1.0], [0.0]])),
+            step_factory(torch.tensor([[0.0], [1.0]])),
+        ],
+    )
+
+    steps = tmp_dataset._get_map_steps("mapA")
+
+    # The "result" file in the map dir is excluded; the .pt files come back
+    # in sorted filename order on the default device (CPU under the
+    # cpu_device fixture).
+    assert len(steps) == 2
+    assert torch.equal(steps[0]["y_true"], torch.tensor([[1.0], [0.0]]))
+    assert torch.equal(steps[1]["y_true"], torch.tensor([[0.0], [1.0]]))
+    assert steps[0][TORCH.game_vertex].x.device.type == "cpu"
+
+
+def test_merge_steps_combines_unique_new_and_all_old(
+    tmp_dataset, step_factory, serial_pool
+):
+    tmp_dataset.update_map(
+        "mapA", Result(100, -1, -5, 0), [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+
+    # Same graph as the stored step -> merged into it, not appended.
+    # Mutated graph -> appended as a unique step.
+    matched = step_factory(torch.tensor([[0.0], [1.0]]))
+    unique = step_factory(torch.tensor([[1.0], [0.0]]))
+    unique[TORCH.game_vertex].x[0, 0] += 1.0
+
+    merged = tmp_dataset._merge_steps([matched, unique], "mapA")
+
+    # Unique new steps first (input order), then all old steps.
+    assert len(merged) == 2
+    assert torch.equal(merged[0]["y_true"], torch.tensor([[1.0], [0.0]]))
+    assert torch.equal(merged[1]["y_true"], torch.tensor([[0.5], [0.5]]))
+
+
+def test_merge_steps_appends_a_new_vertex_group_without_comparison(
+    tmp_dataset, step_factory, serial_pool
+):
+    tmp_dataset.update_map(
+        "mapA", Result(100, -1, -5, 0), [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+
+    # Dropping a game-vertex row moves the step into a vertex-count group
+    # (state + game rows) absent from the old steps: appended without any
+    # graph comparison.
+    other_group = step_factory(torch.tensor([[1.0], [0.0]]))
+    other_group[TORCH.game_vertex].x = other_group[TORCH.game_vertex].x[:2]
+
+    merged = tmp_dataset._merge_steps([other_group], "mapA")
+
+    assert len(merged) == 2
+    assert merged[0][TORCH.game_vertex].x.shape[0] == 2
+    assert torch.equal(merged[0]["y_true"], torch.tensor([[1.0], [0.0]]))
+    assert torch.equal(merged[1]["y_true"], torch.tensor([[1.0], [0.0]]))
+
+
+def test_merge_steps_disjoint_distributions(tmp_dataset, step_factory, serial_pool):
+    tmp_dataset.update_map(
+        "mapA",
+        Result(100, -1, -5, 0),
+        [step_factory(torch.tensor([[1.0], [0.0], [0.0]]))],
+    )
+
+    # Disjoint supports: [1, 0, 0] + [0, 0, 1] -> [1, 0, 1] -> / 2.
+    merged = tmp_dataset._merge_steps(
+        [step_factory(torch.tensor([[0.0], [0.0], [1.0]]))], "mapA"
+    )
+
+    assert len(merged) == 1
+    assert torch.equal(merged[0]["y_true"], torch.tensor([[0.5], [0.0], [0.5]]))

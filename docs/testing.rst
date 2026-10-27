@@ -167,6 +167,12 @@ matrix (new map, below-threshold result-only save, merge, reproduced,
 replace, and the two no-op cases) with ``step_factory`` steps, pinning the
 exact ``logging.info`` messages via caplog (including the trailing space of
 the merge/reproduce messages) and the ``load_to_cpu`` cache bookkeeping.
+They also exercise ``_get_map_steps`` (sorted ``.pt`` load, ``result``
+excluded, default device) and ``_merge_steps`` directly (graph-match merge
+math, unique-step append order, new vertex-count groups). The
+``merge_distributions`` device-mismatch branch (3 statements) is not
+coverable on a CPU-only machine — meta tensors cannot be copied out — so
+``ml/dataset.py`` tops out at 99.0%.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
