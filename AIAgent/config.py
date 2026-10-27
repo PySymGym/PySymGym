@@ -5,10 +5,12 @@ from pathlib import Path
 
 import torch
 
+from device import select_device
+
 
 class GeneralConfig:
     LOGGER_LEVEL = logging.INFO
-    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    DEVICE = select_device()
 
 
 class BrokerConfig:
