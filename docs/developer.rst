@@ -83,10 +83,11 @@ source of truth for their URLs and paths.
 an incidental change: the bump must pass the matching build target (for maps,
 ``make build_maps``) and CI before it lands.
 
-**.NET map forks.** The .NET map repositories are forks in the PySymGym org:
-they are pinned data sources for training, not dependencies to track. Syncing
-a fork to newer upstream content is an explicit task and must keep the fork's
-``TargetFramework`` compatible with ``maps/DotNet/Maps/Root`` (net8.0).
+**.NET forks.** The .NET repositories — the maps and the V# game server
+(``GameServers/VSharp``) — are forks in the PySymGym org: they are pinned,
+not dependencies to track. Syncing a fork to newer upstream content is an
+explicit task and must keep the fork's ``TargetFramework`` compatible with
+``maps/DotNet/Maps/Root`` (net8.0).
 
 **Health.** Submodule worktrees can arrive wiped on a fresh clone; detection
 and repair are documented on the :doc:`setup` page
