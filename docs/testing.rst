@@ -172,7 +172,11 @@ excluded, default device) and ``_merge_steps`` directly (graph-match merge
 math, unique-step append order, new vertex-count groups). The
 ``merge_distributions`` device-mismatch branch (3 statements) is not
 coverable on a CPU-only machine — meta tensors cannot be copied out — so
-``ml/dataset.py`` tops out at 99.0%.
+``ml/dataset.py`` tops out at 99.0%. The protocol tests
+(``test_protocols.py``) pin the ``ml.protocols`` abstract interfaces:
+abstractness, the abstract-method set, a concrete subclass satisfying the
+interface, and the abstract bodies raising ``NotImplementedError`` when
+invoked unbound.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently

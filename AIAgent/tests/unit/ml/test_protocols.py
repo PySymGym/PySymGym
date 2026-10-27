@@ -22,6 +22,19 @@ def test_predictor_requires_name_predict_and_model():
     assert Predictor.__abstractmethods__ == frozenset({"name", "predict", "model"})
 
 
+def test_abstract_bodies_raise_not_implemented_error():
+    # The abstract bodies are unreachable through instances (instantiation
+    # is impossible by design); invoking them unbound on a sentinel is the
+    # only executable path to those lines.
+    sentinel = object()
+    with pytest.raises(NotImplementedError):
+        Named.name(sentinel)
+    with pytest.raises(NotImplementedError):
+        Predictor.predict(sentinel, input=None, map_name=None)
+    with pytest.raises(NotImplementedError):
+        Predictor.model(sentinel)
+
+
 def test_concrete_predictor_satisfies_the_interface():
     class DummyPredictor(Predictor):
         def name(self) -> str:
