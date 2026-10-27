@@ -150,7 +150,10 @@ class TrainingDataset(Dataset):
         if self._load_to_cpu:
             step = self._flattened_loaded_steps[idx]
         else:
-            step = torch.load(self.processed_paths[idx], map_location=get_device())
+            with torch.serialization.safe_globals(
+                [BaseStorage, NodeStorage, EdgeStorage]
+            ):
+                step = torch.load(self.processed_paths[idx], map_location=get_device())
         return step
 
     def switch_to(self, mode: TrainingDatasetMode) -> None:
@@ -207,10 +210,22 @@ class TrainingDataset(Dataset):
         return all_files
 
     def update_meta_data(self) -> None:
+        """Refresh the cached metadata from the processed directory.
+
+        Re-reads the per-map ``result`` files, the processed step paths and
+        the train/test split. In ``load_to_cpu`` mode the in-memory steps are
+        reloaded from disk as well, so they stay consistent with the files
+        written by ``process``/``_save_steps`` — including the steps created
+        by the auto-processing run triggered at the end of ``__init__``.
+
+        Note: the active index set (``indices()``) is not touched; call
+        :meth:`switch_to` to re-select it.
+        """
         self.maps_results = self._get_results()
         self._processed_paths = self._get_processed_paths()
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
         if self._load_to_cpu:
+            self._loaded_to_cpu = self._load_steps()
             self._flattened_loaded_steps = flatten_dict(self._loaded_to_cpu)
 
     @property
@@ -326,7 +341,10 @@ class TrainingDataset(Dataset):
             colour=self._progress_bar_color,
         ):
             map_name = get_map_name_from_path(step_path)
-            steps[map_name].append(torch.load(step_path, map_location="cpu"))
+            with torch.serialization.safe_globals(
+                [BaseStorage, NodeStorage, EdgeStorage]
+            ):
+                steps[map_name].append(torch.load(step_path, map_location="cpu"))
         return steps
 
     def filter_map_steps(self, map_steps: list[HeteroData]) -> list[HeteroData]:
