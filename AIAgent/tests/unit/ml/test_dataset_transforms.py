@@ -9,6 +9,7 @@ from the production tensor schema; ``tmp_dataset`` provides an empty
 import pytest
 import torch
 from ml.dataset import (
+    NUM_STATE_FEATURES,
     Result,
     convert_input_to_tensor,
     flatten_dict,
@@ -70,8 +71,69 @@ def test_get_hetero_data_keeps_the_converted_graph(gamestate_factory):
     assert torch.equal(data[TORCH.state_vertex].x, expected[TORCH.state_vertex].x)
 
 
-def _step(y_true: torch.Tensor) -> HeteroData:
+def test_convert_input_to_tensor_rejects_duplicate_pc_vertex_id(gamestate_factory):
+    gs = gamestate_factory()
+    gs.PathConditionVertices[1].Id = 0
+
+    with pytest.raises(
+        RuntimeError, match="There are two path condition vertices with the same Id."
+    ):
+        convert_input_to_tensor(gs)
+
+
+def test_convert_input_to_tensor_deduplicates_state_nodes_but_not_child_edges(
+    gamestate_factory,
+):
+    gs = gamestate_factory()
+    gs.States.append(gs.States[0])  # duplicate Id 0
+
+    dup_graph, dup_map = convert_input_to_tensor(gs)
+    ref_graph, ref_map = convert_input_to_tensor(gamestate_factory())
+
+    assert dup_map == ref_map
+    assert torch.equal(dup_graph[TORCH.game_vertex].x, ref_graph[TORCH.game_vertex].x)
+    assert torch.equal(dup_graph[TORCH.state_vertex].x, ref_graph[TORCH.state_vertex].x)
+    assert torch.equal(
+        dup_graph[TORCH.path_condition_vertex].x,
+        ref_graph[TORCH.path_condition_vertex].x,
+    )
+    # The duplicated state contributes its child edges a second time.
+    assert torch.equal(
+        dup_graph[*TORCH.statevertex_parentof_statevertex].edge_index,
+        torch.tensor([[0, 0], [1, 1]]),
+    )
+    for edge_type in (
+        TORCH.gamevertex_to_gamevertex,
+        TORCH.statevertex_in_gamevertex,
+        TORCH.gamevertex_in_statevertex,
+        TORCH.statevertex_history_gamevertex,
+        TORCH.gamevertex_history_statevertex,
+        TORCH.pathcondvertex_to_pathcondvertex,
+        TORCH.pathcondvertex_to_statevertex,
+        TORCH.statevertex_to_pathcondvertex,
+    ):
+        assert torch.equal(
+            dup_graph[edge_type].edge_index, ref_graph[edge_type].edge_index
+        ), edge_type
+
+
+def test_convert_input_to_tensor_returns_none_on_missing_child_state(
+    gamestate_factory, capsys
+):
+    gs = gamestate_factory()
+    gs.States[0].Children = [99]  # no state with Id 99
+
+    graph, state_map = convert_input_to_tensor(gs)
+
+    assert graph is None
+    assert state_map is None
+    assert "[ERROR]: KeyError" in capsys.readouterr().out
+
+
+def _step(y_true: torch.Tensor, state_rows: int = 2, game_rows: int = 3) -> HeteroData:
     step = HeteroData()
+    step[TORCH.state_vertex].x = torch.zeros(state_rows, NUM_STATE_FEATURES)
+    step[TORCH.game_vertex].x = torch.zeros(game_rows, 7)
     step["y_true"] = y_true
     return step
 
@@ -85,6 +147,26 @@ def test_filter_map_steps_keeps_multi_state_rows_and_one_hot_encodes(tmp_dataset
 
     assert len(kept) == 1
     assert torch.equal(kept[0]["y_true"], torch.tensor([[0.0], [1.0]]))
+
+
+def test_remove_similar_steps_keeps_steps_with_differing_state_counts(tmp_dataset):
+    first = _step(torch.tensor([[1.0], [0.0]]), state_rows=2)
+    second = _step(torch.tensor([[1.0], [0.0], [0.0]]), state_rows=3)
+
+    kept = tmp_dataset.remove_similar_steps([first, second])
+
+    assert kept == [first, second]
+
+
+def test_remove_similar_steps_keeps_steps_with_differing_game_vertex_counts(
+    tmp_dataset,
+):
+    first = _step(torch.tensor([[1.0], [0.0]]), game_rows=3)
+    second = _step(torch.tensor([[1.0], [0.0]]), game_rows=4)
+
+    kept = tmp_dataset.remove_similar_steps([first, second])
+
+    assert kept == [first, second]
 
 
 def test_is_update_map_required_for_unseen_map(tmp_dataset):
