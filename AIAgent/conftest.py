@@ -6,6 +6,7 @@ the production code paths (``convert_input_to_tensor``, ``TrainingDataset``)
 instead of hand-rolled copies, so they cannot drift from the real schema.
 """
 
+import multiprocessing as mp
 import random
 import threading
 from pathlib import Path
@@ -172,6 +173,22 @@ def hetero_factory(gamestate_factory):
 
 
 @pytest.fixture
+def step_factory(hetero_factory):
+    """Return a factory building a processed step (graph + ``y_true``).
+
+    The graph is the production ``hetero_factory`` output; ``y_true`` is the
+    states distribution attached by ``process_and_save_step``.
+    """
+
+    def make(y_true: torch.Tensor) -> HeteroData:
+        step = hetero_factory()
+        step["y_true"] = y_true
+        return step
+
+    return make
+
+
+@pytest.fixture
 def tmp_dataset(tmp_path: Path) -> TrainingDataset:
     """An empty :class:`TrainingDataset` rooted in a temporary directory."""
     processed_dir = tmp_path / "processed"
@@ -184,6 +201,42 @@ def tmp_dataset(tmp_path: Path) -> TrainingDataset:
         train_percentage=1.0,
         n_jobs=1,
     )
+
+
+class SerialPool:
+    """An in-process stand-in for ``multiprocessing.Pool``.
+
+    Runs ``map`` serially in the calling process so the dataset processing
+    logic is exercised (and covered) without forking workers — forked workers
+    are invisible to pytest-cov.
+    """
+
+    def __init__(self, processes: int) -> None:
+        self.processes = processes
+
+    def __enter__(self) -> "SerialPool":
+        return self
+
+    def __exit__(self, *exc_info: object) -> bool:
+        return False
+
+    def map(self, func, iterable):
+        return [func(item) for item in iterable]
+
+    def close(self) -> None:
+        pass
+
+    def terminate(self) -> None:
+        pass
+
+    def join(self) -> None:
+        pass
+
+
+@pytest.fixture
+def serial_pool(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace ``multiprocessing.Pool`` with the in-process :class:`SerialPool`."""
+    monkeypatch.setattr(mp, "Pool", SerialPool)
 
 
 class FakeWebSocket:
