@@ -118,11 +118,14 @@ and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
     ``gamestate_factory`` builds a synthetic ``GameState``,
     ``hetero_factory`` converts it through the production
     ``convert_input_to_tensor`` (with feature-width overrides for legacy
-    models), ``tmp_dataset`` yields an empty ``TrainingDataset`` in a
-    temporary directory, ``fake_websocket`` returns a recording, no-socket
-    websocket for the connection tests, and ``fake_namespace``/``fake_proc``
-    provide the game managers' multiprocessing namespace and a
-    ``subprocess.Popen`` stand-in.
+    models), ``step_factory`` builds a processed step (the
+    ``hetero_factory`` graph with a given ``y_true``), ``serial_pool``
+    replaces ``multiprocessing.Pool`` with an in-process serial stand-in
+    (forked workers are invisible to pytest-cov), ``tmp_dataset`` yields an
+    empty ``TrainingDataset`` in a temporary directory, ``fake_websocket``
+    returns a recording, no-socket websocket for the connection tests, and
+    ``fake_namespace``/``fake_proc`` provide the game managers'
+    multiprocessing namespace and a ``subprocess.Popen`` stand-in.
 
 ``tools/compstrat/conftest.py``
     Resource-directory and mock-run DataFrame fixtures.
@@ -150,7 +153,12 @@ fixtures and build every graph input through
 production tensor schema. The malformed-input branches of
 ``convert_input_to_tensor`` are pinned by mutating a ``gamestate_factory``
 copy (exact error type and message, the ``(None, None)`` return) rather than
-hand-rolled gamestates.
+hand-rolled gamestates. The ``TrainingDataset`` lifecycle tests
+(``test_dataset_lifecycle.py``) cover the in-memory (``load_to_cpu``) and
+on-disk loading paths, the train/validation index switching, and the
+metadata refresh; they pin the stale ``len()`` before the first
+``switch_to`` and drive the auto-processing run at the end of
+``__init__`` through the ``serial_pool`` fixture.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
