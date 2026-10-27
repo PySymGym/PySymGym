@@ -104,3 +104,8 @@ these packages, provided by requirements. Then follow installation instructions
 provided on the `torch <https://pytorch.org/get-started/locally/>`_ and
 `torch_geometric <https://pytorch-geometric.readthedocs.io/en/stable/install/installation.html#installation-from-wheels>`_
 websites.
+
+The GPU must also be supported by the installed torch build (its compute
+capability must be among the build's compiled archs); otherwise the run
+degrades to CPU automatically — see the "Self-hosted end-to-end workflows"
+section of the :doc:`developer` guide.

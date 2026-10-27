@@ -235,24 +235,26 @@ warning-only behavior.
 
 **Host GPU in e2e CI (#567).** The real-world pipeline runs on a GPU, so the
 self-hosted e2e run exercises the GPU path as its primary mode and falls back
-to CPU when the runner host has no usable GPU. (The original #567 spike
-measured no speedup and concluded DROP; the decision was overridden because
-the value of the GPU path in CI is correctness coverage of the real-world
-device, not speed — measurement history in issue #567.)
+to CPU when the runner host has no usable GPU — one that is both injected
+into the container and supported by the locked torch. (The original #567
+spike measured no speedup and concluded DROP; the decision was overridden
+because the value of the GPU path in CI is correctness coverage of the
+real-world device, not speed — measurement history in issue #567.)
 
-Two properties make this a workflow-only change:
+Two properties keep the degradation automatic:
 
 - The CI environment already ships a CUDA-enabled torch. The Docker image
   (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
   Python dependencies are installed at runtime by ``poetry install`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
   with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
-- Device selection needs no code change: ``AIAgent/config.py`` picks
-  ``cuda:0`` when available and falls back to CPU, and the training step
-  prints the selected device at startup — every CI run logs which path it
-  took.
+- Device selection degrades by construction: ``AIAgent/config.py`` picks the
+  device through ``AIAgent/device.py``, which returns ``cuda:0`` only when a
+  CUDA device is visible *and* a real kernel runs on it, and the training
+  step prints the selected device at startup — every CI run logs which path
+  it took.
 
-The only missing piece was device passthrough to the job container, and the
+The first missing piece was device passthrough to the job container, and the
 right docker flag is host-dependent (``--gpus all`` vs ``--runtime nvidia``,
 two configurations of nvidia-container-toolkit). The shared pipeline's
 ``detect-gpu`` job probes the runner host before the build-and-launch job:
@@ -262,6 +264,24 @@ flag to the build-and-launch job as ``container.options``. When no flag
 works (no GPU, broken driver, missing toolkit) it passes nothing: the
 container starts device-less and the Python side runs on CPU — the e2e run
 degrades instead of failing.
+
+The second missing piece was torch compatibility:
+``torch.cuda.is_available()`` returns True as soon as a CUDA device is
+visible, even when the installed torch build ships no kernels for the
+device's compute capability. torch >=2.9 dropped Pascal (sm_61), so on the
+runner's GT 1030 a newer torch selected ``cuda:0`` and died on the first
+training batch with "no kernel image is available for execution on the
+device" (PR #610, issue #644). Which compute capabilities a torch build
+supports is knowledge of the build itself, so the check runs where torch is
+installed: ``AIAgent/device.py`` launches a tiny smoke kernel on ``cuda:0``
+and degrades to CPU when the build has no kernels for the device, printing a
+one-line diagnosis (GPU name, ``sm_XX``, torch version, the build's arch
+list, the error). ``config.py`` consumes the probe for the runtime decision,
+and the shared pipeline carries a "Check GPU compatibility" step right after
+the venv is verified so every e2e run logs the verdict before the long build
+and training steps. An incompatible GPU therefore degrades to the CPU flow
+exactly like a missing one — and when the runner gets a GPU the locked torch
+supports, the GPU path is picked up automatically with no code change.
 
 CI as source of truth
 ---------------------
