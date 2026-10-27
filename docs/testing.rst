@@ -162,7 +162,11 @@ metadata refresh; they pin the stale ``len()`` before the first
 maintenance tests (``test_dataset_maintenance.py``) build the raw dataset
 layout (per map a ``result`` file plus ``<id>_gameState`` /
 ``<id>_movedState`` step files) and drive ``process()`` through the
-``serial_pool`` fixture as well.
+``serial_pool`` fixture as well. They also walk the ``update_map`` branch
+matrix (new map, below-threshold result-only save, merge, reproduced,
+replace, and the two no-op cases) with ``step_factory`` steps, pinning the
+exact ``logging.info`` messages via caplog (including the trailing space of
+the merge/reproduce messages) and the ``load_to_cpu`` cache bookkeeping.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently

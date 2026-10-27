@@ -10,6 +10,7 @@ step, ``<id>_gameState`` (JSON ``GameState``) plus ``<id>_movedState``
 """
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -140,3 +141,238 @@ def test_double_process_raises_file_exists(tmp_path, gamestate_factory, serial_p
 
     with pytest.raises(FileExistsError):
         ds.process()
+
+
+# ---------------------------------------------------------------------------
+# update_map / _save_steps branch matrix
+#
+# Steps come from ``step_factory`` (the deterministic ``hetero_factory``
+# graph plus a ``y_true`` distribution). ``filter_map_steps`` binarizes
+# ``y_true`` at its argmax, so the tensors below are already one-hot;
+# ``remove_similar_steps`` drops a step only when its distribution and
+# game-vertex count match the previous kept step (at
+# ``similar_steps_save_prob=0``), so the sequences below survive intact.
+# The exact ``logging.info`` messages are pinned via caplog, including the
+# trailing space of the merge/reproduce messages.
+# ---------------------------------------------------------------------------
+
+
+def test_update_map_saves_a_new_map(tmp_dataset, step_factory, serial_pool, caplog):
+    map_name = "mapA"
+    result = Result(100, -1, -5, 0)
+    steps = [
+        step_factory(torch.tensor([[1.0], [0.0]])),
+        step_factory(torch.tensor([[0.0], [1.0]])),
+    ]
+
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(map_name, result, steps)
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "1.pt", "result"]
+    assert (map_dir / "result").read_text() == "(100, -1, -5, 0)"
+    assert tmp_dataset.maps_results == {map_name: result}
+    assert torch.equal(
+        _load_step(map_dir / "0.pt")["y_true"], torch.tensor([[1.0], [0.0]])
+    )
+    assert torch.equal(
+        _load_step(map_dir / "1.pt")["y_true"], torch.tensor([[0.0], [1.0]])
+    )
+    assert caplog.messages == [
+        f"New map with name {map_name} was saved with result {tuple(result)}"
+    ]
+
+
+def test_update_map_below_threshold_saves_result_only(
+    tmp_dataset, step_factory, serial_pool, caplog
+):
+    map_name = "mapA"
+    result = Result(50, 0, 0, 0)
+
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(
+            map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+        )
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert [p.name for p in map_dir.iterdir()] == ["result"]
+    assert (map_dir / "result").read_text() == "(50, 0, 0, 0)"
+    assert tmp_dataset.maps_results == {map_name: result}
+    assert caplog.messages == [
+        f"New map with name {map_name} was saved with result {tuple(result)}"
+    ]
+
+
+def test_update_map_merges_matching_steps(
+    tmp_dataset, step_factory, serial_pool, caplog
+):
+    map_name = "mapA"
+    result = Result(100, -1, -5, 0)
+    tmp_dataset.update_map(
+        map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+
+    # Same graph as the stored step, opposite distribution -> merged into
+    # the stored step. Mutated graph, distribution of the stored step ->
+    # survives remove_similar_steps (differs from the previous kept step)
+    # and is appended as a unique step.
+    matched = step_factory(torch.tensor([[0.0], [1.0]]))
+    unique = step_factory(torch.tensor([[1.0], [0.0]]))
+    unique[TORCH.game_vertex].x[0, 0] += 1.0
+
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(map_name, result, [matched, unique])
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "1.pt", "result"]
+    # Unique new steps first, then all old steps: 0.pt is the unique step
+    # (mutated graph, its own distribution), 1.pt is the old step with the
+    # merged distribution [1, 0] + [0, 1] -> [0.5, 0.5].
+    expected_unique_x = matched[TORCH.game_vertex].x.clone()
+    expected_unique_x[0, 0] += 1.0
+    assert torch.equal(
+        _load_step(map_dir / "0.pt")[TORCH.game_vertex].x, expected_unique_x
+    )
+    assert torch.equal(
+        _load_step(map_dir / "0.pt")["y_true"], torch.tensor([[1.0], [0.0]])
+    )
+    assert torch.equal(
+        _load_step(map_dir / "1.pt")["y_true"], torch.tensor([[0.5], [0.5]])
+    )
+    assert caplog.messages == [
+        f"Steps on map {map_name} were merged with current steps with result "
+        f"{tuple(result)}. 2 + 1 -> 2. "
+    ]
+
+
+def test_update_map_reproduced_branch(tmp_dataset, step_factory, serial_pool, caplog):
+    map_name = "mapA"
+    result = Result(100, -1, -5, 0)
+    tmp_dataset.update_map(
+        map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+
+    # Graph-identical step with the same distribution: merged into the
+    # stored step ([1, 0] + [1, 0] -> [2, 0], binarized to [1, 0], divided
+    # by its mass 1 -> [1, 0], i.e. unchanged), nothing appended, so the
+    # step count does not grow and the "reproduced" branch is taken.
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(
+            map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+        )
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "result"]
+    assert torch.equal(
+        _load_step(map_dir / "0.pt")["y_true"], torch.tensor([[1.0], [0.0]])
+    )
+    assert caplog.messages == [
+        f"Existing results reproduced on map {map_name} with result "
+        f"{tuple(result)}. 1 + 1 -> 1. "
+    ]
+
+
+def test_update_map_replaces_a_worse_result(
+    tmp_dataset, step_factory, serial_pool, caplog
+):
+    map_name = "mapA"
+    old_result = Result(50, 0, 0, 0)
+    new_result = Result(100, -1, -5, 0)
+    tmp_dataset.update_map(
+        map_name, old_result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+    # The below-threshold map holds only the result file.
+    assert [p.name for p in (tmp_dataset.processed_dir / map_name).iterdir()] == [
+        "result"
+    ]
+
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(
+            map_name, new_result, [step_factory(torch.tensor([[0.0], [1.0]]))]
+        )
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "result"]
+    assert (map_dir / "result").read_text() == "(100, -1, -5, 0)"
+    assert tmp_dataset.maps_results == {map_name: new_result}
+    assert torch.equal(
+        _load_step(map_dir / "0.pt")["y_true"], torch.tensor([[0.0], [1.0]])
+    )
+    assert caplog.messages == [
+        f"The model with result = {tuple(old_result)} was replaced with the model with "
+        f"result = {tuple(new_result)} on the map {map_name}"
+    ]
+
+
+def test_update_map_no_op_on_equal_sub_threshold_result(
+    tmp_dataset, step_factory, serial_pool, caplog
+):
+    # Pinned current behaviour (finding on #632): an equal result with
+    # coverage below 100 takes neither the merge nor the replace branch, so
+    # nothing is saved and no log line is emitted.
+    map_name = "mapA"
+    result = Result(50, 0, 0, 0)
+    tmp_dataset.update_map(
+        map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(
+            map_name, result, [step_factory(torch.tensor([[0.0], [1.0]]))]
+        )
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert [p.name for p in map_dir.iterdir()] == ["result"]
+    assert (map_dir / "result").read_text() == "(50, 0, 0, 0)"
+    assert tmp_dataset.maps_results == {map_name: result}
+    assert caplog.messages == []
+
+
+def test_update_map_no_op_on_worse_result(
+    tmp_dataset, step_factory, serial_pool, caplog
+):
+    # Pinned current behaviour (finding on #632): a stored result that is
+    # not worse than the incoming one takes no branch, so the stored steps
+    # and result are untouched.
+    map_name = "mapA"
+    result = Result(100, -1, -5, 0)
+    tmp_dataset.update_map(
+        map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
+    )
+
+    with caplog.at_level(logging.INFO):
+        tmp_dataset.update_map(
+            map_name, Result(50, 0, 0, 0), [step_factory(torch.tensor([[0.0], [1.0]]))]
+        )
+
+    map_dir = tmp_dataset.processed_dir / map_name
+    assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "result"]
+    assert (map_dir / "result").read_text() == "(100, -1, -5, 0)"
+    assert tmp_dataset.maps_results == {map_name: result}
+    assert torch.equal(
+        _load_step(map_dir / "0.pt")["y_true"], torch.tensor([[1.0], [0.0]])
+    )
+    assert caplog.messages == []
+
+
+def test_update_map_updates_the_load_to_cpu_cache(tmp_path, step_factory, serial_pool):
+    raw = tmp_path / "raw"
+    processed = tmp_path / "processed"
+    raw.mkdir()
+    processed.mkdir()
+    ds = TrainingDataset(
+        raw_dir=raw,
+        processed_dir=processed,
+        train_percentage=1.0,
+        load_to_cpu=True,
+        n_jobs=1,
+    )
+    steps = [step_factory(torch.tensor([[1.0], [0.0]]))]
+
+    ds.update_map("mapA", Result(100, -1, -5, 0), steps)
+
+    assert list(ds._loaded_to_cpu) == ["mapA"]
+    assert len(ds._loaded_to_cpu["mapA"]) == 1
+    assert torch.equal(
+        ds._loaded_to_cpu["mapA"][0]["y_true"], torch.tensor([[1.0], [0.0]])
+    )
