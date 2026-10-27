@@ -147,7 +147,10 @@ transforms, training and experiment helpers, model-forward smoke tests) and
 and the coverage-validation flow). They reuse the ``AIAgent/conftest.py``
 fixtures and build every graph input through
 ``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
-production tensor schema.
+production tensor schema. The malformed-input branches of
+``convert_input_to_tensor`` are pinned by mutating a ``gamestate_factory``
+copy (exact error type and message, the ``(None, None)`` return) rather than
+hand-rolled gamestates.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
