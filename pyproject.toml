@@ -108,4 +108,4 @@ omit = [
 exclude_also = [
     "if __name__ == .__main__.:",
 ]
-fail_under = 73
+fail_under = 80
