@@ -158,7 +158,11 @@ hand-rolled gamestates. The ``TrainingDataset`` lifecycle tests
 on-disk loading paths, the train/validation index switching, and the
 metadata refresh; they pin the stale ``len()`` before the first
 ``switch_to`` and drive the auto-processing run at the end of
-``__init__`` through the ``serial_pool`` fixture.
+``__init__`` through the ``serial_pool`` fixture. The processing and
+maintenance tests (``test_dataset_maintenance.py``) build the raw dataset
+layout (per map a ``result`` file plus ``<id>_gameState`` /
+``<id>_movedState`` step files) and drive ``process()`` through the
+``serial_pool`` fixture as well.
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
