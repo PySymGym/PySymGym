@@ -74,21 +74,21 @@ def test_raise_if_gameover_passes_through_other_messages(
     assert Connector._raise_if_gameover(fake_self, payload) == payload
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "#569: _raise_if_gameover re-raises Connector.GameOver without its "
-        "required arguments — the already-over guard raises TypeError "
-        "(4 missing positional args), not Connector.GameOver. #569's fix: "
-        "give the four counts default values (or raise a dedicated "
-        "exception for the already-over case)."
-    ),
-)
 def test_raise_if_gameover_already_over_raises_gameover() -> None:
-    fake_self = SimpleNamespace(game_is_over=True)
+    stored = Connector.GameOver(
+        actual_coverage=55, tests_count=6, steps_count=7, errors_count=2
+    )
+    fake_self = SimpleNamespace(game_is_over=True, _gameover=stored)
 
-    with pytest.raises(Connector.GameOver):
+    with pytest.raises(Connector.GameOver) as exc_info:
         Connector._raise_if_gameover(fake_self, "{}")
+
+    # The guard re-raises the stored exception with its original counts.
+    assert exc_info.value is stored
+    assert exc_info.value.actual_coverage == 55
+    assert exc_info.value.tests_count == 6
+    assert exc_info.value.steps_count == 7
+    assert exc_info.value.errors_count == 2
 
 
 def test_raise_if_gameover_strict_validation_reads_steps_count(
