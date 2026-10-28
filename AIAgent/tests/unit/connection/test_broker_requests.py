@@ -54,7 +54,7 @@ def test_acquire_instance_raises_on_non_200(monkeypatch: pytest.MonkeyPatch) -> 
         acquire_instance(_svm_info())
 
     # The request is issued before the response is decoded, so the non-200
-    # path pins the request shape without touching the #573 decode.
+    # path pins the request shape without touching the decode.
     url, method, body = http.calls[0]
     assert url.startswith(f"{WebsocketSourceLinks.GET_WS}?")
     assert "name=svm" in url
@@ -65,24 +65,13 @@ def test_acquire_instance_raises_on_non_200(monkeypatch: pytest.MonkeyPatch) -> 
     assert body is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "#573: acquire_instance double-decodes the broker response — "
-        "ServerInstanceInfo.from_json(json.loads(...)) raises TypeError on "
-        "the decoded dict. #573's fix spec: from_dict(json.loads(...)) (or "
-        "pass the raw content bytes to from_json)."
-    ),
-)
 def test_acquire_instance_decodes_single_encoded_body(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # The broker's /get_ws single-encodes (launch_servers.py, pinned by
     # C1's test_success_issues_a_real_instance), so the wire format is a
     # single-encoded JSON object. This test feeds the client that
-    # single-encoded body; the client's double-decode raises TypeError on
-    # the decoded dict, so it xfails until #573's client fix lands. The
-    # success-path lines are excluded (see docs/testing.rst).
+    # single-encoded body and asserts the parsed instance is returned.
     http = FakeHttp(content=_instance().to_json().encode("utf-8"))
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
