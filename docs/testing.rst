@@ -206,9 +206,14 @@ model: the per-trial seed derivation, the exact optuna search space, the
 trial settings, the trial artifact layout (``model_kwargs.yaml``, per-epoch
 checkpoints, mlflow params/metrics), the per-epoch train/validate sequence,
 the early-stop break (with its print), and the ``dynamic_dataset`` metadata
-refresh. The ``model_init`` checkpoint loading is pinned through that seam,
-including the ``map_location`` fix for CUDA-saved checkpoints on CPU-only
-machines (#667, regression test requires CUDA and skips otherwise).
+refresh. ``main()`` is pinned with a production-shaped config YAML (alias
+keys): the parsed config forwarded to ``run_training``, the spawn start
+method, the MLflow setup (tracking uri only when set, experiment, tags,
+system metrics), the gpu-monitor logger silenced to ``ERROR``, the printed
+device, and the ``Config`` validator rejecting ``weights_uri`` without
+``trial_uri``. The ``model_init`` checkpoint loading is pinned through that
+seam, including the ``map_location`` fix for CUDA-saved checkpoints on
+CPU-only machines (#667, regression test requires CUDA and skips otherwise).
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
