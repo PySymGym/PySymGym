@@ -447,7 +447,17 @@ Orchestration seams are tested with fakes, never real I/O:
   pinned as pure unit tests: ``GameInterruptedError`` is abstract with an
   abstract ``desc`` property (its no-op stub getter is pinned by calling
   ``fget`` directly — the body is unreachable in production), and the two
-  concrete subclasses expose their exact ``desc`` strings.
+  concrete subclasses expose their exact ``desc`` strings. The broker HTTP
+  calls are pinned with the ``httplib2.Http`` recording fake:
+  ``acquire_instance`` issues a ``GET`` to ``GET_WS`` with the urlencoded
+  ``SVMInfo`` fields and raises ``RuntimeError`` on a non-200 (the request is
+  issued before the decode, so the shape is pinned without touching the
+  #573 decode); the single-encoded 200 body returning the parsed
+  ``ServerInstanceInfo`` is a strict ``xfail`` referencing #573 (the
+  double-decode raises ``TypeError`` today; the broker's double-encoding is
+  what makes the current wire format work — see Exclusions).
+  ``return_instance`` posts the instance's ``to_json`` to ``POST_WS`` and
+  raises ``RuntimeError`` on a non-200.
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
@@ -543,6 +553,21 @@ architecture cannot consume the current graph tensors — the 2-column history
 models cannot forward or instantiate with the current tensors (#572). It is
 tracked in those issues instead of being tested, and its removal is pending
 #581 (model registry / dead-zoo cleanup), which also removes the omit line.
+
+The success path of ``acquire_instance``
+(``AIAgent/connection/broker_conn/requests.py``) is excluded from the
+measurement (``[tool.coverage.report] exclude_also``): it is unreachable with
+a single-encoded body until #573 lands (the double-decode raises
+``TypeError`` on the decoded dict). The broker's ``/get_ws`` handler
+double-encodes (``launch_servers.py:53``, pinned by
+``test_launch_servers.py::TestDequeueInstance::test_success_issues_a_real_instance``),
+so the current wire format is a JSON string containing JSON and the
+double-encoded success path works today — but it is the #573-tracked
+double-decode and is not asserted as correct. The post-fix behaviour (a
+single-encoded 200 body returns the parsed ``ServerInstanceInfo``) is pinned
+by the strict ``xfail`` in
+``AIAgent/tests/unit/connection/test_broker_requests.py``; #573 removes the
+exclusion when it lands.
 
 The ``except TypeError`` fallback in ``unsafe_json.asdict``
 (``AIAgent/connection/game_server_conn/unsafe_json.py``) is excluded from the
