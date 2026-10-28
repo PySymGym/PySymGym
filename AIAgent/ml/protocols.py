@@ -14,7 +14,7 @@ class Named(ABC):
 
 class Predictor(Named, ABC):
     @abstractmethod
-    def predict(self, input: GameState, map_name):
+    def predict(self, input: GameState):
         raise NotImplementedError
 
     @abstractmethod

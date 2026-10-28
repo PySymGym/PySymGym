@@ -30,7 +30,7 @@ def test_abstract_bodies_raise_not_implemented_error():
     with pytest.raises(NotImplementedError):
         Named.name(sentinel)
     with pytest.raises(NotImplementedError):
-        Predictor.predict(sentinel, input=None, map_name=None)
+        Predictor.predict(sentinel, input=None)
     with pytest.raises(NotImplementedError):
         Predictor.model(sentinel)
 
@@ -40,8 +40,8 @@ def test_concrete_predictor_satisfies_the_interface():
         def name(self) -> str:
             return "dummy"
 
-        def predict(self, input, map_name):
-            return map_name
+        def predict(self, input):
+            return input
 
         def model(self):
             return None
@@ -49,7 +49,7 @@ def test_concrete_predictor_satisfies_the_interface():
     predictor = DummyPredictor()
     assert not inspect.isabstract(DummyPredictor)
     assert predictor.name() == "dummy"
-    assert predictor.predict(input=None, map_name="map") == "map"
+    assert predictor.predict(input=None) is None
     assert predictor.model() is None
 
 

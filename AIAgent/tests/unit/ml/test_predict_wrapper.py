@@ -7,11 +7,14 @@ is pinned through a monkeypatched ``predict_state_with_dict`` recorder (the
 delegation contract) and one real-model ``predict`` run.
 """
 
+import inspect
+
 import pytest
 import torch
 from ml.dataset import convert_input_to_tensor
 from ml.models.NorthernPenguin.model import StateModelEncoder as NorthernPenguinEncoder
 from ml.predict import predict_state_with_dict
+from ml.protocols import Predictor
 from ml.training.wrapper import TrainingModelWrapper
 
 pytestmark = pytest.mark.unit
@@ -87,6 +90,14 @@ def test_wrapper_name_and_model_accessor() -> None:
     assert wrapper.model() is model
     # Until make_copy is called, model_copy is the model itself.
     assert wrapper.model_copy is model
+
+
+def test_wrapper_predict_signature_matches_the_protocol() -> None:
+    # Python does not enforce ABC signatures: a drift on either side would
+    # only surface at a call site. Pin the parameter lists equal.
+    assert list(inspect.signature(TrainingModelWrapper.predict).parameters) == list(
+        inspect.signature(Predictor.predict).parameters
+    )
 
 
 def test_wrapper_make_copy_deepcopies_the_model_and_renames_it() -> None:
