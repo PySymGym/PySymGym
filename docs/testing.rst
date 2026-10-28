@@ -200,9 +200,15 @@ raises ``RuntimeError("Validation failed")`` on a failed map when
 ``fail_immediately`` is set; the custom mode runs the sequence in order,
 merges the metrics, and returns the first stage's result. Each mode also
 pins its ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch. The
-``model_init`` checkpoint loading is pinned through that seam, including the
-``map_location`` fix for CUDA-saved checkpoints on CPU-only machines (#667,
-regression test requires CUDA and skips otherwise).
+per-trial ``objective`` loop is pinned with a scripted trial and a recording
+model: the per-trial seed derivation, the exact optuna search space, the
+``EarlyStopping`` construction, the ``model_init`` kwargs drawn from the
+trial settings, the trial artifact layout (``model_kwargs.yaml``, per-epoch
+checkpoints, mlflow params/metrics), the per-epoch train/validate sequence,
+the early-stop break (with its print), and the ``dynamic_dataset`` metadata
+refresh. The ``model_init`` checkpoint loading is pinned through that seam,
+including the ``map_location`` fix for CUDA-saved checkpoints on CPU-only
+machines (#667, regression test requires CUDA and skips otherwise).
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
