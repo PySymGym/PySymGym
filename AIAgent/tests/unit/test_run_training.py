@@ -5,12 +5,12 @@ The entrypoint is driven with recording fakes — no end-to-end training runs:
 ``optuna``, ``mlflow``, ``joblib`` and ``objective``, and the ``objective``
 partial it wires up is inspected to extract the ``model_init`` / ``validate``
 / ``criterion_init`` closures, which are then driven directly. ``objective``
-and ``main`` are tested the same way. The fakes pin the current (pre-#578)
-behaviour: exact dispatch arguments, metric names, artifact layout and error
-messages.
+and ``main`` are tested the same way. The fakes pin the post-#600 behaviour:
+exact dispatch arguments, metric names, artifact layout, the best-checkpoint
+export, the per-trial run-handle hand-off to the study-save callback, and
+error messages.
 """
 
-import contextlib
 import logging
 import os
 from pathlib import Path
@@ -85,6 +85,19 @@ class FakeTrainingDataset:
         self.update_meta_data_calls += 1
 
 
+class FakeRun:
+    """A context-manager stand-in for the run ``mlflow.start_run`` returns."""
+
+    def __init__(self, run_id: str) -> None:
+        self.info = SimpleNamespace(run_id=run_id)
+
+    def __enter__(self) -> "FakeRun":
+        return self
+
+    def __exit__(self, *exc_info: Any) -> bool:
+        return False
+
+
 class FakeMlflow:
     """A recording stand-in for the ``mlflow`` module surface used here."""
 
@@ -100,11 +113,7 @@ class FakeMlflow:
 
     def start_run(self, *args: Any, **kwargs: Any):
         self.record("start_run", *args, **kwargs)
-        return contextlib.nullcontext()
-
-    def last_active_run(self):
-        self.record("last_active_run")
-        return SimpleNamespace(info=SimpleNamespace(run_id="fake-run-id"))
+        return FakeRun("fake-run-id")
 
     def log_artifact(self, *args: Any, **kwargs: Any) -> None:
         self.record("log_artifact", *args, **kwargs)
@@ -145,7 +154,8 @@ class FakeJoblib:
     def __init__(self) -> None:
         self.dump_calls: list[tuple[Any, Any]] = []
         self.load_calls: list[Any] = []
-        self.load_result = "loaded-trial-sentinel"
+        # A frozen-trial stand-in: the replay branch reads its params.
+        self.load_result = SimpleNamespace(params={"lr": 1e-4, "batch_size": 16})
 
     def dump(self, obj: Any, path: Any) -> None:
         self.dump_calls.append((obj, path))
@@ -268,11 +278,11 @@ def run_training_once(
     return captured, fakes
 
 
-def objective_keywords(captured) -> dict:
-    """The keyword arguments the ``objective`` partial is wired with."""
+def objective_config(captured):
+    """The ``ObjectiveConfig`` the ``objective`` partial is wired with."""
     if captured.partial is not None:
-        return captured.partial.keywords
-    return captured.objective_calls[0][1]
+        return captured.partial.keywords["config"]
+    return captured.objective_calls[0][1]["config"]
 
 
 def default_optuna_config(**overrides: Any) -> OptunaConfig:
@@ -341,7 +351,7 @@ class TestModelInit:
             validation_config=criterion_validation_config(),
             weights_uri=weights_uri,
         )
-        return objective_keywords(captured)["model_init"], fakes
+        return objective_config(captured).model_init, fakes
 
     def test_weights_uri_none_returns_fresh_model(
         self, monkeypatch: pytest.MonkeyPatch
@@ -518,16 +528,18 @@ class TestRunTrainingStudyBranch:
         assert optimize["n_jobs"] == 1
         assert len(optimize["callbacks"]) == 1
 
-        # The partial is wired with the run's dependencies.
-        keywords = objective_keywords(captured)
-        assert keywords["dataset"] is dataset
-        assert keywords["dynamic_dataset"] is False
-        assert keywords["epochs"] == 3
-        assert keywords["direction"] is OptimizationDirection.MAXIMIZE
-        assert keywords["seed"] == 42
-        assert callable(keywords["model_init"])
-        assert callable(keywords["criterion_init"])
-        assert callable(keywords["validate"])
+        # The partial is wired with a single config object bundling the
+        # run's dependencies.
+        config = objective_config(captured)
+        assert config.dataset is dataset
+        assert config.dynamic_dataset is False
+        assert config.epochs == 3
+        assert config.direction is OptimizationDirection.MAXIMIZE
+        assert config.seed == 42
+        assert callable(config.model_init)
+        assert callable(config.criterion_init)
+        assert callable(config.validate)
+        assert config.run_ids == {}
 
         # The criterion validation mode enables expandable segments.
         assert os.environ["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"
@@ -544,13 +556,38 @@ class TestRunTrainingStudyBranch:
         study = fakes.optuna.study
 
         # The fake study mirrors Optuna's per-trial callback contract: the
-        # callback dumps study and trial, re-enters the active run, logs both
-        # artifacts and tags the best trial number so far.
+        # callback dumps study and trial. The fake objective never starts a
+        # run, so no run handle is registered and the MLflow part is skipped
+        # (the guard: no last_active_run guesswork, no foreign run).
         assert fakes.joblib.dump_calls == [
             (study, CURRENT_STUDY_PATH),
             (study.callback_trial, CURRENT_TRIAL_PATH),
         ]
-        assert fakes.mlflow.called("start_run") == [(("fake-run-id",), {})]
+        assert fakes.mlflow.called("start_run") == []
+        assert fakes.mlflow.called("log_artifact") == []
+        assert fakes.mlflow.called("set_tag") == []
+
+    def test_save_study_and_trial_logs_to_the_registered_run(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured, fakes = run_training_once(
+            monkeypatch,
+            optuna_config=default_optuna_config(),
+            training_config=default_training_config(),
+            validation_config=criterion_validation_config(),
+        )
+        study = fakes.optuna.study
+        # Register the run handle the way objective does, then fire the
+        # callback for the trial that owns it.
+        objective_config(captured).run_ids[study.callback_trial.number] = (
+            "registered-run-id"
+        )
+        callback = study.optimize_calls[0]["callbacks"][0]
+        callback(study, study.callback_trial)
+
+        # The callback re-enters the trial's own run, logs both artifacts
+        # and tags the best trial number so far.
+        assert fakes.mlflow.called("start_run") == [(("registered-run-id",), {})]
         assert fakes.mlflow.called("log_artifact") == [
             ((CURRENT_STUDY_PATH,), {}),
             ((CURRENT_TRIAL_PATH,), {}),
@@ -599,10 +636,10 @@ class TestRunTrainingTrialReplayBranch:
             assert trial is fakes.joblib.load_result
         assert captured.partial is None
 
-        keywords = objective_keywords(captured)
-        assert keywords["dataset"] is fakes.datasets[0]
-        assert callable(keywords["model_init"])
-        assert callable(keywords["validate"])
+        config = objective_config(captured)
+        assert config.dataset is fakes.datasets[0]
+        assert callable(config.model_init)
+        assert callable(config.validate)
 
 
 class FakeValidationCoverage:
@@ -639,7 +676,7 @@ class TestValidateClosures:
             training_config=default_training_config(),
             validation_config=validation_config,
         )
-        return objective_keywords(captured)["validate"], fakes
+        return objective_config(captured).validate, fakes
 
     def test_criterion_validate(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -1035,8 +1072,8 @@ class TestObjective:
         mlflow = FakeMlflow()
         monkeypatch.setattr(run_training_module, "mlflow", mlflow)
 
-        result = run_training_module.objective(
-            trial,
+        run_ids: dict[int, str] = {}
+        config = run_training_module.ObjectiveConfig(
             dataset=dataset,
             dynamic_dataset=dynamic_dataset,
             model_init=model_init,
@@ -1045,7 +1082,9 @@ class TestObjective:
             validate=validate,
             direction=direction,
             seed=seed,
+            run_ids=run_ids,
         )
+        result = run_training_module.objective(trial, config=config)
 
         return SimpleNamespace(
             result=result,
@@ -1061,6 +1100,7 @@ class TestObjective:
             dataloader_calls=dataloader_calls,
             validate_calls=validate_calls,
             mlflow=mlflow,
+            run_ids=run_ids,
         )
 
     def test_full_loop(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -1104,6 +1144,8 @@ class TestObjective:
         assert trial_dir.is_dir()
         assert yaml.safe_load(kwargs_path.read_text()) == expected_kwargs
         assert rec.mlflow.called("start_run") == [((), {"run_name": "7"})]
+        # The trial's run handle is registered for the study-save callback.
+        assert rec.run_ids == {7: "fake-run-id"}
         assert rec.mlflow.called("log_params") == [
             (
                 (
