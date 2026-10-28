@@ -324,7 +324,12 @@ unknown-strategy ``ValueError``, and the AI-without-model-path
 per-method loop, the ``RunResult`` → ``asdict`` → CSV column order
 (``method,tests,errors,coverage,total_time_sec``), the
 ``{strategy.name}.csv`` / ``{strategy.name}.log`` artifact names, the
-empty-maps empty-CSV case, and the ``setup_logging`` ``basicConfig`` call.
+empty-maps empty-CSV case, and the ``setup_logging`` ``basicConfig`` call. The
+error-handling tests pin the BENCHMARKS skip-versus-DEBUG re-raise for
+``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError``; the
+``ValueError``-kills-the-run defect, the all-methods-fail exit-0 aggregate, and
+the missing-runner no-existence-check behaviour are #590-tracked (``xfail`` /
+documented exclusion).
 
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources

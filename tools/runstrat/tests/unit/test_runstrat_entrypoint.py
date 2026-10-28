@@ -8,8 +8,10 @@ the loop is deterministic.
 """
 
 import logging
+import subprocess
 from pathlib import Path
 
+import func_timeout
 import pytest
 import runstrat
 from runstrat import Args, RunMode
@@ -30,6 +32,16 @@ OUTPUT_M2 = (
     "Tests generated: 10\n"
     "Errors generated: 0\n"
     "Precise coverage: 100.0\n"
+)
+# Missing the "Total time" line -> parse_runner_output raises AttributeError.
+OUTPUT_NO_TIME = "Tests generated: 5\nErrors generated: 2\nPrecise coverage: 88.5\n"
+# Trailing text after the coverage -> float() raises ValueError (not caught by
+# entrypoint, which only catches AttributeError; #590-tracked).
+OUTPUT_BAD_COVERAGE = (
+    "Total time: 00:01:02.123\n"
+    "Tests generated: 5\n"
+    "Errors generated: 2\n"
+    "Precise coverage: 88.5 extra\n"
 )
 
 
@@ -131,3 +143,81 @@ def test_entrypoint_returns_empty_dataframe_when_no_methods(
     assert list(df.columns) == []
     csv_path = tmp_path / "savedir" / "ExecutionTreeContributedCoverage.csv"
     assert csv_path.read_text() == "\n"
+
+
+def _timed_out(method: str) -> func_timeout.FunctionTimedOut:
+    # The entrypoint handler reads timedOutKwargs["call"] to log the cmd.
+    return func_timeout.FunctionTimedOut(
+        timedOutKwargs={"call": ["dotnet", "runner.dll", "--method", method]}
+    )
+
+
+def test_entrypoint_benchmarks_skips_failed_methods(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["CPE", "FTO", "AE", "OK"])
+    entrypoint_env["script"] = {
+        "CPE": subprocess.CalledProcessError(1, ["dotnet", "runner.dll"]),
+        "FTO": _timed_out("FTO"),
+        "AE": OUTPUT_NO_TIME,
+        "OK": OUTPUT_M1,
+    }
+
+    df = runstrat.entrypoint(args)
+
+    # BENCHMARKS mode logs and skips each failure; only the successful method
+    # is recorded.
+    assert df["method"].tolist() == ["OK"]
+    csv_path = tmp_path / "savedir" / "ExecutionTreeContributedCoverage.csv"
+    assert csv_path.read_text() == (
+        "method,tests,errors,coverage,total_time_sec\nOK,5,2,88.5,62\n"
+    )
+
+
+def test_entrypoint_debug_reraises_called_process_error(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["CPE"], run_mode=RunMode.DEBUG)
+    entrypoint_env["script"] = {
+        "CPE": subprocess.CalledProcessError(1, ["dotnet", "runner.dll"])
+    }
+
+    with pytest.raises(subprocess.CalledProcessError):
+        runstrat.entrypoint(args)
+
+
+def test_entrypoint_debug_reraises_function_timed_out(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["FTO"], run_mode=RunMode.DEBUG)
+    entrypoint_env["script"] = {"FTO": _timed_out("FTO")}
+
+    with pytest.raises(func_timeout.FunctionTimedOut):
+        runstrat.entrypoint(args)
+
+
+def test_entrypoint_debug_reraises_attribute_error(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["AE"], run_mode=RunMode.DEBUG)
+    entrypoint_env["script"] = {"AE": OUTPUT_NO_TIME}
+
+    with pytest.raises(AttributeError):
+        runstrat.entrypoint(args)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="#590: a ValueError from float(total_coverage) is not caught by "
+    "entrypoint (only AttributeError is), so one malformed line kills the run "
+    "and discards all results; per-line parse errors should be skipped",
+)
+def test_entrypoint_benchmarks_skips_a_value_error_method(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["BAD", "OK"])
+    entrypoint_env["script"] = {"BAD": OUTPUT_BAD_COVERAGE, "OK": OUTPUT_M1}
+
+    df = runstrat.entrypoint(args)
+
+    assert df["method"].tolist() == ["OK"]
