@@ -40,6 +40,95 @@ V# is the primary game server. A typical end-to-end workflow is automated in
 ``.github/workflows/build_and_run.yaml``, whose pipeline steps live in the
 shared reusable workflow ``.github/workflows/e2e_build_and_run.yml``.
 
+.. _wire-protocol:
+
+Wire protocol
+-------------
+
+This section is the wire contract for engine integrators: the message
+types, the field lists, the encoding rules, and the versioning. The
+executable schema is the message dataclasses in
+``AIAgent/connection/game_server_conn/messages.py`` (with the domain types
+in ``AIAgent/common/game.py``); the two must stay in agreement — the
+wire-format pins in ``AIAgent/tests/unit/connection/`` are the drift net.
+
+Transport and framing
+~~~~~~~~~~~~~~~~~~~~~
+
+The agent and the game server talk over a websocket and exchange one JSON
+object per text frame. Every message is an envelope with a ``MessageType``
+(string) and a ``MessageBody``:
+
+.. code-block:: json
+
+    {"MessageType": "step", "MessageBody": "{\"StateId\": 3, \"PredictedStateUsefulness\": 1.5}"}
+
+Protocol versions
+~~~~~~~~~~~~~~~~~
+
+- **v1** (legacy): the envelope has no ``Version`` field. This is the
+  format the V# and usvm servers speak today.
+- **v2**: the envelope carries ``"Version": 2``.
+
+The version the agent speaks is ``PROTOCOL_VERSION`` in
+``messages.py`` (currently 2). On receive, the agent:
+
+- accepts a ``Version`` equal to ``PROTOCOL_VERSION``;
+- rejects any other present ``Version`` with
+  ``ProtocolVersionMismatchError`` (the game fails with that reason);
+- accepts a missing ``Version`` as a legacy v1 server and logs a loud
+  warning (once per process).
+
+The agent does not emit ``Version`` yet: the current usvm server rejects
+unknown envelope keys, so client-side emission ships together with the
+server-side rollout (the V# and usvm follow-ups that add the field to
+their outgoing messages). Any change to the message types, fields, or
+encoding below is a new version: bump ``PROTOCOL_VERSION`` and update this
+page in the same change.
+
+Client to server
+~~~~~~~~~~~~~~~~
+
+The client sends the ``MessageBody`` as a **JSON string inside the JSON
+envelope** (JSON-in-JSON) — see the encoding note below.
+
+- ``start`` — body: the ``GameMap`` fields (``StartMessageBody`` mirrors
+  ``common.game.GameMap`` field-for-field): ``StepsToPlay`` (int),
+  ``StepsToStart`` (int), ``AssemblyFullName`` (str),
+  ``NameOfObjectToCover`` (str), ``DefaultSearcher`` (str, ``"BFS"`` or
+  ``"DFS"``), ``MapName`` (str).
+- ``step`` — body: ``StateId`` (int), ``PredictedStateUsefulness`` (float).
+- ``stop`` — body: an empty object. The servers handle it; the client does
+  not send it today.
+
+Server to client
+~~~~~~~~~~~~~~~~
+
+The server sends the ``MessageBody`` as a **nested JSON object**.
+
+- ``ReadyForNextStep`` — body: ``GameState`` (``GraphVertices``,
+  ``States``, ``PathConditionVertices``, ``Map`` — see
+  ``common.game.GameState``).
+- ``MoveReward`` — body: ``Reward`` (``ForMove`` with ``ForCoverage`` and
+  ``ForVisitedInstructions`` (ints), ``MaxPossibleReward`` (int)).
+- ``IncorrectPredictedStateId`` — body: ``StateId`` (int). Sent when the
+  predicted state does not exist; the agent continues with the server's
+  state.
+- ``GameOver`` — body: ``ActualCoverage`` (int or null), ``TestsCount``
+  (int), ``StepsCount`` (int), ``ErrorsCount`` (int).
+- ``ServerError`` — body: ``ErrorMessage`` (str) in V#; usvm sends the key
+  ``Message`` instead. The agent does not decode this body today; the
+  message surfaces as a decode failure.
+
+Encoding note: the JSON-in-JSON client-body asymmetry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The client encodes ``MessageBody`` as a JSON **string** (the server
+decodes the string as JSON a second time), while the server encodes it as
+a nested JSON **object**. This asymmetry is a known wart of the current
+protocol, flagged for a future protocol revision; changing it is a
+breaking wire change (a future version).
+
 .. _onnx-conversion:
 
 ONNX conversion
