@@ -11,6 +11,7 @@ messages.
 """
 
 import contextlib
+import logging
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +20,7 @@ from typing import Any
 import pytest
 import torch
 import yaml
+from pydantic import ValidationError
 from torch import nn
 
 import run_training as run_training_module
@@ -41,6 +43,7 @@ from ml.validation.statistics import AVERAGE_COVERAGE
 from paths import (
     CURRENT_STUDY_PATH,
     CURRENT_TRIAL_PATH,
+    LOG_PATH,
     MODEL_FILE_NAME,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
@@ -1181,3 +1184,200 @@ class TestObjective:
 
         assert rec.dataset.update_meta_data_calls == 0
         assert rec.result == 11.0
+
+
+def default_main_config() -> dict:
+    """A production-shaped config (alias keys) for the ``main`` tests."""
+    return {
+        "OptunaConfig": {
+            "n_startup_trials": 1,
+            "n_trials": 1,
+            "n_jobs": 1,
+            "study_direction": "maximize",
+        },
+        "TrainingConfig": {
+            "dynamic_dataset": False,
+            "train_percentage": 1.0,
+            "threshold_coverage": 100,
+            "load_to_cpu": False,
+            "epochs": 1,
+            "seed": 99,
+        },
+        "ValidationConfig": {
+            "validation_mode": {"val_type": "loss", "batch_size": 8},
+        },
+        "MLFlowConfig": {"experiment_name": "CI"},
+    }
+
+
+class TestMain:
+    """``run_training.main``: config loading and MLflow setup."""
+
+    def _main(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, config: dict):
+        # chdir so the ml_app.log from logging.basicConfig lands in tmp.
+        monkeypatch.chdir(tmp_path)
+        config_path = tmp_path / "config.yml"
+        config_path.write_text(yaml.safe_dump(config))
+
+        run_training_calls: list[dict] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "run_training",
+            lambda **kwargs: run_training_calls.append(kwargs),
+        )
+        set_start_method_calls: list[tuple] = []
+        monkeypatch.setattr(
+            run_training_module.mp,
+            "set_start_method",
+            lambda *args, **kwargs: set_start_method_calls.append((args, kwargs)),
+        )
+        create_folder_calls: list[list] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "create_folders_if_necessary",
+            lambda folders: create_folder_calls.append(folders),
+        )
+        create_file_calls: list[Path] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "create_file",
+            lambda path: create_file_calls.append(path),
+        )
+        mlflow = FakeMlflow()
+        monkeypatch.setattr(run_training_module, "mlflow", mlflow)
+
+        gpu_logger = logging.getLogger("mlflow.system_metrics.metrics.gpu_monitor")
+        original_level = gpu_logger.level
+        gpu_level: int | None = None
+        try:
+            run_training_module.main(str(config_path))
+            gpu_level = gpu_logger.level
+        finally:
+            gpu_logger.setLevel(original_level)
+
+        return SimpleNamespace(
+            run_training_calls=run_training_calls,
+            set_start_method_calls=set_start_method_calls,
+            create_folder_calls=create_folder_calls,
+            create_file_calls=create_file_calls,
+            mlflow=mlflow,
+            gpu_level=gpu_level,
+        )
+
+    def test_main_without_tracking_uri(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        capfd: pytest.CaptureFixture,
+    ) -> None:
+        rec = self._main(monkeypatch, tmp_path, default_main_config())
+
+        # Spawn start method, the processed-dataset folder, the log file.
+        assert rec.set_start_method_calls == [(("spawn",), {"force": True})]
+        assert rec.create_folder_calls == [[PROCESSED_DATASET_PATH]]
+        assert rec.create_file_calls == [LOG_PATH]
+
+        # The training device is printed (cpu under the fixture).
+        assert capfd.readouterr().out == "cpu\n"
+
+        # MLflow setup: no tracking uri, experiment, tags, system metrics.
+        assert rec.mlflow.called("set_tracking_uri") == []
+        assert rec.mlflow.called("set_experiment") == [(("CI",), {})]
+        assert rec.mlflow.called("enable_system_metrics_logging") == [((), {})]
+        # The gpu-monitor logger is silenced to ERROR.
+        assert rec.gpu_level == logging.ERROR
+
+        # run_training gets the parsed config.
+        assert len(rec.run_training_calls) == 1
+        call = rec.run_training_calls[0]
+        assert call["weights_uri"] is None
+        assert call["optuna_config"] == OptunaConfig(
+            n_startup_trials=1,
+            n_trials=1,
+            n_jobs=1,
+            study_direction=OptimizationDirection.MAXIMIZE,
+        )
+        assert call["training_config"] == TrainingConfig(
+            dynamic_dataset=False,
+            train_percentage=1.0,
+            threshold_coverage=100,
+            load_to_cpu=False,
+            epochs=1,
+            seed=99,
+        )
+        assert call["validation_config"] == ValidationConfig(
+            validation_mode=CriterionValidation(val_type="loss", batch_size=8)
+        )
+        # Experiment tags: the whole config as a plain dict (enums kept).
+        (tags_args, tags_kwargs) = rec.mlflow.called("set_experiment_tags")[0]
+        assert tags_kwargs == {}
+        assert tags_args[0] == {
+            "optuna_config": {
+                "n_startup_trials": 1,
+                "n_trials": 1,
+                "n_jobs": 1,
+                "study_direction": OptimizationDirection.MAXIMIZE,
+                "trial_uri": None,
+            },
+            "training_config": {
+                "dynamic_dataset": False,
+                "train_percentage": 1.0,
+                "threshold_coverage": 100,
+                "load_to_cpu": False,
+                "epochs": 1,
+                "seed": 99,
+                "threshold_steps_number": None,
+            },
+            "validation_config": {
+                "validation_mode": {
+                    "val_type": "loss",
+                    "batch_size": 8,
+                    "dataset": TrainingDatasetMode.VALIDATION,
+                },
+            },
+            "mlflow_config": {
+                "experiment_name": "CI",
+                "tracking_uri": None,
+            },
+            "weights_uri": None,
+        }
+
+    def test_main_with_tracking_uri(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        config = default_main_config()
+        config["MLFlowConfig"]["tracking_uri"] = "http://127.0.0.1:8080"
+
+        rec = self._main(monkeypatch, tmp_path, config)
+
+        assert rec.mlflow.called("set_tracking_uri") == [
+            ((), {"uri": "http://127.0.0.1:8080"})
+        ]
+
+    def test_main_forwards_weights_uri(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        config = default_main_config()
+        # The Config validator requires weights_uri and trial_uri together.
+        config["weights_uri"] = "mlflow-artifacts:/1/run/artifacts/model.pth"
+        config["OptunaConfig"]["trial_uri"] = (
+            "mlflow-artifacts:/1/run/artifacts/trial.pkl"
+        )
+
+        rec = self._main(monkeypatch, tmp_path, config)
+
+        assert rec.run_training_calls[0]["weights_uri"] == (
+            "mlflow-artifacts:/1/run/artifacts/model.pth"
+        )
+
+    def test_main_rejects_weights_uri_without_trial_uri(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        config = default_main_config()
+        config["weights_uri"] = "mlflow-artifacts:/1/run/artifacts/model.pth"
+
+        with pytest.raises(
+            ValidationError,
+            match="can be either None or not None at the same time",
+        ):
+            self._main(monkeypatch, tmp_path, config)
