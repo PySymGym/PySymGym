@@ -110,13 +110,5 @@ omit = [
 [tool.coverage.report]
 exclude_also = [
     "if __name__ == .__main__.:",
-    # unsafe_json.asdict's `except TypeError` fallback is dead code: a plain
-    # dataclass raises AttributeError (no to_json attribute), not TypeError,
-    # so the fallback never fires, and asdict is only reachable through the
-    # dead custom_encoder_if_disable_message_checks. #579's fix spec ("fix or
-    # delete unsafe_json.asdict") does not pin the post-fix mechanism, so the
-    # branch is excluded rather than xfailed (see docs/testing.rst).
-    "^        except TypeError:",
-    "return asdict(dataclasses_asdict(data))",
 ]
 fail_under = 99

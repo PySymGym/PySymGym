@@ -2,12 +2,14 @@ import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Optional, TypeVar
 
 from common.game import GameMap, GameState, Reward
 from config import FeatureConfig
-from connection.game_server_conn.unsafe_json import obj_from_dict
+from connection.game_server_conn.unsafe_json import BareObject, obj_from_dict
 from dataclasses_json import config, dataclass_json
+
+_T = TypeVar("_T")
 
 
 class ClientMessageType(str, Enum):
@@ -72,7 +74,8 @@ class ServerMessage:
     class DeserializationException(Exception):
         pass
 
-    def from_json_handle(data, expected) -> ClientMessage:
+    @staticmethod
+    def from_json_handle(data: str, expected: type[_T]) -> _T | BareObject:
         if FeatureConfig.DISABLE_MESSAGE_CHECKS:
             return obj_from_dict(json.loads(data))
 

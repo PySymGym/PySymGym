@@ -449,15 +449,11 @@ Orchestration seams are tested with fakes, never real I/O:
   asserted without a server. ``game_server_socket_manager`` must call
   ``return_instance`` on **both** the success and failure paths — assert it
   explicitly rather than trusting the ``finally``.
-- **Connection layer.** The message deserialization helpers in
-  ``unsafe_json`` are pinned as pure unit tests: ``obj_from_dict`` builds
-  nested attribute objects, ``asdict`` inverts it for ``BareObject``s,
-  delegates to ``to_json`` for ``dataclass_json`` dataclasses (returning the
-  JSON string — #579's fix spec says "fix or delete ``unsafe_json.asdict``",
-  so the pin is current behaviour and #579 owns updating it), and recurses
-  into lists, dicts and scalars. The ``except TypeError`` fallback is dead
-  code (a plain dataclass raises ``AttributeError``, not ``TypeError``; see
-  Exclusions) and is not pinned. The ``errors_connection`` hierarchy is
+- **Connection layer.** The message deserialization helper in
+  ``unsafe_json`` is pinned as a pure unit test: ``obj_from_dict`` builds
+  the nested attribute objects (``BareObject``s) that the unchecked
+  ``from_json_handle`` returns when ``DISABLE_MESSAGE_CHECKS`` is set. The
+  ``errors_connection`` hierarchy is
   pinned as pure unit tests: ``GameInterruptedError`` is abstract with an
   abstract ``desc`` property (its no-op stub getter is pinned by calling
   ``fget`` directly — the body is unreachable in production), and the two
@@ -584,13 +580,3 @@ architecture cannot consume the current graph tensors — the 2-column history
 models cannot forward or instantiate with the current tensors (#572). It is
 tracked in those issues instead of being tested, and its removal is pending
 #581 (model registry / dead-zoo cleanup), which also removes the omit line.
-
-The ``except TypeError`` fallback in ``unsafe_json.asdict``
-(``AIAgent/connection/game_server_conn/unsafe_json.py``) is excluded from the
-measurement (``[tool.coverage.report] exclude_also``): it is dead code — a
-plain dataclass raises ``AttributeError`` (no ``to_json`` attribute), not
-``TypeError``, so the fallback never fires, and ``asdict`` is only reachable
-through the dead ``custom_encoder_if_disable_message_checks``. The defect is
-part of #579's "fix or delete ``unsafe_json.asdict``"; the post-fix mechanism
-is unspecified, so the branch is excluded rather than xfailed. #579 removes
-the exclusion when it lands.
