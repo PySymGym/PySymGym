@@ -208,7 +208,14 @@ count, and the ``<module>/<hidden>ch/<epochs>e`` checkpoint layout with both
 the state-dict and full-model files; the ``BALANCE_DATASET`` truncation is
 pinned by monkeypatching the module constant with one 5001-element file
 (marked ``slow``). ``train`` / ``tst`` / ``save_simple`` are driven directly
-against the reference math.
+against the reference math. The loss-validation tests
+(``AIAgent/tests/unit/ml/validation/test_validate_loss.py``) pin
+``ml.validation.loss.validate_loss`` with a real ``TrainingDataset`` (steps
+written through ``step_factory``) and a fixed-output fake model: the exact
+averaged ``MSELoss`` over the ``{0, 1}``-thresholded ``y_true`` (the same run
+would average 0.135 without the thresholding), the per-batch loss sequence,
+and the ``DataLoader`` (``batch_size``, ``shuffle=False``) and ``tqdm``
+(``desc``/``ncols``/``colour``) kwargs.
 
 The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 ``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
