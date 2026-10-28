@@ -58,6 +58,14 @@ class FeatureConfig:
     ON_GAME_SERVER_RESTART = OnGameServerRestartFeature(
         enabled=True, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1
     )
+    # Pin the game server's .NET runtime to the major.minor its
+    # runtimeconfig.json declares (the dataset is generated with .NET 8):
+    # an ambient DOTNET_ROLL_FORWARD must not roll the server forward to a
+    # different major version, which changes the path-condition encoding
+    # (#669). LatestPatch takes the highest installed patch of that
+    # major.minor and disables minor/major roll-forward; Disable would bind
+    # to the exact declared patch (8.0.0) and fail on any 8.0.x install.
+    DOTNET_ROLL_FORWARD = "LatestPatch"
 
 
 class GameServerConnectorConfig:

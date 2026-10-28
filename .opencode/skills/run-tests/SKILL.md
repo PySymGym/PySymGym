@@ -49,9 +49,13 @@ source of truth for the steps. Machine-specific pitfalls:
 - A stale `DOTNET_ROLL_FORWARD=Major` in the ambient environment rolls the
   net8.0 game server forward to a newer runtime, which changes the
   path-condition encoding and breaks e2e validation (the dataset is generated
-  with the .NET 8 runtime; CI runs .NET 8). Run the e2e steps under
-  `env -u DOTNET_ROLL_FORWARD bash -lc '...'` and sanity-check
-  `which dotnet` → `/home/gsv/.dotnet/dotnet` (the .NET 8 install).
+  with the .NET 8 runtime; CI runs .NET 8). The broker now pins the runtime
+  at launch (`DOTNET_ROLL_FORWARD=LatestPatch`, #580), so the broker-launched
+  servers are immune; the dataset-generation step is a plain `dotnet`
+  invocation, so run it under `env -u DOTNET_ROLL_FORWARD bash -lc '...'`
+  and sanity-check `which dotnet` → `/home/gsv/.dotnet/dotnet` (the install
+  with the .NET 8 runtime the dataset was generated with; `dotnet --version`
+  may report a newer SDK — the runtime list is what matters).
 - Start from a clean `AIAgent/report/` and `AIAgent/mlartifacts/` (CI runs
   from a fresh checkout): a stale `report/dataset_path_condition` confounds
   the tuning run.
