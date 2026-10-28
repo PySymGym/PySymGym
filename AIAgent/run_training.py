@@ -9,7 +9,7 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import joblib
 import mlflow
@@ -49,7 +49,6 @@ from paths import (
     trial_dir,
 )
 from torch import nn
-from torch_geometric.data import Dataset
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 from torch_geometric.loader import DataLoader
 
@@ -98,6 +97,28 @@ class TrialSettings:
     early_stopping_state_len: int
     tolerance: float
     num_pc_layers: int
+
+
+@dataclass
+class ObjectiveConfig:
+    """The per-run dependencies of the ``objective`` training loop.
+
+    Bundled into one object (instead of eight partial-bound arguments) so
+    the objective's signature stays ``objective(trial, config)`` and the
+    study-save callback can share the ``run_ids`` registry with it.
+    """
+
+    dataset: TrainingDataset
+    dynamic_dataset: bool
+    model_init: Callable[..., nn.Module]
+    criterion_init: Callable
+    epochs: int
+    validate: Callable
+    direction: OptimizationDirection
+    seed: int
+    # trial number -> MLflow run id, registered by ``objective`` when it
+    # starts the trial's run and consumed by the study-save callback.
+    run_ids: dict[int, str]
 
 
 def run_training(
@@ -242,8 +263,7 @@ def run_training(
                 )
             return state_model_encoder
 
-    objective_partial = partial(
-        objective,
+    objective_config = ObjectiveConfig(
         dataset=dataset,
         dynamic_dataset=training_config.dynamic_dataset,
         model_init=model_init,
@@ -252,21 +272,32 @@ def run_training(
         validate=validate,
         direction=optuna_config.study_direction,
         seed=training_config.seed,
+        run_ids={},
     )
+    objective_partial = partial(objective, config=objective_config)
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials,
         seed=training_config.seed,
     )
+
+    def save_study_and_trial(study, trial):
+        # Per-trial persistence, shared by the tuning and the replay
+        # branches. The pickles are always dumped locally; the MLflow part
+        # needs the trial's run handle, which objective registers in
+        # run_ids when it starts the run. A trial that failed before
+        # starting its run has no handle: the pickles are persisted locally
+        # only.
+        joblib.dump(study, CURRENT_STUDY_PATH)
+        joblib.dump(trial, CURRENT_TRIAL_PATH)
+        run_id = objective_config.run_ids.get(trial.number)
+        if run_id is None:
+            return
+        with mlflow.start_run(run_id):
+            mlflow.log_artifact(CURRENT_STUDY_PATH)
+            mlflow.log_artifact(CURRENT_TRIAL_PATH)
+            mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
+
     if optuna_config.trial_uri is None and weights_uri is None:
-
-        def save_study_and_trial(study, trial):
-            joblib.dump(study, CURRENT_STUDY_PATH)
-            joblib.dump(trial, CURRENT_TRIAL_PATH)
-            with mlflow.start_run(mlflow.last_active_run().info.run_id):
-                mlflow.log_artifact(CURRENT_STUDY_PATH)
-                mlflow.log_artifact(CURRENT_TRIAL_PATH)
-                mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
-
         study = optuna.create_study(
             sampler=sampler, direction=optuna_config.study_direction.value
         )
@@ -286,24 +317,12 @@ def run_training(
             objective_partial(trial)
 
 
-def objective(
-    trial: optuna.Trial,
-    dataset: TrainingDataset,
-    dynamic_dataset: bool,
-    model_init: Callable[[Any], nn.Module],
-    criterion_init: Callable,
-    epochs: int,
-    validate: Callable[
-        [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
-    ],
-    direction: OptimizationDirection,
-    seed: int,
-):
+def objective(trial: optuna.Trial, config: ObjectiveConfig):
     # Per-trial seed: weight init and every sampling site (step sampling,
     # similar-step dedup, validation map order) draw from these globals, so
     # seeding before any of them makes the trial reproducible.
-    seed_everything(derive_trial_seed(seed, trial.number))
-    config = TrialSettings(
+    seed_everything(derive_trial_seed(config.seed, trial.number))
+    settings = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 8, 32),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
@@ -316,22 +335,25 @@ def objective(
         tolerance=0.0001,
     )
     early_stopping = EarlyStopping(
-        state_len=config.early_stopping_state_len,
-        tolerance=config.tolerance,
-        direction=direction,
+        state_len=settings.early_stopping_state_len,
+        tolerance=settings.tolerance,
+        direction=config.direction,
     )
     model_kwargs_names = list(
         inspect.signature(StateModelEncoder.__init__).parameters.keys()
     )
     model_kwargs_names.remove("self")
     model_kwargs = dict(
-        [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
+        [
+            (kwarg_name, getattr(settings, kwarg_name))
+            for kwarg_name in model_kwargs_names
+        ]
     )
-    model: nn.Module = model_init(**model_kwargs)
+    model: nn.Module = config.model_init(**model_kwargs)
     model.to(get_device())
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    criterion = criterion_init()
+    optimizer = torch.optim.Adam(model.parameters(), lr=settings.lr)
+    criterion = config.criterion_init()
 
     trial_directory = trial_dir(trial.number)
     trial_directory.mkdir(parents=True, exist_ok=True)
@@ -344,8 +366,13 @@ def objective(
     best_result: int | float | None = None
     best_state_dict: dict | None = None
 
-    with mlflow.start_run(run_name=str(trial.number)):
-        mlflow.log_params(asdict(config))
+    with mlflow.start_run(run_name=str(trial.number)) as run:
+        # Register the run handle for the study-save callback: the callback
+        # fires after this run has ended, so it cannot rely on
+        # mlflow.last_active_run() (the wrong run under n_jobs > 1, an
+        # AttributeError when the trial failed before starting a run).
+        config.run_ids[trial.number] = run.info.run_id
+        mlflow.log_params(asdict(settings))
         # The kwargs are constant within a trial: persist them once to the
         # trial dir and log them as an artifact, instead of rewriting a shared
         # side-effect file every epoch for the ONNX export to read back.
@@ -353,10 +380,10 @@ def objective(
             yaml.dump(model_kwargs, outfile)
         mlflow.log_artifact(kwargs_path)
 
-        for epoch in range(epochs):
-            dataset.switch_to(TrainingDatasetMode.TRAINING)
+        for epoch in range(config.epochs):
+            config.dataset.switch_to(TrainingDatasetMode.TRAINING)
             train_dataloader = DataLoader(
-                dataset, config.batch_size, shuffle=False
+                config.dataset, settings.batch_size, shuffle=False
             )  # Shuffle leads to problems with GPU memory.
             model.train()
             train(
@@ -370,14 +397,16 @@ def objective(
             mlflow.log_artifact(model_path, str(epoch))
 
             model.eval()
-            dataset.switch_to(TrainingDatasetMode.VALIDATION)
-            result, metrics = validate(model, dataset, trial_directory, model_kwargs)
+            config.dataset.switch_to(TrainingDatasetMode.VALIDATION)
+            result, metrics = config.validate(
+                model, config.dataset, trial_directory, model_kwargs
+            )
             mlflow.log_metrics(metrics, step=epoch)
-            if dynamic_dataset:
-                dataset.update_meta_data()
+            if config.dynamic_dataset:
+                config.dataset.update_meta_data()
             if best_result is None or (
                 result < best_result
-                if direction is OptimizationDirection.MINIMIZE
+                if config.direction is OptimizationDirection.MINIMIZE
                 else result > best_result
             ):
                 best_result = result
