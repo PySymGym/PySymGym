@@ -1074,6 +1074,8 @@ class TestObjective:
             "num_pc_layers": 1,
         }
         assert rec.model_init_calls == [expected_kwargs]
+        # The criterion is created once per trial, not per epoch.
+        assert rec.criterion_init_calls == ["criterion"]
         # The model is moved to the training device (cpu under the fixture).
         assert rec.model.to_calls == [((torch.device("cpu"),), {})]
 
