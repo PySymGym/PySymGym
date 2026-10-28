@@ -1,3 +1,7 @@
+import logging
+
+import torch
+
 _GAME_VERTEX = "game_vertex"
 _STATE_VERTEX = "state_vertex"
 _PATH_CONDITION_VERTEX = "path_condition_vertex"
@@ -61,7 +65,33 @@ class ONNX:
     statevertex_to_pathcondvertex = underscore_join(TORCH.statevertex_to_pathcondvertex)
 
 
+def degenerate_counts(data) -> tuple[int, int] | None:
+    """Return ``(num_states, num_game_vertices)`` if ``data`` is degenerate, else ``None``.
+
+    A graph is degenerate when it has no states (no prediction target) or no
+    game vertices (an impossible CFG); neither can be forwarded through a
+    model. Zero path-condition vertices alone is not degenerate: a state with
+    no path condition is valid and the model handles it.
+
+    Logs a warning when the graph is degenerate so a skipped step is
+    diagnosable (#619).
+    """
+    num_states = data[TORCH.state_vertex].x.shape[0]
+    num_game_vertices = data[TORCH.game_vertex].x.shape[0]
+    if num_states == 0 or num_game_vertices == 0:
+        logging.warning(
+            "degenerate graph: %d states, %d game vertices",
+            num_states,
+            num_game_vertices,
+        )
+        return num_states, num_game_vertices
+    return None
+
+
 def infer(model, data):
+    counts = degenerate_counts(data)
+    if counts is not None:
+        return torch.zeros((counts[0], 1), device=data[TORCH.state_vertex].x.device)
     return model(
         game_x=data[TORCH.game_vertex].x,
         state_x=data[TORCH.state_vertex].x,
