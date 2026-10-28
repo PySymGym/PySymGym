@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 import torch
+import yaml
 from torch import nn
 
 import run_training as run_training_module
@@ -35,10 +36,12 @@ from common.config.validation_config import (
 from common.validation_coverage.svm_info import SVMInfo
 from ml.dataset import TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
+from ml.training.seeds import derive_trial_seed
 from ml.validation.statistics import AVERAGE_COVERAGE
 from paths import (
     CURRENT_STUDY_PATH,
     CURRENT_TRIAL_PATH,
+    MODEL_FILE_NAME,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
     REPORT_PATH,
@@ -871,3 +874,308 @@ class TestValidateClosures:
         }
         # The last stage (SVM) leaves expandable segments disabled.
         assert os.environ["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:False"
+
+
+class FakeTrial:
+    """An ``optuna.Trial`` stand-in with a scripted search space."""
+
+    FLOAT_VALUES = {"lr": 1e-4}
+    INT_VALUES = {
+        "batch_size": 16,
+        "num_of_state_features": 8,
+        "hidden_channels": 64,
+        "num_hops_1": 2,
+        "num_hops_2": 3,
+        "num_pc_layers": 1,
+    }
+
+    def __init__(self, number: int = 7) -> None:
+        self.number = number
+        self.suggest_calls: list[tuple] = []
+
+    def suggest_float(self, name: str, low: float, high: float) -> float:
+        self.suggest_calls.append(("float", name, low, high))
+        return self.FLOAT_VALUES[name]
+
+    def suggest_int(self, name: str, low: int, high: int) -> int:
+        self.suggest_calls.append(("int", name, low, high))
+        return self.INT_VALUES[name]
+
+
+class RecordingModel(nn.Module):
+    """A real ``nn.Module`` (one ``Linear``) with spied ``train``/``eval``/``to``."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear = nn.Linear(4, 4)
+        self.mode_calls: list[str] = []
+        self.to_calls: list[tuple] = []
+
+    def train(self, mode: bool = True) -> "RecordingModel":
+        # ``nn.Module.eval`` is ``train(False)`` in torch 2.7, so one spy
+        # covers both mode switches.
+        self.mode_calls.append("train" if mode else "eval")
+        return super().train(mode)
+
+    def to(self, *args: Any, **kwargs: Any) -> "RecordingModel":
+        self.to_calls.append((args, kwargs))
+        return super().to(*args, **kwargs)
+
+
+def make_fake_early_stopping(continue_results: list[bool]):
+    """An ``EarlyStopping`` stand-in with a scripted ``is_continue``."""
+    inits: list[dict] = []
+    is_continue_calls: list = []
+
+    class FakeEarlyStopping:
+        def __init__(self, **kwargs: Any) -> None:
+            inits.append(kwargs)
+
+        def is_continue(self, state_value: Any) -> bool:
+            is_continue_calls.append(state_value)
+            return continue_results.pop(0)
+
+    return FakeEarlyStopping, inits, is_continue_calls
+
+
+class TestObjective:
+    """The per-trial ``objective`` training loop."""
+
+    EXPECTED_SEARCH_SPACE = [
+        ("float", "lr", 1e-7, 1e-3),
+        ("int", "batch_size", 8, 32),
+        ("int", "num_of_state_features", 8, 64),
+        ("int", "hidden_channels", 64, 128),
+        ("int", "num_hops_1", 2, 10),
+        ("int", "num_hops_2", 2, 10),
+        ("int", "num_pc_layers", 1, 5),
+    ]
+
+    def _run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        *,
+        epochs: int = 2,
+        dynamic_dataset: bool = False,
+        continue_results: list[bool] | None = None,
+        validate_results: list[tuple] | None = None,
+        seed: int = 1,
+        direction: OptimizationDirection = OptimizationDirection.MAXIMIZE,
+        trial_number: int = 7,
+    ):
+        trial = FakeTrial(number=trial_number)
+        dataset = FakeTrainingDataset()
+        model = RecordingModel()
+        model_init_calls: list[dict] = []
+
+        def model_init(**kwargs: Any) -> RecordingModel:
+            model_init_calls.append(kwargs)
+            return model
+
+        criterion_init_calls: list[str] = []
+
+        def criterion_init() -> str:
+            criterion_init_calls.append("criterion")
+            return "criterion-sentinel"
+
+        if continue_results is None:
+            continue_results = [True] * epochs
+        if validate_results is None:
+            validate_results = [(10.0 + i, {"metric": 10.0 + i}) for i in range(epochs)]
+        validate_calls: list[tuple] = []
+
+        def validate(model_, dataset_, trial_directory, model_kwargs):
+            validate_calls.append((model_, dataset_, trial_directory, model_kwargs))
+            return validate_results.pop(0)
+
+        seed_calls: list[int] = []
+        monkeypatch.setattr(
+            run_training_module, "seed_everything", lambda s: seed_calls.append(s)
+        )
+        early_stopping_cls, es_inits, es_is_continue_calls = make_fake_early_stopping(
+            continue_results
+        )
+        monkeypatch.setattr(run_training_module, "EarlyStopping", early_stopping_cls)
+        train_calls: list[dict] = []
+        monkeypatch.setattr(
+            run_training_module, "train", lambda **kwargs: train_calls.append(kwargs)
+        )
+        dataloader_calls: list[tuple] = []
+
+        def dataloader(dataset_, batch_size, **kwargs):
+            dataloader_calls.append((dataset_, batch_size, kwargs))
+            return "dataloader-sentinel"
+
+        monkeypatch.setattr(run_training_module, "DataLoader", dataloader)
+        monkeypatch.setattr(
+            run_training_module, "trial_dir", lambda n: tmp_path / "trials" / str(n)
+        )
+        mlflow = FakeMlflow()
+        monkeypatch.setattr(run_training_module, "mlflow", mlflow)
+
+        result = run_training_module.objective(
+            trial,
+            dataset=dataset,
+            dynamic_dataset=dynamic_dataset,
+            model_init=model_init,
+            criterion_init=criterion_init,
+            epochs=epochs,
+            validate=validate,
+            direction=direction,
+            seed=seed,
+        )
+
+        return SimpleNamespace(
+            result=result,
+            trial=trial,
+            dataset=dataset,
+            model=model,
+            model_init_calls=model_init_calls,
+            criterion_init_calls=criterion_init_calls,
+            seed_calls=seed_calls,
+            es_inits=es_inits,
+            es_is_continue_calls=es_is_continue_calls,
+            train_calls=train_calls,
+            dataloader_calls=dataloader_calls,
+            validate_calls=validate_calls,
+            mlflow=mlflow,
+        )
+
+    def test_full_loop(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rec = self._run(monkeypatch, tmp_path, epochs=2, dynamic_dataset=True)
+        trial_dir = tmp_path / "trials" / "7"
+        model_path = trial_dir / MODEL_FILE_NAME
+        kwargs_path = trial_dir / "model_kwargs.yaml"
+
+        # Per-trial seed: derived from the study seed and the trial number.
+        assert rec.seed_calls == [derive_trial_seed(1, 7)]
+
+        # The exact optuna search space.
+        assert rec.trial.suggest_calls == self.EXPECTED_SEARCH_SPACE
+
+        # Early stopping is constructed from the TrialSettings constants.
+        assert rec.es_inits == [
+            {
+                "state_len": 5,
+                "tolerance": 0.0001,
+                "direction": OptimizationDirection.MAXIMIZE,
+            }
+        ]
+
+        # model_init gets exactly the StateModelEncoder.__init__ kwargs,
+        # drawn from the trial's suggestions.
+        expected_kwargs = {
+            "hidden_channels": 64,
+            "num_of_state_features": 8,
+            "num_hops_1": 2,
+            "num_hops_2": 3,
+            "normalization": True,
+            "num_pc_layers": 1,
+        }
+        assert rec.model_init_calls == [expected_kwargs]
+        # The model is moved to the training device (cpu under the fixture).
+        assert rec.model.to_calls == [((torch.device("cpu"),), {})]
+
+        # Trial artifact layout.
+        assert trial_dir.is_dir()
+        assert yaml.safe_load(kwargs_path.read_text()) == expected_kwargs
+        assert rec.mlflow.called("start_run") == [((), {"run_name": "7"})]
+        assert rec.mlflow.called("log_params") == [
+            (
+                (
+                    {
+                        "lr": 1e-4,
+                        "batch_size": 16,
+                        "num_of_state_features": 8,
+                        "hidden_channels": 64,
+                        "num_hops_1": 2,
+                        "num_hops_2": 3,
+                        "num_pc_layers": 1,
+                        "normalization": True,
+                        "early_stopping_state_len": 5,
+                        "tolerance": 0.0001,
+                    },
+                ),
+                {},
+            )
+        ]
+        assert rec.mlflow.called("log_artifact") == [
+            ((kwargs_path,), {}),
+            ((model_path, "0"), {}),
+            ((model_path, "1"), {}),
+        ]
+
+        # Per-epoch sequence.
+        assert rec.dataset.switch_to_calls == [
+            TrainingDatasetMode.TRAINING,
+            TrainingDatasetMode.VALIDATION,
+            TrainingDatasetMode.TRAINING,
+            TrainingDatasetMode.VALIDATION,
+        ]
+        assert rec.dataloader_calls == [
+            (rec.dataset, 16, {"shuffle": False}),
+            (rec.dataset, 16, {"shuffle": False}),
+        ]
+        assert rec.model.mode_calls == ["train", "eval", "train", "eval"]
+        assert len(rec.train_calls) == 2
+        for call in rec.train_calls:
+            assert call["dataloader"] == "dataloader-sentinel"
+            assert call["model"] is rec.model
+            assert isinstance(call["optimizer"], torch.optim.Adam)
+            assert call["optimizer"].defaults["lr"] == 1e-4
+            assert call["criterion"] == "criterion-sentinel"
+        # The checkpoint is really saved each epoch.
+        assert model_path.exists()
+        loaded = torch.load(model_path, weights_only=True)
+        saved = rec.model.state_dict()
+        assert set(loaded) == set(saved)
+        for name in saved:
+            assert torch.equal(loaded[name], saved[name])
+        assert rec.validate_calls == [
+            (rec.model, rec.dataset, trial_dir, expected_kwargs),
+            (rec.model, rec.dataset, trial_dir, expected_kwargs),
+        ]
+        assert rec.mlflow.called("log_metrics") == [
+            (({"metric": 10.0},), {"step": 0}),
+            (({"metric": 11.0},), {"step": 1}),
+        ]
+        # dynamic_dataset=True refreshes the metadata after each validation.
+        assert rec.dataset.update_meta_data_calls == 2
+        assert rec.es_is_continue_calls == [10.0, 11.0]
+        # The last validation result is returned.
+        assert rec.result == 11.0
+
+    def test_early_stop_breaks_and_prints(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        capfd: pytest.CaptureFixture,
+    ) -> None:
+        rec = self._run(
+            monkeypatch,
+            tmp_path,
+            epochs=3,
+            continue_results=[True, False, True],
+            validate_results=[
+                (1.0, {"m": 1.0}),
+                (2.0, {"m": 2.0}),
+                (3.0, {"m": 3.0}),
+            ],
+        )
+
+        # The loop breaks right after the epoch that stopped continuing:
+        # epochs 0 and 1 both trained, epoch 2 never started.
+        assert len(rec.train_calls) == 2
+        assert rec.es_is_continue_calls == [1.0, 2.0]
+        assert rec.result == 2.0
+        captured = capfd.readouterr()
+        assert "Training was stopped on 1 epoch." in captured.out
+
+    def test_static_dataset_never_updates_meta_data(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rec = self._run(monkeypatch, tmp_path, epochs=2, dynamic_dataset=False)
+
+        assert rec.dataset.update_meta_data_calls == 0
+        assert rec.result == 11.0
