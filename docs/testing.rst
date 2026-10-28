@@ -357,9 +357,9 @@ as current behaviour), the tensor-input builders (the exact 11 ONNX wire names
 as literals — the V# contract and the drift net for #597's single-source input
 names — each mapped to its ``hetero_factory`` tensor, the modifier
 application, the ``.numpy()`` conversion, and the ``input_names`` order),
-``load_gamestate`` (a reference gamestate JSON into the exact ``GameState``),
-and ``resolve_import_model`` (the valid-FQN resolution, the
-``ModuleNotFoundError`` and ``AttributeError`` branches). The integration
+and ``load_gamestate`` (a reference gamestate JSON into the exact
+``GameState``); model selection goes through the registry (pinned in
+``test_registry.py``). The integration
 tests (``AIAgent/tests/integration/test_onnx.py``) are config-driven from
 ``integration/resources/model_configurations/`` and read the reference
 gamestates through ``AIAgent/paths.py``: ``TestONNXConversion`` runs the full
@@ -369,11 +369,12 @@ gamestates through ``AIAgent/paths.py``: ``TestONNXConversion`` runs the full
 (#617 regression guard); ``TestForwardOnCUDA`` pins the CPU/CUDA forward
 equivalence with and without v-v edges (#617 regression guard, skipped
 without CUDA); ``TestModelGamePreparatorKwargs`` pins the preparator's
-explicit-kwarg forwarding to ``onyx.entrypoint``. The ``TestMain`` CLI seam
-tests drive ``main()`` with a patched ``sys.argv`` and a recording
-``onyx.entrypoint`` fake (no export run): the exact dispatch kwargs (the
-loaded sample ``GameState``, the verification ``GameState``s in argv order,
-the FQN-resolved model class, the ``yaml.safe_load``ed model kwargs, the
+explicit-kwarg forwarding to ``onyx.entrypoint`` (including the
+registry-resolved model class). The ``TestMain`` CLI seam tests drive
+``main()`` with a patched ``sys.argv`` and a recording ``onyx.entrypoint``
+fake (no export run): the exact dispatch kwargs (the loaded sample
+``GameState``, the verification ``GameState``s in argv order, the
+registry-resolved model class, the ``yaml.safe_load``ed model kwargs, the
 forwarded paths), the empty ``--verify-on`` default, and the argparse
 ``SystemExit`` for each missing required flag. The ``TestONNXVerification``
 tests pin the verification failure path with real exports and a
