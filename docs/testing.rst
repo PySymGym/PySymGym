@@ -278,12 +278,15 @@ seam, including the ``map_location`` fix for CUDA-saved checkpoints on
 CPU-only machines (#667, regression test requires CUDA and skips otherwise).
 The companion entrypoint seam tests
 (``AIAgent/tests/unit/test_launch_servers.py``) pin ``launch_servers.py``
-the same way: ``wait_for_port`` with a scripted socket, the four broker
-handlers with fake requests and queues (the dequeue success / empty /
-failure-requeue paths, the enqueue kill-and-rewrap versus keep-pid paths,
-the results append / recv), ``run_server_instance`` with a fake ``Popen``
-(the DEVNULL stdout, the pid-keyed handle registration in ``PROCS``), a
-pinned port and a fresh port lock, the ``run_servers`` placeholders,
+the same way: ``wait_for_port`` with a scripted socket (the probe socket
+is closed on success and timeout alike), the four broker handlers with
+fake requests and queues (the dequeue success / empty / failure-requeue
+paths, the enqueue kill-and-rewrap versus keep-pid paths, the results
+append / recv), ``run_server_instance`` with a fake ``Popen`` (the
+DEVNULL stdout, the pid-keyed handle registration in ``PROCS``, and the
+fail-fast group kill + reap with ``InstanceIssuanceError`` when the port
+never opens), a pinned port and a fresh port lock, the ``run_servers``
+placeholders,
 ``kill_server`` / ``kill_process`` with fake ``os.killpg`` /
 ``os.getpgid`` and the ``fake_proc`` stand-in (the untracked-pid warning,
 the process-group kill with the ``proc.wait()`` reap, the vanished-group
