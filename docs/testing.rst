@@ -306,7 +306,12 @@ coverage)`` tuple from a runner transcript, and the ``AttributeError`` with its
 versus top-level method expansion), and the file-reading seams ``load_config``
 (a ``dll,method`` CSV into ``LaunchInfo`` rows, the ``Path``-typed ``dll``
 field) and ``load_prebuilt_config`` (a JSON config structured into
-``PrebuiltConfig`` and expanded).
+``PrebuiltConfig`` and expanded). The ``subprocess_calls`` tests
+(``test_subprocess_calls.py``) pin the exact dotnet argv (the base flags, the
+``--model`` suffix for the AI strategy, the ``cwd``) and the
+exception-propagation branches (``CalledProcessError`` and
+``FunctionTimedOut`` re-raised unchanged); the timeout child-cleanup defect is
+#590-tracked and not asserted.
 
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
