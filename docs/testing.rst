@@ -281,8 +281,9 @@ The companion entrypoint seam tests
 the same way: ``wait_for_port`` with a scripted socket (the probe socket
 is closed on success and timeout alike), the four broker handlers with
 fake requests and queues (the dequeue success / empty / failure-requeue
-paths, the enqueue kill-and-rewrap versus keep-pid paths, the results
-append / recv), ``run_server_instance`` with a fake ``Popen`` (the
+paths, the live-instance ``InstanceIssuanceError`` with the re-queue, the
+enqueue kill-and-rewrap versus keep-pid paths, the results append /
+recv), ``run_server_instance`` with a fake ``Popen`` (the
 DEVNULL stdout, the pid-keyed handle registration in ``PROCS``, and the
 fail-fast group kill + reap with ``InstanceIssuanceError`` when the port
 never opens), a pinned port and a fresh port lock, the ``run_servers``
@@ -454,7 +455,10 @@ Orchestration seams are tested with fakes, never real I/O:
   instead of returned), so ``Connector``'s start/step/reward loop can be
   asserted without a server. ``game_server_socket_manager`` must call
   ``return_instance`` on **both** the success and failure paths — assert it
-  explicitly rather than trusting the ``finally``.
+  explicitly rather than trusting the ``finally``. ``process_running`` is
+  pinned for a live pid (yields), a dead pid (``ProcessStoppedError``) and
+  a ``None`` pid (the restart-disabled placeholder: the check is skipped
+  instead of letting ``psutil.pid_exists(None)`` raise ``TypeError``).
 - **Connection layer.** The message deserialization helper in
   ``unsafe_json`` is pinned as a pure unit test: ``obj_from_dict`` builds
   the nested attribute objects (``BareObject``s) that the unchecked

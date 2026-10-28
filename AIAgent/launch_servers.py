@@ -56,7 +56,18 @@ async def wait_for_port(port, timeout=10):
 async def dequeue_instance(request):
     try:
         server_info = SERVER_INSTANCES.get(block=False)
-        assert server_info.pid is Undefined
+        # The queue must hold placeholders only: a live instance is
+        # re-queued only when the restart feature is disabled, and
+        # re-issuing it would hand the client a server it does not own.
+        # A typed error (not an assert): it survives python -O and the
+        # except-Exception path below re-queues the instance and returns
+        # 500 instead of a silent ws_url="None".
+        if server_info.pid is not Undefined:
+            raise InstanceIssuanceError(
+                f"cannot issue {server_info}: a live instance was requeued, "
+                "which only happens with ON_GAME_SERVER_RESTART disabled; "
+                "the queue must hold placeholders only"
+            )
         server_info = await run_server_instance(
             SVMInfo(**request.query),
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,

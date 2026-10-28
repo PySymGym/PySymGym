@@ -44,6 +44,25 @@ def test_process_running_raises_for_dead_pid(monkeypatch: pytest.MonkeyPatch) ->
             pass
 
 
+def test_process_running_skips_the_check_for_none_pid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A None pid means no process to monitor (the restart-disabled
+    # placeholder): the check is skipped instead of letting
+    # psutil.pid_exists(None) raise TypeError.
+    pid_exists_calls: list = []
+    monkeypatch.setattr(
+        socket_manager.psutil,
+        "pid_exists",
+        lambda pid: pid_exists_calls.append(pid) or True,
+    )
+
+    with socket_manager.process_running(None):
+        pass
+
+    assert pid_exists_calls == []
+
+
 def test_wait_for_connection_returns_the_connected_socket(
     monkeypatch: pytest.MonkeyPatch, fake_websocket
 ) -> None:

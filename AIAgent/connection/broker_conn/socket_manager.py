@@ -13,7 +13,10 @@ from connection.errors_connection import ProcessStoppedError
 
 @contextmanager
 def process_running(pid):
-    if not psutil.pid_exists(pid):
+    # A None pid means no process to monitor (the restart-disabled
+    # placeholder): skip the check instead of letting
+    # psutil.pid_exists(None) raise TypeError.
+    if pid is not None and not psutil.pid_exists(pid):
         raise ProcessStoppedError
     yield
 
