@@ -360,6 +360,18 @@ from the rewritten file (including the empty-dataset case); the ``main()``
 seam tests pin the CLI wiring and the missing-dataset behaviour (the error
 printed to stdout, then ``sys.exit(1)``).
 
+The util tests (``tools/util/tests/unit/test_parse_pretty.py``) pin the
+``parse_pretty`` results-table parser: ``parse_stats`` (the exact
+``(steps, tests, errors, coverage)`` tuple from a stats cell, the
+``AttributeError`` on a malformed cell), the single-model transpose (one
+row per method, the ``_Method_0`` map-name suffix stripped), the
+``Epoch#`` and ``+|-`` separator line skips, and ``main()`` (the parsed
+CSV written to ``-o``, the ``./parsed.csv`` default in the current working
+directory). The multi-model-table crash (a table with more than one model
+row raises ``ValueError`` at the transpose) is #592-tracked and pinned as a
+strict ``xfail`` asserting the crash-level post-fix property; the exact
+post-fix layout is owned by #592.
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer
