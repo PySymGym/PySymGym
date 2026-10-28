@@ -100,4 +100,5 @@ def test_game_over_message_exposes_body(monkeypatch: pytest.MonkeyPatch) -> None
     assert decoded.MessageType is ServerMessageType.GAMEOVER
     assert decoded.MessageBody.ActualCoverage == 12
     assert decoded.MessageBody.TestsCount == 3
+    assert decoded.MessageBody.StepsCount == 4
     assert decoded.MessageBody.ErrorsCount == 1

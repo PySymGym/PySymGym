@@ -91,16 +91,6 @@ def test_raise_if_gameover_already_over_raises_gameover() -> None:
         Connector._raise_if_gameover(fake_self, "{}")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "#570: GameOverServerMessageBody lacks StepsCount, which the V# "
-        "server sends and _raise_if_gameover reads — with strict validation "
-        "(DISABLE_MESSAGE_CHECKS=False) the typed body silently drops "
-        "StepsCount and the access raises AttributeError. #570's fix: add "
-        "StepsCount: int to GameOverServerMessageBody."
-    ),
-)
 def test_raise_if_gameover_strict_validation_reads_steps_count(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
