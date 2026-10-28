@@ -7,18 +7,22 @@ against a scripted connector; graph inputs come from the shared
 """
 
 from contextlib import contextmanager
+import logging
 
 import pytest
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
 from common.game import GameMap, GameState
 from config import FeatureConfig
+from connection.errors_connection import ProcessStoppedError
 from connection.game_server_conn.connector import Connector
+from func_timeout import FunctionTimedOut
 from ml.protocols import Predictor
 from ml.validation.coverage.game_managers.each_step import (
     each_step_game_manager as esgm,
 )
 from ml.validation.coverage.game_managers.each_step.each_step_game_manager import (
+    EachStepGamePreparator,
     EachStepGameManager,
 )
 
@@ -59,6 +63,7 @@ class FakeConnector:
         self._fail_with = fail_with
         self._received = 0
         self.sent_steps: list[int] = []
+        self.sent_usefulness: list[float] = []
 
     def recv_state_or_throw_gameover(self):
         if self._fail_with is not None:
@@ -70,6 +75,7 @@ class FakeConnector:
 
     def send_step(self, next_state_id: int, predicted_usefullness: float) -> None:
         self.sent_steps.append(next_state_id)
+        self.sent_usefulness.append(predicted_usefullness)
 
     def recv_reward_or_throw_gameover(self):
         return object()
@@ -153,6 +159,8 @@ def test_play_game_map_with_svm_returns_result_and_steps(
     )
     assert duration >= 0
     assert fake.sent_steps == [0, 0]
+    # The predicted usefulness is a hardcoded constant (TODO in the source).
+    assert fake.sent_usefulness == [42.0, 42.0]
     steps = manager.get_game_steps(game_map2svm.GameMap)
     assert steps is not None
     assert len(steps) == 2
@@ -239,3 +247,149 @@ def test_play_game_map_saves_model_on_failure(
 
     assert isinstance(result.game_result, GameFailed)
     assert save_feature.saved == [(predictor.model(), "fake-predictor")]
+
+
+def test_play_game_map_timeout_saves_the_model(
+    fake_namespace,
+    game_map2svm_factory,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    game_map2svm = game_map2svm_factory(steps_to_play=1)
+
+    @contextmanager
+    def fake_socket_manager(svm_info):
+        yield object()
+
+    monkeypatch.setattr(esgm, "game_server_socket_manager", fake_socket_manager)
+    save_feature = FakeSaveFeature()
+    monkeypatch.setattr(FeatureConfig, "SAVE_IF_FAIL_OR_TIMEOUT", save_feature)
+    predictor = FakePredictor()
+    manager = _manager(fake_namespace, predictor)
+
+    # The instance attribute shadows the func_set_timeout-decorated class
+    # method, so the timeout exception reaches the branch directly (a real
+    # wall-clock timeout is what raises it in production).
+    def timeout(g2s, ws):
+        raise FunctionTimedOut(timedOutAfter=1800)
+
+    monkeypatch.setattr(manager, "_play_game_map_with_svm", timeout)
+
+    with caplog.at_level(logging.WARNING):
+        result = manager._play_game_map(game_map2svm)
+
+    assert isinstance(result.game_result, GameFailed)
+    # Current behaviour: the reason is the exception class, not an instance.
+    assert result.game_result.reason is FunctionTimedOut
+    assert save_feature.saved == [(predictor.model(), "fake-predictor")]
+    assert "timeouted on map Method_0 with 1800s" in caplog.text
+
+
+def test_play_game_map_inner_timeout_is_swallowed_by_the_timeout_wrapper(
+    fake_namespace,
+    game_map2svm_factory,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # func_timeout's worker swallows a FunctionTimedOut raised from inside
+    # the wrapped function (it only raises one on a real wall-clock
+    # timeout), so _play_game_map_with_svm returns None, the unpacking
+    # raises TypeError, and the generic exception branch handles it.
+    game_map2svm = game_map2svm_factory(steps_to_play=1)
+    fake = FakeConnector(
+        game_map2svm.GameMap,
+        states=[],
+        gameover_after=0,
+        gameover=_gameover(0, 0, 0, 0),
+        fail_with=FunctionTimedOut(timedOutAfter=1800),
+    )
+    _patch_connector(monkeypatch, fake)
+
+    @contextmanager
+    def fake_socket_manager(svm_info):
+        yield object()
+
+    monkeypatch.setattr(esgm, "game_server_socket_manager", fake_socket_manager)
+    save_feature = FakeSaveFeature()
+    monkeypatch.setattr(FeatureConfig, "SAVE_IF_FAIL_OR_TIMEOUT", save_feature)
+    predictor = FakePredictor()
+    manager = _manager(fake_namespace, predictor)
+
+    with caplog.at_level(logging.WARNING):
+        result = manager._play_game_map(game_map2svm)
+
+    assert isinstance(result.game_result, GameFailed)
+    assert result.game_result.reason is TypeError
+    assert save_feature.saved == [(predictor.model(), "fake-predictor")]
+    assert "failed on map Method_0:" in caplog.text
+    assert "TypeError" in caplog.text
+
+
+def test_play_game_map_game_interrupted_does_not_save(
+    fake_namespace,
+    game_map2svm_factory,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    game_map2svm = game_map2svm_factory(steps_to_play=1)
+    fake = FakeConnector(
+        game_map2svm.GameMap,
+        states=[],
+        gameover_after=0,
+        gameover=_gameover(0, 0, 0, 0),
+        fail_with=ProcessStoppedError(),
+    )
+    _patch_connector(monkeypatch, fake)
+
+    @contextmanager
+    def fake_socket_manager(svm_info):
+        yield object()
+
+    monkeypatch.setattr(esgm, "game_server_socket_manager", fake_socket_manager)
+    save_feature = FakeSaveFeature()
+    monkeypatch.setattr(FeatureConfig, "SAVE_IF_FAIL_OR_TIMEOUT", save_feature)
+    manager = _manager(fake_namespace, FakePredictor())
+
+    with caplog.at_level(logging.WARNING):
+        result = manager._play_game_map(game_map2svm)
+
+    assert isinstance(result.game_result, GameFailed)
+    assert result.game_result.reason is ProcessStoppedError
+    # Unlike the timeout/failure branches, an interrupted game does not save.
+    assert save_feature.saved == []
+    assert (
+        "<fake-predictor> failed on map Method_0 with ProcessStoppedError: "
+        "SVM's process unexpectedly stopped" in caplog.text
+    )
+
+
+def test_delete_game_artifacts_drops_the_stored_steps(
+    fake_namespace, game_map_factory
+) -> None:
+    manager = _manager(fake_namespace, FakePredictor())
+    game_map = game_map_factory("M")
+    manager._game_states[str(game_map)] = ["step"]
+
+    manager.delete_game_artifacts(game_map)
+
+    assert manager._game_states == {}
+    assert manager.get_game_steps(game_map) is None
+
+    # A second call (absent key) is a no-op.
+    manager.delete_game_artifacts(game_map)
+
+
+def test_notify_steps_requirement_is_a_noop(fake_namespace, game_map_factory) -> None:
+    manager = _manager(fake_namespace, FakePredictor())
+
+    assert manager.notify_steps_requirement(game_map_factory("M"), True) is None
+
+
+def test_preparator_prepare_marks_the_namespace(fake_namespace) -> None:
+    manager = _manager(fake_namespace, FakePredictor())
+    preparator = manager._create_preparator()
+    assert isinstance(preparator, EachStepGamePreparator)
+
+    preparator.prepare()
+
+    assert fake_namespace.is_prepared.value is True
