@@ -53,15 +53,15 @@ To convert a PyTorch model to ONNX, run ``onyx.py``:
     python3 onyx.py --sample-gamestate <game_state0.json> \
         --pytorch-model <path_to_model>.pth \
         --savepath <converted_model_save_path>.onnx \
-        --import-model-fqn <model.module.fqn.Model> \
+        --model-name <model_name> \
         --model-kwargs <yaml_with_model_args>.yml \
         [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
 
 - ``pytorch-model`` is the path to the PyTorch model weights.
 - Examples of the ``model-kwargs`` YAML file, verification game states, and a
   ``sample-gamestate`` (any can be used) are under ``resources/onnx/``.
-- ``import-model-fqn`` is the dotted path to the model class to convert, for
-  example ``ml.models.RGCNEdgeTypeTAG3VerticesDoubleHistory2Parametrized.model.StateModelEncoder``.
+- ``model-name`` is the registry name of the model to convert (see
+  ``AIAgent/ml/models/registry.py``), for example ``NorthernPenguin``.
 
 See :ref:`guide-symbolic-execution` for how to run execution with the
 converted model.
