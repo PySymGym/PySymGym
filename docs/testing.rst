@@ -183,10 +183,26 @@ The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 with recording fakes for ``TrainingDataset``, ``optuna``, ``mlflow``,
 ``joblib`` and ``objective``, and the ``objective`` partial it wires up is
 inspected to extract the ``model_init`` / ``validate`` / ``criterion_init``
-closures, which are then driven directly. The ``model_init`` checkpoint
-loading is pinned through that seam, including the ``map_location`` fix for
-CUDA-saved checkpoints on CPU-only machines (#667, regression test requires
-CUDA and skips otherwise).
+closures, which are then driven directly. The study branch pins the
+study-level seed, the dataset construction from the module path constants,
+the TPE sampler and study creation, and the per-trial callback (joblib dumps
+of the study and trial, re-entering the active run, logging both artifacts,
+tagging the best trial number); the trial-replay branch (``trial_uri`` set)
+pins the artifact download to ``REPORT_PATH``, the joblib load, and the
+replay of the loaded trial ``n_trials`` times without creating a fresh
+study. The ``validate`` closures are pinned per mode: the criterion mode
+switches the dataset to the configured split, drives ``validate_loss`` with
+a fresh ``BCEWithLogitsLoss(reduction="sum")``, and names the metric
+``BCEWithLogitsLoss__<DATASET MODE>``; the SVM mode writes the per-trial
+``svms_result_table.csv`` (sorted map-name header, written once), drives
+``ValidationCoverage`` and ``get_svms_statistics``, logs the table, and
+raises ``RuntimeError("Validation failed")`` on a failed map when
+``fail_immediately`` is set; the custom mode runs the sequence in order,
+merges the metrics, and returns the first stage's result. Each mode also
+pins its ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch. The
+``model_init`` checkpoint loading is pinned through that seam, including the
+``map_location`` fix for CUDA-saved checkpoints on CPU-only machines (#667,
+regression test requires CUDA and skips otherwise).
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
