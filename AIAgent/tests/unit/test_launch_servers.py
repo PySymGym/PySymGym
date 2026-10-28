@@ -2,8 +2,9 @@
 
 The broker is driven with fakes: a scripted socket for ``wait_for_port``,
 fake requests for the aiohttp handlers, a fake ``Popen`` for the server
-lifecycle, and fake ``os.kill``/``psutil`` for the kill paths. No real
-processes, ports, or event-loop-bound state are touched.
+lifecycle, and fake ``os.killpg``/``os.getpgid`` plus the ``fake_proc``
+stand-in for the kill paths. No real processes, ports, or event-loop-bound
+state are touched.
 """
 
 import asyncio
@@ -12,12 +13,12 @@ import logging
 import signal
 import socket
 import subprocess
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Empty, Queue
 from types import SimpleNamespace
 
-import psutil
 import pytest
 import yaml
 
@@ -203,9 +204,11 @@ class TestEnqueueInstance:
             launch_servers_module, "SERVER_INSTANCES", queue, raising=False
         )
         kill_calls: list[ServerInstanceInfo] = []
-        monkeypatch.setattr(
-            launch_servers_module, "kill_server", lambda info: kill_calls.append(info)
-        )
+
+        async def fake_kill_server(info):
+            kill_calls.append(info)
+
+        monkeypatch.setattr(launch_servers_module, "kill_server", fake_kill_server)
         original = ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
         )
@@ -314,6 +317,7 @@ class TestRunServerInstance:
             launch_servers_module, "next_free_port", fake_next_free_port
         )
         popen_calls: list[tuple] = []
+        popen_instances: list = []
 
         class FakePopen:
             # The nested start_server annotates subprocess.Popen[bytes]; the
@@ -323,6 +327,7 @@ class TestRunServerInstance:
 
             def __init__(self, args, **kwargs):
                 popen_calls.append((args, kwargs))
+                popen_instances.append(self)
                 self.pid = 4321
 
         monkeypatch.setattr(launch_servers_module.subprocess, "Popen", FakePopen)
@@ -331,7 +336,7 @@ class TestRunServerInstance:
             return True
 
         monkeypatch.setattr(launch_servers_module, "wait_for_port", fake_wait_for_port)
-        procs: list[int] = []
+        procs: dict = {}
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
 
@@ -345,11 +350,12 @@ class TestRunServerInstance:
         (args, kwargs) = popen_calls[0]
         assert args == ["run", "--port", "35012"]
         assert kwargs == {
-            "stdout": subprocess.PIPE,
+            "stdout": subprocess.DEVNULL,
             "start_new_session": True,
             "cwd": Path(tmp_path).absolute(),
         }
-        assert procs == [4321]
+        # The Popen handle is tracked by pid, not the pid alone.
+        assert procs == {4321: popen_instances[0]}
         assert result == ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 4321
         )
@@ -368,11 +374,9 @@ class TestKillServer:
     def _setup(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        procs: list,
+        procs: dict,
         *,
-        status=None,
-        kill_error=None,
-        process_error=None,
+        killpg_error=None,
         retries=2,
         wait_time=0.01,
     ):
@@ -387,110 +391,134 @@ class TestKillServer:
                 wait_for_reset_time=wait_time,
             ),
         )
-        kill_calls: list[tuple] = []
+        killpg_calls: list[tuple] = []
 
-        def fake_kill(pid, sig):
-            kill_calls.append((pid, sig))
-            if kill_error is not None:
-                raise kill_error
+        def fake_killpg(pgid, sig):
+            killpg_calls.append((pgid, sig))
+            if killpg_error is not None:
+                raise killpg_error
 
-        monkeypatch.setattr(launch_servers_module.os, "kill", fake_kill)
-        process_calls: list[int] = []
+        monkeypatch.setattr(launch_servers_module.os, "killpg", fake_killpg)
+        getpgid_calls: list[int] = []
 
-        class FakeProc:
-            def __init__(self, pid):
-                self.pid = pid
+        def fake_getpgid(pid):
+            getpgid_calls.append(pid)
+            # start_new_session=True: the child's pid is its group id.
+            return pid
 
-            def status(self):
-                return status
-
-        def fake_process(pid):
-            process_calls.append(pid)
-            if process_error is not None:
-                raise process_error
-            return FakeProc(pid)
-
-        monkeypatch.setattr(launch_servers_module.psutil, "Process", fake_process)
-        return kill_calls, process_calls
+        monkeypatch.setattr(launch_servers_module.os, "getpgid", fake_getpgid)
+        return killpg_calls, getpgid_calls
 
     def _info(self) -> ServerInstanceInfo:
         return ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
         )
 
-    def test_os_kill_missing_process(
+    def test_untracked_pid_warns_and_returns(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
-        procs = [1234]
-        kill_calls, process_calls = self._setup(
-            monkeypatch, procs, kill_error=ProcessLookupError()
-        )
+        killpg_calls, getpgid_calls = self._setup(monkeypatch, {})
 
         with caplog.at_level(logging.WARNING):
-            launch_servers_module.kill_server(self._info())
+            asyncio.run(launch_servers_module.kill_server(self._info()))
 
-        assert kill_calls == [(1234, signal.SIGKILL)]
-        assert process_calls == []
-        assert procs == []
+        assert killpg_calls == []
+        assert getpgid_calls == []
         assert "the process doesn't exist" in caplog.text
 
-    def test_psutil_missing_process(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    def test_kills_the_group_and_reaps(
+        self, monkeypatch: pytest.MonkeyPatch, fake_proc
     ) -> None:
-        procs = [1234]
-        kill_calls, _ = self._setup(
-            monkeypatch, procs, process_error=psutil.NoSuchProcess(1234)
-        )
+        proc = fake_proc()
+        killpg_calls, getpgid_calls = self._setup(monkeypatch, {1234: proc})
 
-        with caplog.at_level(logging.WARNING):
-            launch_servers_module.kill_server(self._info())
+        asyncio.run(launch_servers_module.kill_server(self._info()))
 
-        assert kill_calls == [(1234, signal.SIGKILL)]
-        assert procs == []
-        assert "the process doesn't exist" in caplog.text
+        assert getpgid_calls == [1234]
+        assert killpg_calls == [(1234, signal.SIGKILL)]
+        assert proc.waited is True
+        assert launch_servers_module.PROCS == {}
 
-    def test_already_dead_returns(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        procs = [1234]
-        kill_calls, process_calls = self._setup(
-            monkeypatch, procs, status=psutil.STATUS_ZOMBIE
-        )
+    def test_vanished_group_still_reaps(
+        self, monkeypatch: pytest.MonkeyPatch, fake_proc
+    ) -> None:
+        proc = fake_proc()
+        self._setup(monkeypatch, {1234: proc}, killpg_error=ProcessLookupError())
 
-        launch_servers_module.kill_server(self._info())
+        asyncio.run(launch_servers_module.kill_server(self._info()))
 
-        assert kill_calls == [(1234, signal.SIGKILL)]
-        assert process_calls == [1234]
-        assert procs == []
+        assert proc.waited is True
+        assert launch_servers_module.PROCS == {}
 
     def test_never_dies_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        procs = [1234]
-        self._setup(monkeypatch, procs, status=psutil.STATUS_RUNNING)
+        class HangingProcess:
+            pid = 1234
+
+            def wait(self) -> int:
+                time.sleep(0.2)
+                return 0
+
+        proc = HangingProcess()
+        self._setup(monkeypatch, {1234: proc})
 
         with pytest.raises(RuntimeError, match="could not be killed"):
-            launch_servers_module.kill_server(self._info())
+            asyncio.run(launch_servers_module.kill_server(self._info()))
+
+        # The process survived the kill, so it stays tracked: the shutdown
+        # loop (or a later post_ws) still reaches it.
+        assert launch_servers_module.PROCS == {1234: proc}
 
 
 class TestKillProcess:
-    def test_kills_and_removes(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        procs = [1234, 5678]
+    def test_kills_the_group_and_reaps(
+        self, monkeypatch: pytest.MonkeyPatch, fake_proc
+    ) -> None:
+        proc = fake_proc()
+        other = fake_proc(pid=5678)
         # The global is only created by main(); set it fresh for the test.
-        monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
-        kill_calls: list[tuple] = []
+        monkeypatch.setattr(
+            launch_servers_module, "PROCS", {1234: proc, 5678: other}, raising=False
+        )
+        killpg_calls: list[tuple] = []
         monkeypatch.setattr(
             launch_servers_module.os,
-            "kill",
-            lambda pid, sig: kill_calls.append((pid, sig)),
+            "killpg",
+            lambda pgid, sig: killpg_calls.append((pgid, sig)),
         )
+        monkeypatch.setattr(launch_servers_module.os, "getpgid", lambda pid: pid)
 
         launch_servers_module.kill_process(1234)
 
-        assert kill_calls == [(1234, signal.SIGKILL)]
-        assert procs == [5678]
+        assert killpg_calls == [(1234, signal.SIGKILL)]
+        assert proc.waited is True
+        assert other.waited is False
+        assert launch_servers_module.PROCS == {5678: other}
+
+    def test_untracked_pid_warns_and_returns(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # The global is only created by main(); set it fresh for the test.
+        monkeypatch.setattr(launch_servers_module, "PROCS", {}, raising=False)
+        killpg_calls: list[tuple] = []
+        monkeypatch.setattr(
+            launch_servers_module.os,
+            "killpg",
+            lambda pgid, sig: killpg_calls.append((pgid, sig)),
+        )
+
+        with caplog.at_level(logging.WARNING):
+            launch_servers_module.kill_process(1234)
+
+        assert killpg_calls == []
+        assert "the process doesn't exist" in caplog.text
 
 
 class TestServerManager:
-    def test_enter_queues_exit_kills(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_enter_queues_exit_kills(
+        self, monkeypatch: pytest.MonkeyPatch, fake_proc
+    ) -> None:
         queue = Queue()
-        procs = [111, 222]
+        procs = {111: fake_proc(pid=111), 222: fake_proc(pid=222)}
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
         killed: list[int] = []
@@ -505,7 +533,33 @@ class TestServerManager:
             ]
 
         assert killed == [111, 222]
-        assert launch_servers_module.PROCS == []
+        assert launch_servers_module.PROCS == {}
+
+    def test_shutdown_survives_per_pid_errors(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        queue = Queue()
+        procs = {111: object(), 222: object()}
+        # The global is only created by main(); set it fresh for the test.
+        monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
+        killed: list[int] = []
+
+        def flaky_kill_process(pid):
+            if pid == 111:
+                raise ProcessLookupError()
+            killed.append(pid)
+
+        monkeypatch.setattr(launch_servers_module, "kill_process", flaky_kill_process)
+
+        with caplog.at_level(logging.ERROR):
+            with launch_servers_module.server_manager(queue, 2):
+                pass
+
+        # The first pid's failure did not stop the loop: the second server
+        # was still killed, and PROCS was cleared.
+        assert killed == [222]
+        assert launch_servers_module.PROCS == {}
+        assert "Failed to kill server 111 during shutdown" in caplog.text
 
 
 def launch_servers_main_config() -> dict:
@@ -609,5 +663,5 @@ class TestMain:
 
         # The module globals are reset for the run.
         assert isinstance(launch_servers_module.SERVER_INSTANCES, Queue)
-        assert launch_servers_module.PROCS == []
+        assert launch_servers_module.PROCS == {}
         assert launch_servers_module.RESULTS == []

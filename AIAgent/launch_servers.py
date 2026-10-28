@@ -7,7 +7,7 @@ import signal
 import socket
 import subprocess
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from queue import Empty, Queue
 
@@ -69,7 +69,7 @@ async def enqueue_instance(request):
     logging.info(f"got {returned_instance_info} from client")
 
     if FeatureConfig.ON_GAME_SERVER_RESTART.enabled:
-        kill_server(returned_instance_info)
+        await kill_server(returned_instance_info)
         returned_instance_info = ServerInstanceInfo(
             returned_instance_info.svm_name,
             returned_instance_info.port,
@@ -120,12 +120,15 @@ async def run_server_instance(
     if not should_start_server:
         return ServerInstanceInfo(svm_name, 0, "None", pid=Undefined)
 
-    def start_server() -> tuple[subprocess.Popen[bytes], int, str]:
+    def start_server() -> tuple[subprocess.Popen[bytes], int]:
         port = next_free_port(min_port, max_port)
         launch_server = launcher(port)
         proc = subprocess.Popen(
             launch_server.split(),
-            stdout=subprocess.PIPE,
+            # The pipe was never read: a server writing more than the pipe
+            # buffer blocked its game until the timeout. DEVNULL discards
+            # the output (nothing consumed it) and cannot fill up.
+            stdout=subprocess.DEVNULL,
             start_new_session=True,
             cwd=Path(server_working_dir).absolute(),
         )
@@ -134,15 +137,15 @@ async def run_server_instance(
 
     async with avoid_same_free_port_lock:
         proc, port = start_server()
+        # Track the handle from birth: the pid alone cannot be reaped.
+        PROCS[proc.pid] = proc
         await wait_for_port(port)
 
-    server_pid = proc.pid
-    PROCS.append(server_pid)
     launch_server = launcher(port)
-    logging.info(f"running new instance on {port=} with {server_pid=}:" + launch_server)
+    logging.info(f"running new instance on {port=} with {proc.pid=}:" + launch_server)
 
     ws_url = get_socket_url(port)
-    return ServerInstanceInfo(svm_name, port, ws_url, server_pid)
+    return ServerInstanceInfo(svm_name, port, ws_url, proc.pid)
 
 
 async def run_servers(count: int) -> list[ServerInstanceInfo]:
@@ -157,40 +160,67 @@ async def run_servers(count: int) -> list[ServerInstanceInfo]:
     return servers_start_tasks
 
 
-def kill_server(server_instance: ServerInstanceInfo):
-    PROCS.remove(server_instance.pid)
-    try:
-        os.kill(server_instance.pid, signal.SIGKILL)
-        proc_info = psutil.Process(server_instance.pid)
-    except (ProcessLookupError, psutil.NoSuchProcess):
+def _tracked_handle(pid: int) -> subprocess.Popen[bytes] | None:
+    """Look up the tracked handle for ``pid``.
+
+    An untracked pid (already reaped, or never registered) is a no-op, not
+    an error: log the warning and return ``None``.
+    """
+    proc = PROCS.get(pid)
+    if proc is None:
         logging.warning(
-            f"Failed to kill the process with ID={server_instance.pid}: the process doesn't exist"
+            f"Failed to kill the process with ID={pid}: the process doesn't exist"
         )
+    return proc
+
+
+def _kill_process_group(pid: int) -> None:
+    """SIGKILL the whole process group of ``pid``.
+
+    ``start_new_session=True`` makes the child the leader of its own session
+    and process group, so ``os.getpgid(pid) == pid`` and the signal reaches
+    the grandchild dotnet processes, not just the direct child. A vanished
+    group is not an error: the caller still reaps the handle.
+    """
+    with suppress(ProcessLookupError):
+        os.killpg(os.getpgid(pid), signal.SIGKILL)
+
+
+async def kill_server(server_instance: ServerInstanceInfo) -> None:
+    pid = server_instance.pid
+    proc = _tracked_handle(pid)
+    if proc is None:
         return
-    wait_for_reset_retries = FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_retries
+    _kill_process_group(pid)
+    # Reap with proc.wait() (POSIX waitpid): a zombie is collected, unlike
+    # the old psutil-status poll that treated STATUS_ZOMBIE as "killed" and
+    # left the zombie behind. The blocking wait runs in a worker thread so
+    # the event loop (and every other broker request) is not stalled; the
+    # budget is the existing restart-feature retry values. The handle is
+    # dropped only once the death is confirmed: a process that survived the
+    # kill stays tracked so the shutdown loop still reaches it.
+    timeout = (
+        FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_retries
+        * FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_time
+    )
+    try:
+        await asyncio.wait_for(asyncio.to_thread(proc.wait), timeout=timeout)
+    except TimeoutError as err:
+        raise RuntimeError(f"{server_instance} could not be killed") from err
+    PROCS.pop(pid, None)
 
-    while wait_for_reset_retries:
-        logging.info(
-            f"Waiting for {server_instance} to die, {wait_for_reset_retries} retries left"
-        )
-        if proc_info.status() in (psutil.STATUS_DEAD, psutil.STATUS_ZOMBIE):
-            logging.info(f"killed {proc_info}")
-            return
-        time.sleep(FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_time)
-        wait_for_reset_retries -= 1
 
-    raise RuntimeError(f"{server_instance} could not be killed")
-
-
-def kill_process(pid: int):
-    os.kill(pid, signal.SIGKILL)
-    PROCS.remove(pid)
+def kill_process(pid: int) -> None:
+    proc = _tracked_handle(pid)
+    if proc is None:
+        return
+    _kill_process_group(pid)
+    proc.wait()
+    PROCS.pop(pid, None)
 
 
 @contextmanager
 def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
-    global PROCS
-
     servers_info = asyncio.run(run_servers(server_count))
 
     for server_info in servers_info:
@@ -198,9 +228,14 @@ def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
     try:
         yield
     finally:
-        for proc in list(PROCS):
-            kill_process(proc)
-        PROCS = []
+        # A per-pid failure (an already-exited server) must not stop the
+        # loop: the remaining servers would be orphaned.
+        for pid in list(PROCS):
+            try:
+                kill_process(pid)
+            except Exception:
+                logging.exception(f"Failed to kill server {pid} during shutdown")
+        PROCS.clear()
 
 
 def main(config: str):
@@ -215,7 +250,7 @@ def main(config: str):
 
     # Queue[ServerInstanceInfo]
     SERVER_INSTANCES = Queue()
-    PROCS = []
+    PROCS = {}
     RESULTS = []
 
     with open(config, "r") as file:
