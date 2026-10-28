@@ -178,6 +178,16 @@ abstractness, the abstract-method set, a concrete subclass satisfying the
 interface, and the abstract bodies raising ``NotImplementedError`` when
 invoked unbound.
 
+The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
+``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
+with recording fakes for ``TrainingDataset``, ``optuna``, ``mlflow``,
+``joblib`` and ``objective``, and the ``objective`` partial it wires up is
+inspected to extract the ``model_init`` / ``validate`` / ``criterion_init``
+closures, which are then driven directly. The ``model_init`` checkpoint
+loading is pinned through that seam, including the ``map_location`` fix for
+CUDA-saved checkpoints on CPU-only machines (#667, regression test requires
+CUDA and skips otherwise).
+
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
 ``NorthernPenguin`` and ``InvisibleCow``: game width 7 and six state features),

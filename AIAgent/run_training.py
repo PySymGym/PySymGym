@@ -222,7 +222,16 @@ def run_training(
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
                 artifact_uri=weights_uri, dst_path=REPORT_PATH
             )
-            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path))
+            # The checkpoint may have been saved on another device (a
+            # CUDA-saved model loaded on a CPU-only machine crashes a bare
+            # torch.load, #667); map it to the device we train on, with the
+            # same storage-class allow-list ml/dataset.py uses.
+            with torch.serialization.safe_globals(
+                [BaseStorage, NodeStorage, EdgeStorage]
+            ):
+                state_model_encoder.load_state_dict(
+                    torch.load(downloaded_artifact_path, map_location=get_device())
+                )
             return state_model_encoder
 
     objective_partial = partial(
