@@ -35,3 +35,8 @@ def test_asdict_delegates_to_to_json_for_serializable_dataclasses() -> None:
 @pytest.mark.parametrize("value", [1, 1.5, "text"])
 def test_asdict_passes_scalars_through(value: int | float | str) -> None:
     assert asdict(value) == value
+
+
+def test_asdict_recurses_into_dicts() -> None:
+    data = {"a": [1, {"b": 2}]}
+    assert asdict(data) == data
