@@ -180,6 +180,30 @@ class TestDequeueInstance:
                 )
             )
 
+    def test_live_instance_raises_issuance_error(self, monkeypatch: pytest.MonkeyPatch):
+        # A live instance (real pid) is re-queued only with the restart
+        # feature disabled; the broker must refuse to re-issue it with a
+        # typed error (the old assert vanished under python -O and the
+        # client got ws_url="None").
+        queue = Queue()
+        live = ServerInstanceInfo(
+            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
+        )
+        queue.put(live)
+        self._setup(monkeypatch, queue)
+
+        with pytest.raises(
+            launch_servers_module.InstanceIssuanceError,
+            match="live instance was requeued",
+        ):
+            asyncio.run(
+                launch_servers_module.dequeue_instance(
+                    SimpleNamespace(query=svm_query())
+                )
+            )
+        # The live instance is re-queued for the next request.
+        assert queue.get_nowait() is live
+
     def test_failure_requeues_the_placeholder(self, monkeypatch: pytest.MonkeyPatch):
         queue = Queue()
         placeholder = ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
