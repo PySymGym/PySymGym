@@ -289,7 +289,7 @@ missing-process warnings, the zombie shortcut, the never-dies
 and ``main()`` (the parsed ``process_count`` handed to ``server_manager``
 with a fresh queue, the four declared broker routes on the application,
 the broker port, and the module-global reset). The
-``derive_dataset_improvement_config.py`` pins split by tier: the unit tests
+``derive_dataset_improvement_config.py`` pins are split by tier: the unit tests
 (``AIAgent/tests/unit/test_derive_dataset_improvement_config.py``) pin the
 ``main()`` CLI seam (the parsed ``--base-config`` / ``--output-config``
 Paths forwarded to ``derive_config``) and the missing-``experiment_name``
