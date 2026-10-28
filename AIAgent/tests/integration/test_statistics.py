@@ -5,6 +5,7 @@ from random import choice
 import pytest
 import yaml
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.loader import anchor_paths
 from common.config.validation_config import ValidationConfig
 from ml.dataset import Result
 from ml.validation.statistics import (
@@ -23,19 +24,13 @@ pytestmark = pytest.mark.integration
 def _load_validation_mode(config_path: Path):
     """Load a validation-mode config with its paths anchored to the repository.
 
-    The test config uses the same repository-relative paths as the production
-    configs (``../maps/...`` as if the process ran from ``AIAgent/``). Resolve
-    them against the AIAgent directory explicitly so the test does not depend
-    on the current working directory.
+    The fixture config is written with repository-relative paths as if the
+    process ran from ``AIAgent/`` (``../maps/...``), not relative to its own
+    location: anchor it against the AIAgent directory with the production
+    anchoring so the test does not depend on the current working directory.
     """
     raw = yaml.safe_load(config_path.read_text())
-    for platform in raw["validation_mode"]["PlatformsConfig"]:
-        for dataset_config in platform["DatasetConfigs"]:
-            for key in ("dataset_base_path", "dataset_description"):
-                dataset_config[key] = str(
-                    (AI_AGENT_PATH / dataset_config[key]).resolve()
-                )
-    return ValidationConfig(**raw).validation_mode
+    return ValidationConfig(**anchor_paths(raw, AI_AGENT_PATH)).validation_mode
 
 
 class TrainingDatasetMock:

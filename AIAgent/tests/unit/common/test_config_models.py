@@ -129,13 +129,24 @@ def test_validation_config_rejects_unknown_mode() -> None:
         ValidationConfig(validation_mode={"val_type": "unknown"})
 
 
-def test_dataset_config_resolves_paths_against_cwd() -> None:
+def test_dataset_config_rejects_relative_paths() -> None:
+    # Relative values are ambiguous without an anchor: the config loader
+    # resolves them against the config file's location before the model sees
+    # them, so the model itself refuses them.
+    with pytest.raises(ValidationError, match="not an absolute path"):
+        DatasetConfig(
+            dataset_base_path="relative/base",
+            dataset_description="relative/description.json",
+        )
+
+
+def test_dataset_config_keeps_absolute_paths() -> None:
     config = DatasetConfig(
-        dataset_base_path="relative/base",
-        dataset_description="relative/description.json",
+        dataset_base_path="/abs/base",
+        dataset_description="/abs/description.json",
     )
-    assert config.dataset_base_path == Path("relative/base").resolve()
-    assert config.dataset_description == Path("relative/description.json").resolve()
+    assert config.dataset_base_path == Path("/abs/base")
+    assert config.dataset_description == Path("/abs/description.json")
 
 
 def test_svm_info_to_dict_exposes_all_fields() -> None:
@@ -159,7 +170,7 @@ def test_platform_parses_dataset_and_svm_lists() -> None:
     platform = Platform(
         name="platform",
         DatasetConfigs=[
-            {"dataset_base_path": "base", "dataset_description": "desc.json"}
+            {"dataset_base_path": "/base", "dataset_description": "/desc.json"}
         ],
         SVMSInfo=[
             {

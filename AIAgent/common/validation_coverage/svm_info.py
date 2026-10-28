@@ -1,6 +1,8 @@
 from typing import Any
 
 from common.typealias import SVMName
+from common.utils import require_absolute_path
+from pydantic import field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 
@@ -11,6 +13,14 @@ class SVMInfo:
     server_working_dir: str
     min_port: int
     max_port: int
+
+    @field_validator("server_working_dir", mode="before")
+    @classmethod
+    def _absolute_server_working_dir(cls, value: str) -> str:
+        # The broker launches the server with this as its CWD: a relative
+        # value would silently resolve against the broker's CWD, so it is
+        # rejected (the config loader anchors it before the model sees it).
+        return str(require_absolute_path(value))
 
     def to_dict(
         self,
