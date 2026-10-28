@@ -348,7 +348,17 @@ deduplication, the empty result for a missing log) and ``clean`` (bad
 episodes removed, the ``(method, step, searcher)`` sort order); the
 ``main()`` seam tests pin the CLI wiring end-to-end (argv ``Path``-typed
 arguments into the real ``clean``) and the exact ``sys.exit`` messages for a
-missing dataset (checked before the log) and a missing log.
+missing dataset (checked before the log) and a missing log. The
+``generate_episodes`` tests (``test_generate_episodes.py``) pin the helpers
+(``generate_steps`` bucket sizes, the ``create_episode`` map-name rules,
+``is_duplicate``) and their composition in ``generate_episodes()``: the
+per-method grouping, the grid from each method's FIRST episode's
+``StepsToPlay`` crossed with ``BFS``/``DFS`` plus the step-0 ``BFS``
+episode, the deduplication that matches on ``(method, step, searcher)`` and
+ignores the ``MapName``, and the exact sorted ``MapName`` list read back
+from the rewritten file (including the empty-dataset case); the ``main()``
+seam tests pin the CLI wiring and the missing-dataset behaviour (the error
+printed to stdout, then ``sys.exit(1)``).
 
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
