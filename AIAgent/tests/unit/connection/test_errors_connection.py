@@ -18,6 +18,13 @@ def test_game_interrupted_error_is_abstract() -> None:
     assert "desc" in GameInterruptedError.__abstractmethods__
 
 
+def test_abstract_desc_property_getter_is_a_noop_stub() -> None:
+    # The abstract property body is unreachable in production (the class is
+    # abstract; concrete subclasses shadow desc with a class attribute). Call
+    # the getter directly to pin the stub.
+    assert GameInterruptedError.desc.fget(None) is None
+
+
 @pytest.mark.parametrize(
     ("error_cls", "expected_desc"),
     [

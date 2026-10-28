@@ -443,7 +443,11 @@ Orchestration seams are tested with fakes, never real I/O:
   so the pin is current behaviour and #579 owns updating it), and recurses
   into lists, dicts and scalars. The ``except TypeError`` fallback is dead
   code (a plain dataclass raises ``AttributeError``, not ``TypeError``; see
-  Exclusions) and is not pinned.
+  Exclusions) and is not pinned. The ``errors_connection`` hierarchy is
+  pinned as pure unit tests: ``GameInterruptedError`` is abstract with an
+  abstract ``desc`` property (its no-op stub getter is pinned by calling
+  ``fget`` directly — the body is unreachable in production), and the two
+  concrete subclasses expose their exact ``desc`` strings.
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
