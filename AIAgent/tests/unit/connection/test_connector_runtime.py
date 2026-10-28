@@ -106,23 +106,25 @@ def test_connection_reset_becomes_connection_lost(fake_websocket) -> None:
         connector.recv_state_or_throw_gameover()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "#579: connection-loss translation catches only "
-        "ConnectionResetError, but real websocket closes raise "
-        "WebSocketConnectionClosedException / WebSocketTimeoutException. "
-        "#579's fix: catch the websocket-client exception family "
-        "(WebSocketException) plus OSError."
-    ),
+@pytest.mark.parametrize(
+    "exc_type",
+    [
+        websocket.WebSocketConnectionClosedException,
+        websocket.WebSocketTimeoutException,
+    ],
 )
-def test_real_websocket_close_becomes_connection_lost(fake_websocket) -> None:
+def test_real_websocket_exceptions_become_connection_lost(
+    fake_websocket, exc_type: type[websocket.WebSocketException]
+) -> None:
     ws = fake_websocket
     connector = _connector(ws)
-    ws.incoming.append(websocket.WebSocketConnectionClosedException())
+    ws.incoming.append(exc_type())
 
-    with pytest.raises(ConnectionLostError):
+    with pytest.raises(ConnectionLostError) as exc_info:
         connector.recv_state_or_throw_gameover()
+
+    # The translation chains the real websocket exception as the cause.
+    assert isinstance(exc_info.value.__cause__, exc_type)
 
 
 def test_send_step_serializes_and_records_state(fake_websocket) -> None:

@@ -67,7 +67,7 @@ class Connector:
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except ConnectionResetError as e:
+            except (websocket.WebSocketException, OSError) as e:
                 raise ConnectionLostError from e
 
         return wrapper
