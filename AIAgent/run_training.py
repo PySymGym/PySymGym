@@ -297,24 +297,29 @@ def run_training(
             mlflow.log_artifact(CURRENT_TRIAL_PATH)
             mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
 
-    if optuna_config.trial_uri is None and weights_uri is None:
-        study = optuna.create_study(
-            sampler=sampler, direction=optuna_config.study_direction.value
-        )
-        study.optimize(
-            objective_partial,
-            n_trials=optuna_config.n_trials,
-            gc_after_trial=True,
-            n_jobs=optuna_config.n_jobs,
-            callbacks=[save_study_and_trial],
-        )
-    else:
+    study = optuna.create_study(
+        sampler=sampler, direction=optuna_config.study_direction.value
+    )
+    if optuna_config.trial_uri is not None or weights_uri is not None:
+        # Replay branch: re-run the frozen trial n_trials times through a
+        # fresh study, so the improvement run persists study.pkl/trial.pkl
+        # and the per-trial MLflow artifacts exactly like a tuning run. The
+        # enqueued params make the sampler suggest the frozen values; the
+        # trials get fresh numbers 0..n-1, so run names, trial dirs and
+        # per-trial seeds follow the fresh numbers.
         downloaded_artifact_path = mlflow.artifacts.download_artifacts(
             optuna_config.trial_uri, dst_path=str(REPORT_PATH)
         )
         trial: optuna.trial.FrozenTrial = joblib.load(downloaded_artifact_path)
         for _ in range(optuna_config.n_trials):
-            objective_partial(trial)
+            study.enqueue_trial(params=dict(trial.params))
+    study.optimize(
+        objective_partial,
+        n_trials=optuna_config.n_trials,
+        gc_after_trial=True,
+        n_jobs=optuna_config.n_jobs,
+        callbacks=[save_study_and_trial],
+    )
 
 
 def objective(trial: optuna.Trial, config: ObjectiveConfig):
