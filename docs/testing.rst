@@ -331,6 +331,15 @@ error-handling tests pin the BENCHMARKS skip-versus-DEBUG re-raise for
 the missing-runner no-existence-check behaviour are #590-tracked (``xfail`` /
 documented exclusion).
 
+The compstrat CLI tests (``tools/compstrat/tests/unit/test_compstrat_main.py``)
+pin ``main()`` with a patched ``sys.argv`` and a recording ``entrypoint`` fake
+(no matplotlib run); ``read_configs`` runs for real against the
+``mock_compare_confs`` fixture. They pin the parsed ``Args`` value (the
+``-r1``/``-r2`` ``action="extend"`` + ``nargs="+"`` accumulation across
+repeated flags, the ``--savedir`` default of ``report``) and the argparse
+``SystemExit`` for each missing required flag. The ``entrypoint()`` pipeline
+itself is pinned by the integration-tier ``test_pipeline.py``.
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer
