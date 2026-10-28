@@ -180,7 +180,18 @@ invoked unbound. The training-loop tests (``test_train.py``) pin
 ``ml.training.train`` with a real small model, optimizer and criterion: the
 ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch, the ``y_true``
 clamping to ``{0, 1}`` before the criterion sees it, the per-batch optimizer
-step, and the skip of backward/step when the criterion returns zero.
+step, and the skip of backward/step when the criterion returns zero. The
+experiment-helper tests (``test_experiments_utils.py``) pin the remaining
+``ml.training.experiments_utils`` helpers: ``get_model`` reloading a saved
+state dict with the ``lin_last`` weights overwritten by the exact seeded
+random values, ``find_unfinished_maps`` printing the started-but-not-finished
+maps parsed from a server log (per port, a ``Finish`` without a ``Start``
+prints nothing), ``sync_dataset_with_description`` pruning dataset dirs
+missing from the map description, ``find_dominators_in_cfg`` appending the
+dominator edges (type 3, dominator to dominated, self-loops skipped) per
+entry point and raising ``ValueError`` without one, and ``sample_dataset``
+copying the rounded percentage of ``.pt`` files (with the map's ``result``
+file on first copy) from a two-levels-deep relative dataset.
 
 The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 ``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
