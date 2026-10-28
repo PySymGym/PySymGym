@@ -1,9 +1,11 @@
 import copy
 import json
+import sys
 import typing as t
 import warnings
 from types import SimpleNamespace
 
+import onyx
 import paths
 import pytest
 import torch
@@ -160,6 +162,101 @@ class TestModelGamePreparatorKwargs:
         assert captured["model_kwargs"] == model_kwargs
         assert captured["pytorch_model_path"] == model_path
         assert captured["onnx_savepath"] == onnx_path
+
+
+class TestMain:
+    """CLI seam tests for ``onyx.main()``.
+
+    ``main()`` is driven with a patched ``sys.argv`` and a recording fake for
+    ``onyx.entrypoint`` so no export run happens; the model-kwargs YAML and the
+    gamestate JSONs are the real golden inputs (the ``config`` fixture and the
+    reference gamestates read through ``AIAgent/paths.py``).
+    """
+
+    def test_main_dispatches_to_entrypoint(self, tmp_path, monkeypatch, config):
+        gamestates = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))
+        sample, *verify = gamestates
+
+        captured = _run_main(monkeypatch, _main_argv(tmp_path, config, sample, verify))
+
+        assert set(captured) == {
+            "sample_gamestate",
+            "pytorch_model_path",
+            "onnx_savepath",
+            "model_def",
+            "model_kwargs",
+            "verification_gamestates",
+        }
+        assert captured["sample_gamestate"] == _load_gamestate(sample)
+        assert captured["pytorch_model_path"] == tmp_path / "model.pth"
+        assert captured["onnx_savepath"] == tmp_path / "model.onnx"
+        assert captured["model_def"] is RealStateModelEncoder
+        assert captured["model_kwargs"] == yaml.safe_load(config.read_text())
+        assert captured["verification_gamestates"] == [
+            _load_gamestate(path) for path in verify
+        ]
+
+    def test_main_without_verify_on_defaults_to_empty(
+        self, tmp_path, monkeypatch, config
+    ):
+        sample = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
+
+        captured = _run_main(monkeypatch, _main_argv(tmp_path, config, sample, []))
+
+        assert captured["verification_gamestates"] == []
+
+    @pytest.mark.parametrize(
+        "missing_flag",
+        [
+            "--sample-gamestate",
+            "--pytorch-model",
+            "--savepath",
+            "--import-model-fqn",
+            "--model-kwargs",
+        ],
+    )
+    def test_main_missing_required_flag_exits(
+        self, tmp_path, monkeypatch, config, missing_flag
+    ):
+        gamestates = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))
+        sample, *verify = gamestates
+
+        with pytest.raises(SystemExit):
+            _run_main(
+                monkeypatch,
+                _main_argv(tmp_path, config, sample, verify, omit=missing_flag),
+            )
+
+
+def _run_main(monkeypatch, argv):
+    """Run ``onyx.main()`` with the given argv; return the captured kwargs."""
+    captured = {}
+
+    def fake_entrypoint(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(onyx, "entrypoint", fake_entrypoint)
+    monkeypatch.setattr(sys, "argv", argv)
+    onyx.main()
+    return captured
+
+
+def _main_argv(tmp_path, config, sample, verify, omit=None):
+    """The full ``onyx`` CLI argv; ``omit`` drops one required flag (and its value)."""
+    flags = {
+        "--sample-gamestate": [str(sample)],
+        "--pytorch-model": [str(tmp_path / "model.pth")],
+        "--savepath": [str(tmp_path / "model.onnx")],
+        "--import-model-fqn": ["ml.models.NorthernPenguin.model.StateModelEncoder"],
+        "--model-kwargs": [str(config)],
+    }
+    if verify:
+        flags["--verify-on"] = [str(path) for path in verify]
+    argv = ["onyx"]
+    for flag, values in flags.items():
+        if flag != omit:
+            argv.extend([flag, *values])
+    return argv
 
 
 def _load_gamestate(path) -> dict[str, t.Any]:
