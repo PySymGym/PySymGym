@@ -554,7 +554,13 @@ Orchestration seams are tested with fakes, never real I/O:
   warning). ``from_json_handle`` runs the check under **both**
   ``DISABLE_MESSAGE_CHECKS`` settings (a foreign ``Version`` raises before
   the flag branch) and wraps ``json.JSONDecodeError`` in
-  ``DeserializationException`` under both settings (#582).
+  ``DeserializationException`` under both settings (#582). The reward
+  channel's strict-mode decoding is pinned for **both** wire message types
+  it carries: ``MoveReward`` (a ``Reward`` body) and
+  ``IncorrectPredictedStateId`` (a ``StateId`` body, decoded through the
+  union body type of ``RewardServerMessage``) — the latter used to raise
+  ``DeserializationException`` under strict validation, a defect discovered
+  during #582 (untracked; recorded on the issue).
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
