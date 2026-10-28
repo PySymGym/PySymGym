@@ -44,7 +44,6 @@ from ml.validation.statistics import AVERAGE_COVERAGE
 from paths import (
     CURRENT_STUDY_PATH,
     CURRENT_TRIAL_PATH,
-    LOG_PATH,
     MODEL_FILE_NAME,
     PROCESSED_DATASET_PATH,
     RAW_DATASET_PATH,
@@ -1350,8 +1349,10 @@ class TestMain:
     """``run_training.main``: config loading and MLflow setup."""
 
     def _main(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, config: dict):
-        # chdir so the ml_app.log from logging.basicConfig lands in tmp.
-        monkeypatch.chdir(tmp_path)
+        # The log path is anchored to the AIAgent directory (paths.py); point
+        # it at tmp so the test leaves no artifact behind.
+        log_path = tmp_path / "ml_app.log"
+        monkeypatch.setattr(run_training_module, "LOG_PATH", log_path)
         config_path = tmp_path / "config.yml"
         config_path.write_text(yaml.safe_dump(config))
 
@@ -1396,6 +1397,7 @@ class TestMain:
             set_start_method_calls=set_start_method_calls,
             create_folder_calls=create_folder_calls,
             create_file_calls=create_file_calls,
+            log_path=log_path,
             mlflow=mlflow,
             gpu_level=gpu_level,
         )
@@ -1411,7 +1413,7 @@ class TestMain:
         # Spawn start method, the processed-dataset folder, the log file.
         assert rec.set_start_method_calls == [(("spawn",), {"force": True})]
         assert rec.create_folder_calls == [[PROCESSED_DATASET_PATH]]
-        assert rec.create_file_calls == [LOG_PATH]
+        assert rec.create_file_calls == [rec.log_path]
 
         # The training device is printed (cpu under the fixture).
         assert capfd.readouterr().out == "cpu\n"
