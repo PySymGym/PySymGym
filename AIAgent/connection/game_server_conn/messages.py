@@ -68,9 +68,33 @@ class ClientMessageBody:
 
 @dataclass_json
 @dataclass(slots=True)
-class StartMessageBody(ClientMessageBody, GameMap):
+class StartMessageBody(ClientMessageBody):
+    # The wire body of the ``start`` message. Mirrors
+    # :class:`common.game.GameMap` field-for-field (same names, same
+    # order); the sync test in ``test_messages.py`` keeps the two in
+    # lockstep so a domain-model change cannot silently change the wire
+    # format. The multiple inheritance that fused the wire body with the
+    # domain model was replaced by this explicit mapping (#582).
+    StepsToPlay: int
+    StepsToStart: int
+    AssemblyFullName: str
+    NameOfObjectToCover: str
+    DefaultSearcher: str
+    MapName: str
+
     def type(self) -> ClientMessageType:
         return ClientMessageType.START
+
+    @classmethod
+    def from_game_map(cls, game_map: GameMap) -> "StartMessageBody":
+        return cls(
+            StepsToPlay=game_map.StepsToPlay,
+            StepsToStart=game_map.StepsToStart,
+            AssemblyFullName=game_map.AssemblyFullName,
+            NameOfObjectToCover=game_map.NameOfObjectToCover,
+            DefaultSearcher=game_map.DefaultSearcher,
+            MapName=game_map.MapName,
+        )
 
 
 @dataclass_json
