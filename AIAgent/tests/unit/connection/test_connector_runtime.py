@@ -158,3 +158,42 @@ def test_incorrect_predicted_state_does_not_increment_step(fake_websocket) -> No
     connector.recv_reward_or_throw_gameover()
 
     assert connector._current_step == 0
+
+
+def test_strict_validation_decodes_incorrect_predicted_state(
+    fake_websocket, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Pre-#582, the strict path decoded the body as Reward and raised
+    # DeserializationException on this normal protocol event.
+    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+    ws = fake_websocket
+    connector = _connector(ws)
+    connector.send_step(next_state_id=3, predicted_usefullness=42)
+    _queued(ws, "IncorrectPredictedStateId", {"StateId": 9})
+
+    body = connector.recv_reward_or_throw_gameover()
+
+    assert connector._current_step == 0
+    assert body.StateId == 9
+
+
+def test_strict_validation_decodes_move_reward(
+    fake_websocket, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+    ws = fake_websocket
+    connector = _connector(ws)
+    _queued(
+        ws,
+        "MoveReward",
+        {
+            "ForMove": {"ForCoverage": 1, "ForVisitedInstructions": 2},
+            "MaxPossibleReward": 3,
+        },
+    )
+
+    body = connector.recv_reward_or_throw_gameover()
+
+    assert connector._current_step == 1
+    assert body.ForMove.ForCoverage == 1
+    assert body.MaxPossibleReward == 3

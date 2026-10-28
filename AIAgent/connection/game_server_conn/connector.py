@@ -10,6 +10,7 @@ from .messages import (
     ClientMessage,
     GameOverServerMessage,
     GameStateServerMessage,
+    IncorrectPredictedStateIdBody,
     Reward,
     RewardServerMessage,
     ServerMessage,
@@ -123,7 +124,7 @@ class Connector:
         self.send(do_step_message.to_json())
         self._sent_state_id = next_state_id
 
-    def recv_reward_or_throw_gameover(self) -> Reward:
+    def recv_reward_or_throw_gameover(self) -> Reward | IncorrectPredictedStateIdBody:
         received = self.receive()
         decoded = RewardServerMessage.from_json_handle(
             self._raise_if_gameover(received),

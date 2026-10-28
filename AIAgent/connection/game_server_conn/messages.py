@@ -143,9 +143,18 @@ class GameStateServerMessage(ServerMessage):
     MessageBody: GameState
 
 
+@dataclass_json
+@dataclass(slots=True)
+class IncorrectPredictedStateIdBody:
+    StateId: int
+
+
 @dataclass(slots=True)
 class RewardServerMessage(ServerMessage):
-    MessageBody: Reward
+    # The reward channel carries two wire message types: MoveReward (a
+    # Reward body) and IncorrectPredictedStateId (a StateId body). The
+    # required fields are disjoint, so the union decodes unambiguously.
+    MessageBody: Reward | IncorrectPredictedStateIdBody
 
 
 @dataclass(slots=True)
