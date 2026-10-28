@@ -30,7 +30,7 @@ from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig, get_device
 from ml.dataset import TrainingDataset, TrainingDatasetMode
-from ml.models.NorthernPenguin.model import StateModelEncoder
+from ml.models.registry import get_model_class
 from ml.training.early_stopping import EarlyStopping
 from ml.training.seeds import derive_trial_seed, seed_everything
 from ml.training.train import train
@@ -51,6 +51,13 @@ from torch import nn
 from torch_geometric.data import Dataset
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 from torch_geometric.loader import DataLoader
+
+# The model this entrypoint trains, selected through the registry (the
+# single model-selection path, #581). The module-level name is preserved:
+# the seam tests monkeypatch it and ``objective`` introspects its
+# ``__init__`` for the trial kwargs.
+MODEL_NAME = "NorthernPenguin"
+StateModelEncoder = get_model_class(MODEL_NAME)
 
 # Tag the tuning run's MLflow runs carry: the number of the best trial among
 # those completed so far. Readers of the tuning artifacts (see

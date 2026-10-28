@@ -199,8 +199,14 @@ coverable on a CPU-only machine — meta tensors cannot be copied out — so
 ``ml/dataset.py`` tops out at 99.0%. The protocol tests
 (``test_protocols.py``) pin the ``ml.protocols`` abstract interfaces:
 abstractness, the abstract-method set, a concrete subclass satisfying the
-interface, and the abstract bodies raising ``NotImplementedError`` when
-invoked unbound. The training-loop tests (``test_train.py``) pin
+interface, the abstract bodies raising ``NotImplementedError`` when invoked
+unbound, and the ``Model`` forward contract (the exact 11-parameter
+``forward`` signature ``infer`` calls). The registry tests
+(``test_registry.py``) pin ``ml.models.registry``: name lookup, the
+unknown-name ``ValueError`` listing the known models, reverse lookup by
+instance and class, and the forward-contract pin (every registered model's
+``forward`` signature equals ``Model``'s). The training-loop tests
+(``test_train.py``) pin
 ``ml.training.train`` with a real small model, optimizer and criterion: the
 ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch, the ``y_true``
 clamping to ``{0, 1}`` before the criterion sees it, the per-batch optimizer

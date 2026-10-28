@@ -38,6 +38,7 @@ from common.config.validation_config import (
 from common.validation_coverage.svm_info import SVMInfo
 from ml.dataset import TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
+from ml.models.registry import get_model_class
 from ml.training.seeds import derive_trial_seed
 from ml.validation.statistics import AVERAGE_COVERAGE
 from paths import (
@@ -315,6 +316,16 @@ class FakeEncoder(nn.Module):
     def load_state_dict(self, state: dict) -> "FakeEncoder":
         self.loaded_state = state
         return self
+
+
+class TestModelSelection:
+    """The entrypoint's model is selected through the registry (#581)."""
+
+    def test_module_model_is_the_registry_lookup(self):
+        assert run_training_module.MODEL_NAME == "NorthernPenguin"
+        assert run_training_module.StateModelEncoder is get_model_class(
+            run_training_module.MODEL_NAME
+        )
 
 
 class TestModelInit:
