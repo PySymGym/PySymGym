@@ -515,8 +515,9 @@ Orchestration seams are tested with fakes, never real I/O:
   ``errors_connection`` hierarchy is
   pinned as pure unit tests: ``GameInterruptedError`` is abstract with an
   abstract ``desc`` property (its no-op stub getter is pinned by calling
-  ``fget`` directly — the body is unreachable in production), and the two
-  concrete subclasses expose their exact ``desc`` strings. The broker HTTP
+  ``fget`` directly — the body is unreachable in production), and the
+  concrete subclasses (``ProcessStoppedError``, ``ConnectionLostError``,
+  ``ProtocolVersionMismatchError``) expose their exact ``desc`` strings. The broker HTTP
   calls are pinned with the ``httplib2.Http`` recording fake:
   ``acquire_instance`` issues a ``GET`` to ``GET_WS`` with the urlencoded
   ``SVMInfo`` fields and raises ``RuntimeError`` on a non-200 (the request is
@@ -565,7 +566,13 @@ Orchestration seams are tested with fakes, never real I/O:
   that fused the wire body with the domain model) is pinned by a field
   identity sync test (names and types, in order) and a wire-JSON
   equivalence test (``from_game_map(m).to_json() == m.to_json()``), so a
-  domain-model change cannot silently change the wire format.
+  domain-model change cannot silently change the wire format. The
+  wire-format pins evolved to the v2 envelope (#582): the server→client
+  test payloads carry ``"Version": PROTOCOL_VERSION`` (derived from the
+  constant, not a literal), and a dedicated legacy test queues a
+  versionless payload to pin the v1 tolerance; the client→server pins are
+  unchanged — the client does not emit ``Version`` yet (the coordinated
+  server rollout).
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
