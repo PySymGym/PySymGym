@@ -977,6 +977,7 @@ class TestObjective:
         seed: int = 1,
         direction: OptimizationDirection = OptimizationDirection.MAXIMIZE,
         trial_number: int = 7,
+        mutate_on_train: bool = False,
     ):
         trial = FakeTrial(number=trial_number)
         dataset = FakeTrainingDataset()
@@ -1012,9 +1013,15 @@ class TestObjective:
         )
         monkeypatch.setattr(run_training_module, "EarlyStopping", early_stopping_cls)
         train_calls: list[dict] = []
-        monkeypatch.setattr(
-            run_training_module, "train", lambda **kwargs: train_calls.append(kwargs)
-        )
+
+        def fake_train(**kwargs: Any) -> None:
+            if mutate_on_train:
+                # Mark the model with the train-call index so each epoch's
+                # weights differ and the restored checkpoint is identifiable.
+                kwargs["model"].linear.bias.data.fill_(float(len(train_calls)))
+            train_calls.append(kwargs)
+
+        monkeypatch.setattr(run_training_module, "train", fake_train)
         dataloader_calls: list[tuple] = []
 
         def dataloader(dataset_, batch_size, **kwargs):
@@ -1120,6 +1127,10 @@ class TestObjective:
             ((kwargs_path,), {}),
             ((model_path, "0"), {}),
             ((model_path, "1"), {}),
+            # The final export re-logs the best checkpoint under the last
+            # epoch's slot (here the best is the last epoch, so the weights
+            # are unchanged).
+            ((model_path, "1"), {}),
         ]
 
         # Per-epoch sequence.
@@ -1141,7 +1152,9 @@ class TestObjective:
             assert isinstance(call["optimizer"], torch.optim.Adam)
             assert call["optimizer"].defaults["lr"] == 1e-4
             assert call["criterion"] == "criterion-sentinel"
-        # The checkpoint is really saved each epoch.
+        # The checkpoint is really saved each epoch, and the final export
+        # restores the best checkpoint (here the best is the last epoch, so
+        # the file equals the model's final state).
         assert model_path.exists()
         loaded = torch.load(model_path, weights_only=True)
         saved = rec.model.state_dict()
@@ -1187,6 +1200,45 @@ class TestObjective:
         assert rec.result == 2.0
         captured = capfd.readouterr()
         assert "Training was stopped on 1 epoch." in captured.out
+
+    @pytest.mark.parametrize(
+        ("direction", "results", "best"),
+        [
+            (OptimizationDirection.MAXIMIZE, [1.0, 3.0, 2.0], 3.0),
+            (OptimizationDirection.MINIMIZE, [3.0, 1.0, 2.0], 1.0),
+        ],
+    )
+    def test_restores_the_best_checkpoint_when_the_best_epoch_is_not_last(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        direction: OptimizationDirection,
+        results: list[float],
+        best: float,
+    ) -> None:
+        # Epoch 1 is the best; epoch 2 regresses and triggers the stop. The
+        # exported model and the trial's value must be epoch 1's, not
+        # epoch 2's.
+        rec = self._run(
+            monkeypatch,
+            tmp_path,
+            epochs=3,
+            continue_results=[True, True, False],
+            validate_results=[(value, {"m": value}) for value in results],
+            direction=direction,
+            mutate_on_train=True,
+        )
+        model_path = tmp_path / "trials" / "7" / MODEL_FILE_NAME
+
+        # The fake train marks the bias with the call index: the restored
+        # checkpoint carries epoch 1's mark (1.0), not epoch 2's (2.0).
+        loaded = torch.load(model_path, weights_only=True)
+        assert loaded["linear.bias"].tolist() == [1.0, 1.0, 1.0, 1.0]
+        assert rec.model.linear.bias.tolist() == [1.0, 1.0, 1.0, 1.0]
+        assert rec.result == best
+        # The final export re-logs the best checkpoint under the last
+        # epoch's slot.
+        assert rec.mlflow.called("log_artifact")[-1] == ((model_path, "2"), {})
 
     def test_static_dataset_never_updates_meta_data(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

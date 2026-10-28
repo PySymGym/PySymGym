@@ -1,4 +1,5 @@
 import argparse
+import copy
 import csv
 import inspect
 import json
@@ -337,6 +338,12 @@ def objective(
     model_path = trial_directory / MODEL_FILE_NAME
     kwargs_path = trial_directory / "model_kwargs.yaml"
 
+    # The best checkpoint so far: early stopping (or the final epoch) ends
+    # the loop with the last epoch's weights in the model, but the retained
+    # model and the trial's value must be the best ones, not the last ones.
+    best_result: int | float | None = None
+    best_state_dict: dict | None = None
+
     with mlflow.start_run(run_name=str(trial.number)):
         mlflow.log_params(asdict(config))
         # The kwargs are constant within a trial: persist them once to the
@@ -368,11 +375,26 @@ def objective(
             mlflow.log_metrics(metrics, step=epoch)
             if dynamic_dataset:
                 dataset.update_meta_data()
+            if best_result is None or (
+                result < best_result
+                if direction is OptimizationDirection.MINIMIZE
+                else result > best_result
+            ):
+                best_result = result
+                best_state_dict = copy.deepcopy(model.state_dict())
             if not early_stopping.is_continue(result):
                 print(f"Training was stopped on {epoch} epoch.")
                 break
             torch.cuda.empty_cache()
-    return result
+
+        # Restore the best checkpoint before the final export: the last
+        # epoch's artifact slot is re-written with the best weights, so the
+        # highest-epoch artifact (the one
+        # derive_dataset_improvement_config.py picks) is the best model.
+        model.load_state_dict(best_state_dict)
+        torch.save(model.state_dict(), model_path)
+        mlflow.log_artifact(model_path, str(epoch))
+    return best_result
 
 
 def main(config: str):

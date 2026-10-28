@@ -100,6 +100,13 @@ improving the dataset in the other kind of run.
     validation), so parallel trials cannot overwrite each other; the study
     snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
 
+    A trial stops early when its validation result stops improving. On early
+    stop (or after the final epoch), the best checkpoint — the epoch with the
+    best validation result — is restored into the model and exported, so the
+    retained ``model.pth`` and the highest-epoch ``<epoch>/model.pth`` MLflow
+    artifact hold the best weights, and the trial's value is that best
+    result, not the last epoch's.
+
 2. Move to the ``AIAgent`` directory and run training:
 
    .. code-block:: console
