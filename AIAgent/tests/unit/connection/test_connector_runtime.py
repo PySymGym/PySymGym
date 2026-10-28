@@ -14,6 +14,7 @@ from common.game import GameMap
 from config import FeatureConfig
 from connection.errors_connection import ConnectionLostError
 from connection.game_server_conn.connector import Connector
+from connection.game_server_conn.messages import PROTOCOL_VERSION
 
 pytestmark = [pytest.mark.unit, pytest.mark.serial]
 
@@ -33,8 +34,17 @@ def _connector(ws) -> Connector:
     return Connector(ws, _game_map())
 
 
-def _queued(ws, message_type: str, body: dict | None = None) -> None:
+def _queued(
+    ws,
+    message_type: str,
+    body: dict | None = None,
+    version: int | None = PROTOCOL_VERSION,
+) -> None:
+    # The default simulates a v2 server (the envelope carries the
+    # Version field); pass version=None for a legacy v1 payload.
     payload: dict[str, object] = {"MessageType": message_type}
+    if version is not None:
+        payload["Version"] = version
     if body is not None:
         payload["MessageBody"] = body
     ws.incoming.append(json.dumps(payload))
@@ -197,3 +207,25 @@ def test_strict_validation_decodes_move_reward(
     assert connector._current_step == 1
     assert body.ForMove.ForCoverage == 1
     assert body.MaxPossibleReward == 3
+
+
+def test_legacy_versionless_envelope_is_still_accepted(fake_websocket) -> None:
+    # A v1 server (no Version field) is tolerated: the message decodes
+    # and the once-per-process legacy warning is logged, not an error.
+    ws = fake_websocket
+    connector = _connector(ws)
+    _queued(
+        ws,
+        "ReadyForNextStep",
+        {
+            "GraphVertices": [],
+            "States": [],
+            "PathConditionVertices": [],
+            "Map": [],
+        },
+        version=None,
+    )
+
+    body = connector.recv_state_or_throw_gameover()
+
+    assert body.GraphVertices == []

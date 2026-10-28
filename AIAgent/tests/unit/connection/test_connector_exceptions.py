@@ -11,6 +11,7 @@ import pytest
 from config import FeatureConfig
 
 from connection.game_server_conn.connector import Connector
+from connection.game_server_conn.messages import PROTOCOL_VERSION
 
 pytestmark = pytest.mark.unit
 
@@ -43,6 +44,7 @@ def test_raise_if_gameover_parses_gameover_message(
     monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", True)
     payload = json.dumps(
         {
+            "Version": PROTOCOL_VERSION,
             "MessageType": "GameOver",
             "MessageBody": {
                 "ActualCoverage": 55,
@@ -68,7 +70,9 @@ def test_raise_if_gameover_passes_through_other_messages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
-    payload = json.dumps({"MessageType": "ReadyForNextStep"})
+    payload = json.dumps(
+        {"Version": PROTOCOL_VERSION, "MessageType": "ReadyForNextStep"}
+    )
     fake_self = SimpleNamespace(game_is_over=False)
 
     assert Connector._raise_if_gameover(fake_self, payload) == payload
@@ -97,6 +101,7 @@ def test_raise_if_gameover_strict_validation_reads_steps_count(
     monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
     payload = json.dumps(
         {
+            "Version": PROTOCOL_VERSION,
             "MessageType": "GameOver",
             "MessageBody": {
                 "ActualCoverage": 55,
