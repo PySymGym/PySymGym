@@ -191,7 +191,14 @@ missing from the map description, ``find_dominators_in_cfg`` appending the
 dominator edges (type 3, dominator to dominated, self-loops skipped) per
 entry point and raising ``ValueError`` without one, and ``sample_dataset``
 copying the rounded percentage of ``.pt`` files (with the map's ``result``
-file on first copy) from a two-levels-deep relative dataset.
+file on first copy) from a two-levels-deep relative dataset. The inference
+tests (``test_predict_wrapper.py``) pin ``ml.predict.predict_state_with_dict``
+with a fixed-output fake model (the exact max-row-sum selection, the
+state-map remapping, the ``no_grad`` output) plus one real-model run, and
+``ml.training.wrapper.TrainingModelWrapper`` (the name/model accessors, the
+initial ``model_copy`` alias, the ``make_copy`` deep copy and rename, the
+``predict`` delegation to ``predict_state_with_dict`` with the production
+converted graph and state map, and a real-model ``predict`` run).
 
 The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 ``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
