@@ -51,7 +51,7 @@ class OnGameServerRestartFeature:
 
 class FeatureConfig:
     VERBOSE_TABLES = True
-    DISABLE_MESSAGE_CHECKS = True
+    DISABLE_MESSAGE_CHECKS = False
     SAVE_IF_FAIL_OR_TIMEOUT = SaveIfFailOrTimeout(
         enabled=True, timeout_sec=1800, save_path=Path("./report/timeouted_agents/")
     )

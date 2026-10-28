@@ -103,13 +103,8 @@ def test_game_server_connector_config_values() -> None:
     assert GameServerConnectorConfig.SKIP_UTF_VALIDATION is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "#579: strict validation by default — the fix spec flips "
-        "DISABLE_MESSAGE_CHECKS to False (keeping the flag for "
-        "compatibility); it is True today."
-    ),
-)
 def test_disable_message_checks_defaults_to_strict_validation() -> None:
+    # Strict validation is the default (#579); the flag is kept for
+    # compatibility and set explicitly by the tests that pin the unchecked
+    # (BareObject) path.
     assert FeatureConfig.DISABLE_MESSAGE_CHECKS is False

@@ -476,10 +476,11 @@ Orchestration seams are tested with fakes, never real I/O:
   the current values over as the pydantic defaults — the CWD-relative
   ``save_path`` value is pinned (the #584 target is the CWD-dependence, not
   the value) and the ``RESPONCE_TIMEOUT_SEC`` value 1801 is pinned without
-  its current cross-feature derivation (the #585 target). The strict
-  ``xfail`` ``test_disable_message_checks_defaults_to_strict_validation``
-  references #579 (flip the default to strict validation; currently
-  ``DISABLE_MESSAGE_CHECKS is True``). The connection-loss translation is
+  its current cross-feature derivation (the #585 target). Strict validation
+  is the default: ``test_disable_message_checks_defaults_to_strict_validation``
+  pins ``DISABLE_MESSAGE_CHECKS is False`` (the flag is kept for
+  compatibility; the tests that pin the unchecked ``BareObject`` path set it
+  explicitly, #579). The connection-loss translation is
   pinned with real exception types from the pinned websocket-client: the
   ``WebSocketException`` family (``WebSocketConnectionClosedException`` and
   ``WebSocketTimeoutException``) and ``OSError`` (the synthetic
