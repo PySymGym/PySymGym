@@ -223,8 +223,10 @@ the results append / recv), ``run_server_instance`` with a fake ``Popen``,
 a pinned port and a fresh port lock, the ``run_servers`` placeholders,
 ``kill_server`` / ``kill_process`` with fake ``os.kill`` / ``psutil`` (the
 missing-process warnings, the zombie shortcut, the never-dies
-``RuntimeError``), and ``server_manager`` (queue on enter, kill-all on
-exit).
+``RuntimeError``), ``server_manager`` (queue on enter, kill-all on exit),
+and ``main()`` (the parsed ``process_count`` handed to ``server_manager``
+with a fresh queue, the four declared broker routes on the application,
+the broker port, and the module-global reset).
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
