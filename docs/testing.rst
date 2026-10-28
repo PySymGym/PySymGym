@@ -298,6 +298,28 @@ asserting output dtype/shape and the ``log_softmax`` normalization;
 ``datetime``. Legacy architectures that cannot consume the current tensors are
 tracked in issues #571/#572 instead of being tested.
 
+The ONNX export tests pin ``onyx.py``. The unit tests
+(``AIAgent/tests/unit/test_onyx.py``) pin the pure helpers: ``shorten_output``
+(flatten, round to ``round_to`` decimals, truncate to the first 10 elements
+plus ``"..."`` — the truncation is part of the #597 weak verification, pinned
+as current behaviour), the tensor-input builders (the exact 11 ONNX wire names
+as literals — the V# contract and the drift net for #597's single-source input
+names — each mapped to its ``hetero_factory`` tensor, the modifier
+application, the ``.numpy()`` conversion, and the ``input_names`` order),
+``load_gamestate`` (a reference gamestate JSON into the exact ``GameState``),
+and ``resolve_import_model`` (the valid-FQN resolution, the
+``ModuleNotFoundError`` and ``AttributeError`` branches). The integration
+tests (``AIAgent/tests/integration/test_onnx.py``) are config-driven from
+``integration/resources/model_configurations/`` and read the reference
+gamestates through ``AIAgent/paths.py``: ``TestONNXConversion`` runs the full
+``entrypoint`` (export + verification) with a randomized
+``RealStateModelEncoder``; ``TestONNXExportWarnings`` pins that
+``save_in_onnx`` emits no warnings from torch.onnx, PyG conv, or this repo
+(#617 regression guard); ``TestForwardOnCUDA`` pins the CPU/CUDA forward
+equivalence with and without v-v edges (#617 regression guard, skipped
+without CUDA); ``TestModelGamePreparatorKwargs`` pins the preparator's
+explicit-kwarg forwarding to ``onyx.entrypoint``.
+
 The runstrat CLI tests (``tools/runstrat/tests/unit/``) pin the benchmarking
 tool without end-to-end strategy runs. The parsing tests (``test_parsing.py``)
 pin ``parse_runner_output`` (the exact ``(total_time_sec, tests, errors,
