@@ -15,6 +15,7 @@ from pathlib import Path
 import mlflow
 import yaml
 from common.config.config import Config
+from common.config.loader import anchor_paths
 from mlflow.tracking import MlflowClient
 from paths import MODEL_FILE_NAME, CURRENT_TRIAL_PATH
 from run_training import BEST_TRIAL_NUMBER_TAG
@@ -194,8 +195,11 @@ def derive_config(base_config_path: Path, output_config_path: Path) -> tuple[str
     data["weights_uri"] = weights_uri
     data["OptunaConfig"]["trial_uri"] = trial_uri
     # Reuse the config model's validation (notably that weights_uri and
-    # trial_uri must be set together) before writing anything.
-    Config(**data)
+    # trial_uri must be set together) before writing anything. The models
+    # require absolute paths, so validate an anchored copy against the base
+    # config's own directory; the written config keeps the base's path
+    # values verbatim.
+    Config(**anchor_paths(data, base_config_path.resolve().parent))
 
     output_config_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_config_path, "w") as file:
