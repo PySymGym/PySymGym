@@ -30,14 +30,26 @@ FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
 avoid_same_free_port_lock = asyncio.Lock()
 
 
+class InstanceIssuanceError(RuntimeError):
+    """The broker cannot fulfil a /get_ws request.
+
+    Raised when a live instance is dequeued while the restart feature is
+    disabled (the queue must hold placeholders only) or when a freshly
+    started game server does not open its port within the startup timeout.
+    """
+
+
 async def wait_for_port(port, timeout=10):
     start_time = time.time()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while time.time() - start_time < timeout:
-        if sock.connect_ex(("", port)) == 0:
-            return True
-        await asyncio.sleep(0.1)
-    return False
+    try:
+        while time.time() - start_time < timeout:
+            if sock.connect_ex(("", port)) == 0:
+                return True
+            await asyncio.sleep(0.1)
+        return False
+    finally:
+        sock.close()
 
 
 @routes.get("/get_ws")
@@ -139,7 +151,15 @@ async def run_server_instance(
         proc, port = start_server()
         # Track the handle from birth: the pid alone cannot be reaped.
         PROCS[proc.pid] = proc
-        await wait_for_port(port)
+        if not await wait_for_port(port):
+            # Fail fast: a server that never opens its port would make the
+            # client retry a dead port for the whole connection timeout.
+            # The kill runs in a worker thread so the async handler does
+            # not block on the reap.
+            await asyncio.to_thread(kill_process, proc.pid)
+            raise InstanceIssuanceError(
+                f"game server did not open port {port} within the startup timeout"
+            )
 
     launch_server = launcher(port)
     logging.info(f"running new instance on {port=} with {proc.pid=}:" + launch_server)

@@ -66,10 +66,14 @@ class FakeSocket:
     def __init__(self, connect_ex_result: int) -> None:
         self.connect_ex_result = connect_ex_result
         self.connect_ex_calls: list[tuple] = []
+        self.closed = False
 
     def connect_ex(self, address: tuple) -> int:
         self.connect_ex_calls.append(address)
         return self.connect_ex_result
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def fake_socket_module(monkeypatch: pytest.MonkeyPatch, connect_ex_result: int):
@@ -103,6 +107,8 @@ class TestWaitForPort:
 
         assert asyncio.run(launch_servers_module.wait_for_port(35012)) is True
         assert socks[0].connect_ex_calls == [("", 35012)]
+        # The probe socket is closed on success.
+        assert socks[0].closed is True
 
     def test_closed_port_times_out(self, monkeypatch: pytest.MonkeyPatch) -> None:
         socks = fake_socket_module(monkeypatch, 111)
@@ -113,6 +119,8 @@ class TestWaitForPort:
         )
         # Polled until the timeout expired.
         assert len(socks[0].connect_ex_calls) >= 2
+        # The probe socket is closed on timeout as well.
+        assert socks[0].closed is True
 
 
 class TestGetSocketUrl:
@@ -359,6 +367,63 @@ class TestRunServerInstance:
         assert result == ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 4321
         )
+
+    def test_port_never_opens_fails_fast(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_proc
+    ) -> None:
+        # A fresh lock: the module-level one binds to the first event loop.
+        monkeypatch.setattr(
+            launch_servers_module, "avoid_same_free_port_lock", asyncio.Lock()
+        )
+        monkeypatch.setattr(
+            launch_servers_module,
+            "next_free_port",
+            lambda min_port, max_port: 35012,
+        )
+        proc = fake_proc(pid=4321)
+
+        class FakePopen:
+            # The nested start_server annotates subprocess.Popen[bytes]; the
+            # annotation is evaluated at def time, so the fake must subscript.
+            def __class_getitem__(cls, item):
+                return cls
+
+            def __new__(cls, args, **kwargs):
+                return proc
+
+        monkeypatch.setattr(launch_servers_module.subprocess, "Popen", FakePopen)
+
+        async def fake_wait_for_port(port, timeout=10):
+            return False
+
+        monkeypatch.setattr(launch_servers_module, "wait_for_port", fake_wait_for_port)
+        procs: dict = {}
+        # The global is only created by main(); set it fresh for the test.
+        monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
+        killpg_calls: list[tuple] = []
+        monkeypatch.setattr(
+            launch_servers_module.os,
+            "killpg",
+            lambda pgid, sig: killpg_calls.append((pgid, sig)),
+        )
+        monkeypatch.setattr(launch_servers_module.os, "getpgid", lambda pid: pid)
+
+        with pytest.raises(
+            launch_servers_module.InstanceIssuanceError,
+            match="did not open port 35012",
+        ):
+            asyncio.run(
+                launch_servers_module.run_server_instance(
+                    svm_info(server_working_dir=str(tmp_path)),
+                    should_start_server=True,
+                )
+            )
+
+        # The started process was killed (whole group) and reaped, and no
+        # dead handle is left in the bookkeeping.
+        assert killpg_calls == [(4321, signal.SIGKILL)]
+        assert proc.waited is True
+        assert procs == {}
 
 
 class TestRunServers:
