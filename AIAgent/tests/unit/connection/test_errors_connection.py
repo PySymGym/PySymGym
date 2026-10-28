@@ -8,6 +8,7 @@ from connection.errors_connection import (
     ConnectionLostError,
     GameInterruptedError,
     ProcessStoppedError,
+    ProtocolVersionMismatchError,
 )
 
 pytestmark = pytest.mark.unit
@@ -30,6 +31,10 @@ def test_abstract_desc_property_getter_is_a_noop_stub() -> None:
     [
         (ProcessStoppedError, "SVM's process unexpectedly stopped"),
         (ConnectionLostError, "Connection to SVM was lost"),
+        (
+            ProtocolVersionMismatchError,
+            "the game server speaks an incompatible protocol version",
+        ),
     ],
 )
 def test_concrete_errors_expose_description(

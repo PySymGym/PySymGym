@@ -1,12 +1,16 @@
 """Unit tests for the game-server client/server messages."""
 
 import json
+import logging
 
 import pytest
 from config import FeatureConfig
 
 from common.game import GameMap
+from connection.errors_connection import ProtocolVersionMismatchError
+from connection.game_server_conn import messages
 from connection.game_server_conn.messages import (
+    PROTOCOL_VERSION,
     ClientMessage,
     ClientMessageType,
     GameOverServerMessage,
@@ -14,6 +18,7 @@ from connection.game_server_conn.messages import (
     ServerMessageType,
     StartMessageBody,
     StepMessageBody,
+    check_protocol_version,
 )
 
 pytestmark = pytest.mark.unit
@@ -102,3 +107,83 @@ def test_game_over_message_exposes_body(monkeypatch: pytest.MonkeyPatch) -> None
     assert decoded.MessageBody.TestsCount == 3
     assert decoded.MessageBody.StepsCount == 4
     assert decoded.MessageBody.ErrorsCount == 1
+
+
+def test_check_protocol_version_accepts_the_current_version() -> None:
+    assert check_protocol_version({"Version": PROTOCOL_VERSION}) is PROTOCOL_VERSION
+
+
+def test_check_protocol_version_rejects_a_foreign_version() -> None:
+    with pytest.raises(ProtocolVersionMismatchError) as exc_info:
+        check_protocol_version({"Version": PROTOCOL_VERSION + 1})
+
+    assert str(PROTOCOL_VERSION) in str(exc_info.value)
+    assert str(PROTOCOL_VERSION + 1) in str(exc_info.value)
+
+
+def test_check_protocol_version_ignores_non_dict_envelopes(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(messages, "_legacy_version_notice_issued", False)
+
+    with caplog.at_level(logging.WARNING):
+        assert check_protocol_version([1, 2]) is None
+        assert check_protocol_version("start") is None
+
+    assert not [r for r in caplog.records if r.levelno == logging.WARNING]
+
+
+def test_check_protocol_version_warns_once_per_process_on_legacy(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(messages, "_legacy_version_notice_issued", False)
+
+    with caplog.at_level(logging.WARNING):
+        assert check_protocol_version({"MessageType": "GameOver"}) is None
+        assert check_protocol_version({"MessageType": "GameOver"}) is None
+
+    legacy_warnings = [
+        r
+        for r in caplog.records
+        if r.levelno == logging.WARNING and "no Version field" in r.message
+    ]
+    assert len(legacy_warnings) == 1
+    assert str(PROTOCOL_VERSION) in legacy_warnings[0].message
+
+
+@pytest.mark.parametrize("disabled", [True, False])
+def test_from_json_handle_decodes_a_v2_envelope(
+    disabled: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
+    payload = json.dumps({"Version": PROTOCOL_VERSION, "MessageType": "GameOver"})
+
+    result = ServerMessage.from_json_handle(payload, expected=ServerMessage)
+
+    if disabled:
+        assert result.Version == PROTOCOL_VERSION
+        assert result.MessageType == "GameOver"
+    else:
+        assert isinstance(result, ServerMessage)
+        assert result.MessageType is ServerMessageType.GAMEOVER
+
+
+@pytest.mark.parametrize("disabled", [True, False])
+def test_from_json_handle_rejects_a_foreign_version_under_both_flags(
+    disabled: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
+    payload = json.dumps({"Version": PROTOCOL_VERSION + 1, "MessageType": "GameOver"})
+
+    with pytest.raises(ProtocolVersionMismatchError):
+        ServerMessage.from_json_handle(payload, expected=ServerMessage)
+
+
+@pytest.mark.parametrize("disabled", [True, False])
+def test_from_json_handle_wraps_invalid_json_under_both_flags(
+    disabled: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
+
+    with pytest.raises(ServerMessage.DeserializationException):
+        ServerMessage.from_json_handle("{not json", expected=ServerMessage)
