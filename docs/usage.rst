@@ -78,34 +78,41 @@ improving the dataset in the other kind of run.
            val_type: loss
            batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
 
-    Configure Optuna, for example:
+   Configure Optuna, for example:
 
-    .. code-block:: yaml
+   .. code-block:: yaml
 
-        OptunaConfig:
-          n_startup_trials: 10
-          n_trials: 30
-          n_jobs: 1
-          study_direction: "minimize"
+     OptunaConfig:
+       n_startup_trials: 10
+       n_trials: 30
+       n_jobs: 1
+       study_direction: "minimize"
 
-    The ``TrainingConfig`` section requires a ``seed``. It makes the run
-    reproducible: the dataset split, step sampling, validation map order, and
-    model weight initialization are seeded with it, each trial re-seeds from a
-    seed derived from (study seed, trial number), and the Optuna sampler is
-    seeded with the study seed — so two runs of the same configuration produce
-    identical splits, samples, and hyper-parameter suggestions.
+   The ``TrainingConfig`` section requires a ``seed``. It makes the run
+   reproducible: the dataset split, step sampling, validation map order, and
+   model weight initialization are seeded with it, each trial re-seeds from a
+   seed derived from (study seed, trial number), and the Optuna sampler is
+   seeded with the study seed — so two runs of the same configuration produce
+   identical splits, samples, and hyper-parameter suggestions.
 
-    Each trial writes its artifacts to ``report/trials/<trial_number>/``
-    (model weights, model kwargs, and the SVM statistics table for SVM
-    validation), so parallel trials cannot overwrite each other; the study
-    snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
+   Each trial writes its artifacts to ``report/trials/<trial_number>/``
+   (model weights, model kwargs, and the SVM statistics table for SVM
+   validation), so parallel trials cannot overwrite each other; the study
+   snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
 
-    A trial stops early when its validation result stops improving. On early
-    stop (or after the final epoch), the best checkpoint — the epoch with the
-    best validation result — is restored into the model and exported, so the
-    retained ``model.pth`` and the highest-epoch ``<epoch>/model.pth`` MLflow
-    artifact hold the best weights, and the trial's value is that best
-    result, not the last epoch's.
+   Each trial also runs in its own MLflow run named after the trial number.
+   After each trial finishes, the ``study.pkl`` and ``trial.pkl`` snapshots
+   are logged to that run together with a ``best_trial_number`` tag holding
+   the best trial among those completed so far;
+   ``derive_dataset_improvement_config.py`` locates the best trial's
+   artifacts through that tag.
+
+   A trial stops early when its validation result stops improving. On early
+   stop (or after the final epoch), the best checkpoint — the epoch with the
+   best validation result — is restored into the model and exported, so the
+   retained ``model.pth`` and the highest-epoch ``<epoch>/model.pth`` MLflow
+   artifact hold the best weights, and the trial's value is that best
+   result, not the last epoch's.
 
 2. Move to the ``AIAgent`` directory and run training:
 
