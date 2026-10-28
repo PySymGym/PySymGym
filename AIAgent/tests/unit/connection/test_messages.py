@@ -77,7 +77,7 @@ def test_from_json_handle_respects_message_checks(
     disabled: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
-    payload = json.dumps({"MessageType": "GameOver"})
+    payload = json.dumps({"Version": PROTOCOL_VERSION, "MessageType": "GameOver"})
 
     result = ServerMessage.from_json_handle(payload, expected=ServerMessage)
 
@@ -93,7 +93,7 @@ def test_from_json_handle_raises_on_malformed_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
-    payload = json.dumps({"MessageType": "GameOver"})
+    payload = json.dumps({"Version": PROTOCOL_VERSION, "MessageType": "GameOver"})
 
     with pytest.raises(ServerMessage.DeserializationException):
         GameOverServerMessage.from_json_handle(payload, expected=GameOverServerMessage)
@@ -103,6 +103,7 @@ def test_game_over_message_exposes_body(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
     payload = json.dumps(
         {
+            "Version": PROTOCOL_VERSION,
             "MessageType": "GameOver",
             "MessageBody": {
                 "ActualCoverage": 12,
