@@ -659,8 +659,12 @@ class TestServerManager:
         assert "Failed to kill server 111 during shutdown" in caplog.text
 
 
-def launch_servers_main_config() -> dict:
-    """A production-shaped config (alias keys) for the ``main`` tests."""
+def launch_servers_main_config(base: Path) -> dict:
+    """A production-shaped config (alias keys) for the ``main`` tests.
+
+    The path values point at real objects under ``base``: ``main`` loads the
+    config through ``load_config``, which validates their existence.
+    """
     return {
         "OptunaConfig": {
             "n_startup_trials": 1,
@@ -686,8 +690,8 @@ def launch_servers_main_config() -> dict:
                         "name": "dotnet",
                         "DatasetConfigs": [
                             {
-                                "dataset_base_path": "/dummy",
-                                "dataset_description": "/dummy.json",
+                                "dataset_base_path": str(base / "maps"),
+                                "dataset_description": str(base / "maps.json"),
                             }
                         ],
                         "SVMSInfo": [
@@ -696,7 +700,7 @@ def launch_servers_main_config() -> dict:
                                 "launch_command": "run --port {port}",
                                 "min_port": 35000,
                                 "max_port": 35050,
-                                "server_working_dir": "/srv",
+                                "server_working_dir": str(base / "srv"),
                             }
                         ],
                     }
@@ -716,8 +720,12 @@ class TestMain:
         monkeypatch.setattr(
             launch_servers_module, "BROKER_LOG_PATH", tmp_path / "instance_manager.log"
         )
+        # The config's path values must exist: load_config validates them.
+        (tmp_path / "maps").mkdir()
+        (tmp_path / "maps.json").write_text("{}")
+        (tmp_path / "srv").mkdir()
         config_path = tmp_path / "config.yml"
-        config_path.write_text(yaml.safe_dump(launch_servers_main_config()))
+        config_path.write_text(yaml.safe_dump(launch_servers_main_config(tmp_path)))
 
         sm_calls: list[tuple] = []
 
