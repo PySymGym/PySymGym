@@ -18,6 +18,7 @@ import torch
 import yaml
 from common.classes import GameFailed
 from common.config.config import Config
+from common.config.loader import load_config
 from common.config.optuna_config import OptimizationDirection, OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
@@ -432,6 +433,11 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
 
 
 def main(config: str):
+    # Load the config first: a broken config (a relative path that does not
+    # exist, a missing file) must fail before any side effect — log file,
+    # dataset folder, MLflow setup.
+    config: Config = load_config(config)
+
     logging.basicConfig(
         level=GeneralConfig.LOGGER_LEVEL,
         filename=LOG_PATH,
@@ -439,9 +445,6 @@ def main(config: str):
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
     )
     create_folders_if_necessary([PROCESSED_DATASET_PATH])
-
-    with open(config, "r") as file:
-        config: Config = Config(**yaml.safe_load(file))
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)

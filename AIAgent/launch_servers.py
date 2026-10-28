@@ -12,10 +12,10 @@ from pathlib import Path
 from queue import Empty, Queue
 
 import psutil
-import yaml
 from aiohttp import web
 from common.network_utils import next_free_port
 from common.config.config import Config
+from common.config.loader import load_config
 from common.validation_coverage.svm_info import SVMInfo
 from config import BrokerConfig, FeatureConfig, GeneralConfig
 from paths import BROKER_LOG_PATH
@@ -285,6 +285,10 @@ def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
 def main(config: str):
     global SERVER_INSTANCES, PROCS, RESULTS
 
+    # Load the config first: a broken config must fail before the broker
+    # sets up its state and starts serving.
+    config: Config = load_config(config)
+
     logging.basicConfig(
         level=GeneralConfig.LOGGER_LEVEL,
         filename=BROKER_LOG_PATH,
@@ -297,9 +301,6 @@ def main(config: str):
     PROCS = {}
     RESULTS = []
 
-    with open(config, "r") as file:
-        trainings_parameters = yaml.safe_load(file)
-    config: Config = Config(**trainings_parameters)
     server_count = config.validation_config.validation_mode.process_count
 
     with server_manager(SERVER_INSTANCES, server_count):
