@@ -281,12 +281,15 @@ The companion entrypoint seam tests
 the same way: ``wait_for_port`` with a scripted socket, the four broker
 handlers with fake requests and queues (the dequeue success / empty /
 failure-requeue paths, the enqueue kill-and-rewrap versus keep-pid paths,
-the results append / recv), ``run_server_instance`` with a fake ``Popen``,
-a pinned port and a fresh port lock, the ``run_servers`` placeholders,
-``kill_server`` / ``kill_process`` with fake ``os.kill`` / ``psutil`` (the
-missing-process warnings, the zombie shortcut, the never-dies
-``RuntimeError``), ``server_manager`` (queue on enter, kill-all on exit),
-and ``main()`` (the parsed ``process_count`` handed to ``server_manager``
+the results append / recv), ``run_server_instance`` with a fake ``Popen``
+(the DEVNULL stdout, the pid-keyed handle registration in ``PROCS``), a
+pinned port and a fresh port lock, the ``run_servers`` placeholders,
+``kill_server`` / ``kill_process`` with fake ``os.killpg`` /
+``os.getpgid`` and the ``fake_proc`` stand-in (the untracked-pid warning,
+the process-group kill with the ``proc.wait()`` reap, the vanished-group
+suppression, the never-dies ``RuntimeError``), ``server_manager`` (queue
+on enter, kill-all on exit that survives a per-pid failure), and
+``main()`` (the parsed ``process_count`` handed to ``server_manager``
 with a fresh queue, the four declared broker routes on the application,
 the broker port, and the module-global reset). The
 ``derive_dataset_improvement_config.py`` pins are split by tier: the unit tests
