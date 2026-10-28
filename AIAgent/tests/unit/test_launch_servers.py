@@ -711,8 +711,11 @@ class TestMain:
     """``launch_servers.main``: config loading and broker startup."""
 
     def test_main(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # chdir so the instance_manager.log from logging.basicConfig lands in tmp.
-        monkeypatch.chdir(tmp_path)
+        # The log path is anchored to the AIAgent directory (paths.py); point
+        # it at tmp so the test leaves no artifact behind.
+        monkeypatch.setattr(
+            launch_servers_module, "BROKER_LOG_PATH", tmp_path / "instance_manager.log"
+        )
         config_path = tmp_path / "config.yml"
         config_path.write_text(yaml.safe_dump(launch_servers_main_config()))
 
