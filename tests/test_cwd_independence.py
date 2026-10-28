@@ -2,7 +2,8 @@
 
 The dataset tools used to append a path relative to the CWD to ``sys.path``
 and the integration suites used to resolve resources from the CWD. These tests
-pin both properties.
+pin both properties, plus the entrypoints' artifact paths (``paths.py``) and
+the config loading, which used to resolve everything against the CWD.
 """
 
 import importlib
@@ -12,8 +13,30 @@ from pathlib import Path
 
 import pytest
 
+import paths as paths_module
+
 ROOT = Path(__file__).resolve().parents[1]
 DATASET_TOOLS = ["clean", "generate_episodes"]
+
+
+@pytest.mark.unit
+def test_entrypoint_paths_are_anchored_to_the_ai_agent_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The artifact paths in ``paths.py`` do not depend on the CWD at import time."""
+    monkeypatch.chdir(tmp_path)
+    importlib.reload(paths_module)
+
+    assert paths_module.REPORT_PATH == paths_module.AI_AGENT_PATH / "report"
+    assert paths_module.LOG_PATH == paths_module.AI_AGENT_PATH / "ml_app.log"
+    assert (
+        paths_module.BROKER_LOG_PATH
+        == paths_module.AI_AGENT_PATH / "instance_manager.log"
+    )
+    assert (
+        paths_module.trial_dir(1)
+        == paths_module.AI_AGENT_PATH / "report" / "trials" / "1"
+    )
 
 
 @pytest.mark.unit
