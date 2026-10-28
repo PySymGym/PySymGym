@@ -12,6 +12,7 @@ from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM
 from common.network_utils import look_for_free_port_locked
 from func_timeout import FunctionTimedOut
+from ml.models.registry import get_model_class, get_model_name
 from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
@@ -35,7 +36,6 @@ from onyx import (
 )
 from onyx import (
     load_gamestate,
-    resolve_import_model,
 )
 from paths import MODEL_FILE_NAME, REPORT_PATH, RESOURCES_PATH
 from torch_geometric.data.hetero_data import HeteroData
@@ -92,15 +92,12 @@ class ModelGamePreparator(BaseGamePreparator):
         super().__init__(namespace)
 
     def _create_onnx_model(self):
-        import_model_fqn = (
-            f"{self._model.__class__.__module__}.{self._model.__class__.__name__}"
-        )
         with open(self._gamestate_example_path) as gamestate_file:
             save_torch_model_to_onnx_file(
                 sample_gamestate=load_gamestate(gamestate_file),
                 pytorch_model_path=self._path_to_model,
                 onnx_savepath=self._onnx_path,
-                model_def=resolve_import_model(import_model_fqn),
+                model_def=get_model_class(get_model_name(self._model)),
                 model_kwargs=self._model_kwargs,
             )
 

@@ -140,6 +140,7 @@ class TestModelGamePreparatorKwargs:
             captured["model_kwargs"] = model_kwargs
             captured["pytorch_model_path"] = pytorch_model_path
             captured["onnx_savepath"] = onnx_savepath
+            captured["model_def"] = model_def
 
         monkeypatch.setattr(
             process_game_manager, "save_torch_model_to_onnx_file", fake_export
@@ -161,6 +162,9 @@ class TestModelGamePreparatorKwargs:
         assert captured["model_kwargs"] == model_kwargs
         assert captured["pytorch_model_path"] == model_path
         assert captured["onnx_savepath"] == onnx_path
+        # The preparator resolves the model class through the registry
+        # (name round-trip), not by reconstructing an import path.
+        assert captured["model_def"] is RealStateModelEncoder
 
 
 class TestMain:
@@ -210,7 +214,7 @@ class TestMain:
             "--sample-gamestate",
             "--pytorch-model",
             "--savepath",
-            "--import-model-fqn",
+            "--model-name",
             "--model-kwargs",
         ],
     )
@@ -363,7 +367,7 @@ def _main_argv(tmp_path, config, sample, verify, omit=None):
         "--sample-gamestate": [str(sample)],
         "--pytorch-model": [str(tmp_path / "model.pth")],
         "--savepath": [str(tmp_path / "model.onnx")],
-        "--import-model-fqn": ["ml.models.NorthernPenguin.model.StateModelEncoder"],
+        "--model-name": ["NorthernPenguin"],
         "--model-kwargs": [str(config)],
     }
     if verify:
