@@ -298,6 +298,16 @@ asserting output dtype/shape and the ``log_softmax`` normalization;
 ``datetime``. Legacy architectures that cannot consume the current tensors are
 tracked in issues #571/#572 instead of being tested.
 
+The runstrat CLI tests (``tools/runstrat/tests/unit/``) pin the benchmarking
+tool without end-to-end strategy runs. The parsing tests (``test_parsing.py``)
+pin ``parse_runner_output`` (the exact ``(total_time_sec, tests, errors,
+coverage)`` tuple from a runner transcript, and the ``AttributeError`` with its
+``__notes__`` on a malformed transcript), ``parse_prebuilt`` (class-qualified
+versus top-level method expansion), and the file-reading seams ``load_config``
+(a ``dll,method`` CSV into ``LaunchInfo`` rows, the ``Path``-typed ``dll``
+field) and ``load_prebuilt_config`` (a JSON config structured into
+``PrebuiltConfig`` and expanded).
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer
