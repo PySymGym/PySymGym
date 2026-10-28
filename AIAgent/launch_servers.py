@@ -154,6 +154,18 @@ async def run_server_instance(
             stdout=subprocess.DEVNULL,
             start_new_session=True,
             cwd=Path(server_working_dir).absolute(),
+            # Pin the .NET runtime to the major.minor the game server's
+            # runtimeconfig.json declares (.NET 8 — the runtime the dataset
+            # was generated with, the same guarantee CI has): LatestPatch
+            # takes the highest installed patch of that major.minor and
+            # never rolls forward to a newer major, so a mismatched ambient
+            # runtime fails loudly at server start instead of silently
+            # changing the path-condition encoding (#669). The variable is
+            # inert for non-.NET launch commands.
+            env={
+                **os.environ,
+                "DOTNET_ROLL_FORWARD": FeatureConfig.DOTNET_ROLL_FORWARD,
+            },
         )
         logging.info("bash exec cmd: " + launch_server)
         return proc, port

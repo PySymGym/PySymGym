@@ -81,6 +81,30 @@ To run a single component or a single test:
     poetry run pytest AIAgent/tests/unit/test_fixtures.py
     poetry run pytest AIAgent/tests/integration/test_onnx.py::TestONNXConversion -sv
 
+Local e2e runs
+--------------
+
+The e2e tier is reproduced locally as part of the quality gate. The game
+servers must run on the same ``.NET`` runtime the dataset was generated
+with: the runtime version changes the game server's path-condition
+encoding (the model's input), so a model validated against a different
+runtime fails. The prerequisite is a ``.NET`` 8 runtime on the machine
+with ``dotnet`` on the ``PATH`` resolving to it.
+
+The broker pins the runtime at launch: it sets
+``DOTNET_ROLL_FORWARD=LatestPatch`` in the game server's environment, so
+the server runs on the major.minor its ``runtimeconfig.json`` declares
+(the highest installed patch of it) or fails to start at all — never on a
+newer major version. A mismatched ambient runtime therefore fails loudly
+at server start — the port never opens and the broker refuses to issue
+the instance — instead of silently changing the encoding. The pin
+covers only the broker-launched servers. Two ``.NET`` invocations in the
+local e2e flow are not broker-launched and still run under the ambient
+environment: the dataset-generation step (a plain ``dotnet`` invocation in
+the shell) and the model-validation pipeline's game server (``svms_model``
+launches it directly from the training process, not through the broker).
+Run both under ``env -u DOTNET_ROLL_FORWARD``.
+
 Layout
 ------
 
@@ -284,10 +308,10 @@ fake requests and queues (the dequeue success / empty / failure-requeue
 paths, the live-instance ``InstanceIssuanceError`` with the re-queue, the
 enqueue kill-and-rewrap versus keep-pid paths, the results append /
 recv), ``run_server_instance`` with a fake ``Popen`` (the
-DEVNULL stdout, the pid-keyed handle registration in ``PROCS``, and the
-fail-fast group kill + reap with ``InstanceIssuanceError`` when the port
-never opens), a pinned port and a fresh port lock, the ``run_servers``
-placeholders,
+DEVNULL stdout, the pinned ``DOTNET_ROLL_FORWARD`` environment, the
+pid-keyed handle registration in ``PROCS``, and the fail-fast group kill
++ reap with ``InstanceIssuanceError`` when the port never opens), a
+pinned port and a fresh port lock, the ``run_servers`` placeholders,
 ``kill_server`` / ``kill_process`` with fake ``os.killpg`` /
 ``os.getpgid`` and the ``fake_proc`` stand-in (the untracked-pid warning,
 the process-group kill with the ``proc.wait()`` reap, the vanished-group
