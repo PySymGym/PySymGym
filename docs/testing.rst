@@ -215,7 +215,18 @@ written through ``step_factory``) and a fixed-output fake model: the exact
 averaged ``MSELoss`` over the ``{0, 1}``-thresholded ``y_true`` (the same run
 would average 0.135 without the thresholding), the per-batch loss sequence,
 and the ``DataLoader`` (``batch_size``, ``shuffle=False``) and ``tqdm``
-(``desc``/``ncols``/``colour``) kwargs.
+(``desc``/``ncols``/``colour``) kwargs. The ``ModelGameManager`` play-flow
+tests (``test_process_game_manager.py``) pin ``_play_game_map`` with
+instance-level fakes for ``_run_game_process`` / ``_get_result`` and the
+``fake_proc`` fixture: the ``GameResult`` / ``GameFailed`` wrapping into
+``GameResultDetails`` / ``GameFailedDetails`` (with the
+``SVMConnectionInfo``), the exact
+``"Failed to instantiate process for <map>"`` message, the timeout and
+exception branches killing the process and storing the exception CLASS as
+the ``GameFailed`` reason, and the no-process warning; the preparator is
+pinned (clean-then-export order, the existing-dir delete, the
+no-op-when-missing) and the full-coverage-without-oracle warning of
+``_get_result`` is pinned via caplog.
 
 The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 ``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
