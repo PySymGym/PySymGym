@@ -1,0 +1,133 @@
+"""Seam tests for the runstrat ``entrypoint()`` (happy path + result writing).
+
+``entrypoint()`` is driven with a method-keyed fake for
+``runstrat.call_test_runner`` (the subprocess boundary) and a recording fake for
+``logging.basicConfig`` (no global logging side effect). ``load_config`` and
+``parse_runner_output`` run for real; ``tqdm`` is replaced by a passthrough so
+the loop is deterministic.
+"""
+
+import logging
+from pathlib import Path
+
+import pytest
+import runstrat
+from runstrat import Args, RunMode
+from src.psstrategy import ExecutionTreeContributedCoverageStrategy
+
+pytestmark = pytest.mark.unit
+
+# Parses to (total_time_sec, tests, errors, coverage) = (62, 5, 2, 88.5).
+OUTPUT_M1 = (
+    "Total time: 00:01:02.123\n"
+    "Tests generated: 5\n"
+    "Errors generated: 2\n"
+    "Precise coverage: 88.5\n"
+)
+# Parses to (3600, 10, 0, 100.0).
+OUTPUT_M2 = (
+    "Total time: 01:00:00.000\n"
+    "Tests generated: 10\n"
+    "Errors generated: 0\n"
+    "Precise coverage: 100.0\n"
+)
+
+
+def make_args(tmp_path: Path, methods: list[str], run_mode=RunMode.BENCHMARKS) -> Args:
+    """Build an Args whose maps CSV yields one launch info per method."""
+    csv_path = tmp_path / "maps.csv"
+    csv_path.write_text("dll,method\n" + "".join(f"A.dll,{m}\n" for m in methods))
+    dll_dir = tmp_path / "dlls"
+    dll_dir.mkdir(exist_ok=True)
+    savedir = tmp_path / "savedir"
+    savedir.mkdir(exist_ok=True)
+    return Args(
+        strategy=ExecutionTreeContributedCoverageStrategy(
+            "ExecutionTreeContributedCoverage"
+        ),
+        timeout=5,
+        pysymgym_path=tmp_path / "pysymgym",
+        savedir=savedir,
+        assembly_infos=[(dll_dir, csv_path)],
+        run_mode=run_mode,
+    )
+
+
+@pytest.fixture
+def entrypoint_env(monkeypatch: pytest.MonkeyPatch):
+    """Install the entrypoint() fakes; return a dict with the script hook."""
+    env: dict = {"script": {}, "basicConfig_calls": []}
+
+    def fake_call_test_runner(path_to_runner, launch_info, strategy, wdir, timeout):
+        entry = env["script"][launch_info.method]
+        if isinstance(entry, BaseException):
+            raise entry
+        return f"dotnet {path_to_runner} --method {launch_info.method}", entry
+
+    def fake_basicConfig(**kwargs):
+        env["basicConfig_calls"].append(kwargs)
+
+    def fake_tqdm(iterable, *args, **kwargs):
+        return iterable
+
+    monkeypatch.setattr(runstrat, "call_test_runner", fake_call_test_runner)
+    monkeypatch.setattr(logging, "basicConfig", fake_basicConfig)
+    monkeypatch.setattr(runstrat.tqdm, "tqdm", fake_tqdm)
+    return env
+
+
+def test_setup_logging_configures_a_file_handler(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list = []
+    monkeypatch.setattr(logging, "basicConfig", lambda **kw: calls.append(kw))
+
+    runstrat.setup_logging(tmp_path / "logs", "MyStrat")
+
+    assert calls[0]["filename"] == str(tmp_path / "logs" / "MyStrat.log")
+    assert calls[0]["level"] == logging.INFO
+
+
+def test_entrypoint_writes_one_row_per_method(entrypoint_env, tmp_path: Path) -> None:
+    args = make_args(tmp_path, ["M1", "M2"])
+    entrypoint_env["script"] = {"M1": OUTPUT_M1, "M2": OUTPUT_M2}
+
+    df = runstrat.entrypoint(args)
+
+    assert list(df.columns) == [
+        "method",
+        "tests",
+        "errors",
+        "coverage",
+        "total_time_sec",
+    ]
+    assert df["method"].tolist() == ["M1", "M2"]
+    assert df["tests"].tolist() == [5, 10]
+    assert df["errors"].tolist() == [2, 0]
+    assert df["coverage"].tolist() == [88.5, 100.0]
+    assert df["total_time_sec"].tolist() == [62, 3600]
+
+    csv_path = tmp_path / "savedir" / "ExecutionTreeContributedCoverage.csv"
+    assert csv_path.read_text() == (
+        "method,tests,errors,coverage,total_time_sec\n"
+        "M1,5,2,88.5,62\n"
+        "M2,10,0,100.0,3600\n"
+    )
+    # setup_logging pointed the file handler at {strategy.name}.log.
+    assert entrypoint_env["basicConfig_calls"][0]["filename"] == str(
+        tmp_path / "savedir" / "ExecutionTreeContributedCoverage.log"
+    )
+
+
+def test_entrypoint_returns_empty_dataframe_when_no_methods(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, [])
+    entrypoint_env["script"] = {}
+
+    df = runstrat.entrypoint(args)
+
+    assert len(df) == 0
+    assert list(df.columns) == []
+    csv_path = tmp_path / "savedir" / "ExecutionTreeContributedCoverage.csv"
+    assert csv_path.read_text() == "\n"
