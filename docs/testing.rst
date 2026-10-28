@@ -378,3 +378,14 @@ A pull request that drops coverage below it fails CI
 (``.github/workflows/python_tests.yaml``). Raise the value in the same pull
 request that improves coverage; never lower it without a deliberate decision
 recorded in the pull request.
+
+Exclusions
+~~~~~~~~~~
+
+``AIAgent/ml/models/RGCNEdgeTypeTAG3VerticesDoubleHistory2/model.py`` is
+omitted from the measurement (``[tool.coverage.run] omit``): the legacy
+architecture cannot consume the current graph tensors — the 2-column history
+``edge_attr`` is passed as a 1-D ``edge_weight`` (#571) and the three legacy
+models cannot forward or instantiate with the current tensors (#572). It is
+tracked in those issues instead of being tested, and its removal is pending
+#581 (model registry / dead-zoo cleanup), which also removes the omit line.
