@@ -228,6 +228,123 @@ class TestMain:
             )
 
 
+class TestONNXVerification:
+    """The verification failure path of ``entrypoint``.
+
+    The current verification compares ``shorten_output`` results (rounded
+    to 3 decimals, truncated to the first 10 elements) with an ``assert``;
+    both weaknesses are #597-tracked. These tests pin the crash-level
+    post-fix properties as strict ``xfail``s; #597 owns removing the
+    markers when it lands.
+    """
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "#597: the verification compares shorten_output results with an "
+            "assert, so a numerically divergent conversion surfaces as an "
+            "AssertionError; #597's fix spec pins a proper (non-assert) "
+            "error, so this pins that crash-level property"
+        ),
+    )
+    def test_divergent_verification_raises_proper_error(
+        self, tmp_path, monkeypatch, config
+    ):
+        with open(config) as file:
+            model_kwargs = yaml.safe_load(file)
+
+        gamestates = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))
+        sample, *verify = gamestates
+
+        mock_model_path = tmp_path / "real_random_model.pt"
+        torch.save(
+            obj=RealStateModelEncoder(**model_kwargs).state_dict(),
+            f=mock_model_path,
+        )
+
+        real_onnx_run = onyx.onnx_run
+
+        def divergent_onnx_run(session, data):
+            (out,) = real_onnx_run(session, data)
+            return [out + 1.0]
+
+        monkeypatch.setattr(onyx, "onnx_run", divergent_onnx_run)
+
+        with pytest.raises(Exception) as excinfo:
+            entrypoint(
+                sample_gamestate=_load_gamestate(sample),
+                pytorch_model_path=mock_model_path,
+                onnx_savepath=tmp_path / "real_random_model.onnx",
+                model_def=RealStateModelEncoder,
+                model_kwargs=model_kwargs,
+                verification_gamestates=[_load_gamestate(path) for path in verify],
+            )
+
+        assert not isinstance(excinfo.value, AssertionError)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "#597: the verification truncates both outputs to the first 10 "
+            "elements, so a divergence beyond element 10 passes the current "
+            "assert; #597's fix spec compares the full tensors with a proper "
+            "(non-assert) error, so this pins that such a divergence is "
+            "rejected with a proper error"
+        ),
+    )
+    def test_divergence_beyond_first_ten_elements_is_rejected(
+        self, tmp_path, monkeypatch, config
+    ):
+        with open(config) as file:
+            model_kwargs = yaml.safe_load(file)
+
+        sample = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
+
+        mock_model_path = tmp_path / "real_random_model.pt"
+        torch.save(
+            obj=RealStateModelEncoder(**model_kwargs).state_dict(),
+            f=mock_model_path,
+        )
+
+        real_onnx_run = onyx.onnx_run
+
+        def beyond_truncation_onnx_run(session, data):
+            (out,) = real_onnx_run(session, data)
+            perturbed = out.copy()
+            perturbed.reshape(-1)[10] += 1.0
+            return [perturbed]
+
+        monkeypatch.setattr(onyx, "onnx_run", beyond_truncation_onnx_run)
+
+        with pytest.raises(Exception) as excinfo:
+            entrypoint(
+                sample_gamestate=_load_gamestate(sample),
+                pytorch_model_path=mock_model_path,
+                onnx_savepath=tmp_path / "real_random_model.onnx",
+                model_def=RealStateModelEncoder,
+                model_kwargs=model_kwargs,
+                verification_gamestates=[_twelve_state_gamestate()],
+            )
+
+        assert not isinstance(excinfo.value, AssertionError)
+
+
+def _twelve_state_gamestate() -> GameState:
+    """A 12-state verification gamestate built from the 86 reference.
+
+    The reference has 4 states; 8 copies of its first state with fresh
+    Ids (100-107) and empty ``Children`` bring it to 12, so the model
+    output (one row per state) is longer than ``shorten_output``'s
+    10-element truncation window.
+    """
+    path = REFERENCE_GAMESTATES_DIR / "86_gameState.json"
+    with open(path) as f:
+        data = json.load(f)
+    template = data["States"][0]
+    data["States"].extend({**template, "Id": 100 + i, "Children": []} for i in range(8))
+    return GameState.from_dict(data)
+
+
 def _run_main(monkeypatch, argv):
     """Run ``onyx.main()`` with the given argv; return the captured kwargs."""
     captured = {}
