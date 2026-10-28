@@ -288,7 +288,21 @@ missing-process warnings, the zombie shortcut, the never-dies
 ``RuntimeError``), ``server_manager`` (queue on enter, kill-all on exit),
 and ``main()`` (the parsed ``process_count`` handed to ``server_manager``
 with a fresh queue, the four declared broker routes on the application,
-the broker port, and the module-global reset).
+the broker port, and the module-global reset). The
+``derive_dataset_improvement_config.py`` pins split by tier: the unit tests
+(``AIAgent/tests/unit/test_derive_dataset_improvement_config.py``) pin the
+``main()`` CLI seam (the parsed ``--base-config`` / ``--output-config``
+Paths forwarded to ``derive_config``) and the missing-``experiment_name``
+``SystemExit`` (which fails before an ``MlflowClient`` is created, so no
+MLflow store is needed); the integration tests
+(``AIAgent/tests/integration/test_derive_dataset_improvement_config.py``)
+drive the real sqlite-backed MLflow store with the ``log_tuning_structure``
+helper and pin the best-trial lookup (best trial not last finished, single
+trial, no tagged runs, unended tag, a tag pointing at a missing run), the
+last-model-epoch lookup (highest epoch, no model artifacts), the missing
+experiment, and ``derive_config`` (the derived URIs, the preserved base
+config, and the missing-experiment / missing-``OptunaConfig``
+``SystemExit`` paths that write nothing).
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently

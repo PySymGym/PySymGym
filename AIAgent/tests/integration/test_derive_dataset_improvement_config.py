@@ -122,6 +122,15 @@ class TestFindBestTrialRun:
             find_best_trial_run(client, experiment.experiment_id)
         mlflow.end_run()
 
+    def test_tag_pointing_at_missing_run_fails(self, tmp_path):
+        mlflow.set_tracking_uri(f"sqlite:///{tmp_path / 'mlflow.db'}")
+        experiment = mlflow.set_experiment("CI")
+        with mlflow.start_run(run_name="0"):
+            mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, "5")
+        client = MlflowClient()
+        with pytest.raises(SystemExit, match="no run named 5"):
+            find_best_trial_run(client, experiment.experiment_id)
+
 
 class TestFindLastModelEpoch:
     def test_highest_epoch_of_the_given_run(self, tmp_path):
@@ -202,6 +211,19 @@ class TestDeriveConfig:
             yaml.safe_dump(data, file, sort_keys=False)
         output = tmp_path / "derived.yml"
         with pytest.raises(SystemExit, match="not found"):
+            derive_config(base, output)
+        assert not output.exists()
+
+    def test_missing_optuna_config_fails_without_writing(self, tmp_path):
+        log_tuning_structure(tmp_path, values=[0.5], epochs_per_trial=[1])
+        base = base_config_pointing_at(tmp_path)
+        with open(base) as file:
+            data = yaml.safe_load(file)
+        del data["OptunaConfig"]
+        with open(base, "w") as file:
+            yaml.safe_dump(data, file, sort_keys=False)
+        output = tmp_path / "derived.yml"
+        with pytest.raises(SystemExit, match="has no OptunaConfig section"):
             derive_config(base, output)
         assert not output.exists()
 
