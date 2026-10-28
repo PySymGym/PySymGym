@@ -1,32 +1,32 @@
+# ML Models
 
+Model classes for the state-prediction GNN. A model lives here only if it
+conforms to the forward contract and is registered.
 
-## Pretrained Models Summary Balanced Dataset
+## Layout
 
-| Name | Train Loss | Test Loss |#parameters|#epochs|#hidden|lr|Comments|
-|--|--|--|--|--|--|--|--|
-|[EdgeTypeRGCNSageSubgraphs64ch](./models/EdgeTypeRGCNSageSubgraphs64ch/)  |0.009276  |0.009997 |22,920|20|64|0.0001||
-|[EdgeTypeRGCNSageSubgraphs64ch](./models/EdgeTypeRGCNSageSubgraphs64ch/)   |0.006144  |0.006247 |22,920|50|64|0.0001||
-|[EdgeTypeRGCNSageSubgraphs64ch](./models/EdgeTypeRGCNSageSubgraphs64ch/)  |0.004633  |0.004714 |22,920|100|64|0.0001||
+- `NorthernPenguin/` — the registered model (`StateModelEncoder`).
+- `modelop/` — model utilities (`filemanager.save_model`).
+- `registry.py` — the model registry: the single selection path for model
+  classes (name → class, reverse lookup by instance or class).
 
+## Forward contract
 
-## Inference
-```python
-model = StateModelEncoder(hidden_channels=#hidden, out_channels=8)
-```
+`ml/protocols.py` defines the `Model` protocol: the 11-parameter `forward`
+signature that `ml/inference.py:infer()` calls, returning a
+`(num_states, 1)` tensor. Every production forward call goes through
+`infer()`, so a model that does not conform to the contract cannot be
+trained, exported, or deployed. The registry tests
+(`AIAgent/tests/unit/ml/test_registry.py`) pin each registered model's
+`forward` signature against the contract, and the smoke tests
+(`AIAgent/tests/unit/ml/test_models_forward.py`) forward a dummy batch
+through `infer()` for every registered model.
 
+## Registering a new model
 
-## Pretrained Models Summary Old
-
-| Name | Train Loss | Test Loss |#parameters|#epochs|#hidden|lr|Comments|
-|--|--|--|--|--|--|--|--|
-|[StateGNNEncoderConvEdgeAttrSPA](./models/StateGNNEncoderConvEdgeAttrSPA/)  |0.006074  |0.006214 |12,392|20|32|0.0001||
-|[StateGNNEncoderConvEdgeAttrBasic32Ch](./models/StateGNNEncoderConvEdgeAttrBasic32Ch/)  |0.007862  |0.007962 |9,896|20|32|0.0001||
-|[StateGNNEncoderConvEdgeAttrBasic](./models/StateGNNEncoderConvEdgeAttrBasic/)  |0.007512  |0.007499 |36,168|20|64|0.0001||
-|[StatesAfterAllCompact32ch](./models/StatesAfterAllCompact32ch/)  |0.006934  |0.006977 |8,296|20|32|0.0001||
-|[StatesAfterAllCompact32ch](./models/StatesAfterAllCompact32ch/)  |0.006135  |0.006215 |8,296|50|32|0.0001||
-
-## Inference
-```python
-model = StateModelEncoder(hidden_channels=#hidden, out_channels=8)
-```
-
+1. Add the model class under a new directory (e.g. `MyModel/model.py`).
+2. Conform its `forward` to the `Model` contract.
+3. Register it in `registry.py` (`MODELS["MyModel"] = MyModelEncoder`).
+4. Extend the smoke test's per-model init-kwargs table with the model's
+   small kwargs — its coverage assertion fails if the table and the
+   registry drift apart.

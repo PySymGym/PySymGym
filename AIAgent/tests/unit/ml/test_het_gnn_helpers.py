@@ -4,10 +4,15 @@ import pytest
 import torch
 import torch.nn.functional as F
 from ml.het_gnn_test_train import HetGNNTestTrain, get_module_name
-from ml.models.InvisibleCow.model import StateModelEncoder as InvisibleCowEncoder
 from ml.models.NorthernPenguin.model import StateModelEncoder as NorthernPenguinEncoder
 
 pytestmark = pytest.mark.unit
+
+
+class _OtherPackageModel:
+    """A stand-in whose ``__module__`` pins the parent-package extraction."""
+
+    __module__ = "ml.models.SomeOther.model"
 
 
 @pytest.fixture
@@ -17,7 +22,7 @@ def trainer() -> HetGNNTestTrain:
 
 def test_get_module_name_returns_the_parent_package():
     assert get_module_name(NorthernPenguinEncoder) == "NorthernPenguin"
-    assert get_module_name(InvisibleCowEncoder) == "InvisibleCow"
+    assert get_module_name(_OtherPackageModel) == "SomeOther"
 
 
 def test_weighted_mse_loss_without_weight_equals_mse(trainer):
