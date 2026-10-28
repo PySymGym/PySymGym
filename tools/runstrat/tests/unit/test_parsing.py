@@ -1,7 +1,15 @@
 """Unit tests for the runstrat output/config parsing."""
 
+import json
+from pathlib import Path
+
 import pytest
-from src.parsing import parse_prebuilt, parse_runner_output
+from src.parsing import (
+    load_config,
+    load_prebuilt_config,
+    parse_prebuilt,
+    parse_runner_output,
+)
 from src.structs import PrebuiltConfig
 
 pytestmark = pytest.mark.unit
@@ -31,6 +39,37 @@ def test_parse_prebuilt_expands_classes_and_top_level_functions() -> None:
     )
 
     infos = parse_prebuilt(config)
+
+    assert [(info.dll, info.method) for info in infos] == [
+        ("/dlls/a.dll", "Cls.M1"),
+        ("/dlls/a.dll", "Cls.M2"),
+        ("/dlls/a.dll", "Top"),
+    ]
+
+
+def test_load_config_reads_dll_method_pairs(tmp_path: Path) -> None:
+    csv_path = tmp_path / "maps.csv"
+    csv_path.write_text("dll,method\nA.dll,Cls.M1\nB.dll,Top\n")
+
+    infos = load_config(tmp_path / "dlls", csv_path)
+
+    # ``load_config`` joins the dll dir onto each row, so ``dll`` is a ``Path``
+    # (the ``LaunchInfo.dll`` annotation says ``str`` but the value is a Path).
+    assert [(info.dll, info.method) for info in infos] == [
+        (tmp_path / "dlls" / "A.dll", "Cls.M1"),
+        (tmp_path / "dlls" / "B.dll", "Top"),
+    ]
+
+
+def test_load_prebuilt_config_structures_and_expands(tmp_path: Path) -> None:
+    json_path = tmp_path / "config.json"
+    json_path.write_text(
+        json.dumps(
+            {"dll_dir": "/dlls", "dlls": {"a.dll": {"Cls": ["M1", "M2"], "": ["Top"]}}}
+        )
+    )
+
+    infos = load_prebuilt_config(str(json_path))
 
     assert [(info.dll, info.method) for info in infos] == [
         ("/dlls/a.dll", "Cls.M1"),
