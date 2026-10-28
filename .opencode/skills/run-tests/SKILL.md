@@ -39,3 +39,19 @@ restore it before running anything:
 
 - The runstrat suite needs two pre-built .NET artifacts first — see the
   "Per-component build prerequisites" section of `docs/setup.rst`.
+
+## Local e2e reproduction (quality gate)
+
+The e2e training pipeline (`.github/workflows/e2e_build_and_run.yml`) is
+reproduced locally as part of the quality gate; the workflow file is the
+source of truth for the steps. Machine-specific pitfalls:
+
+- A stale `DOTNET_ROLL_FORWARD=Major` in the ambient environment rolls the
+  net8.0 game server forward to a newer runtime, which changes the
+  path-condition encoding and breaks e2e validation (the dataset is generated
+  with the .NET 8 runtime; CI runs .NET 8). Run the e2e steps under
+  `env -u DOTNET_ROLL_FORWARD bash -lc '...'` and sanity-check
+  `which dotnet` → `/home/gsv/.dotnet/dotnet` (the .NET 8 install).
+- Start from a clean `AIAgent/report/` and `AIAgent/mlartifacts/` (CI runs
+  from a fresh checkout): a stale `report/dataset_path_condition` confounds
+  the tuning run.
