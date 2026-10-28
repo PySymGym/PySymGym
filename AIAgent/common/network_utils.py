@@ -11,14 +11,16 @@ def next_free_port(
     max_port=BrokerConfig.BROKER_PORT + 1000,
 ):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while min_port <= max_port:
-        try:
-            sock.bind(("", min_port))
-            sock.close()
-            return min_port
-        except OSError:
-            min_port += 1
-    raise IOError("no free ports")
+    try:
+        while min_port <= max_port:
+            try:
+                sock.bind(("", min_port))
+                return min_port
+            except OSError:
+                min_port += 1
+        raise IOError("no free ports")
+    finally:
+        sock.close()
 
 
 def look_for_free_port_locked(
