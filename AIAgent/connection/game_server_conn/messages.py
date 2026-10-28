@@ -99,6 +99,7 @@ class RewardServerMessage(ServerMessage):
 class GameOverServerMessageBody:
     ActualCoverage: Optional[int]
     TestsCount: int
+    StepsCount: int
     ErrorsCount: int
 
 
