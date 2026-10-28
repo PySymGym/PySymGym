@@ -50,7 +50,7 @@ async def dequeue_instance(request):
             should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
-        return web.json_response(server_info.to_json())
+        return web.json_response(server_info.to_dict())
     except Empty:
         logging.error("Couldn't dequeue instance, the queue is not replenishing")
         raise

@@ -157,8 +157,8 @@ class TestDequeueInstance:
         # The query is parsed into an SVMInfo (pydantic coerces the strings),
         # and the restart feature (enabled by default) starts the server.
         assert calls == [(svm_info(), True)]
-        # The response body is the JSON encoding of the issued info's to_json.
-        assert json.loads(response.text) == issued.to_json()
+        # The response body is the single-encoded JSON of the issued info.
+        assert json.loads(response.text) == issued.to_dict()
         assert queue.empty()
 
     def test_empty_queue_raises(self, monkeypatch: pytest.MonkeyPatch):
