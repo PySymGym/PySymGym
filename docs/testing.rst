@@ -214,6 +214,17 @@ device, and the ``Config`` validator rejecting ``weights_uri`` without
 ``trial_uri``. The ``model_init`` checkpoint loading is pinned through that
 seam, including the ``map_location`` fix for CUDA-saved checkpoints on
 CPU-only machines (#667, regression test requires CUDA and skips otherwise).
+The companion entrypoint seam tests
+(``AIAgent/tests/unit/test_launch_servers.py``) pin ``launch_servers.py``
+the same way: ``wait_for_port`` with a scripted socket, the four broker
+handlers with fake requests and queues (the dequeue success / empty /
+failure-requeue paths, the enqueue kill-and-rewrap versus keep-pid paths,
+the results append / recv), ``run_server_instance`` with a fake ``Popen``,
+a pinned port and a fresh port lock, the ``run_servers`` placeholders,
+``kill_server`` / ``kill_process`` with fake ``os.kill`` / ``psutil`` (the
+missing-process warnings, the zombie shortcut, the never-dies
+``RuntimeError``), and ``server_manager`` (queue on enter, kill-all on
+exit).
 
 Model smoke tests forward a synthetic ``hetero_factory`` graph through every
 model that still matches the production tensor schema (currently
