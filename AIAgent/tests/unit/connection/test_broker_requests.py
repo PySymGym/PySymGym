@@ -77,14 +77,12 @@ def test_acquire_instance_raises_on_non_200(monkeypatch: pytest.MonkeyPatch) -> 
 def test_acquire_instance_decodes_single_encoded_body(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # The broker's /get_ws double-encodes (launch_servers.py:53, pinned by
-    # C1's test_success_issues_a_real_instance), so the current wire format
-    # is a JSON string containing JSON and the client's double-decode
-    # matches it. This test uses the single-encoded body — the natural
-    # format and the one #573's fix decodes — so it xfails until #573
-    # lands. The double-encoded success path is the tracked double-decode
-    # and is not asserted as correct (the success-path lines are excluded;
-    # see docs/testing.rst).
+    # The broker's /get_ws single-encodes (launch_servers.py, pinned by
+    # C1's test_success_issues_a_real_instance), so the wire format is a
+    # single-encoded JSON object. This test feeds the client that
+    # single-encoded body; the client's double-decode raises TypeError on
+    # the decoded dict, so it xfails until #573's client fix lands. The
+    # success-path lines are excluded (see docs/testing.rst).
     http = FakeHttp(content=_instance().to_json().encode("utf-8"))
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
