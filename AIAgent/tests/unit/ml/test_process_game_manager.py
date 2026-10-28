@@ -12,6 +12,7 @@ import pytest
 import torch
 from common.classes import GameFailed, GameResult
 from common.game import GameMap
+from func_timeout import FunctionTimedOut
 from ml.validation.coverage.game_managers.model import process_game_manager as pgm
 from ml.validation.coverage.game_managers.model.classes import (
     GameFailedDetails,
@@ -20,6 +21,7 @@ from ml.validation.coverage.game_managers.model.classes import (
     SVMConnectionInfo,
 )
 from ml.validation.coverage.game_managers.model.process_game_manager import (
+    ModelGamePreparator,
     ModelGameManager,
 )
 
@@ -251,6 +253,229 @@ def test_run_game_process_formats_and_launches(
     args, kwargs = popen_calls[0]
     assert args == ["run", "--port", "4000", "--map", "Map1", "--cover", "Method"]
     assert kwargs["encoding"] == "utf-8"
+
+
+def test_get_result_full_coverage_without_oracle_warns(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory(steps_to_play=10, steps_to_start=3)
+    _write_result(tmp_path, game_map2svm.GameMap, "100 5 3 0")
+
+    with caplog.at_level(logging.WARNING):
+        result = manager._get_result(game_map2svm, fake_proc())
+
+    assert result == GameResult(
+        steps_count=0,
+        tests_count=5,
+        errors_count=0,
+        actual_coverage_percent=100,
+    )
+    assert "The map Method_0 was completely covered without an oracle?!" in caplog.text
+
+
+def test_clean_output_folder_deletes_the_existing_dir(
+    fake_namespace, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    svms_out = tmp_path / "svms_out"
+    svms_out.mkdir()
+    preparator = ModelGamePreparator(
+        fake_namespace, torch.nn.Linear(1, 1), svms_output_path=svms_out
+    )
+    removed: list = []
+    monkeypatch.setattr(pgm, "delete_dir", removed.append)
+
+    preparator._clean_output_folder()
+
+    assert removed == [svms_out]
+
+
+def test_clean_output_folder_is_a_noop_when_missing(
+    fake_namespace, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    preparator = ModelGamePreparator(
+        fake_namespace, torch.nn.Linear(1, 1), svms_output_path=tmp_path / "svms_out"
+    )
+    removed: list = []
+    monkeypatch.setattr(pgm, "delete_dir", removed.append)
+
+    preparator._clean_output_folder()
+
+    assert removed == []
+
+
+def test_prepare_cleans_then_exports_the_onnx_model(
+    fake_namespace, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    preparator = ModelGamePreparator(
+        fake_namespace, torch.nn.Linear(1, 1), svms_output_path=tmp_path / "svms_out"
+    )
+    events: list[str] = []
+    monkeypatch.setattr(
+        preparator, "_clean_output_folder", lambda: events.append("clean")
+    )
+    monkeypatch.setattr(preparator, "_create_onnx_model", lambda: events.append("onnx"))
+
+    preparator.prepare()
+
+    assert events == ["clean", "onnx"]
+    assert fake_namespace.is_prepared.value is True
+
+
+def test_play_game_map_returns_the_game_result(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory()
+    proc = fake_proc()
+    server_socket = object()
+    monkeypatch.setattr(
+        manager, "_run_game_process", lambda g2s: (proc, 4000, server_socket)
+    )
+    monkeypatch.setattr(manager, "_get_result", lambda g2s, p: GameResult(5, 2, 1, 80))
+
+    result = manager._play_game_map(game_map2svm)
+
+    assert result.map is game_map2svm
+    assert result.game_result == GameResult(5, 2, 1, 80)
+    info = manager._games_info[game_map2svm.GameMap.MapName]
+    assert info.proc is proc
+    assert info.game_result == GameResultDetails(
+        game_result=GameResult(5, 2, 1, 80),
+        svm_connection_info=SVMConnectionInfo(occupied_port=4000, socket=server_socket),
+    )
+
+
+def test_play_game_map_wraps_a_game_failed(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory()
+    failed = GameFailed("engine died")
+    monkeypatch.setattr(
+        manager, "_run_game_process", lambda g2s: (fake_proc(), 4000, object())
+    )
+    monkeypatch.setattr(manager, "_get_result", lambda g2s, p: failed)
+
+    result = manager._play_game_map(game_map2svm)
+
+    assert result.game_result is failed
+    info = manager._games_info[game_map2svm.GameMap.MapName]
+    assert info.game_result == GameFailedDetails(game_failed=failed)
+
+
+def test_play_game_map_reports_process_instantiation_failure(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory()
+
+    def boom(g2s):
+        raise RuntimeError("no server")
+
+    monkeypatch.setattr(manager, "_run_game_process", boom)
+
+    result = manager._play_game_map(game_map2svm)
+
+    assert isinstance(result.game_result, GameFailed)
+    assert result.game_result.reason == "Failed to instantiate process for Method_0"
+
+
+def test_play_game_map_timeout_kills_the_process(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory()
+    proc = fake_proc()
+    monkeypatch.setattr(
+        manager, "_run_game_process", lambda g2s: (proc, 4000, object())
+    )
+
+    def timeout(g2s, p):
+        raise FunctionTimedOut(timedOutAfter=1800)
+
+    monkeypatch.setattr(manager, "_get_result", timeout)
+
+    with caplog.at_level(logging.WARNING):
+        result = manager._play_game_map(game_map2svm)
+
+    assert proc.killed is True
+    assert isinstance(result.game_result, GameFailed)
+    # Current behaviour: the reason is the exception class, not an instance.
+    assert result.game_result.reason is FunctionTimedOut
+    assert "Timeouted on map Method_0 with 1800s after 0 steps" in caplog.text
+
+
+def test_play_game_map_exception_kills_the_process(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory()
+    proc = fake_proc()
+    monkeypatch.setattr(
+        manager, "_run_game_process", lambda g2s: (proc, 4000, object())
+    )
+
+    def boom(g2s, p):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(manager, "_get_result", boom)
+
+    result = manager._play_game_map(game_map2svm)
+
+    assert proc.killed is True
+    assert isinstance(result.game_result, GameFailed)
+    assert result.game_result.reason is RuntimeError
+
+
+def test_play_game_map_failure_without_process_warns(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    game_map2svm = game_map2svm_factory()
+    monkeypatch.setattr(
+        manager, "_run_game_process", lambda g2s: (None, 4000, object())
+    )
+
+    def boom(g2s, p):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(manager, "_get_result", boom)
+
+    with caplog.at_level(logging.WARNING):
+        result = manager._play_game_map(game_map2svm)
+
+    assert "There is no such proc?! Can't kill instance of Method_0." in caplog.text
+    assert isinstance(result.game_result, GameFailed)
+    assert result.game_result.reason is RuntimeError
 
 
 class FakeConnectionSocket:
