@@ -1,5 +1,6 @@
 """Unit tests for the game-server client/server messages."""
 
+import dataclasses
 import json
 import logging
 
@@ -36,7 +37,7 @@ def _game_map() -> GameMap:
 
 
 def test_client_message_sets_type_from_start_body() -> None:
-    message = ClientMessage(StartMessageBody(**_game_map().to_dict()))
+    message = ClientMessage(StartMessageBody.from_game_map(_game_map()))
     assert message.MessageType is ClientMessageType.START
 
 
@@ -53,8 +54,22 @@ def test_client_message_json_contains_encoded_body() -> None:
 
 
 def test_start_message_body_json_round_trip() -> None:
-    body = StartMessageBody(**_game_map().to_dict())
+    body = StartMessageBody.from_game_map(_game_map())
     assert StartMessageBody.from_json(body.to_json()) == body
+
+
+def test_start_message_body_fields_mirror_game_map() -> None:
+    # The sync test: the wire body mirrors GameMap field-for-field, so a
+    # domain-model change cannot silently change the wire format (#582).
+    body_fields = dataclasses.fields(StartMessageBody)
+    map_fields = dataclasses.fields(GameMap)
+    assert [f.name for f in body_fields] == [f.name for f in map_fields]
+    assert [f.type for f in body_fields] == [f.type for f in map_fields]
+
+
+def test_start_message_body_wire_json_equals_game_map_json() -> None:
+    game_map = _game_map()
+    assert StartMessageBody.from_game_map(game_map).to_json() == game_map.to_json()
 
 
 @pytest.mark.parametrize("disabled", [True, False])

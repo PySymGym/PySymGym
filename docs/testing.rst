@@ -560,7 +560,12 @@ Orchestration seams are tested with fakes, never real I/O:
   ``IncorrectPredictedStateId`` (a ``StateId`` body, decoded through the
   union body type of ``RewardServerMessage``) — the latter used to raise
   ``DeserializationException`` under strict validation, a defect discovered
-  during #582 (untracked; recorded on the issue).
+  during #582 (untracked; recorded on the issue). The start body's
+  explicit mapping of ``GameMap`` (#582 replaced the multiple inheritance
+  that fused the wire body with the domain model) is pinned by a field
+  identity sync test (names and types, in order) and a wire-JSON
+  equivalence test (``from_game_map(m).to_json() == m.to_json()``), so a
+  domain-model change cannot silently change the wire format.
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the

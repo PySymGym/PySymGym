@@ -55,7 +55,7 @@ class Connector:
     ) -> None:
         self.ws = ws
 
-        start_message = ClientMessage(StartMessageBody(**map.to_dict()))
+        start_message = ClientMessage(StartMessageBody.from_game_map(map))
         logging.debug(f"--> StartMessage  : {start_message}")
         self.send(start_message.to_json())
         self._current_step = 0
