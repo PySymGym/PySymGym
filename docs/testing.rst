@@ -340,6 +340,16 @@ repeated flags, the ``--savedir`` default of ``report``) and the argparse
 ``SystemExit`` for each missing required flag. The ``entrypoint()`` pipeline
 itself is pinned by the integration-tier ``test_pipeline.py``.
 
+The dataset_tools tests (``tools/dataset_tools/tests/unit/``) drive the
+dataset maintenance CLIs over temporary datasets decoded through
+``GameMap.schema()``. The ``clean`` tests (``test_clean.py``) pin
+``get_bad_episodes`` (the ``immediate GameOver on <name>`` extraction with
+deduplication, the empty result for a missing log) and ``clean`` (bad
+episodes removed, the ``(method, step, searcher)`` sort order); the
+``main()`` seam tests pin the CLI wiring end-to-end (argv ``Path``-typed
+arguments into the real ``clean``) and the exact ``sys.exit`` messages for a
+missing dataset (checked before the log) and a missing log.
+
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
     relative to ``__file__`` (never the current working directory), and prefer
