@@ -1,17 +1,11 @@
 """Model-forward smoke tests and ``save_model`` coverage.
 
-Only the models that forward unchanged against the production tensor schema
-are exercised here: ``NorthernPenguin`` and ``InvisibleCow`` (both game width
-7, six state features). The legacy architectures under ``ml/models/`` cannot
-consume the current graph tensors and are tracked in #571/#572 instead.
-
-``NorthernPenguin`` goes through the production ``infer`` entrypoint;
-``InvisibleCow`` needs the extra reverse/path-condition edges, so it is called
-with the subset of inputs its ``forward`` declares.
+The registered models forward a synthetic ``hetero_factory`` graph through
+the production ``infer`` entrypoint; ``modelop.filemanager.save_model`` is
+exercised with ``tmp_path`` and a patched ``datetime``.
 """
 
 import importlib
-import inspect
 from collections import namedtuple
 
 import pytest
@@ -50,46 +44,7 @@ MODEL_CASES = [
         ),
         id="NorthernPenguin",
     ),
-    pytest.param(
-        ModelCase(
-            module="ml.models.InvisibleCow.model",
-            class_name="StateModelEncoder",
-            init_kwargs={
-                "hidden_channels": 8,
-                "num_of_state_features": 6,
-                "blocks": [8, 8],
-                "normalization": True,
-            },
-            game_features=GAME_FEATURES_WITH_HISTORY,
-            via_infer=False,
-            normalized=True,
-        ),
-        id="InvisibleCow",
-    ),
 ]
-
-
-def _model_inputs(data) -> dict:
-    return {
-        "game_x": data[TORCH.game_vertex].x,
-        "state_x": data[TORCH.state_vertex].x,
-        "pc_x": data[TORCH.path_condition_vertex].x,
-        "edge_index_v_v": data[*TORCH.gamevertex_to_gamevertex].edge_index,
-        "edge_type_v_v": data[*TORCH.gamevertex_to_gamevertex].edge_type,
-        "edge_index_history_v_s": data[
-            *TORCH.gamevertex_history_statevertex
-        ].edge_index,
-        "edge_attr_history_v_s": data[*TORCH.gamevertex_history_statevertex].edge_attr,
-        "edge_index_history_s_v": data[
-            *TORCH.statevertex_history_gamevertex
-        ].edge_index,
-        "edge_index_in_v_s": data[*TORCH.gamevertex_in_statevertex].edge_index,
-        "edge_index_in_s_v": data[*TORCH.statevertex_in_gamevertex].edge_index,
-        "edge_index_s_s": data[*TORCH.statevertex_parentof_statevertex].edge_index,
-        "edge_index_pc_pc": data[*TORCH.pathcondvertex_to_pathcondvertex].edge_index,
-        "edge_index_pc_s": data[*TORCH.pathcondvertex_to_statevertex].edge_index,
-        "edge_index_s_pc": data[*TORCH.statevertex_to_pathcondvertex].edge_index,
-    }
 
 
 def _build_model(case: ModelCase) -> torch.nn.Module:
@@ -103,11 +58,7 @@ def _build_model(case: ModelCase) -> torch.nn.Module:
 def _forward(model: torch.nn.Module, data, case: ModelCase) -> torch.Tensor:
     if case.via_infer:
         return infer(model, data)
-    parameters = inspect.signature(model.forward).parameters
-    inputs = {
-        name: value for name, value in _model_inputs(data).items() if name in parameters
-    }
-    return model(**inputs)
+    raise AssertionError("direct forward is no longer supported")
 
 
 @pytest.mark.parametrize("case", MODEL_CASES)

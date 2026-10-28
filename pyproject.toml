@@ -102,9 +102,6 @@ omit = [
     "*/conftest.py",
     "AIAgent/tests_utils.py",
     "*/__main__.py",
-    # Legacy architecture that cannot consume the current tensors (#571,
-    # #572); tracked there instead of being tested. Removal pending #581.
-    "AIAgent/ml/models/RGCNEdgeTypeTAG3VerticesDoubleHistory2/model.py",
 ]
 
 [tool.coverage.report]

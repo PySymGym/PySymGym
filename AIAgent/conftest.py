@@ -154,8 +154,7 @@ def hetero_factory(gamestate_factory):
     Parameters
     ----------
     game_features : int, optional
-        Width of the game-vertex feature matrix (7 for current models, 5 for
-        the legacy ones).
+        Width of the game-vertex feature matrix.
     state_features : int, optional
         Width of the state-vertex feature matrix.
     """

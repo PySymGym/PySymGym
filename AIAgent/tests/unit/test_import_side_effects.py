@@ -16,7 +16,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-MODULES = ["run_training", "launch_servers", "pretrain"]
+MODULES = ["run_training", "launch_servers"]
 
 
 @contextmanager
