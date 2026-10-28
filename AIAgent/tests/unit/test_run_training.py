@@ -170,11 +170,19 @@ class FakeStudy:
 
     def __init__(self) -> None:
         self.optimize_calls: list[dict] = []
+        self.enqueue_calls: list[dict] = []
         self.best_trial = SimpleNamespace(number=3)
         self.callback_trial = SimpleNamespace(number=0)
 
+    def enqueue_trial(self, params: dict) -> None:
+        self.enqueue_calls.append({"params": params})
+
     def optimize(self, func, **kwargs: Any) -> None:
         self.optimize_calls.append({"func": func, **kwargs})
+        # Mirror Optuna's per-trial contract: the objective runs once per
+        # trial, then the callbacks fire with the finished trial.
+        for _ in range(kwargs.get("n_trials", 1)):
+            func(self.callback_trial)
         for callback in kwargs.get("callbacks") or []:
             callback(self, self.callback_trial)
 
@@ -221,9 +229,9 @@ def run_training_once(
     """Drive ``run_training.run_training`` once with recording fakes.
 
     Returns ``(captured, fakes)``: ``captured.partial`` is the ``objective``
-    partial in the study branch (``None`` in the trial-replay branch),
-    ``captured.objective_calls`` the recorded ``objective`` calls (trial-replay
-    branch only); ``fakes`` holds every recording fake.
+    partial the study optimises (both branches), ``captured.objective_calls``
+    the ``objective`` calls the fake study drove; ``fakes`` holds every
+    recording fake.
     """
     seed_calls: list[int] = []
     monkeypatch.setattr(
@@ -280,9 +288,7 @@ def run_training_once(
 
 def objective_config(captured):
     """The ``ObjectiveConfig`` the ``objective`` partial is wired with."""
-    if captured.partial is not None:
-        return captured.partial.keywords["config"]
-    return captured.objective_calls[0][1]["config"]
+    return captured.partial.keywords["config"]
 
 
 def default_optuna_config(**overrides: Any) -> OptunaConfig:
@@ -615,10 +621,7 @@ class TestRunTrainingTrialReplayBranch:
             weights_uri="mlflow-artifacts:/1/run/artifacts/model.pth",
             download_artifacts_result=trial_path,
         )
-
-        # No fresh study is created in the replay branch.
-        assert fakes.optuna.create_study_calls == []
-        assert fakes.optuna.study.optimize_calls == []
+        study = fakes.optuna.study
 
         # The trial artifact is downloaded (uri positionally, dst_path as a
         # string) and loaded with joblib.
@@ -630,16 +633,44 @@ class TestRunTrainingTrialReplayBranch:
         ]
         assert fakes.joblib.load_calls == [trial_path]
 
-        # The loaded trial is replayed n_trials times through the partial.
-        assert len(captured.objective_calls) == 2
-        for trial, _ in captured.objective_calls:
-            assert trial is fakes.joblib.load_result
-        assert captured.partial is None
+        # The replay runs through a fresh study, like a tuning run: the
+        # same sampler and direction, the frozen trial's params enqueued
+        # once per replay, one optimize with the shared per-trial
+        # persistence.
+        assert fakes.optuna.create_study_calls == [
+            {"sampler": "tpe-sampler-sentinel", "direction": "maximize"}
+        ]
+        assert study.enqueue_calls == [
+            {"params": {"lr": 1e-4, "batch_size": 16}},
+            {"params": {"lr": 1e-4, "batch_size": 16}},
+        ]
+        assert len(study.optimize_calls) == 1
+        optimize = study.optimize_calls[0]
+        assert optimize["func"] is captured.partial
+        assert optimize["n_trials"] == 2
+        assert optimize["gc_after_trial"] is True
+        assert optimize["n_jobs"] == 1
+        assert len(optimize["callbacks"]) == 1
 
+        # The objective is driven n_trials times with the shared config.
         config = objective_config(captured)
+        assert len(captured.objective_calls) == 2
+        for trial, kwargs in captured.objective_calls:
+            assert trial is study.callback_trial
+            assert kwargs == {"config": config}
         assert config.dataset is fakes.datasets[0]
         assert callable(config.model_init)
         assert callable(config.validate)
+
+        # The callback fired with no registered run (the fake objective
+        # never starts one): the pickles are dumped, no MLflow calls.
+        assert fakes.joblib.dump_calls == [
+            (study, CURRENT_STUDY_PATH),
+            (study.callback_trial, CURRENT_TRIAL_PATH),
+        ]
+        assert fakes.mlflow.called("start_run") == []
+        assert fakes.mlflow.called("log_artifact") == []
+        assert fakes.mlflow.called("set_tag") == []
 
 
 class FakeValidationCoverage:
