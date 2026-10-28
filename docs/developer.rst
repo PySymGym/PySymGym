@@ -114,7 +114,12 @@ directory; two anchors cover the two kinds of paths:
   a relative value in the config is resolved against the directory the config
   file lives in, never against the CWD. The config models themselves require
   absolute paths — a relative value is ambiguous without an anchor and is
-  rejected at construction.
+  rejected at construction. The entrypoints load their config through
+  ``common.config.loader.load_config``, which does the anchoring and then
+  validates that every path names an existing filesystem object of the
+  required kind (``dataset_base_path`` and ``server_working_dir``: directory,
+  ``dataset_description``: file), failing with an error that names every
+  offending key and its location in the config.
 
 Test pipeline
 -------------

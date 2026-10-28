@@ -121,6 +121,11 @@ improving the dataset in the other kind of run.
        cd AIAgent
        poetry run python3 run_training.py --config path/to/config.yml
 
+   The entrypoints are CWD-independent: the artifacts always land under
+   ``AIAgent/`` and the config's relative paths resolve against the config
+   file's own directory, so the command works from any directory (the
+   ``cd`` only locates the script).
+
 Dataset improvement with symbolic virtual machines
 ---------------------------------------------------
 
