@@ -318,7 +318,13 @@ recording ``entrypoint`` fake: the parsed ``Args`` (strategy dispatch through
 timestamp default savedir), the argparse exits for missing ``-s``/``-t``, the
 unknown-strategy ``ValueError``, and the AI-without-model-path
 ``AssertionError``; the missing-``-ps``/``-as`` argparse-error behaviour is
-#590-tracked (``xfail``).
+#590-tracked (``xfail``). The ``entrypoint()`` seam tests
+(``test_runstrat_entrypoint.py``) drive ``entrypoint()`` with a method-keyed
+``call_test_runner`` fake and a recording ``logging.basicConfig``: the
+per-method loop, the ``RunResult`` → ``asdict`` → CSV column order
+(``method,tests,errors,coverage,total_time_sec``), the
+``{strategy.name}.csv`` / ``{strategy.name}.log`` artifact names, the
+empty-maps empty-CSV case, and the ``setup_logging`` ``basicConfig`` call.
 
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
