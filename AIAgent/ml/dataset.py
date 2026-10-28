@@ -696,10 +696,17 @@ def convert_input_to_tensor(
             edges_index_s_v_in.append(np.array([state_map[s], vertex_map[v.Id]]))
             edges_index_v_s_in.append(np.array([vertex_map[v.Id], state_map[s]]))
 
-    data[TORCH.game_vertex].x = torch.tensor(np.array(nodes_vertex), dtype=torch.float)
-    data[TORCH.state_vertex].x = torch.tensor(np.array(nodes_state), dtype=torch.float)
+    data[TORCH.game_vertex].x = torch.tensor(
+        np.array(nodes_vertex, dtype=float).reshape(-1, NUM_CFG_VERTEX_FEATURES),
+        dtype=torch.float,
+    )
+    data[TORCH.state_vertex].x = torch.tensor(
+        np.array(nodes_state, dtype=float).reshape(-1, NUM_STATE_FEATURES),
+        dtype=torch.float,
+    )
     data[TORCH.path_condition_vertex].x = torch.tensor(
-        np.array(nodes_path_condition), dtype=torch.float
+        np.array(nodes_path_condition, dtype=float).reshape(-1, NUM_PC_FEATURES),
+        dtype=torch.float,
     )
 
     # dumb fix

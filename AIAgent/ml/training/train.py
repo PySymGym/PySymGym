@@ -6,7 +6,7 @@ import os
 from torch_geometric.loader import DataLoader
 
 from config import get_device
-from ml.inference import infer
+from ml.inference import degenerate_counts, infer
 
 
 def train(
@@ -24,6 +24,8 @@ def train(
     ):
         batch.to(get_device())
         optimizer.zero_grad()
+        if degenerate_counts(batch) is not None:
+            continue
         out = infer(model, batch)
         batch.y_true[batch.y_true > 0] = 1
         loss = criterion(out, batch.y_true)

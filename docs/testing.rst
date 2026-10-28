@@ -211,6 +211,17 @@ instance and class, and the forward-contract pin (every registered model's
 ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch, the ``y_true``
 clamping to ``{0, 1}`` before the criterion sees it, the per-batch optimizer
 step, and the skip of backward/step when the criterion returns zero. The
+degenerate-graph regression tests (``test_degenerate_graphs.py``, #619)
+mutate a ``gamestate_factory`` copy into zero-path-condition, zero-states
+and zero-vertices variants and pin: ``convert_input_to_tensor`` emitting
+2-D ``(0, F)`` node tensors for the empty node types, ``degenerate_counts``
+reporting both counts for a degenerate graph and accepting a zero-PC graph
+(a state with no path condition is valid), ``infer`` returning ``(0, 1)``
+or the neutral zeros without calling the model and logging a warning with
+both counts, the zero-PC graph forwarding through the real small model to
+a finite output (the exact #619 crash input), and ``train`` skipping a
+degenerate step as a no-op (bit-identical weights) while still training a
+normal step in a mixed dataloader. The
 experiment-helper tests (``test_experiments_utils.py``) pin the remaining
 ``ml.training.experiments_utils`` helpers: ``get_model`` reloading a saved
 state dict with the ``lin_last`` weights overwritten by the exact seeded
