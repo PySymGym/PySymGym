@@ -11,6 +11,7 @@ messages.
 """
 
 import contextlib
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -20,11 +21,29 @@ import torch
 from torch import nn
 
 import run_training as run_training_module
+from common.classes import GameFailed, GameResult, Map2Result
+from common.config.dataset_config import DatasetConfig
 from common.config.optuna_config import OptimizationDirection, OptunaConfig
+from common.config.platform_config import Platform
 from common.config.training_config import TrainingConfig
-from common.config.validation_config import CriterionValidation, ValidationConfig
+from common.config.validation_config import (
+    CriterionValidation,
+    CustomValidation,
+    SVMValidationSendEachStep,
+    ValidationConfig,
+)
+from common.validation_coverage.svm_info import SVMInfo
+from ml.dataset import TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
-from paths import REPORT_PATH
+from ml.validation.statistics import AVERAGE_COVERAGE
+from paths import (
+    CURRENT_STUDY_PATH,
+    CURRENT_TRIAL_PATH,
+    PROCESSED_DATASET_PATH,
+    RAW_DATASET_PATH,
+    REPORT_PATH,
+)
+from run_training import BEST_TRIAL_NUMBER_TAG
 
 pytestmark = pytest.mark.unit
 
@@ -135,11 +154,12 @@ class FakeStudy:
     def __init__(self) -> None:
         self.optimize_calls: list[dict] = []
         self.best_trial = SimpleNamespace(number=3)
+        self.callback_trial = SimpleNamespace(number=0)
 
     def optimize(self, func, **kwargs: Any) -> None:
         self.optimize_calls.append({"func": func, **kwargs})
         for callback in kwargs.get("callbacks") or []:
-            callback(self, SimpleNamespace(number=0))
+            callback(self, self.callback_trial)
 
 
 class FakeOptuna:
@@ -179,6 +199,7 @@ def run_training_once(
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: str | None = None,
+    download_artifacts_result: Path | None = None,
 ):
     """Drive ``run_training.run_training`` once with recording fakes.
 
@@ -206,6 +227,7 @@ def run_training_once(
     monkeypatch.setattr(run_training_module, "optuna", optuna)
 
     mlflow = FakeMlflow()
+    mlflow.download_artifacts_result = download_artifacts_result
     monkeypatch.setattr(run_training_module, "mlflow", mlflow)
 
     joblib = FakeJoblib()
@@ -403,3 +425,449 @@ class TestModelInit:
         for name, param in model.state_dict().items():
             assert param.device.type == "cpu"
             assert torch.equal(param, saved[name].cpu())
+
+
+def svm_validation_config(fail_immediately: bool = True) -> ValidationConfig:
+    platform = Platform(
+        name="dotnet",
+        DatasetConfigs=[
+            DatasetConfig(dataset_base_path="/dummy", dataset_description="/dummy.json")
+        ],
+        SVMSInfo=[
+            SVMInfo(
+                name="VSharp",
+                launch_command="run --port {port}",
+                server_working_dir="/srv",
+                min_port=35000,
+                max_port=35050,
+            )
+        ],
+    )
+    return ValidationConfig(
+        validation_mode=SVMValidationSendEachStep(
+            val_type="svms_each_step",
+            process_count=1,
+            fail_immediately=fail_immediately,
+            PlatformsConfig=[platform],
+        )
+    )
+
+
+class TestRunTrainingStudyBranch:
+    """``trial_uri is None and weights_uri is None``: tune a fresh study."""
+
+    def test_dispatches_to_optuna_study(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        optuna_config = default_optuna_config(n_trials=2, n_startup_trials=3)
+        training_config = default_training_config(
+            train_percentage=0.8,
+            threshold_steps_number=50,
+            load_to_cpu=True,
+            epochs=3,
+            seed=42,
+        )
+        captured, fakes = run_training_once(
+            monkeypatch,
+            optuna_config=optuna_config,
+            training_config=training_config,
+            validation_config=criterion_validation_config(),
+        )
+
+        # Study-level seed, applied before the dataset is built.
+        assert fakes.seed_calls == [42]
+
+        # The dataset is built from the module path constants with the
+        # training-config knobs.
+        assert len(fakes.datasets) == 1
+        dataset = fakes.datasets[0]
+        assert dataset.init_args == (RAW_DATASET_PATH, PROCESSED_DATASET_PATH)
+        assert dataset.init_kwargs == {
+            "train_percentage": 0.8,
+            "threshold_steps_number": 50,
+            "load_to_cpu": True,
+            "threshold_coverage": 100,
+        }
+
+        # Sampler and study creation.
+        assert fakes.optuna.tpe_sampler_calls == [{"n_startup_trials": 3, "seed": 42}]
+        assert fakes.optuna.create_study_calls == [
+            {"sampler": "tpe-sampler-sentinel", "direction": "maximize"}
+        ]
+
+        # The study optimises the objective partial.
+        assert len(fakes.optuna.study.optimize_calls) == 1
+        optimize = fakes.optuna.study.optimize_calls[0]
+        assert optimize["n_trials"] == 2
+        assert optimize["gc_after_trial"] is True
+        assert optimize["n_jobs"] == 1
+        assert len(optimize["callbacks"]) == 1
+
+        # The partial is wired with the run's dependencies.
+        keywords = objective_keywords(captured)
+        assert keywords["dataset"] is dataset
+        assert keywords["dynamic_dataset"] is False
+        assert keywords["epochs"] == 3
+        assert keywords["direction"] is OptimizationDirection.MAXIMIZE
+        assert keywords["seed"] == 42
+        assert callable(keywords["model_init"])
+        assert callable(keywords["criterion_init"])
+        assert callable(keywords["validate"])
+
+        # The criterion validation mode enables expandable segments.
+        assert os.environ["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"
+
+    def test_save_study_and_trial_callback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _, fakes = run_training_once(
+            monkeypatch,
+            optuna_config=default_optuna_config(),
+            training_config=default_training_config(),
+            validation_config=criterion_validation_config(),
+        )
+        study = fakes.optuna.study
+
+        # The fake study mirrors Optuna's per-trial callback contract: the
+        # callback dumps study and trial, re-enters the active run, logs both
+        # artifacts and tags the best trial number so far.
+        assert fakes.joblib.dump_calls == [
+            (study, CURRENT_STUDY_PATH),
+            (study.callback_trial, CURRENT_TRIAL_PATH),
+        ]
+        assert fakes.mlflow.called("start_run") == [(("fake-run-id",), {})]
+        assert fakes.mlflow.called("log_artifact") == [
+            ((CURRENT_STUDY_PATH,), {}),
+            ((CURRENT_TRIAL_PATH,), {}),
+        ]
+        assert fakes.mlflow.called("set_tag") == [
+            ((BEST_TRIAL_NUMBER_TAG, study.best_trial.number), {})
+        ]
+
+
+class TestRunTrainingTrialReplayBranch:
+    """``trial_uri``/``weights_uri`` set: replay the downloaded trial."""
+
+    def test_replays_downloaded_trial(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        trial_path = tmp_path / "trial.pkl"
+        optuna_config = default_optuna_config(
+            n_trials=2, trial_uri="mlflow-artifacts:/1/run/artifacts/trial.pkl"
+        )
+        captured, fakes = run_training_once(
+            monkeypatch,
+            optuna_config=optuna_config,
+            training_config=default_training_config(),
+            validation_config=criterion_validation_config(),
+            weights_uri="mlflow-artifacts:/1/run/artifacts/model.pth",
+            download_artifacts_result=trial_path,
+        )
+
+        # No fresh study is created in the replay branch.
+        assert fakes.optuna.create_study_calls == []
+        assert fakes.optuna.study.optimize_calls == []
+
+        # The trial artifact is downloaded (uri positionally, dst_path as a
+        # string) and loaded with joblib.
+        assert fakes.mlflow.called("artifacts.download_artifacts") == [
+            (
+                ("mlflow-artifacts:/1/run/artifacts/trial.pkl",),
+                {"dst_path": str(REPORT_PATH)},
+            )
+        ]
+        assert fakes.joblib.load_calls == [trial_path]
+
+        # The loaded trial is replayed n_trials times through the partial.
+        assert len(captured.objective_calls) == 2
+        for trial, _ in captured.objective_calls:
+            assert trial is fakes.joblib.load_result
+        assert captured.partial is None
+
+        keywords = objective_keywords(captured)
+        assert keywords["dataset"] is fakes.datasets[0]
+        assert callable(keywords["model_init"])
+        assert callable(keywords["validate"])
+
+
+class FakeValidationCoverage:
+    """A ``ValidationCoverage`` stand-in recording construction and calls."""
+
+    def __init__(
+        self,
+        model: Any,
+        dataset: Any,
+        model_kwargs: dict | None = None,
+        trial_dir: Path | None = None,
+    ) -> None:
+        self.model = model
+        self.dataset = dataset
+        self.model_kwargs = model_kwargs
+        self.trial_dir = trial_dir
+        self.validate_coverage_calls: list[tuple] = []
+        self.result: list = []
+
+    def validate_coverage(self, maps: list, validation_config: Any, **kwargs: Any):
+        self.validate_coverage_calls.append((maps, validation_config))
+        return self.result
+
+
+class TestValidateClosures:
+    """The ``validate`` closures built by ``get_validation``."""
+
+    def _validate(
+        self, monkeypatch: pytest.MonkeyPatch, validation_config: ValidationConfig
+    ):
+        captured, fakes = run_training_once(
+            monkeypatch,
+            optuna_config=default_optuna_config(),
+            training_config=default_training_config(),
+            validation_config=validation_config,
+        )
+        return objective_keywords(captured)["validate"], fakes
+
+    def test_criterion_validate(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        validate, fakes = self._validate(monkeypatch, criterion_validation_config())
+        loss_calls: list[tuple] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "validate_loss",
+            lambda model, dataset, criterion, batch_size: (
+                loss_calls.append((model, dataset, criterion, batch_size)),
+                0.123,
+            )[1],
+        )
+        model = object()
+        dataset = fakes.datasets[0]
+
+        result, metrics = validate(model, dataset, tmp_path, {})
+
+        assert dataset.switch_to_calls == [TrainingDatasetMode.VALIDATION]
+        assert len(loss_calls) == 1
+        called_model, called_dataset, criterion, batch_size = loss_calls[0]
+        assert called_model is model
+        assert called_dataset is dataset
+        assert batch_size == 8
+        assert isinstance(criterion, nn.BCEWithLogitsLoss)
+        assert criterion.reduction == "sum"
+        assert result == 0.123
+        # Metric name: str(criterion) with parentheses replaced, plus the
+        # dataset mode value (torch 2.7.1 renders the criterion as
+        # "BCEWithLogitsLoss()").
+        assert metrics == {"BCEWithLogitsLoss__VALIDATION": 0.123}
+
+    def test_criterion_validate_training_dataset(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        validation_config = ValidationConfig(
+            validation_mode=CriterionValidation(
+                val_type="loss", batch_size=8, dataset=TrainingDatasetMode.TRAINING
+            )
+        )
+        validate, fakes = self._validate(monkeypatch, validation_config)
+        monkeypatch.setattr(run_training_module, "validate_loss", lambda *a: 0.5)
+        dataset = fakes.datasets[0]
+
+        result, metrics = validate(object(), dataset, tmp_path, {})
+
+        assert dataset.switch_to_calls == [TrainingDatasetMode.TRAINING]
+        assert result == 0.5
+        assert metrics == {"BCEWithLogitsLoss__TRAINING": 0.5}
+
+    def test_svm_validate(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
+    ) -> None:
+        maps = [game_map2svm_factory("MapA"), game_map2svm_factory("MapB")]
+        monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
+        coverage_inits: list[FakeValidationCoverage] = []
+
+        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
+            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+            coverage_inits.append(instance)
+            return instance
+
+        monkeypatch.setattr(run_training_module, "ValidationCoverage", coverage_factory)
+        stats_calls: list[tuple] = []
+        metrics = {AVERAGE_COVERAGE: 0.5, "extra": 1}
+        monkeypatch.setattr(
+            run_training_module,
+            "get_svms_statistics",
+            lambda results, config, dataset, table_path: (
+                stats_calls.append((results, config, dataset, table_path)),
+                metrics,
+            )[1],
+        )
+
+        validation_config = svm_validation_config()
+        validate, fakes = self._validate(monkeypatch, validation_config)
+        model = object()
+        dataset = fakes.datasets[0]
+        trial_dir = tmp_path / "trial"
+        trial_dir.mkdir()
+
+        result, returned_metrics = validate(
+            model, dataset, trial_dir, {"hidden_channels": 64}
+        )
+
+        # The SVM validation mode disables expandable segments (it does not
+        # work with multiprocessing).
+        assert os.environ["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:False"
+
+        coverage = coverage_inits[0]
+        assert coverage.model is model
+        assert coverage.dataset is dataset
+        assert coverage.model_kwargs == {"hidden_channels": 64}
+        assert coverage.trial_dir == trial_dir
+        assert coverage.validate_coverage_calls == [
+            (maps, validation_config.validation_mode)
+        ]
+
+        table_path = trial_dir / "svms_result_table.csv"
+        assert stats_calls == [
+            (coverage.result, validation_config.validation_mode, dataset, table_path)
+        ]
+        # The study-branch callback also logs the study/trial pickles; the
+        # validate call logs the per-trial statistics table.
+        log_artifact_calls = fakes.mlflow.called("log_artifact")
+        assert ((table_path,), {}) in log_artifact_calls
+        assert result == metrics[AVERAGE_COVERAGE]
+        assert returned_metrics is metrics
+
+        # Per-trial statistics table: sorted map names as the header.
+        assert table_path.read_text() == "MapA,MapB\n"
+
+        # A second call must not rewrite the header.
+        validate(model, dataset, trial_dir, {})
+        assert table_path.read_text() == "MapA,MapB\n"
+
+    def test_svm_validate_fail_immediately(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
+    ) -> None:
+        maps = [game_map2svm_factory("MapA")]
+        monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
+
+        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
+            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+            instance.result = [
+                Map2Result(maps[0], GameFailed(reason=Exception("boom")))
+            ]
+            return instance
+
+        monkeypatch.setattr(run_training_module, "ValidationCoverage", coverage_factory)
+        monkeypatch.setattr(
+            run_training_module,
+            "get_svms_statistics",
+            lambda *a: {AVERAGE_COVERAGE: 0.0},
+        )
+
+        validate, fakes = self._validate(
+            monkeypatch, svm_validation_config(fail_immediately=True)
+        )
+        model = object()
+        dataset = fakes.datasets[0]
+        trial_dir = tmp_path / "trial"
+        trial_dir.mkdir()
+
+        with pytest.raises(RuntimeError, match="Validation failed"):
+            validate(model, dataset, trial_dir, {})
+
+    def test_svm_validate_failed_map_without_fail_immediately(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
+    ) -> None:
+        maps = [game_map2svm_factory("MapA")]
+        monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
+        coverage_inits: list[FakeValidationCoverage] = []
+
+        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
+            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+            instance.result = [
+                Map2Result(maps[0], GameFailed(reason=Exception("boom")))
+            ]
+            coverage_inits.append(instance)
+            return instance
+
+        monkeypatch.setattr(run_training_module, "ValidationCoverage", coverage_factory)
+        monkeypatch.setattr(
+            run_training_module,
+            "get_svms_statistics",
+            lambda *a: {AVERAGE_COVERAGE: 0.0},
+        )
+
+        validate, fakes = self._validate(
+            monkeypatch, svm_validation_config(fail_immediately=False)
+        )
+        model = object()
+        dataset = fakes.datasets[0]
+        trial_dir = tmp_path / "trial"
+        trial_dir.mkdir()
+
+        result, metrics = validate(model, dataset, trial_dir, {})
+
+        assert result == 0.0
+        assert metrics == {AVERAGE_COVERAGE: 0.0}
+
+    def test_custom_validate_runs_pipeline_in_order(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
+    ) -> None:
+        criterion_mode = CriterionValidation(val_type="loss", batch_size=8)
+        svm_config = svm_validation_config()
+        custom = CustomValidation(
+            val_type="custom",
+            val_sequence=[criterion_mode, svm_config.validation_mode],
+            process_count=1,
+        )
+        maps = [game_map2svm_factory("MapA")]
+        monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
+        order: list[str] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "validate_loss",
+            lambda *a: (order.append("criterion"), 0.1)[1],
+        )
+        coverage_inits: list[FakeValidationCoverage] = []
+
+        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
+            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+            # A successful result: the default fail_immediately=True would
+            # abort the pipeline on a GameFailed.
+            instance.result = [
+                Map2Result(
+                    maps[0],
+                    GameResult(
+                        steps_count=1000,
+                        tests_count=2,
+                        errors_count=3,
+                        actual_coverage_percent=100.0,
+                    ),
+                )
+            ]
+            coverage_inits.append(instance)
+            return instance
+
+        monkeypatch.setattr(run_training_module, "ValidationCoverage", coverage_factory)
+        svm_metrics = {AVERAGE_COVERAGE: 0.5}
+        monkeypatch.setattr(
+            run_training_module,
+            "get_svms_statistics",
+            lambda *a: (order.append("svm"), svm_metrics)[1],
+        )
+
+        validate, fakes = self._validate(
+            monkeypatch, ValidationConfig(validation_mode=custom)
+        )
+        model = object()
+        dataset = fakes.datasets[0]
+        trial_dir = tmp_path / "trial"
+        trial_dir.mkdir()
+
+        result, metrics = validate(model, dataset, trial_dir, {})
+
+        assert order == ["criterion", "svm"]
+        # The first stage's result is returned; the metrics are merged.
+        assert result == 0.1
+        assert metrics == {
+            "BCEWithLogitsLoss__VALIDATION": 0.1,
+            AVERAGE_COVERAGE: 0.5,
+        }
+        # The last stage (SVM) leaves expandable segments disabled.
+        assert os.environ["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:False"
