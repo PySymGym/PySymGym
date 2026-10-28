@@ -176,7 +176,11 @@ coverable on a CPU-only machine — meta tensors cannot be copied out — so
 (``test_protocols.py``) pin the ``ml.protocols`` abstract interfaces:
 abstractness, the abstract-method set, a concrete subclass satisfying the
 interface, and the abstract bodies raising ``NotImplementedError`` when
-invoked unbound.
+invoked unbound. The training-loop tests (``test_train.py``) pin
+``ml.training.train`` with a real small model, optimizer and criterion: the
+``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch, the ``y_true``
+clamping to ``{0, 1}`` before the criterion sees it, the per-batch optimizer
+step, and the skip of backward/step when the criterion returns zero.
 
 The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 ``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
