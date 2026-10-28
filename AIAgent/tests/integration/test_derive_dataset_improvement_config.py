@@ -17,6 +17,7 @@ import pytest
 import yaml
 from mlflow.tracking import MlflowClient
 
+from common.config.loader import anchor_paths
 from derive_dataset_improvement_config import (
     derive_config,
     find_best_trial_run,
@@ -194,7 +195,13 @@ class TestDeriveConfig:
         assert derived["weights_uri"] == weights_uri
         assert derived["OptunaConfig"]["trial_uri"] == trial_uri
         assert derived["TrainingConfig"] == base["TrainingConfig"]
-        assert derived["ValidationConfig"] == base["ValidationConfig"]
+        # The path values are anchored against the base config's own
+        # directory and written absolute: the derived config is written
+        # elsewhere, and the entrypoints anchor relative values against the
+        # config file's own location.
+        assert derived["ValidationConfig"] == anchor_paths(
+            base["ValidationConfig"], tmp_path
+        )
         assert {
             key: value
             for key, value in derived["OptunaConfig"].items()

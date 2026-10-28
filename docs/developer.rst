@@ -120,6 +120,11 @@ directory; two anchors cover the two kinds of paths:
   required kind (``dataset_base_path`` and ``server_working_dir``: directory,
   ``dataset_description``: file), failing with an error that names every
   offending key and its location in the config.
+  ``derive_dataset_improvement_config.py`` writes its derived config with the
+  path values anchored against the **base** config's directory (absolute):
+  the derived config is written next to the tuning artifacts, not next to the
+  base, so the base's relative values would anchor against the wrong
+  directory there.
 
 Test pipeline
 -------------

@@ -349,7 +349,8 @@ helper and pin the best-trial lookup (best trial not last finished, single
 trial, no tagged runs, unended tag, a tag pointing at a missing run), the
 last-model-epoch lookup (highest epoch, no model artifacts), the missing
 experiment, and ``derive_config`` (the derived URIs, the preserved base
-config, and the missing-experiment / missing-``OptunaConfig``
+config with its path values anchored against the base config's directory,
+and the missing-experiment / missing-``OptunaConfig``
 ``SystemExit`` paths that write nothing).
 
 Model smoke tests (``test_models_forward.py``) are registry-driven: every

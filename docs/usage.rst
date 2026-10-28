@@ -159,6 +159,9 @@ from the previous step are used to obtain relatively good ones:
          ...
          trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
 
+   The derived config's path values are absolute (anchored against the base
+   config's directory), so it loads from any directory.
+
 4. Move to the ``AIAgent`` directory, launch the server manager, and run
    training with the derived config:
 
