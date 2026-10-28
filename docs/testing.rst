@@ -352,13 +352,15 @@ experiment, and ``derive_config`` (the derived URIs, the preserved base
 config, and the missing-experiment / missing-``OptunaConfig``
 ``SystemExit`` paths that write nothing).
 
-Model smoke tests forward a synthetic ``hetero_factory`` graph through every
-model that still matches the production tensor schema (currently
-``NorthernPenguin`` and ``InvisibleCow``: game width 7 and six state features),
-asserting output dtype/shape and the ``log_softmax`` normalization;
-``modelop.filemanager.save_model`` is exercised with ``tmp_path`` and a patched
-``datetime``. Legacy architectures that cannot consume the current tensors are
-tracked in issues #571/#572 instead of being tested.
+Model smoke tests (``test_models_forward.py``) are registry-driven: every
+model in ``ml.models.registry`` is instantiated with its small init kwargs
+from a test-local table (a coverage assertion pins the table against
+``model_names()``, so a registered model without a test entry — or a stale
+entry — fails) and forwards a synthetic ``hetero_factory`` graph through
+the production ``infer`` entrypoint, asserting output dtype ``float32``,
+shape ``(num_states, 1)`` and finiteness — the smoke test is the forward
+contract's enforcement. ``modelop.filemanager.save_model`` is exercised
+with ``tmp_path`` and a patched ``datetime``.
 
 The ONNX export tests pin ``onyx.py``. The unit tests
 (``AIAgent/tests/unit/test_onyx.py``) pin the pure helpers: ``shorten_output``
