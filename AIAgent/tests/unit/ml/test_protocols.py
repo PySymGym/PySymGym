@@ -3,7 +3,7 @@
 import inspect
 
 import pytest
-from ml.protocols import Named, Predictor
+from ml.protocols import Model, Named, Predictor
 
 pytestmark = pytest.mark.unit
 
@@ -51,3 +51,22 @@ def test_concrete_predictor_satisfies_the_interface():
     assert predictor.name() == "dummy"
     assert predictor.predict(input=None, map_name="map") == "map"
     assert predictor.model() is None
+
+
+def test_model_protocol_declares_the_infer_contract():
+    # The 11-argument forward signature ``ml.inference.infer`` passes, in
+    # order: the contract every registered model must satisfy.
+    assert list(inspect.signature(Model.forward).parameters) == [
+        "self",
+        "game_x",
+        "state_x",
+        "pc_x",
+        "edge_index_v_v",
+        "edge_type_v_v",
+        "edge_index_history_v_s",
+        "edge_attr_history_v_s",
+        "edge_index_in_v_s",
+        "edge_index_s_s",
+        "edge_index_pc_pc",
+        "edge_index_pc_s",
+    ]
