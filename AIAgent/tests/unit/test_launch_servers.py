@@ -12,16 +12,18 @@ import logging
 import signal
 import socket
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
 from queue import Empty, Queue
 from types import SimpleNamespace
 
 import psutil
 import pytest
+import yaml
 
 import launch_servers as launch_servers_module
 from common.validation_coverage.svm_info import SVMInfo
-from config import FeatureConfig, OnGameServerRestartFeature
+from config import BrokerConfig, FeatureConfig, OnGameServerRestartFeature
 from connection.broker_conn.classes import ServerInstanceInfo, Undefined
 
 pytestmark = pytest.mark.unit
@@ -504,3 +506,108 @@ class TestServerManager:
 
         assert killed == [111, 222]
         assert launch_servers_module.PROCS == []
+
+
+def launch_servers_main_config() -> dict:
+    """A production-shaped config (alias keys) for the ``main`` tests."""
+    return {
+        "OptunaConfig": {
+            "n_startup_trials": 1,
+            "n_trials": 1,
+            "n_jobs": 1,
+            "study_direction": "maximize",
+        },
+        "TrainingConfig": {
+            "dynamic_dataset": False,
+            "train_percentage": 1.0,
+            "threshold_coverage": 100,
+            "load_to_cpu": False,
+            "epochs": 1,
+            "seed": 99,
+        },
+        "ValidationConfig": {
+            "validation_mode": {
+                "val_type": "svms_each_step",
+                "process_count": 2,
+                "fail_immediately": True,
+                "PlatformsConfig": [
+                    {
+                        "name": "dotnet",
+                        "DatasetConfigs": [
+                            {
+                                "dataset_base_path": "/dummy",
+                                "dataset_description": "/dummy.json",
+                            }
+                        ],
+                        "SVMSInfo": [
+                            {
+                                "name": "VSharp",
+                                "launch_command": "run --port {port}",
+                                "min_port": 35000,
+                                "max_port": 35050,
+                                "server_working_dir": "/srv",
+                            }
+                        ],
+                    }
+                ],
+            }
+        },
+        "MLFlowConfig": {"experiment_name": "CI"},
+    }
+
+
+class TestMain:
+    """``launch_servers.main``: config loading and broker startup."""
+
+    def test_main(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # chdir so the instance_manager.log from logging.basicConfig lands in tmp.
+        monkeypatch.chdir(tmp_path)
+        config_path = tmp_path / "config.yml"
+        config_path.write_text(yaml.safe_dump(launch_servers_main_config()))
+
+        sm_calls: list[tuple] = []
+
+        @contextmanager
+        def fake_server_manager(server_queue, server_count):
+            sm_calls.append((server_queue, server_count))
+            yield
+
+        monkeypatch.setattr(
+            launch_servers_module, "server_manager", fake_server_manager
+        )
+        run_app_calls: list[tuple] = []
+        monkeypatch.setattr(
+            launch_servers_module.web,
+            "run_app",
+            lambda app, **kwargs: run_app_calls.append((app, kwargs)),
+        )
+
+        launch_servers_module.main(str(config_path))
+
+        # server_manager got the fresh queue and the configured process count.
+        assert len(sm_calls) == 1
+        server_queue, server_count = sm_calls[0]
+        assert server_count == 2
+        assert isinstance(server_queue, Queue)
+        assert server_queue is launch_servers_module.SERVER_INSTANCES
+
+        # The app carries exactly the four declared broker routes (aiohttp
+        # adds implicit HEAD routes for the GETs, which are filtered out).
+        (app, kwargs) = run_app_calls[0]
+        assert kwargs == {"port": BrokerConfig.BROKER_PORT}
+        routes = sorted(
+            (route.method, route.resource.canonical)
+            for route in app.router.routes()
+            if route.method != "HEAD"
+        )
+        assert routes == [
+            ("GET", "/get_ws"),
+            ("GET", "/recv_res"),
+            ("POST", "/post_ws"),
+            ("POST", "/send_res"),
+        ]
+
+        # The module globals are reset for the run.
+        assert isinstance(launch_servers_module.SERVER_INSTANCES, Queue)
+        assert launch_servers_module.PROCS == []
+        assert launch_servers_module.RESULTS == []
