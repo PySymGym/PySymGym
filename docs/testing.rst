@@ -483,11 +483,9 @@ Orchestration seams are tested with fakes, never real I/O:
   its current cross-feature derivation (the #585 target). The strict
   ``xfail`` ``test_disable_message_checks_defaults_to_strict_validation``
   references #579 (flip the default to strict validation; currently
-  ``DISABLE_MESSAGE_CHECKS is True``). Two #578-tracked connector defects
-  are pinned as strict ``xfail``s asserting the post-fix behaviour (the
-  tracking issue owns removing the markers): the already-over guard of
-  ``_raise_if_gameover`` raising ``Connector.GameOver`` instead of
-  ``TypeError`` (#569), and a real websocket close
+  ``DISABLE_MESSAGE_CHECKS is True``). One #578-tracked connector defect
+  is pinned as a strict ``xfail`` asserting the post-fix behaviour (the
+  tracking issue owns removing the marker): a real websocket close
   (``WebSocketConnectionClosedException`` from the pinned websocket-client)
   translating to ``ConnectionLostError`` instead of propagating (#579).
 - **Subprocesses and files.** For the model game manager, patch

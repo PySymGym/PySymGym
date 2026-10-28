@@ -59,6 +59,7 @@ class Connector:
         self.send(start_message.to_json())
         self._current_step = 0
         self.game_is_over = False
+        self._gameover: Connector.GameOver | None = None
         self.map = map
 
     def catch_losing_of_connection(func):
@@ -81,7 +82,7 @@ class Connector:
 
     def _raise_if_gameover(self, msg) -> GameOverServerMessage | str:
         if self.game_is_over:
-            raise Connector.GameOver
+            raise self._gameover
 
         matching_message_type = ServerMessage.from_json_handle(
             msg, expected=ServerMessage
@@ -92,13 +93,14 @@ class Connector:
                     msg, expected=GameOverServerMessage
                 )
                 self.game_is_over = True
-                logging.debug(f"--> {matching_message_type}")
-                raise Connector.GameOver(
+                self._gameover = Connector.GameOver(
                     actual_coverage=deser_msg.MessageBody.ActualCoverage,
                     tests_count=deser_msg.MessageBody.TestsCount,
                     steps_count=deser_msg.MessageBody.StepsCount,
                     errors_count=deser_msg.MessageBody.ErrorsCount,
                 )
+                logging.debug(f"--> {matching_message_type}")
+                raise self._gameover
             case _:
                 return msg
 
