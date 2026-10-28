@@ -483,11 +483,12 @@ Orchestration seams are tested with fakes, never real I/O:
   its current cross-feature derivation (the #585 target). The strict
   ``xfail`` ``test_disable_message_checks_defaults_to_strict_validation``
   references #579 (flip the default to strict validation; currently
-  ``DISABLE_MESSAGE_CHECKS is True``). One #578-tracked connector defect
-  is pinned as a strict ``xfail`` asserting the post-fix behaviour (the
-  tracking issue owns removing the marker): a real websocket close
-  (``WebSocketConnectionClosedException`` from the pinned websocket-client)
-  translating to ``ConnectionLostError`` instead of propagating (#579).
+  ``DISABLE_MESSAGE_CHECKS is True``). The connection-loss translation is
+  pinned with real exception types from the pinned websocket-client: the
+  ``WebSocketException`` family (``WebSocketConnectionClosedException`` and
+  ``WebSocketTimeoutException``) and ``OSError`` (the synthetic
+  ``ConnectionResetError`` pin) all translate to ``ConnectionLostError``,
+  chained as the cause (#579).
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
