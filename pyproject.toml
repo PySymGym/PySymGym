@@ -118,14 +118,5 @@ exclude_also = [
     # branch is excluded rather than xfailed (see docs/testing.rst).
     "^        except TypeError:",
     "return asdict(dataclasses_asdict(data))",
-    # acquire_instance's success path (log + return): unreachable with a
-    # single-encoded body until #573 lands (the double-decode raises
-    # TypeError on the decoded dict); the double-encoded success path is the
-    # #573-tracked double-decode and is not asserted as correct. Pinned by
-    # the strict xfail in
-    # AIAgent/tests/unit/connection/test_broker_requests.py; #573 removes
-    # the exclusion when it lands.
-    "acquired ws:",
-    "return acquired_instance",
 ]
 fail_under = 99

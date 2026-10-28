@@ -17,7 +17,7 @@ def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:
             f"{response.status} with {content=} on acquire_instance call for {svm_info}"
         )
         raise RuntimeError(f"Not ok response: {response}, {content}")
-    acquired_instance = ServerInstanceInfo.from_json(
+    acquired_instance = ServerInstanceInfo.from_dict(
         json.loads(content.decode("utf-8"))
     )
     logging.info(f"acquired ws: {acquired_instance}")
