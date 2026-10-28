@@ -1,9 +1,10 @@
 """Unit tests for the pure helpers of the ONNX export entrypoint ``onyx.py``.
 
 These pin the current (pre-#578) behaviour of the tensor-input builders, the
-output shortener, the gamestate loader and the model-FQN resolver. The ONNX
-input names are pinned as literal strings: they are the V# wire contract and
-the drift net for #597's single-source input-names change.
+output shortener, and the gamestate loader. The ONNX input names are pinned
+as literal strings: they are the V# wire contract and the drift net for
+#597's single-source input-names change. Model selection goes through the
+registry (pinned in ``test_registry.py``).
 """
 
 import json
@@ -13,15 +14,11 @@ import pytest
 import torch
 from common.game import GameState
 from ml.inference import TORCH
-from ml.models.NorthernPenguin.model import (
-    StateModelEncoder as RealStateModelEncoder,
-)
 from onyx import (
     create_model_input,
     create_onnxruntime_input,
     create_torch_input,
     load_gamestate,
-    resolve_import_model,
     shorten_output,
 )
 from paths import RESOURCES_PATH
@@ -171,20 +168,3 @@ class TestLoadGamestate:
             actual = load_gamestate(f)
 
         assert actual == expected
-
-
-class TestResolveImportModel:
-    def test_resolves_a_valid_fqn(self):
-        model_def = resolve_import_model(
-            "ml.models.NorthernPenguin.model.StateModelEncoder"
-        )
-
-        assert model_def is RealStateModelEncoder
-
-    def test_missing_module_raises_module_not_found(self):
-        with pytest.raises(ModuleNotFoundError):
-            resolve_import_model("no.such.module.StateModelEncoder")
-
-    def test_missing_class_raises_attribute_error(self):
-        with pytest.raises(AttributeError):
-            resolve_import_model("ml.models.NorthernPenguin.model.NoSuchClass")

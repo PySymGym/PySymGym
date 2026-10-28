@@ -1,10 +1,8 @@
 import argparse
-import importlib
 import json
 import pathlib
 import typing as t
 import warnings
-from textwrap import dedent
 
 import onnx
 import onnxruntime
@@ -17,6 +15,7 @@ from ml.inference import ONNX, TORCH
 from torch_geometric import backend as pyg_backend
 from torch_geometric.data import HeteroData
 from ml.inference import infer
+from ml.models.registry import get_model_class
 
 # working version
 ONNX_OPSET_VERSION = 17
@@ -199,15 +198,13 @@ def main():
         help="Path to which ONNX model will be saved",
     )
     parser.add_argument(
-        "--import-model-fqn",
-        dest="import_model_fqn",
+        "--model-name",
+        dest="model_name",
         type=str,
         required=True,
-        help=dedent(
-            """\n
-            model import fully qualified name from AIAgent/ root,
-            for example: 'ml.models.TAGSageSimple.model.StateModelEncoder'
-            """
+        help=(
+            "registry name of the model to convert "
+            "(see ml/models/registry.py), for example: 'NorthernPenguin'"
         ),
     )
     parser.add_argument(
@@ -244,22 +241,10 @@ def main():
         sample_gamestate=sample_gamestate,
         pytorch_model_path=args.pytorch_model_path,
         onnx_savepath=args.onnx_savepath,
-        model_def=resolve_import_model(args.import_model_fqn),
+        model_def=get_model_class(args.model_name),
         model_kwargs=model_kwargs,
         verification_gamestates=veification_gamestates,
     )
-
-
-def resolve_import_model(import_model_fqn: str) -> t.Type[torch.nn.Module]:
-    module, clazz = (
-        import_model_fqn[: import_model_fqn.rfind(".")],
-        import_model_fqn[import_model_fqn.rfind(".") + 1 :],
-    )
-
-    module_def = importlib.import_module(module)
-    model_def = getattr(module_def, clazz)
-
-    return model_def
 
 
 def entrypoint(
