@@ -457,7 +457,21 @@ Orchestration seams are tested with fakes, never real I/O:
   double-decode raises ``TypeError`` today; the broker's double-encoding is
   what makes the current wire format work — see Exclusions).
   ``return_instance`` posts the instance's ``to_json`` to ``POST_WS`` and
-  raises ``RuntimeError`` on a non-200.
+  raises ``RuntimeError`` on a non-200. The ``config.py`` constants are
+  pinned as pure unit tests: ``SaveIfFailOrTimeout.save_model`` creates the
+  save directory and writes the model's ``state_dict`` to a
+  ``{with_name}_{timestamp}.pt`` file (the ``str(datetime)`` pattern, not the
+  exact wall-clock time); the ``BrokerConfig``/``WebsocketSourceLinks``
+  values, the ``FeatureConfig`` defaults and the
+  ``GameServerConnectorConfig`` values are pinned as the drift net for #585
+  (merge the constant classes into the pydantic YAML system), which carries
+  the current values over as the pydantic defaults — the CWD-relative
+  ``save_path`` value is pinned (the #584 target is the CWD-dependence, not
+  the value) and the ``RESPONCE_TIMEOUT_SEC`` value 1801 is pinned without
+  its current cross-feature derivation (the #585 target). The strict
+  ``xfail`` ``test_disable_message_checks_defaults_to_strict_validation``
+  references #579 (flip the default to strict validation; currently
+  ``DISABLE_MESSAGE_CHECKS is True``).
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
