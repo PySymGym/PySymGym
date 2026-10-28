@@ -483,6 +483,11 @@ Orchestration seams are tested with fakes, never real I/O:
   pinned for a live pid (yields), a dead pid (``ProcessStoppedError``) and
   a ``None`` pid (the restart-disabled placeholder: the check is skipped
   instead of letting ``psutil.pid_exists(None)`` raise ``TypeError``).
+  The free-port helpers (``next_free_port``, ``look_for_free_port_locked``)
+  are driven by a fake socket factory whose sockets fail ``bind`` for a
+  chosen set of occupied ports: the selection loop, the range bounds, the
+  lock usage, the retry/exhaustion behaviour, and the probe-socket close
+  on the success and error paths alike.
 - **Connection layer.** The message deserialization helper in
   ``unsafe_json`` is pinned as a pure unit test: ``obj_from_dict`` builds
   the nested attribute objects (``BareObject``s) that the unchecked

@@ -93,6 +93,21 @@ def test_next_free_port_raises_when_range_is_exhausted(
     with pytest.raises(IOError, match="no free ports"):
         next_free_port(5, 7)
 
+    # The probe socket is closed on the error path as well.
+    assert factory.created[0].closed is True
+
+
+def test_next_free_port_closes_the_socket_for_an_empty_range(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory = FakeSocketFactory(occupied_ports=set())
+    monkeypatch.setattr(network_utils.socket, "socket", factory)
+
+    with pytest.raises(IOError, match="no free ports"):
+        next_free_port(8, 5)
+
+    assert factory.created[0].closed is True
+
 
 def test_look_for_free_port_locked_binds_and_listens_under_lock(
     monkeypatch: pytest.MonkeyPatch,
