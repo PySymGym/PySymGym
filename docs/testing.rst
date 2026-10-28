@@ -198,7 +198,17 @@ state-map remapping, the ``no_grad`` output) plus one real-model run, and
 ``ml.training.wrapper.TrainingModelWrapper`` (the name/model accessors, the
 initial ``model_copy`` alias, the ``make_copy`` deep copy and rename, the
 ``predict`` delegation to ``predict_state_with_dict`` with the production
-converted graph and state map, and a real-model ``predict`` run).
+converted graph and state map, and a real-model ``predict`` run). The
+pretraining tests (``test_het_gnn_test_train.py``) pin
+``ml.het_gnn_test_train.HetGNNTestTrain`` as a seam: ``train_and_save`` runs
+against a fake model class (one parameter, output ``weight + 0.5``) and
+pickled synthetic graphs, pinning the 85/15 split counts, the exact per-epoch
+loss line (a reference ``Adam`` step computed in the test), the forward-call
+count, and the ``<module>/<hidden>ch/<epochs>e`` checkpoint layout with both
+the state-dict and full-model files; the ``BALANCE_DATASET`` truncation is
+pinned by monkeypatching the module constant with one 5001-element file
+(marked ``slow``). ``train`` / ``tst`` / ``save_simple`` are driven directly
+against the reference math.
 
 The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
 ``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
