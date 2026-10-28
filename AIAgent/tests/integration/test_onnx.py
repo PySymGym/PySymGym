@@ -1,7 +1,6 @@
 import copy
 import json
 import sys
-import typing as t
 import warnings
 from types import SimpleNamespace
 
@@ -376,7 +375,7 @@ def _main_argv(tmp_path, config, sample, verify, omit=None):
     return argv
 
 
-def _load_gamestate(path) -> dict[str, t.Any]:
+def _load_gamestate(path) -> GameState:
     with open(path) as f:
         game_state = GameState.from_dict(json.load(f))
         return game_state
