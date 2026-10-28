@@ -9,6 +9,7 @@ propagation, connection-loss translation and the reward step counter.
 import json
 
 import pytest
+import websocket
 from common.game import GameMap
 from config import FeatureConfig
 from connection.errors_connection import ConnectionLostError
@@ -100,6 +101,25 @@ def test_connection_reset_becomes_connection_lost(fake_websocket) -> None:
     ws = fake_websocket
     connector = _connector(ws)
     ws.incoming.append(ConnectionResetError())
+
+    with pytest.raises(ConnectionLostError):
+        connector.recv_state_or_throw_gameover()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "#579: connection-loss translation catches only "
+        "ConnectionResetError, but real websocket closes raise "
+        "WebSocketConnectionClosedException / WebSocketTimeoutException. "
+        "#579's fix: catch the websocket-client exception family "
+        "(WebSocketException) plus OSError."
+    ),
+)
+def test_real_websocket_close_becomes_connection_lost(fake_websocket) -> None:
+    ws = fake_websocket
+    connector = _connector(ws)
+    ws.incoming.append(websocket.WebSocketConnectionClosedException())
 
     with pytest.raises(ConnectionLostError):
         connector.recv_state_or_throw_gameover()
