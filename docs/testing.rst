@@ -468,8 +468,8 @@ Orchestration seams are tested with fakes, never real I/O:
   issued before the decode, so the shape is pinned without touching the
   #573 decode); the single-encoded 200 body returning the parsed
   ``ServerInstanceInfo`` is a strict ``xfail`` referencing #573 (the
-  double-decode raises ``TypeError`` today; the broker's double-encoding is
-  what makes the current wire format work — see Exclusions).
+  client's double-decode raises ``TypeError`` on the single-encoded body
+  the broker sends — see Exclusions).
   ``return_instance`` posts the instance's ``to_json`` to ``POST_WS`` and
   raises ``RuntimeError`` on a non-200. The ``config.py`` constants are
   pinned as pure unit tests: ``SaveIfFailOrTimeout.save_model`` creates the
@@ -593,15 +593,14 @@ tracked in those issues instead of being tested, and its removal is pending
 The success path of ``acquire_instance``
 (``AIAgent/connection/broker_conn/requests.py``) is excluded from the
 measurement (``[tool.coverage.report] exclude_also``): it is unreachable with
-a single-encoded body until #573 lands (the double-decode raises
+a single-encoded body until #573 lands (the client's double-decode raises
 ``TypeError`` on the decoded dict). The broker's ``/get_ws`` handler
-double-encodes (``launch_servers.py:53``, pinned by
+single-encodes (``launch_servers.py``, pinned by
 ``test_launch_servers.py::TestDequeueInstance::test_success_issues_a_real_instance``),
-so the current wire format is a JSON string containing JSON and the
-double-encoded success path works today — but it is the #573-tracked
-double-decode and is not asserted as correct. The post-fix behaviour (a
-single-encoded 200 body returns the parsed ``ServerInstanceInfo``) is pinned
-by the strict ``xfail`` in
+so the wire format is a single-encoded JSON object and the client's
+double-decode is the remaining #573-tracked defect. The post-fix behaviour
+(a single-encoded 200 body returns the parsed ``ServerInstanceInfo``) is
+pinned by the strict ``xfail`` in
 ``AIAgent/tests/unit/connection/test_broker_requests.py``; #573 removes the
 exclusion when it lands.
 
