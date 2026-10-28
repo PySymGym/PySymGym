@@ -163,6 +163,12 @@ from the previous step are used to obtain relatively good ones:
        poetry run python3 launch_servers.py --config path/to/derived.yml
        poetry run python3 run_training.py --config path/to/derived.yml
 
+   The improvement run replays the frozen trial through a fresh study,
+   enqueuing its hyper-parameters once per replay. It persists
+   ``study.pkl``/``trial.pkl`` and the per-trial MLflow artifacts exactly
+   like a tuning run, so the next round of the loop derives its config the
+   same way.
+
 SVM validation failure flag
 ---------------------------
 
