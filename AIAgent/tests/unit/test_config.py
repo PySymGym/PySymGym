@@ -90,6 +90,9 @@ def test_feature_config_defaults() -> None:
     assert FeatureConfig.ON_GAME_SERVER_RESTART == OnGameServerRestartFeature(
         enabled=True, wait_for_reset_retries=600, wait_for_reset_time=0.1
     )
+    # Pins the game server's .NET runtime to the major.minor its
+    # runtimeconfig.json declares (#669).
+    assert FeatureConfig.DOTNET_ROLL_FORWARD == "LatestPatch"
 
 
 def test_game_server_connector_config_values() -> None:

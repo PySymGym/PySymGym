@@ -10,6 +10,7 @@ state are touched.
 import asyncio
 import json
 import logging
+import os
 import signal
 import socket
 import subprocess
@@ -385,6 +386,13 @@ class TestRunServerInstance:
             "stdout": subprocess.DEVNULL,
             "start_new_session": True,
             "cwd": Path(tmp_path).absolute(),
+            # The .NET runtime is pinned to the one the dataset was
+            # generated with (#669); the rest of the ambient environment
+            # is passed through.
+            "env": {
+                **os.environ,
+                "DOTNET_ROLL_FORWARD": FeatureConfig.DOTNET_ROLL_FORWARD,
+            },
         }
         # The Popen handle is tracked by pid, not the pid alone.
         assert procs == {4321: popen_instances[0]}
