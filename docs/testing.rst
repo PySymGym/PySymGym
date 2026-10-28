@@ -544,7 +544,17 @@ Orchestration seams are tested with fakes, never real I/O:
   ``WebSocketException`` family (``WebSocketConnectionClosedException`` and
   ``WebSocketTimeoutException``) and ``OSError`` (the synthetic
   ``ConnectionResetError`` pin) all translate to ``ConnectionLostError``,
-  chained as the cause (#579).
+  chained as the cause (#579). The protocol-version check
+  (``check_protocol_version``, #582) is pinned as a pure unit test: the
+  current ``PROTOCOL_VERSION`` is accepted, a foreign version raises
+  ``ProtocolVersionMismatchError`` (named in the message), and a legacy
+  versionless envelope returns ``None`` with a loud warning logged **once
+  per process** (the module-level throttle flag is reset per test via
+  ``monkeypatch``; non-dict envelopes are ignored by the check and leave no
+  warning). ``from_json_handle`` runs the check under **both**
+  ``DISABLE_MESSAGE_CHECKS`` settings (a foreign ``Version`` raises before
+  the flag branch) and wraps ``json.JSONDecodeError`` in
+  ``DeserializationException`` under both settings (#582).
 - **Subprocesses and files.** For the model game manager, patch
   ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
   (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the

@@ -2,14 +2,55 @@ import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, TypeVar
+from typing import Final, Optional, TypeVar
 
 from common.game import GameMap, GameState, Reward
 from config import FeatureConfig
+from connection.errors_connection import ProtocolVersionMismatchError
 from connection.game_server_conn.unsafe_json import BareObject, obj_from_dict
 from dataclasses_json import config, dataclass_json
 
 _T = TypeVar("_T")
+
+#: The protocol version the agent speaks. Version 1 is the historical
+#: format without the ``Version`` field (what the V# and usvm servers
+#: speak today); version 2 adds the ``Version`` field to the envelope.
+#: The wire contract lives in ``docs/integration.rst``.
+PROTOCOL_VERSION: Final[int] = 2
+
+_legacy_version_notice_issued = False
+
+
+def check_protocol_version(envelope: object) -> int | None:
+    """Validate the ``Version`` field of a received message envelope.
+
+    Returns the observed version, or ``None`` for a legacy v1 envelope
+    (no ``Version`` field) or a non-dict envelope (structural validation
+    handles those). Raises :class:`ProtocolVersionMismatchError` when the
+    field is present with a foreign version. A legacy envelope logs a loud
+    warning once per process.
+    """
+    global _legacy_version_notice_issued
+    if not isinstance(envelope, dict):
+        return None
+    version = envelope.get("Version")
+    if version is None:
+        if not _legacy_version_notice_issued:
+            _legacy_version_notice_issued = True
+            logging.warning(
+                "game-server message carries no Version field: the server "
+                "speaks the legacy protocol (v1); this client speaks "
+                "v%s (wire contract: docs/integration.rst)",
+                PROTOCOL_VERSION,
+            )
+        return None
+    if version != PROTOCOL_VERSION:
+        raise ProtocolVersionMismatchError(
+            f"the game server speaks protocol version {version}; "
+            f"this client speaks v{PROTOCOL_VERSION} "
+            "(wire contract: docs/integration.rst)"
+        )
+    return version
 
 
 class ClientMessageType(str, Enum):
@@ -76,14 +117,23 @@ class ServerMessage:
 
     @staticmethod
     def from_json_handle(data: str, expected: type[_T]) -> _T | BareObject:
+        try:
+            envelope = json.loads(data)
+        except json.JSONDecodeError as e:
+            raise ServerMessage.DeserializationException(f"invalid JSON: {e}") from e
+
+        # The version check is a protocol-level invariant: it runs
+        # regardless of DISABLE_MESSAGE_CHECKS.
+        check_protocol_version(envelope)
+
         if FeatureConfig.DISABLE_MESSAGE_CHECKS:
-            return obj_from_dict(json.loads(data))
+            return obj_from_dict(envelope)
 
         try:
-            return expected.from_json(data)
+            return expected.from_dict(envelope)
         except Exception as e:
             err_to_display = f"{type(e)} - {e}: tried to decode {expected}, got unmatched structure, registered to app.log under [ERROR] tag"
-            error = f"{type(e)} - {e}: tried to decode {expected}, got raw data: {json.dumps(json.loads(data), indent=2)}"
+            error = f"{type(e)} - {e}: tried to decode {expected}, got raw data: {json.dumps(envelope, indent=2)}"
             logging.error(error)
             raise ServerMessage.DeserializationException(err_to_display) from e
 
