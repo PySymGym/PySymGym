@@ -5,6 +5,8 @@ from pathlib import Path
 
 import torch
 
+from paths import REPORT_PATH
+
 
 class GeneralConfig:
     LOGGER_LEVEL = logging.INFO
@@ -53,7 +55,7 @@ class FeatureConfig:
     VERBOSE_TABLES = True
     DISABLE_MESSAGE_CHECKS = False
     SAVE_IF_FAIL_OR_TIMEOUT = SaveIfFailOrTimeout(
-        enabled=True, timeout_sec=1800, save_path=Path("./report/timeouted_agents/")
+        enabled=True, timeout_sec=1800, save_path=REPORT_PATH / "timeouted_agents"
     )
     ON_GAME_SERVER_RESTART = OnGameServerRestartFeature(
         enabled=True, wait_for_reset_retries=10 * 60, wait_for_reset_time=0.1

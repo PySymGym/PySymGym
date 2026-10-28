@@ -18,6 +18,7 @@ from common.network_utils import next_free_port
 from common.config.config import Config
 from common.validation_coverage.svm_info import SVMInfo
 from config import BrokerConfig, FeatureConfig, GeneralConfig
+from paths import BROKER_LOG_PATH
 from connection.broker_conn.classes import (
     ServerInstanceInfo,
     Undefined,
@@ -286,7 +287,7 @@ def main(config: str):
 
     logging.basicConfig(
         level=GeneralConfig.LOGGER_LEVEL,
-        filename="instance_manager.log",
+        filename=BROKER_LOG_PATH,
         filemode="w",
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
     )

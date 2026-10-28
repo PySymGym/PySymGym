@@ -93,6 +93,21 @@ explicit task and must keep the fork's ``TargetFramework`` compatible with
 and repair are documented on the :doc:`setup` page
 (``make check_submodules``).
 
+Path conventions
+----------------
+
+Nothing in the entrypoints resolves a path against the current working
+directory. **Runtime artifact paths** (``AIAgent/paths.py``: ``REPORT_PATH``,
+``LOG_PATH``, ``BROKER_LOG_PATH`` and everything derived from them, plus the
+``FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_path`` default) are anchored to
+the **AIAgent directory**, located via ``__file__`` the same way
+``RESOURCES_PATH`` locates the repo root. The entrypoints therefore run from
+any CWD and always write their generated artifacts (models, trials, datasets,
+study/trial pickles, logs) under ``AIAgent/``. AIAgent — rather than the repo
+root — is the anchor because the e2e pipeline stages the dataset at
+``AIAgent/report/SerializedEpisodes`` and collects ``AIAgent/report/study.pkl``
+and ``AIAgent/*.log``.
+
 Test pipeline
 -------------
 

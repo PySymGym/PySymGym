@@ -24,6 +24,7 @@ from config import (
     WebsocketSourceLinks,
     get_device,
 )
+from paths import REPORT_PATH
 
 pytestmark = pytest.mark.unit
 
@@ -81,11 +82,10 @@ def test_broker_config_and_urls() -> None:
 
 def test_feature_config_defaults() -> None:
     # #585 carries these values over as the pydantic defaults; the pins are
-    # the drift net. save_path is CWD-relative (the #584 target) — the value
-    # is pinned, the CWD-dependence is not asserted as correct.
+    # the drift net.
     assert FeatureConfig.VERBOSE_TABLES is True
     assert FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT == SaveIfFailOrTimeout(
-        enabled=True, timeout_sec=1800, save_path=Path("./report/timeouted_agents/")
+        enabled=True, timeout_sec=1800, save_path=REPORT_PATH / "timeouted_agents"
     )
     assert FeatureConfig.ON_GAME_SERVER_RESTART == OnGameServerRestartFeature(
         enabled=True, wait_for_reset_retries=600, wait_for_reset_time=0.1
