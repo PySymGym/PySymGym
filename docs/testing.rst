@@ -318,7 +318,13 @@ gamestates through ``AIAgent/paths.py``: ``TestONNXConversion`` runs the full
 (#617 regression guard); ``TestForwardOnCUDA`` pins the CPU/CUDA forward
 equivalence with and without v-v edges (#617 regression guard, skipped
 without CUDA); ``TestModelGamePreparatorKwargs`` pins the preparator's
-explicit-kwarg forwarding to ``onyx.entrypoint``.
+explicit-kwarg forwarding to ``onyx.entrypoint``. The ``TestMain`` CLI seam
+tests drive ``main()`` with a patched ``sys.argv`` and a recording
+``onyx.entrypoint`` fake (no export run): the exact dispatch kwargs (the
+loaded sample ``GameState``, the verification ``GameState``s in argv order,
+the FQN-resolved model class, the ``yaml.safe_load``ed model kwargs, the
+forwarded paths), the empty ``--verify-on`` default, and the argparse
+``SystemExit`` for each missing required flag.
 
 The runstrat CLI tests (``tools/runstrat/tests/unit/``) pin the benchmarking
 tool without end-to-end strategy runs. The parsing tests (``test_parsing.py``)
