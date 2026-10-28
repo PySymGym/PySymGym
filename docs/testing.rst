@@ -311,7 +311,14 @@ field) and ``load_prebuilt_config`` (a JSON config structured into
 ``--model`` suffix for the AI strategy, the ``cwd``) and the
 exception-propagation branches (``CalledProcessError`` and
 ``FunctionTimedOut`` re-raised unchanged); the timeout child-cleanup defect is
-#590-tracked and not asserted.
+#590-tracked and not asserted. The ``main()`` seam tests
+(``test_runstrat_main.py``) drive ``main()`` with a patched ``sys.argv`` and a
+recording ``entrypoint`` fake: the parsed ``Args`` (strategy dispatch through
+``BasePSStrategy.parse``, the ``assembly_infos`` list-of-pairs shape, the
+timestamp default savedir), the argparse exits for missing ``-s``/``-t``, the
+unknown-strategy ``ValueError``, and the AI-without-model-path
+``AssertionError``; the missing-``-ps``/``-as`` argparse-error behaviour is
+#590-tracked (``xfail``).
 
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
