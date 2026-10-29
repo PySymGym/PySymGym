@@ -60,6 +60,9 @@ can produce. This project generates it with one of the strategies from V#:
 saved under ``./AIAgent/report/SerializedEpisodes`` and is later updated by the
 neural network when it finds a better solution.
 
+Generation is deterministic: two runs with the same seed produce
+byte-identical serialized path conditions.
+
 Hyper-parameters tuning
 -----------------------
 
