@@ -413,8 +413,9 @@ markers when it lands.
 The runstrat CLI tests (``tools/runstrat/tests/unit/``) pin the benchmarking
 tool without end-to-end strategy runs. The parsing tests (``test_parsing.py``)
 pin ``parse_runner_output`` (the exact ``(total_time_sec, tests, errors,
-coverage)`` tuple from a runner transcript, and the ``AttributeError`` with its
-``__notes__`` on a malformed transcript), ``parse_prebuilt`` (class-qualified
+coverage)`` tuple from a runner transcript, the single-digit and three-digit
+time fields, the integer and decimal coverage, and the ``AttributeError`` with
+its ``__notes__`` on a malformed transcript), ``parse_prebuilt`` (class-qualified
 versus top-level method expansion), and the file-reading seams ``load_config``
 (a ``dll,method`` CSV into ``LaunchInfo`` rows, the ``Path``-typed ``dll``
 field) and ``load_prebuilt_config`` (a JSON config structured into
