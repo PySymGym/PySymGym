@@ -1,11 +1,21 @@
-"""Unit tests for the ``ml.protocols`` abstract interfaces."""
+"""Unit tests for the ``ml.protocols`` abstract interfaces.
+
+``Named`` lives in ``common.protocols`` (the shared layer must not import
+``ml``); ``ml.protocols`` re-exports it for ``Predictor``.
+"""
 
 import inspect
 
 import pytest
-from ml.protocols import Model, Named, Predictor
+from common.protocols import Named
+from ml.protocols import Model, Predictor, Named as MlNamed
 
 pytestmark = pytest.mark.unit
+
+
+def test_named_is_reexported_by_ml_protocols():
+    # One class, two import paths: the ml-side name is the common-side one.
+    assert MlNamed is Named
 
 
 def test_named_and_predictor_are_abstract():
