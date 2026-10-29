@@ -46,6 +46,48 @@ check_submodules:
 	done; \
 	exit $$fail
 
+# Pin stability: every submodule pointer must name a commit reachable from a
+# stable ref (a tag, or the default branch) of the submodule's remote, so a
+# force-push or branch deletion upstream cannot break `git submodule update`.
+# Policy: docs/developer.rst, "Submodules".
+check_submodule_pins:
+	@fail=0; \
+	for name in $$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$$' | awk '{print $$1}' | sed 's/^submodule\.//;s/\.path$$//'); do \
+		path=$$(git config -f .gitmodules --get "submodule.$${name}.path"); \
+		url=$$(git config -f .gitmodules --get "submodule.$${name}.url"); \
+		pin=$$(git ls-tree HEAD "$$path" | awk '{print $$3}'); \
+		if [ -z "$$pin" ]; then \
+			echo "MISSING: $$path (no gitlink in HEAD)"; \
+			fail=1; continue; \
+		fi; \
+		default=$$(git ls-remote --symref "$$url" HEAD 2>/dev/null | awk '/^ref:/{print $$2}' | sed 's@^refs/heads/@@'); \
+		if [ -z "$$default" ]; then \
+			echo "UNRESOLVED: $$path (no default branch advertised by $$url)"; \
+			fail=1; continue; \
+		fi; \
+		tmp=$$(mktemp -d); \
+		git init --bare -q "$$tmp"; \
+		if ! git -C "$$tmp" fetch -q --filter=blob:none "$$url" "refs/heads/$$default:refs/stable/default" "+refs/tags/*:refs/tags/*" 2>/dev/null; then \
+			echo "UNREACHABLE: $$path (cannot fetch $$url)"; \
+			rm -rf "$$tmp"; fail=1; continue; \
+		fi; \
+		ok=0; \
+		for ref in $$(git -C "$$tmp" for-each-ref --format='%(objectname)' refs/stable/default 'refs/tags/*'); do \
+			commit=$$(git -C "$$tmp" rev-parse -q --verify "$$ref^{commit}" 2>/dev/null); \
+			if [ -n "$$commit" ] && git -C "$$tmp" merge-base --is-ancestor "$$pin" "$$commit" 2>/dev/null; then \
+				ok=1; break; \
+			fi; \
+		done; \
+		rm -rf "$$tmp"; \
+		if [ "$$ok" -eq 1 ]; then \
+			echo "OK: $$path ($$(echo $$pin | cut -c1-8) reachable from a stable ref of $$url)"; \
+		else \
+			echo "UNSTABLE: $$path ($$(echo $$pin | cut -c1-8) not reachable from any tag or from $$default of $$url)"; \
+			fail=1; \
+		fi; \
+	done; \
+	exit $$fail
+
 init_data: generate_init_data move_init_data
 
 STEPS_TO_SERIALIZE = 200
