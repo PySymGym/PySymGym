@@ -38,7 +38,7 @@ RANDOM_SEED = 0
 
 @pytest.fixture(autouse=True)
 def cpu_device(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Make ``config.get_device()`` resolve to CPU so tests never use a GPU."""
+    """Make ``ml.device.get_device()`` resolve to CPU so tests never use a GPU."""
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
 
 

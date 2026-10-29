@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 import torch
 import tqdm
-from config import get_device
+from ml.device import get_device
 from ml.inference import infer
 from ml.dataset import TrainingDataset
 from torch_geometric.loader import DataLoader
