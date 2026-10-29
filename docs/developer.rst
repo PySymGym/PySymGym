@@ -354,6 +354,26 @@ works (no GPU, broken driver, missing toolkit) it passes nothing: the
 container starts device-less and the Python side runs on CPU — the e2e run
 degrades instead of failing.
 
+**The locked torch must be able to run the GPU (#662).** Passthrough is
+necessary but not sufficient: a GPU whose compute capability the locked
+torch build has no kernels for would pass the passthrough probe and then
+crash the first CUDA op mid-training ("no kernel image is available for
+execution on the device"). The pipeline therefore verifies compatibility
+where torch is actually available — a step in the build-and-launch job,
+after the Python environment is prepared: the image itself ships no Python
+(the venv with the locked torch is created at runtime by the
+checkout-poetry action), so the probe cannot run earlier.
+``AIAgent/probe_gpu_torch.py`` runs a small CUDA op on ``cuda:0`` with the
+exact torch the pipeline trains with. The verdict is the op, not the
+arch-list membership: a capability absent from
+``torch.cuda.get_arch_list()`` can still work through driver JIT of bundled
+PTX (the locked torch 2.7.1 runs on the runner's sm_61 GPU this way), and
+an arch-list hit proves nothing if the op fails. On failure the probe logs
+the device, its compute capability, the torch version and arch list, and
+hides the device from torch for the rest of the run (an empty
+``CUDA_VISIBLE_DEVICES`` via ``$GITHUB_ENV``), so ``ml.device.get_device``
+falls back to CPU and the e2e run degrades instead of failing.
+
 CI as source of truth
 ---------------------
 
