@@ -19,7 +19,7 @@ class SaveIfFailOrTimeout:
 
     enabled: bool = Field(default=True)
     timeout_sec: int = Field(default=1800)
-    save_path: Path = Field(default_factory=lambda: REPORT_PATH / "timeouted_agents")
+    save_path: Path = Field(default_factory=lambda: REPORT_PATH / "timed_out_agents")
 
 
 @pydantic_dataclass(config=_CONFIG)
