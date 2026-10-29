@@ -437,10 +437,10 @@ per-method loop, the ``RunResult`` → ``asdict`` → CSV column order
 ``{strategy.name}.csv`` / ``{strategy.name}.log`` artifact names, the
 empty-maps empty-CSV case, and the ``setup_logging`` ``basicConfig`` call. The
 error-handling tests pin the BENCHMARKS skip-versus-DEBUG re-raise for
-``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError``; the
-``ValueError``-kills-the-run defect, the all-methods-fail exit-0 aggregate, and
-the missing-runner no-existence-check behaviour are #590-tracked (``xfail`` /
-documented exclusion).
+``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError`` and the
+up-front ``FileNotFoundError`` for a missing V# runner; the
+``ValueError``-kills-the-run defect and the all-methods-fail exit-0 aggregate
+are #590-tracked (``xfail``).
 
 The compstrat CLI tests (``tools/compstrat/tests/unit/test_compstrat_main.py``)
 pin ``main()`` with a patched ``sys.argv`` and a recording ``entrypoint`` fake

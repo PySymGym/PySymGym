@@ -14,7 +14,7 @@ from pathlib import Path
 import func_timeout
 import pytest
 import runstrat.cli
-from runstrat import Args, RunMode
+from runstrat import Args, PATH_TO_VSHARP, RunMode
 from runstrat.psstrategy import ExecutionTreeContributedCoverageStrategy
 
 pytestmark = pytest.mark.unit
@@ -53,6 +53,10 @@ def make_args(tmp_path: Path, methods: list[str], run_mode=RunMode.BENCHMARKS) -
     dll_dir.mkdir(exist_ok=True)
     savedir = tmp_path / "savedir"
     savedir.mkdir(exist_ok=True)
+    # entrypoint() validates the runner up front; give it a file to find.
+    runner = tmp_path / "pysymgym" / PATH_TO_VSHARP
+    runner.parent.mkdir(parents=True, exist_ok=True)
+    runner.touch()
     return Args(
         strategy=ExecutionTreeContributedCoverageStrategy(
             "ExecutionTreeContributedCoverage"
@@ -98,6 +102,17 @@ def test_setup_logging_configures_a_file_handler(
 
     assert calls[0]["filename"] == str(tmp_path / "logs" / "MyStrat.log")
     assert calls[0]["level"] == logging.INFO
+
+
+def test_entrypoint_missing_runner_raises_file_not_found(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["M1"])
+    args.pysymgym_path = tmp_path / "missing"
+    entrypoint_env["script"] = {}
+
+    with pytest.raises(FileNotFoundError, match="V# runner not found at"):
+        runstrat.cli.entrypoint(args)
 
 
 def test_entrypoint_writes_one_row_per_method(entrypoint_env, tmp_path: Path) -> None:

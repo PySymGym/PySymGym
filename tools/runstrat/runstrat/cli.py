@@ -52,6 +52,11 @@ class Args:
 
 def entrypoint(args: Args) -> pd.DataFrame:
     runner_path = Path(args.pysymgym_path / PATH_TO_VSHARP).resolve()
+    if not runner_path.is_file():
+        raise FileNotFoundError(
+            f"V# runner not found at {runner_path}; build VSharp.Runner first "
+            "(see docs/setup.rst)"
+        )
 
     setup_logging(args.savedir, strategy_name=args.strategy.name)
 
