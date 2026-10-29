@@ -1,9 +1,23 @@
+import os
+import signal
 import subprocess
 
 import func_timeout
 
 from runstrat.psstrategy import AIStrategy, BasePSStrategy
 from runstrat.structs import LaunchInfo
+
+
+def _kill_process_group(proc: subprocess.Popen) -> None:
+    """Kill the child's process group (it leads its own session).
+
+    ``dotnet`` may spawn children of its own, which killing the direct
+    child would orphan. A group that already exited is fine.
+    """
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def call_test_runner(
@@ -33,19 +47,28 @@ def call_test_runner(
                 model_path,
             )
 
-    def runner_fun(call, wdir):
-        return subprocess.check_output(call, stderr=subprocess.STDOUT, cwd=wdir).decode(
-            "utf-8"
-        )
-
+    # The child leads its own session so the whole group (dotnet may spawn
+    # children) can be killed on timeout. Waiting on the process directly
+    # instead of via func_timeout, which would interrupt only the waiting
+    # thread and orphan the runner.
+    proc = subprocess.Popen(
+        call,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=wdir,
+        start_new_session=True,
+    )
     try:
-        runner_output = func_timeout.func_timeout(
-            timeout=timeout + 1, func=runner_fun, kwargs={"call": call, "wdir": wdir}
-        )
+        out, _ = proc.communicate(timeout=timeout + 1)
+    except subprocess.TimeoutExpired:
+        _kill_process_group(proc)
+        proc.wait()
+        raise func_timeout.FunctionTimedOut(
+            timedOutAfter=timeout + 1,
+            timedOutKwargs={"call": call, "wdir": wdir},
+        ) from None
 
-    except subprocess.CalledProcessError:
-        raise
-    except func_timeout.FunctionTimedOut:
-        raise
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, call, output=out)
 
-    return " ".join(map(str, call)), runner_output
+    return " ".join(map(str, call)), out.decode("utf-8")

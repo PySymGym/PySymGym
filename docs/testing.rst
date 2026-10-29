@@ -421,11 +421,13 @@ versus top-level method expansion), and the file-reading seams ``load_config``
 field) and ``load_prebuilt_config`` (a JSON config structured into
 ``PrebuiltConfig`` and expanded). The ``subprocess_calls`` tests
 (``test_subprocess_calls.py``) pin the exact dotnet argv (the base flags, the
-``--model`` suffix for the AI strategy, the ``cwd``) and the
-exception-propagation branches (``CalledProcessError`` and
-``FunctionTimedOut`` re-raised unchanged); the timeout child-cleanup defect is
-#590-tracked and not asserted. The ``main()`` seam tests
-(``test_runstrat_main.py``) drive ``main()`` with a patched ``sys.argv`` and a
+``--model`` suffix for the AI strategy, the ``cwd``), the
+``start_new_session`` group-leader launch, the exception-propagation branches
+(``CalledProcessError`` with its output/cmd, ``FunctionTimedOut`` with its
+``timedOutKwargs``), and the timeout child cleanup (the process group is
+killed with ``SIGKILL`` and reaped; an already-dead group is tolerated).
+The ``main()`` seam tests (``test_runstrat_main.py``) drive ``main()`` with
+a patched ``sys.argv`` and a
 recording ``entrypoint`` fake: the parsed ``Args`` (strategy dispatch through
 ``BasePSStrategy.parse``, the ``assembly_infos`` list-of-pairs shape, the
 timestamp default savedir), the argparse exits for missing
