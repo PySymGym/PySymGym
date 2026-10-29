@@ -161,7 +161,7 @@ def main():
         "--pysymgym-path",
         type=Path,
         dest="pysymgym_path",
-        required=False,
+        required=True,
         help="Absolute path to PySymGym",
     )
     parser.add_argument(
@@ -177,6 +177,7 @@ def main():
         type=Path,
         action="append",
         nargs=2,
+        required=True,
         metavar=("dlls-path", "launch-info-path"),
         help="Provide tuples: dir with dlls/assembly info file",
     )
