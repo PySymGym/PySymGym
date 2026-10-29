@@ -531,18 +531,20 @@ Orchestration seams are tested with fakes, never real I/O:
   decode); the single-encoded 200 body returns the parsed
   ``ServerInstanceInfo``.
   ``return_instance`` posts the instance's ``to_json`` to ``POST_WS`` and
-  raises ``RuntimeError`` on a non-200. The ``config.py`` constants are
-  pinned as pure unit tests: ``SaveIfFailOrTimeout.save_model`` creates the
-  save directory and writes the model's ``state_dict`` to a
-  ``{with_name}_{timestamp}.pt`` file (the ``str(datetime)`` pattern, not the
-  exact wall-clock time); the ``BrokerConfig``/``WebsocketSourceLinks``
-  values, the ``FeatureConfig`` defaults and the
-  ``GameServerConnectorConfig`` values are pinned as the drift net for #585
+  raises ``RuntimeError`` on a non-200. The merged values are pinned on the
+  pydantic models (``test_config_models.py``) as the drift net for #585
   (merge the constant classes into the pydantic YAML system), which carries
-  the current values over as the pydantic defaults — the CWD-relative
-  ``save_path`` value is pinned (the #584 target is the CWD-dependence, not
-  the value) and the ``RESPONCE_TIMEOUT_SEC`` value 1801 is pinned without
-  its current cross-feature derivation (the #585 target). Strict validation
+  the current values over as the pydantic defaults: the ``BrokerConfig``
+  port and url properties (replacing ``WebsocketSourceLinks``), the
+  ``FeatureConfig`` defaults and the ``GameServerConnectorConfig`` values —
+  the CWD-relative ``save_path`` value is pinned (the #584 target is the
+  CWD-dependence, not the value) and the ``response_timeout_sec`` value 1801
+  is pinned as an explicit field, without the old cross-feature derivation
+  (the #585 target). The remaining ``config.py`` constants are pinned as
+  pure unit tests until the module is deleted:
+  ``SaveIfFailOrTimeout.save_model`` creates the save directory and writes
+  the model's ``state_dict`` to a ``{with_name}_{timestamp}.pt`` file (the
+  ``str(datetime)`` pattern, not the exact wall-clock time). Strict validation
   is the default: ``test_disable_message_checks_defaults_to_strict_validation``
   pins ``DISABLE_MESSAGE_CHECKS is False`` (the flag is kept for
   compatibility; the tests that pin the unchecked ``BareObject`` path set it
