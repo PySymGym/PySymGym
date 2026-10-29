@@ -10,18 +10,22 @@ this directory.
 Docs:
 
 ```bash
-usage: runstrat [-h] -s STRATEGY [-mp MODEL_PATH] -t TIMEOUT [-ps PYSYMGYM_PATH] [-as dlls-path launch-info-path]
+usage: runstrat [-h] -s STRATEGY [-mp MODEL_PATH] -t TIMEOUT -ps PYSYMGYM_PATH
+                [-sd SAVEDIR] -as dlls-path launch-info-path
 
 options:
   -h, --help            show this help message and exit
   -s STRATEGY, --strategy STRATEGY
-                        V# searcher strategy
+                        V# searcher strategy. ExecutionTreeContributedCoverage
+                        and AI are supported.
   -mp MODEL_PATH, --model-path MODEL_PATH
                         Absolute path to AI model if AI strategy is selected
   -t TIMEOUT, --timeout TIMEOUT
-                        V# runner timeout
+                        V# runner timeout (s)
   -ps PYSYMGYM_PATH, --pysymgym-path PYSYMGYM_PATH
                         Absolute path to PySymGym
+  -sd SAVEDIR, --savedir SAVEDIR
+                        Path to save results to. Default is current directory.
   -as dlls-path launch-info-path, --assembly-infos dlls-path launch-info-path
                         Provide tuples: dir with dlls/assembly info file
 ```

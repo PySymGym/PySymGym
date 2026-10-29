@@ -427,10 +427,9 @@ exception-propagation branches (``CalledProcessError`` and
 (``test_runstrat_main.py``) drive ``main()`` with a patched ``sys.argv`` and a
 recording ``entrypoint`` fake: the parsed ``Args`` (strategy dispatch through
 ``BasePSStrategy.parse``, the ``assembly_infos`` list-of-pairs shape, the
-timestamp default savedir), the argparse exits for missing ``-s``/``-t``, the
-unknown-strategy ``ValueError``, and the AI-without-model-path
-``AssertionError``; the missing-``-ps``/``-as`` argparse-error behaviour is
-#590-tracked (``xfail``). The ``entrypoint()`` seam tests
+timestamp default savedir), the argparse exits for missing
+``-s``/``-t``/``-ps``/``-as``, the unknown-strategy ``ValueError``, and the
+AI-without-model-path ``AssertionError``. The ``entrypoint()`` seam tests
 (``test_runstrat_entrypoint.py``) drive ``entrypoint()`` with a method-keyed
 ``call_test_runner`` fake and a recording ``logging.basicConfig``: the
 per-method loop, the ``RunResult`` → ``asdict`` → CSV column order
