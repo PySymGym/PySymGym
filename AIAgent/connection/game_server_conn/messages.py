@@ -124,7 +124,7 @@ class ClientMessage:
 
 class ServerMessageType(str, Enum):
     GAMEOVER = "GameOver"
-    MOVE_REVARD = "MoveReward"
+    MOVE_REWARD = "MoveReward"
     INCORRECT_PREDICTED_STATEID = "IncorrectPredictedStateId"
     READY_FOR_NEXT_STEP = "ReadyForNextStep"
     SERVER_ERROR = "ServerError"
