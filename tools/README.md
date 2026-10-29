@@ -134,3 +134,35 @@ PYTHONPATH=../../AIAgent python3 clean.py -l ../../AIAgent/<name>.log
 Use custom dataset and log paths:
 PYTHONPATH=../../AIAgent python3 clean.py -d <path-to-dataset> -l <path-to-log>
 ```
+
+## Dependencies
+
+The tools are standalone except for one explicit, one-way dependency on the
+agent package:
+
+- `runstrat`, `compstrat`, `util` — standalone: no AIAgent imports.
+- `dataset_tools` (`clean.py`, `generate_episodes.py`) — import
+  `common.game.GameMap` from AIAgent: the dataset schema is owned by the
+  agent package (`AIAgent/common/game.py`), and the tools operate on its
+  dataset files. The dependency direction is tools → AIAgent, one-way.
+
+Running the dataset tools from the CLI therefore requires `AIAgent` on
+`PYTHONPATH` (the commands in [docs/dataset.rst](../docs/dataset.rst) show
+it); the test suites get it from the root `conftest.py` instead. The scripts
+deliberately do not add `AIAgent` to `sys.path` at import time — that
+coupling was removed in #559 and is pinned by
+`tests/test_cwd_independence.py::test_dataset_tool_import_is_side_effect_free`.
+
+Design decisions (recorded for #589):
+
+- **No thin shared module.** `GameMap` is the core of AIAgent's domain model
+  (alongside `GameState`, `GameMap2SVM` and `SVMInfo` in
+  `AIAgent/common/game.py`); extracting it would fragment that model for an
+  edge that is light (dataclasses_json + pydantic only, no torch) and
+  one-way.
+- **No import-boundary guard for the edge.** The AST guard in
+  `tests/test_import_boundaries.py` protects the shared layer
+  (`AIAgent/common`) from heavy dependencies — a different concern. Freezing
+  "tools must not import `ml.*`" would codify an accidental property
+  (runstrat/compstrat happen to import nothing from AIAgent) without
+  demonstrated need.
