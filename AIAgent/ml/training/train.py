@@ -5,7 +5,7 @@ import tqdm
 import os
 from torch_geometric.loader import DataLoader
 
-from config import get_device
+from ml.device import get_device
 from ml.inference import degenerate_counts, infer
 
 

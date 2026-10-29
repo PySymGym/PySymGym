@@ -27,7 +27,7 @@ import torch
 import tqdm
 from common.dataset import TrainingDatasetMode
 from common.game import GameState, PathConditionVertex
-from config import get_device
+from ml.device import get_device
 from ml.inference import TORCH
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData

@@ -142,7 +142,7 @@ Shared fixtures live in a ``conftest.py`` next to the component they serve: the
 and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
 
 ``AIAgent/conftest.py``
-    ``cpu_device`` (autouse) forces ``GeneralConfig.DEVICE`` to CPU,
+    ``cpu_device`` (autouse) forces ``ml.device.get_device()`` to CPU,
     ``seeded_rng`` (autouse) seeds ``random``/``numpy``/``torch``,
     ``gamestate_factory`` builds a synthetic ``GameState``,
     ``hetero_factory`` converts it through the production
@@ -545,15 +545,14 @@ Orchestration seams are tested with fakes, never real I/O:
   the CWD-relative ``save_path`` value is pinned (the #584 target is the
   CWD-dependence, not the value) and the ``response_timeout_sec`` value 1801
   is pinned as an explicit field, without the old cross-feature derivation
-  (the #585 target). The remaining ``config.py`` constants are pinned as
-  pure unit tests until the module is deleted:
-  ``SaveIfFailOrTimeout.save_model`` creates the save directory and writes
+  (the #585 target). The save-on-failure behavior is pinned as a pure unit
+  test: ``ml.model_io.save_state_dict`` creates the save directory and writes
   the model's ``state_dict`` to a ``{with_name}_{timestamp}.pt`` file (the
   ``str(datetime)`` pattern, not the exact wall-clock time). Strict validation
-  is the default: ``test_disable_message_checks_defaults_to_strict_validation``
-  pins ``DISABLE_MESSAGE_CHECKS is False`` (the flag is kept for
-  compatibility; the tests that pin the unchecked ``BareObject`` path set it
-  explicitly, #579). The connection-loss translation is
+  is the default: the ``FeatureConfig`` pin above asserts
+  ``disable_message_checks is False`` (the flag is kept for compatibility;
+  the tests that pin the unchecked ``BareObject`` path set it explicitly,
+  #579). The connection-loss translation is
   pinned with real exception types from the pinned websocket-client: the
   ``WebSocketException`` family (``WebSocketConnectionClosedException`` and
   ``WebSocketTimeoutException``) and ``OSError`` (the synthetic
@@ -642,7 +641,7 @@ Testability rules
   ``AIAgent/tests/unit/test_import_side_effects.py`` enforces it for the
   runnable AIAgent scripts.
 - **Device selection is lazy.** The torch device comes from
-  ``config.get_device()`` at call time, never from a module-level constant, so
+  ``ml.device.get_device()`` at call time, never from a module-level constant, so
   importing AIAgent code never probes CUDA and tests can force CPU by patching
   ``torch.cuda.is_available``.
 - **Never depend on the current working directory.** Resolve resource paths

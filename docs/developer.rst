@@ -101,7 +101,7 @@ directory; two anchors cover the two kinds of paths:
 
 - **Runtime artifact paths** (``AIAgent/paths.py``: ``REPORT_PATH``,
   ``LOG_PATH``, ``BROKER_LOG_PATH`` and everything derived from them, plus the
-  ``FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_path`` default) are anchored to
+  ``SaveIfFailOrTimeout.save_path`` default) are anchored to
   the **AIAgent directory**, located via ``__file__`` the same way
   ``RESOURCES_PATH`` locates the repo root. The entrypoints therefore run from
   any CWD and always write their generated artifacts (models, trials,
@@ -280,7 +280,7 @@ Two properties make this a workflow-only change:
   Python dependencies are installed at runtime by ``poetry install`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
   with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
-- Device selection needs no code change: ``AIAgent/config.py`` picks
+- Device selection needs no code change: ``ml.device.get_device`` picks
   ``cuda:0`` when available and falls back to CPU, and the training step
   prints the selected device at startup — every CI run logs which path it
   took.

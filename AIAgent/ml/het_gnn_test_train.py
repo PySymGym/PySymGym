@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import tqdm
 from torch_geometric.loader import DataLoader
 
-from config import get_device
+from ml.device import get_device
 from ml.inference import infer
 
 BALANCE_DATASET = False

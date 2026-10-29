@@ -1,6 +1,5 @@
 import logging
 import traceback
-from datetime import datetime
 from multiprocessing.managers import Namespace
 from time import perf_counter
 from typing import Optional, TypeAlias
@@ -16,6 +15,7 @@ from connection.errors_connection import GameInterruptedError
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut
 from ml.dataset import convert_input_to_tensor
+from ml.model_io import save_state_dict
 from ml.protocols import Predictor
 from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
@@ -204,13 +204,10 @@ class EachStepGameManager(BaseGameManager):
         if need_to_save:
             # The save-on-failure/timeout behavior, driven by the run's
             # feature config (the data-only SaveIfFailOrTimeout model).
-            save_feature = self._feature_config.save_if_fail_or_timeout
-            save_feature.save_path.mkdir(exist_ok=True)
-            timestamp = datetime.fromtimestamp(datetime.now().timestamp())
-            torch.save(
-                self._with_predictor.model().state_dict(),
-                save_feature.save_path
-                / f"{self._with_predictor.name()}_{timestamp}.pt",
+            save_state_dict(
+                self._with_predictor.model(),
+                self._feature_config.save_if_fail_or_timeout.save_path,
+                with_name=self._with_predictor.name(),
             )
         return Map2Result(game_map2svm, game_result)
 
