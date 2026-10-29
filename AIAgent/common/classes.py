@@ -4,7 +4,7 @@ from dataclasses_json import dataclass_json
 from typing import Optional, TypeAlias, Union
 
 from common.game import GameMap, GameMap2SVM
-from ml.protocols import Named
+from common.protocols import Named
 
 
 @dataclass_json
