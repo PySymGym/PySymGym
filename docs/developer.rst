@@ -83,6 +83,35 @@ source of truth for their URLs and paths.
 an incidental change: the bump must pass the matching build target (for maps,
 ``make build_maps``) and CI before it lands.
 
+**Pin stability.** A submodule pointer is *stable* when the commit it names
+is reachable from a stable ref of the submodule's remote — a tag, or the
+default branch. A pointer to a bare feature-branch commit is unstable: if the
+branch is force-pushed or deleted, ``git submodule update`` breaks on every
+clone and the build stops being reproducible, while CI silently tracks moving
+WIP code instead of a stable baseline. Every pointer must therefore be
+stable, and CI enforces it: the ``submodule-pins`` job of
+``.github/workflows/python_tests.yaml`` runs ``make check_submodule_pins``,
+which fails when a pointer is not reachable from any tag or from the default
+branch of its remote. No ``branch =`` entries are used in ``.gitmodules``:
+tracking a moving branch with ``git submodule update --remote`` is the
+opposite of pinning.
+
+**How to bump a pin.** The procedure depends on who owns the remote:
+
+- **Engine forks** (``GameServers/VSharp``, ``GameServers/usvm`` — both in
+  the PySymGym org): pin to a tag. When new fork work must be pinned, cut an
+  annotated tag on the fork at that commit and point the submodule at the
+  tag's commit. The tag series starts at ``v0.2.0`` for VSharp (after the
+  inherited 2019 upstream ``v0.1.0``) and at ``v0.1.0`` for usvm; bump the
+  patch level for fixes and the minor level for new functionality.
+- **.NET map forks** (``maps/DotNet/Maps/*``): pin to a commit on the fork's
+  default branch. Land fork-local changes on the default branch first (a
+  fast-forward when the branch has no unique commits), then point the
+  submodule at the landed commit.
+- **Upstream repositories** (``maps/Java/Maps/LogicNG``,
+  ``maps/Java/Maps/jflex``): no refs can be created there, so pin to a commit
+  that is already reachable from the upstream default branch or a tag.
+
 **.NET forks.** The .NET repositories — the maps and the V# game server
 (``GameServers/VSharp``) — are forks in the PySymGym org: they are pinned,
 not dependencies to track. Syncing a fork to newer upstream content is an
