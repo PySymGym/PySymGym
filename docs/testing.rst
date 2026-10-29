@@ -126,9 +126,9 @@ no module under ``AIAgent/common`` may import ``ml.*`` or the top-level
 guarded code).
 
 The marker is the source of truth, not the directory: CI selects markers
-explicitly per component (``-m "not e2e"`` for the AIAgent and compstrat jobs,
-``-m e2e`` for the runstrat job) and the root default filter deselects
-``integration`` and ``e2e``. A module may declare its tier once at module level
+explicitly (``-m "not e2e"`` for the gated-tier ratchet step, ``-m e2e`` for
+the runstrat job) and the root default filter deselects ``integration`` and
+``e2e``. A module may declare its tier once at module level
 (``pytestmark = pytest.mark.unit``) or per function; every ``test_*`` function
 must resolve to exactly one tier, which ``tests/test_pytest_infra.py`` enforces
 statically together with the tier directory (``unit/``, ``integration/`` or
