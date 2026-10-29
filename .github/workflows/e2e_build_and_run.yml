@@ -49,8 +49,8 @@ jobs:
           # nvidia-container-toolkit configuration; probe both and verify the
           # device is actually injected into a disposable container. When no
           # flag works (no GPU, broken driver, missing toolkit) pass nothing:
-          # the container then starts device-less and AIAgent/config.py falls
-          # back to CPU at runtime.
+          # the container then starts device-less and ml.device.get_device
+          # falls back to CPU at runtime.
           echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
           echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
           echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"

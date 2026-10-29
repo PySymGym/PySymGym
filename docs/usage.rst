@@ -74,7 +74,7 @@ improving the dataset in the other kind of run.
    .. code-block:: yaml
 
        ValidationConfig:
-         validation:
+         validation_mode:
            val_type: loss
            batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
 

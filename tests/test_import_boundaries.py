@@ -1,12 +1,13 @@
 """Import boundary guard for the shared domain layer.
 
 ``AIAgent/common`` is the dependency-light layer everything else builds
-on: importing it must never pull in the ML stack (``ml.*``) or the
-script-level ``config`` module (which imports torch). This guard pins
-that boundary statically, following the AST-guard pattern of
-``test_pytest_infra.py``: no module under ``AIAgent/common`` may import
-``ml.*`` or top-level ``config`` (``common.config`` is the config
-package and stays allowed).
+on: importing it must never pull in the ML stack (``ml.*``) or a
+top-level ``config`` module (the config system is the ``common.config``
+package; a top-level ``config`` module would recreate the constant-class
+system #585 merged into it). This guard pins that boundary statically,
+following the AST-guard pattern of ``test_pytest_infra.py``: no module
+under ``AIAgent/common`` may import ``ml.*`` or top-level ``config``
+(``common.config`` is the config package and stays allowed).
 """
 
 import ast
