@@ -5,8 +5,10 @@ from common.utils import require_absolute_path
 from pydantic import field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
+_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-@pydantic_dataclass
+
+@pydantic_dataclass(config=_CONFIG)
 class SVMInfo:
     name: SVMName
     launch_command: str
