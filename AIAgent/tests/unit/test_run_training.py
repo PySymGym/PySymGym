@@ -35,8 +35,8 @@ from common.config.validation_config import (
     SVMValidationSendEachStep,
     ValidationConfig,
 )
+from common.dataset import TrainingDatasetMode
 from common.validation_coverage.svm_info import SVMInfo
-from ml.dataset import TrainingDatasetMode
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.models.registry import get_model_class
 from ml.training.seeds import derive_trial_seed
