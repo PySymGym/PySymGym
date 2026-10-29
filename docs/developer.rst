@@ -257,6 +257,15 @@ training run, relative to ``AIAgent/``) and the optional
 such a thin caller with its own name and concurrency group — do not copy the
 pipeline.
 
+**Shared setup and build steps.** The pipeline's environment preparation
+(checkout with submodules, Python 3.11.8, pinned Poetry, the self-healing
+dependency install, the cached-venv integrity check) lives once in the
+composite action ``.github/actions/checkout-poetry``, and the .NET builds
+(V# game server plus the caller-selected maps project) in
+``.github/actions/dotnet-build``. The e2e pipeline is a thin configuration
+of those actions; the Poetry version they install is the one documented in
+``README.md``.
+
 **Servers live in the step that uses them.** MLflow and the game-server
 broker are started inside the same step as the training command that talks to
 them, gated on readiness polling (an HTTP ``/health`` check for MLflow, a TCP
