@@ -38,7 +38,7 @@ python3 -m runstrat \
     --model-path <..>/model.onnx \
     --timeout 120 \
     --pysymgym-path <abs-path-to-PySymGym> \
-    --assembly-infos <abs-path-to-PySymGym>/maps/DotNet/Maps/Root/bin/Release/net7.0 <abs-path-to-prebuilt>/assembled.csv \
+    --assembly-infos <abs-path-to-PySymGym>/maps/DotNet/Maps/Root/bin/Release/net8.0 <abs-path-to-prebuilt>/assembled.csv \
     --assembly-infos <abs-path-to-prebuilt>/cosmos/publish prebuilt/cosmos_os.csv \
     --assembly-infos <abs-path-to-prebuilt>/powershell-osx-arm64 prebuilt/powershell.csv
 ```
@@ -50,7 +50,7 @@ python3 -m runstrat \
     -s AI \
     -t 120 \
     -ps <abs-path-to-PySymGym> \
-    -as <abs-path-to-PySymGym>/maps/DotNet/Maps/Root/bin/Release/net7.0 <path-to-prebuilt>/assembled.csv \
+    -as <abs-path-to-PySymGym>/maps/DotNet/Maps/Root/bin/Release/net8.0 <path-to-prebuilt>/assembled.csv \
     -as <path-to-prebuilt>/cosmos/publish prebuilt/cosmos_os.csv \
     -as <path-to-prebuilt>/powershell-osx-arm64 prebuilt/powershell.csv
 ```
