@@ -32,6 +32,39 @@ def test_parse_runner_output_raises_with_note_on_invalid_input() -> None:
     assert "Parse failed on output" in "\n".join(exc_info.value.__notes__)
 
 
+def test_parse_runner_output_accepts_single_digit_time_fields() -> None:
+    output = (
+        "Total time: 0:05:03.123.\n"
+        "Tests generated: 1\n"
+        "Errors generated: 0\n"
+        "Precise coverage: 50\n"
+    )
+    assert parse_runner_output(output) == (303, 1, 0, 50.0)
+
+
+def test_parse_runner_output_accepts_three_digit_hours() -> None:
+    output = (
+        "Total time: 100:00:00.000.\n"
+        "Tests generated: 1\n"
+        "Errors generated: 0\n"
+        "Precise coverage: 50\n"
+    )
+    assert parse_runner_output(output) == (360000, 1, 0, 50.0)
+
+
+def test_parse_runner_output_rejects_trailing_text_after_coverage() -> None:
+    output = (
+        "Total time: 00:01:02.123\n"
+        "Tests generated: 5\n"
+        "Errors generated: 2\n"
+        "Precise coverage: 88.5 extra\n"
+    )
+    with pytest.raises(AttributeError) as exc_info:
+        parse_runner_output(output)
+
+    assert "Parse failed on output" in "\n".join(exc_info.value.__notes__)
+
+
 def test_parse_prebuilt_expands_classes_and_top_level_functions() -> None:
     config = PrebuiltConfig(
         dll_dir="/dlls",

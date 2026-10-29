@@ -35,8 +35,9 @@ OUTPUT_M2 = (
 )
 # Missing the "Total time" line -> parse_runner_output raises AttributeError.
 OUTPUT_NO_TIME = "Tests generated: 5\nErrors generated: 2\nPrecise coverage: 88.5\n"
-# Trailing text after the coverage -> float() raises ValueError, which
-# entrypoint catches per line (log + skip).
+# Trailing text after the coverage number -> the anchored coverage pattern
+# does not match -> AttributeError, which entrypoint catches per line
+# (log + skip).
 OUTPUT_BAD_COVERAGE = (
     "Total time: 00:01:02.123\n"
     "Tests generated: 5\n"
@@ -257,7 +258,7 @@ def test_entrypoint_debug_reraises_attribute_error(
         runstrat.cli.entrypoint(args)
 
 
-def test_entrypoint_benchmarks_skips_a_value_error_method(
+def test_entrypoint_benchmarks_skips_a_malformed_coverage_method(
     entrypoint_env, tmp_path: Path
 ) -> None:
     args = make_args(tmp_path, ["BAD", "OK"])
