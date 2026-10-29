@@ -3,13 +3,32 @@ import socket
 from typing import Tuple
 
 from common.validation_coverage.svm_info import SVMInfo
-from config import BrokerConfig
 
 
-def next_free_port(
-    min_port=BrokerConfig.BROKER_PORT + 1,
-    max_port=BrokerConfig.BROKER_PORT + 1000,
-):
+def next_free_port(min_port: int, max_port: int) -> int:
+    """Scan ``[min_port, max_port]`` and return the first free TCP port.
+
+    The range is the caller's policy: this module deliberately does not
+    know about the broker port or any other fixed range, so the shared
+    layer stays importable without the script-level ``config`` module.
+
+    Parameters
+    ----------
+    min_port : int
+        First port to try (inclusive).
+    max_port : int
+        Last port to try (inclusive).
+
+    Returns
+    -------
+    int
+        The first port in the range that could be bound.
+
+    Raises
+    ------
+    IOError
+        If no port in the range is free.
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         while min_port <= max_port:
