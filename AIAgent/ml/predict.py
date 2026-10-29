@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 import torch
-from config import get_device
+from ml.device import get_device
 from ml.inference import infer
 from torch_geometric.data import HeteroData
 
