@@ -2,11 +2,16 @@ name: Publish image to GHCR
 
 on:
   push:
+    branches: [main]
     paths:
       - ".github/docker/Dockerfile"
   pull_request:
     paths:
       - ".github/docker/Dockerfile"
+
+concurrency:
+  group: publish_image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   publish-image:
