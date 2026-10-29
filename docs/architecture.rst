@@ -54,7 +54,12 @@ The repository separates the engine, the agent, the inputs, and the tooling.
 ``tools/``
     Standalone command-line tools: ``runstrat`` (benchmark a strategy),
     ``compstrat`` (compare two strategies), ``dataset_tools`` (expand and
-    clean datasets), and ``util``.
+    clean datasets), and ``util``. Each tool directory is a package named
+    after the tool (``tools/runstrat/runstrat/``, ``tools/compstrat/
+    compstrat/``) with the CLI in its ``cli`` module (``python -m
+    runstrat``); ``dataset_tools`` and ``util`` are flat script
+    directories. The tools→AIAgent dependency direction is documented in
+    ``tools/README.md``.
 
 ``configs/``
     Ready-to-run training and validation YAML configurations.

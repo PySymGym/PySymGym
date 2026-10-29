@@ -3,8 +3,8 @@
 from pathlib import Path
 
 import pytest
-from src.comparator import CompareConfig, DataSourceType
-from src.config_extractor import _structure_config, read_configs
+from compstrat.comparator import CompareConfig, DataSourceType
+from compstrat.config_extractor import _structure_config, read_configs
 
 pytestmark = pytest.mark.unit
 

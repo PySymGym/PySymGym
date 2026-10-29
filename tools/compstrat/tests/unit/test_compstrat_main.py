@@ -1,17 +1,17 @@
 """CLI seam tests for the compstrat ``main()`` entrypoint.
 
 ``main()`` is driven with a patched ``sys.argv`` and a recording fake for
-``compstrat.entrypoint`` so no matplotlib comparison run happens.
+``compstrat.cli.entrypoint`` so no matplotlib comparison run happens.
 ``read_configs`` runs for real — it is the config-loading seam under test.
 """
 
 import sys
 from pathlib import Path
 
+import compstrat.cli
 import pytest
-import compstrat
 from compstrat import Args
-from src.config_extractor import read_configs
+from compstrat.config_extractor import read_configs
 
 pytestmark = pytest.mark.unit
 
@@ -43,13 +43,13 @@ def run_main(monkeypatch: pytest.MonkeyPatch, mock_compare_confs_dir: Path):
         def fake_entrypoint(args: Args):
             captured["args"] = args
 
-        monkeypatch.setattr(compstrat, "entrypoint", fake_entrypoint)
+        monkeypatch.setattr(compstrat.cli, "entrypoint", fake_entrypoint)
         argv = list(argv)
         if "-cp" in argv:
             idx = argv.index("-cp")
             argv[idx + 1] = str(mock_compare_confs_dir / "compare_confs_1.yaml")
         monkeypatch.setattr(sys, "argv", ["compstrat"] + argv)
-        compstrat.main()
+        compstrat.cli.main()
         return captured["args"]
 
     return _run

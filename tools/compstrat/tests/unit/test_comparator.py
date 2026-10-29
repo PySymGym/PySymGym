@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pytest
-from src.comparator import Color, Comparator
+from compstrat.comparator import Color, Comparator
 
 pytestmark = pytest.mark.unit
 
