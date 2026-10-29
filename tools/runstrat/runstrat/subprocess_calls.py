@@ -2,8 +2,8 @@ import subprocess
 
 import func_timeout
 
-from src.psstrategy import AIStrategy, BasePSStrategy
-from src.structs import LaunchInfo
+from runstrat.psstrategy import AIStrategy, BasePSStrategy
+from runstrat.structs import LaunchInfo
 
 
 def call_test_runner(
