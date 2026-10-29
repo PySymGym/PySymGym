@@ -55,7 +55,16 @@ source of truth for the steps. Machine-specific pitfalls:
   invocation, so run it under `env -u DOTNET_ROLL_FORWARD bash -lc '...'`
   and sanity-check `which dotnet` → `/home/gsv/.dotnet/dotnet` (the install
   with the .NET 8 runtime the dataset was generated with; `dotnet --version`
-  may report a newer SDK — the runtime list is what matters).
+  may report a newer SDK — the runtime list is what matters). The same
+  resolution applies to the whole Python phase, not just the generator: the
+  configs' `launch_command` is a bare `dotnet` that the broker's and the
+  svms_model validation's server children inherit via PATH, so put
+  `/home/gsv/.dotnet` first on PATH for the training/broker steps too —
+  otherwise the servers die at start with "framework 8.0.0 not found"
+  (the system dotnet at `/usr/lib/dotnet` has no .NET 8 runtime).
 - Start from a clean `AIAgent/report/` and `AIAgent/mlartifacts/` (CI runs
   from a fresh checkout): a stale `report/dataset_path_condition` confounds
-  the tuning run.
+  the tuning run. Also clean the generator's output directory
+  (`GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0/8100`)
+  before each generation: a leftover `SerializedEpisodes` from an interrupted
+  run confounds the next one.
