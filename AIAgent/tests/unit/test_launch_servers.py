@@ -24,8 +24,8 @@ import pytest
 import yaml
 
 import launch_servers as launch_servers_module
+from common.config.feature_config import FeatureConfig, OnGameServerRestartFeature
 from common.validation_coverage.svm_info import SVMInfo
-from config import BrokerConfig, FeatureConfig, OnGameServerRestartFeature
 from connection.broker_conn.classes import ServerInstanceInfo, Undefined
 
 pytestmark = pytest.mark.unit
@@ -52,13 +52,24 @@ def svm_query() -> dict:
     }
 
 
-def make_read_request(payload: bytes) -> SimpleNamespace:
+def make_app(feature_config: FeatureConfig) -> dict:
+    """The aiohttp app context ``main`` puts the loaded config on."""
+    return {
+        launch_servers_module.CONFIG_KEY: SimpleNamespace(feature_config=feature_config)
+    }
+
+
+def make_read_request(
+    payload: bytes, feature_config: FeatureConfig | None = None
+) -> SimpleNamespace:
     """A fake aiohttp request whose ``read()`` returns ``payload``."""
 
     async def read() -> bytes:
         return payload
 
-    return SimpleNamespace(read=read)
+    if feature_config is None:
+        feature_config = FeatureConfig()
+    return SimpleNamespace(read=read, app=make_app(feature_config))
 
 
 class FakeSocket:
@@ -150,10 +161,11 @@ class TestDequeueInstance:
         issued = ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
         )
+        feature_config = FeatureConfig()
         calls: list[tuple] = []
 
-        async def fake_run_server_instance(svm_info_arg, should_start_server):
-            calls.append((svm_info_arg, should_start_server))
+        async def fake_run_server_instance(svm_info_arg, feature_config_arg):
+            calls.append((svm_info_arg, feature_config_arg))
             return issued
 
         monkeypatch.setattr(
@@ -161,12 +173,14 @@ class TestDequeueInstance:
         )
 
         response = asyncio.run(
-            launch_servers_module.dequeue_instance(SimpleNamespace(query=svm_query()))
+            launch_servers_module.dequeue_instance(
+                SimpleNamespace(query=svm_query(), app=make_app(feature_config))
+            )
         )
 
         # The query is parsed into an SVMInfo (pydantic coerces the strings),
-        # and the restart feature (enabled by default) starts the server.
-        assert calls == [(svm_info(), True)]
+        # and the app-context feature config reaches run_server_instance.
+        assert calls == [(svm_info(), feature_config)]
         # The response body is the single-encoded JSON of the issued info.
         assert json.loads(response.text) == issued.to_dict()
         assert queue.empty()
@@ -177,7 +191,7 @@ class TestDequeueInstance:
         with pytest.raises(Empty):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query())
+                    SimpleNamespace(query=svm_query(), app=make_app(FeatureConfig()))
                 )
             )
 
@@ -199,7 +213,7 @@ class TestDequeueInstance:
         ):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query())
+                    SimpleNamespace(query=svm_query(), app=make_app(FeatureConfig()))
                 )
             )
         # The live instance is re-queued for the next request.
@@ -210,8 +224,9 @@ class TestDequeueInstance:
         placeholder = ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
         queue.put(placeholder)
         self._setup(monkeypatch, queue)
+        feature_config = FeatureConfig()
 
-        async def fake_run_server_instance(svm_info_arg, should_start_server):
+        async def fake_run_server_instance(svm_info_arg, feature_config_arg):
             raise RuntimeError("boom")
 
         monkeypatch.setattr(
@@ -221,7 +236,7 @@ class TestDequeueInstance:
         with pytest.raises(RuntimeError, match="boom"):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query())
+                    SimpleNamespace(query=svm_query(), app=make_app(feature_config))
                 )
             )
         assert queue.get_nowait() is placeholder
@@ -236,10 +251,11 @@ class TestEnqueueInstance:
         monkeypatch.setattr(
             launch_servers_module, "SERVER_INSTANCES", queue, raising=False
         )
-        kill_calls: list[ServerInstanceInfo] = []
+        feature_config = FeatureConfig()
+        kill_calls: list[tuple] = []
 
-        async def fake_kill_server(info):
-            kill_calls.append(info)
+        async def fake_kill_server(info, feature_config_arg):
+            kill_calls.append((info, feature_config_arg))
 
         monkeypatch.setattr(launch_servers_module, "kill_server", fake_kill_server)
         original = ServerInstanceInfo(
@@ -248,32 +264,34 @@ class TestEnqueueInstance:
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
-                make_read_request(original.to_json().encode("utf-8"))
+                make_read_request(original.to_json().encode("utf-8"), feature_config)
             )
         )
 
-        assert kill_calls == [original]
+        assert kill_calls == [(original, feature_config)]
         assert queue.get_nowait() == ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid=Undefined
         )
         assert response.status == 200
 
     def test_restart_disabled_keeps_the_pid(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setattr(
-            FeatureConfig,
-            "ON_GAME_SERVER_RESTART",
-            OnGameServerRestartFeature(
+        feature_config = FeatureConfig(
+            on_game_server_restart=OnGameServerRestartFeature(
                 enabled=False, wait_for_reset_retries=1, wait_for_reset_time=0.01
-            ),
+            )
         )
         queue = Queue()
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(
             launch_servers_module, "SERVER_INSTANCES", queue, raising=False
         )
-        kill_calls: list[ServerInstanceInfo] = []
+        kill_calls: list[tuple] = []
         monkeypatch.setattr(
-            launch_servers_module, "kill_server", lambda info: kill_calls.append(info)
+            launch_servers_module,
+            "kill_server",
+            lambda info, feature_config_arg: kill_calls.append(
+                (info, feature_config_arg)
+            ),
         )
         original = ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
@@ -281,7 +299,7 @@ class TestEnqueueInstance:
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
-                make_read_request(original.to_json().encode("utf-8"))
+                make_read_request(original.to_json().encode("utf-8"), feature_config)
             )
         )
 
@@ -325,10 +343,13 @@ class TestRecvRes:
 
 class TestRunServerInstance:
     def test_should_not_start_returns_placeholder(self) -> None:
-        result = asyncio.run(
-            launch_servers_module.run_server_instance(
-                svm_info(), should_start_server=False
+        feature_config = FeatureConfig(
+            on_game_server_restart=OnGameServerRestartFeature(
+                enabled=False, wait_for_reset_retries=1, wait_for_reset_time=0.01
             )
+        )
+        result = asyncio.run(
+            launch_servers_module.run_server_instance(svm_info(), feature_config)
         )
 
         assert result == ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
@@ -373,9 +394,10 @@ class TestRunServerInstance:
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
 
+        feature_config = FeatureConfig()
         result = asyncio.run(
             launch_servers_module.run_server_instance(
-                svm_info(server_working_dir=str(tmp_path)), should_start_server=True
+                svm_info(server_working_dir=str(tmp_path)), feature_config
             )
         )
 
@@ -391,7 +413,7 @@ class TestRunServerInstance:
             # is passed through.
             "env": {
                 **os.environ,
-                "DOTNET_ROLL_FORWARD": FeatureConfig.DOTNET_ROLL_FORWARD,
+                "DOTNET_ROLL_FORWARD": feature_config.dotnet_roll_forward,
             },
         }
         # The Popen handle is tracked by pid, not the pid alone.
@@ -447,7 +469,7 @@ class TestRunServerInstance:
             asyncio.run(
                 launch_servers_module.run_server_instance(
                     svm_info(server_working_dir=str(tmp_path)),
-                    should_start_server=True,
+                    FeatureConfig(),
                 )
             )
 
@@ -479,14 +501,12 @@ class TestKillServer:
     ):
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
-        monkeypatch.setattr(
-            FeatureConfig,
-            "ON_GAME_SERVER_RESTART",
-            OnGameServerRestartFeature(
+        feature_config = FeatureConfig(
+            on_game_server_restart=OnGameServerRestartFeature(
                 enabled=True,
                 wait_for_reset_retries=retries,
                 wait_for_reset_time=wait_time,
-            ),
+            )
         )
         killpg_calls: list[tuple] = []
 
@@ -504,7 +524,7 @@ class TestKillServer:
             return pid
 
         monkeypatch.setattr(launch_servers_module.os, "getpgid", fake_getpgid)
-        return killpg_calls, getpgid_calls
+        return killpg_calls, getpgid_calls, feature_config
 
     def _info(self) -> ServerInstanceInfo:
         return ServerInstanceInfo(
@@ -514,10 +534,10 @@ class TestKillServer:
     def test_untracked_pid_warns_and_returns(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
-        killpg_calls, getpgid_calls = self._setup(monkeypatch, {})
+        killpg_calls, getpgid_calls, feature_config = self._setup(monkeypatch, {})
 
         with caplog.at_level(logging.WARNING):
-            asyncio.run(launch_servers_module.kill_server(self._info()))
+            asyncio.run(launch_servers_module.kill_server(self._info(), feature_config))
 
         assert killpg_calls == []
         assert getpgid_calls == []
@@ -527,9 +547,11 @@ class TestKillServer:
         self, monkeypatch: pytest.MonkeyPatch, fake_proc
     ) -> None:
         proc = fake_proc()
-        killpg_calls, getpgid_calls = self._setup(monkeypatch, {1234: proc})
+        killpg_calls, getpgid_calls, feature_config = self._setup(
+            monkeypatch, {1234: proc}
+        )
 
-        asyncio.run(launch_servers_module.kill_server(self._info()))
+        asyncio.run(launch_servers_module.kill_server(self._info(), feature_config))
 
         assert getpgid_calls == [1234]
         assert killpg_calls == [(1234, signal.SIGKILL)]
@@ -540,9 +562,11 @@ class TestKillServer:
         self, monkeypatch: pytest.MonkeyPatch, fake_proc
     ) -> None:
         proc = fake_proc()
-        self._setup(monkeypatch, {1234: proc}, killpg_error=ProcessLookupError())
+        _, _, feature_config = self._setup(
+            monkeypatch, {1234: proc}, killpg_error=ProcessLookupError()
+        )
 
-        asyncio.run(launch_servers_module.kill_server(self._info()))
+        asyncio.run(launch_servers_module.kill_server(self._info(), feature_config))
 
         assert proc.waited is True
         assert launch_servers_module.PROCS == {}
@@ -556,10 +580,10 @@ class TestKillServer:
                 return 0
 
         proc = HangingProcess()
-        self._setup(monkeypatch, {1234: proc})
+        _, _, feature_config = self._setup(monkeypatch, {1234: proc})
 
         with pytest.raises(RuntimeError, match="could not be killed"):
-            asyncio.run(launch_servers_module.kill_server(self._info()))
+            asyncio.run(launch_servers_module.kill_server(self._info(), feature_config))
 
         # The process survived the kill, so it stays tracked: the shutdown
         # loop (or a later post_ws) still reaches it.
@@ -743,6 +767,12 @@ class TestMain:
             "run_app",
             lambda app, **kwargs: run_app_calls.append((app, kwargs)),
         )
+        basic_config_calls: list[dict] = []
+        monkeypatch.setattr(
+            launch_servers_module.logging,
+            "basicConfig",
+            lambda **kwargs: basic_config_calls.append(kwargs),
+        )
 
         launch_servers_module.main(str(config_path))
 
@@ -753,10 +783,18 @@ class TestMain:
         assert isinstance(server_queue, Queue)
         assert server_queue is launch_servers_module.SERVER_INSTANCES
 
+        # Logging is configured from the loaded config: the level (the
+        # default logging.INFO) and the broker log file.
+        assert basic_config_calls[0]["level"] == logging.INFO
+        assert basic_config_calls[0]["filename"] == tmp_path / "instance_manager.log"
+
         # The app carries exactly the four declared broker routes (aiohttp
-        # adds implicit HEAD routes for the GETs, which are filtered out).
+        # adds implicit HEAD routes for the GETs, which are filtered out)
+        # and the loaded config, which the handlers read the feature
+        # settings from.
         (app, kwargs) = run_app_calls[0]
-        assert kwargs == {"port": BrokerConfig.BROKER_PORT}
+        assert kwargs == {"port": 35000}
+        assert app[launch_servers_module.CONFIG_KEY].broker_config.port == 35000
         routes = sorted(
             (route.method, route.resource.canonical)
             for route in app.router.routes()

@@ -15,9 +15,9 @@ import psutil
 from aiohttp import web
 from common.network_utils import next_free_port
 from common.config.config import Config
+from common.config.feature_config import FeatureConfig
 from common.config.loader import load_config
 from common.validation_coverage.svm_info import SVMInfo
-from config import BrokerConfig, FeatureConfig, GeneralConfig
 from paths import BROKER_LOG_PATH
 from connection.broker_conn.classes import (
     ServerInstanceInfo,
@@ -29,6 +29,9 @@ routes = web.RouteTableDef()
 
 FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
 avoid_same_free_port_lock = asyncio.Lock()
+# The loaded config the handlers read the feature settings from (the broker
+# is a single process, so the app context needs no other transport).
+CONFIG_KEY: web.AppKey[Config] = web.AppKey("config", Config)
 
 
 class InstanceIssuanceError(RuntimeError):
@@ -71,7 +74,7 @@ async def dequeue_instance(request):
             )
         server_info = await run_server_instance(
             SVMInfo(**request.query),
-            should_start_server=FeatureConfig.ON_GAME_SERVER_RESTART.enabled,
+            request.app[CONFIG_KEY].feature_config,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
         return web.json_response(server_info.to_dict())
@@ -92,8 +95,9 @@ async def enqueue_instance(request):
     )
     logging.info(f"got {returned_instance_info} from client")
 
-    if FeatureConfig.ON_GAME_SERVER_RESTART.enabled:
-        await kill_server(returned_instance_info)
+    feature_config = request.app[CONFIG_KEY].feature_config
+    if feature_config.on_game_server_restart.enabled:
+        await kill_server(returned_instance_info, feature_config)
         returned_instance_info = ServerInstanceInfo(
             returned_instance_info.svm_name,
             returned_instance_info.port,
@@ -130,7 +134,7 @@ def get_socket_url(port: int) -> WSUrl:
 
 
 async def run_server_instance(
-    svm_info: SVMInfo, should_start_server: bool
+    svm_info: SVMInfo, feature_config: FeatureConfig
 ) -> ServerInstanceInfo:
     svm_name = svm_info.name
 
@@ -141,7 +145,7 @@ async def run_server_instance(
     max_port = svm_info.max_port
     server_working_dir = svm_info.server_working_dir
 
-    if not should_start_server:
+    if not feature_config.on_game_server_restart.enabled:
         return ServerInstanceInfo(svm_name, 0, "None", pid=Undefined)
 
     def start_server() -> tuple[subprocess.Popen[bytes], int]:
@@ -165,7 +169,7 @@ async def run_server_instance(
             # inert for non-.NET launch commands.
             env={
                 **os.environ,
-                "DOTNET_ROLL_FORWARD": FeatureConfig.DOTNET_ROLL_FORWARD,
+                "DOTNET_ROLL_FORWARD": feature_config.dotnet_roll_forward,
             },
         )
         logging.info("bash exec cmd: " + launch_server)
@@ -230,7 +234,9 @@ def _kill_process_group(pid: int) -> None:
         os.killpg(os.getpgid(pid), signal.SIGKILL)
 
 
-async def kill_server(server_instance: ServerInstanceInfo) -> None:
+async def kill_server(
+    server_instance: ServerInstanceInfo, feature_config: FeatureConfig
+) -> None:
     pid = server_instance.pid
     proc = _tracked_handle(pid)
     if proc is None:
@@ -240,13 +246,11 @@ async def kill_server(server_instance: ServerInstanceInfo) -> None:
     # the old psutil-status poll that treated STATUS_ZOMBIE as "killed" and
     # left the zombie behind. The blocking wait runs in a worker thread so
     # the event loop (and every other broker request) is not stalled; the
-    # budget is the existing restart-feature retry values. The handle is
-    # dropped only once the death is confirmed: a process that survived the
-    # kill stays tracked so the shutdown loop still reaches it.
-    timeout = (
-        FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_retries
-        * FeatureConfig.ON_GAME_SERVER_RESTART.wait_for_reset_time
-    )
+    # budget is the restart-feature retry values. The handle is dropped only
+    # once the death is confirmed: a process that survived the kill stays
+    # tracked so the shutdown loop still reaches it.
+    restart = feature_config.on_game_server_restart
+    timeout = restart.wait_for_reset_retries * restart.wait_for_reset_time
     try:
         await asyncio.wait_for(asyncio.to_thread(proc.wait), timeout=timeout)
     except TimeoutError as err:
@@ -290,7 +294,7 @@ def main(config: str):
     config: Config = load_config(config)
 
     logging.basicConfig(
-        level=GeneralConfig.LOGGER_LEVEL,
+        level=config.logger_level,
         filename=BROKER_LOG_PATH,
         filemode="w",
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
@@ -306,7 +310,8 @@ def main(config: str):
     with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()
         app.add_routes(routes)
-        web.run_app(app, port=BrokerConfig.BROKER_PORT)
+        app[CONFIG_KEY] = config
+        web.run_app(app, port=config.broker_config.port)
 
 
 if __name__ == "__main__":
