@@ -9,6 +9,10 @@ on:
     paths:
       - 'GameServers/usvm'
 
+concurrency:
+  group: build_and_test_usvm-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-and-test:
     runs-on: self-hosted

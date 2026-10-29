@@ -295,15 +295,16 @@ a fixed sleep additionally races with the variable startup time. The polling
 itself is ``AIAgent/wait_for_service.py`` (stdlib only, ``http`` and ``tcp``
 subcommands), called from the workflow step.
 
-**Triggers and concurrency.** The four self-hosted workflows that build or
-test code (``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
-``runstrat_tool.yaml``, ``build_and_test_usvm.yaml``) run only on pushes to
-``main`` and on pull requests — feature-branch pushes do not trigger them, so
-a dependabot bump does not trigger the long e2e pipeline twice (push and pull
-request) and stale runs do not queue up. The two e2e workflows additionally
-use a per-workflow concurrency group keyed by ref that cancels in-progress
-runs for pull requests only: a new push to the same branch supersedes the
-stale run, while a run started by a push to ``main`` is never cancelled.
+**Triggers and concurrency.** The five self-hosted workflows
+(``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
+``runstrat_tool.yaml``, ``build_and_test_usvm.yaml``,
+``publish_image.yaml``) run only on pushes to ``main`` and on pull requests —
+feature-branch pushes do not trigger them, so a dependabot bump does not
+trigger the long pipelines twice (push and pull request) and stale runs do
+not queue up. Each uses a per-workflow concurrency group keyed by ref that
+cancels in-progress runs for pull requests only: a new push to the same
+branch supersedes the stale run, while a run started by a push to ``main`` is
+never cancelled.
 
 **Dataset improvement continues from tuning.** In ``build_and_run.yaml`` the
 tuning run and the dataset-improvement run share one MLflow experiment. The
