@@ -8,6 +8,7 @@ from typing import Any, Callable, Optional
 
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.feature_config import FeatureConfig
 from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM
 from common.network_utils import look_for_free_port_locked
@@ -116,6 +117,8 @@ class ModelGameManager(BaseGameManager):
         self,
         namespace: Namespace,
         model: torch.nn.Module,
+        *,
+        feature_config: FeatureConfig,
         trial_dir: Optional[Path] = None,
         model_kwargs: Optional[dict[str, Any]] = None,
         fail_immediately: bool = False,
@@ -124,6 +127,9 @@ class ModelGameManager(BaseGameManager):
         self._namespace = namespace
         self._shared_lock = namespace.shared_lock
         self._model = model
+        # Pickled to the spawn-based mp.Pool workers with the manager, so
+        # the timeout arrives as an instance attribute, never a global.
+        self._feature_config = feature_config
         # Per-trial artifacts (model weights and the exported ONNX) live in the
         # trial's directory so concurrent trials cannot overwrite each other;
         # without a trial dir they fall back to the report root.
@@ -173,7 +179,11 @@ class ModelGameManager(BaseGameManager):
         try:
             game_info.proc = proc
             svm_connection_info = SVMConnectionInfo(occupied_port=port, socket=socket)
-            game_success_or_failure = self._get_result(game_map2svm, proc)
+            # Wrapped at call time (not at import time) so the timeout comes
+            # from this run's feature config; a wall-clock timeout raises
+            # FunctionTimedOut into the except below.
+            get_result = set_timeout_if_needed(self._feature_config, self._get_result)
+            game_success_or_failure = get_result(game_map2svm, proc)
             # TODO: There is confusion here because of the ambiguous name of the 'GameResult'. Renaming is needed.
             if isinstance(game_success_or_failure, GameResult):
                 game_result = GameResultDetails(
@@ -239,7 +249,6 @@ class ModelGameManager(BaseGameManager):
         _ = self._get_and_log_proc_output(proc, logger)
         logging.warning(f"Process {proc.pid} was intentionally killed")
 
-    @set_timeout_if_needed
     def _get_result(
         self, game_map2svm: GameMap2SVM, proc: subprocess.Popen
     ) -> GameResult | GameFailed:

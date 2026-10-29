@@ -25,7 +25,10 @@ from torch import nn
 
 import run_training as run_training_module
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
 from common.config.dataset_config import DatasetConfig
+from common.config.feature_config import FeatureConfig
 from common.config.optuna_config import OptimizationDirection, OptunaConfig
 from common.config.platform_config import Platform
 from common.config.training_config import TrainingConfig
@@ -224,13 +227,17 @@ def run_training_once(
     validation_config: ValidationConfig,
     weights_uri: str | None = None,
     download_artifacts_result: Path | None = None,
+    broker_config: BrokerConfig | None = None,
+    connector_config: GameServerConnectorConfig | None = None,
+    feature_config: FeatureConfig | None = None,
 ):
     """Drive ``run_training.run_training`` once with recording fakes.
 
     Returns ``(captured, fakes)``: ``captured.partial`` is the ``objective``
     partial the study optimises (both branches), ``captured.objective_calls``
     the ``objective`` calls the fake study drove; ``fakes`` holds every
-    recording fake.
+    recording fake. The sub-configs default to fresh models with the
+    production defaults.
     """
     seed_calls: list[int] = []
     monkeypatch.setattr(
@@ -265,6 +272,9 @@ def run_training_once(
         training_config=training_config,
         validation_config=validation_config,
         weights_uri=weights_uri,
+        broker_config=broker_config or BrokerConfig(),
+        connector_config=connector_config or GameServerConnectorConfig(),
+        feature_config=feature_config or FeatureConfig(),
     )
 
     captured = SimpleNamespace(
@@ -679,11 +689,18 @@ class FakeValidationCoverage:
         self,
         model: Any,
         dataset: Any,
+        *,
+        broker_config: Any = None,
+        connector_config: Any = None,
+        feature_config: Any = None,
         model_kwargs: dict | None = None,
         trial_dir: Path | None = None,
     ) -> None:
         self.model = model
         self.dataset = dataset
+        self.broker_config = broker_config
+        self.connector_config = connector_config
+        self.feature_config = feature_config
         self.model_kwargs = model_kwargs
         self.trial_dir = trial_dir
         self.validate_coverage_calls: list[tuple] = []
@@ -765,8 +782,24 @@ class TestValidateClosures:
         monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
         coverage_inits: list[FakeValidationCoverage] = []
 
-        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
-            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+        def coverage_factory(
+            model,
+            dataset,
+            broker_config=None,
+            connector_config=None,
+            feature_config=None,
+            model_kwargs=None,
+            trial_dir=None,
+        ):
+            instance = FakeValidationCoverage(
+                model,
+                dataset,
+                broker_config=broker_config,
+                connector_config=connector_config,
+                feature_config=feature_config,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_dir,
+            )
             coverage_inits.append(instance)
             return instance
 
@@ -800,6 +833,10 @@ class TestValidateClosures:
         coverage = coverage_inits[0]
         assert coverage.model is model
         assert coverage.dataset is dataset
+        # The run's sub-configs are threaded to the coverage validator.
+        assert coverage.broker_config == BrokerConfig()
+        assert coverage.connector_config == GameServerConnectorConfig()
+        assert coverage.feature_config == FeatureConfig()
         assert coverage.model_kwargs == {"hidden_channels": 64}
         assert coverage.trial_dir == trial_dir
         assert coverage.validate_coverage_calls == [
@@ -830,8 +867,24 @@ class TestValidateClosures:
         maps = [game_map2svm_factory("MapA")]
         monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
 
-        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
-            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+        def coverage_factory(
+            model,
+            dataset,
+            broker_config=None,
+            connector_config=None,
+            feature_config=None,
+            model_kwargs=None,
+            trial_dir=None,
+        ):
+            instance = FakeValidationCoverage(
+                model,
+                dataset,
+                broker_config=broker_config,
+                connector_config=connector_config,
+                feature_config=feature_config,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_dir,
+            )
             instance.result = [
                 Map2Result(maps[0], GameFailed(reason=Exception("boom")))
             ]
@@ -862,8 +915,24 @@ class TestValidateClosures:
         monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
         coverage_inits: list[FakeValidationCoverage] = []
 
-        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
-            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+        def coverage_factory(
+            model,
+            dataset,
+            broker_config=None,
+            connector_config=None,
+            feature_config=None,
+            model_kwargs=None,
+            trial_dir=None,
+        ):
+            instance = FakeValidationCoverage(
+                model,
+                dataset,
+                broker_config=broker_config,
+                connector_config=connector_config,
+                feature_config=feature_config,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_dir,
+            )
             instance.result = [
                 Map2Result(maps[0], GameFailed(reason=Exception("boom")))
             ]
@@ -910,8 +979,24 @@ class TestValidateClosures:
         )
         coverage_inits: list[FakeValidationCoverage] = []
 
-        def coverage_factory(model, dataset, model_kwargs=None, trial_dir=None):
-            instance = FakeValidationCoverage(model, dataset, model_kwargs, trial_dir)
+        def coverage_factory(
+            model,
+            dataset,
+            broker_config=None,
+            connector_config=None,
+            feature_config=None,
+            model_kwargs=None,
+            trial_dir=None,
+        ):
+            instance = FakeValidationCoverage(
+                model,
+                dataset,
+                broker_config=broker_config,
+                connector_config=connector_config,
+                feature_config=feature_config,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_dir,
+            )
             # A successful result: the default fail_immediately=True would
             # abort the pipeline on a GameFailed.
             instance.result = [
@@ -1446,6 +1531,10 @@ class TestMain:
         assert call["validation_config"] == ValidationConfig(
             validation_mode=CriterionValidation(val_type="loss", batch_size=8)
         )
+        # The run's sub-configs are threaded to run_training.
+        assert call["broker_config"] == BrokerConfig()
+        assert call["connector_config"] == GameServerConnectorConfig()
+        assert call["feature_config"] == FeatureConfig()
         # Experiment tags: the whole config as a plain dict (enums kept).
         (tags_args, tags_kwargs) = rec.mlflow.called("set_experiment_tags")[0]
         assert tags_kwargs == {}

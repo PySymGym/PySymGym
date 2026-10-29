@@ -17,7 +17,10 @@ import optuna
 import torch
 import yaml
 from common.classes import GameFailed
+from common.config.broker_config import BrokerConfig
 from common.config.config import Config
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
 from common.config.loader import load_config
 from common.config.optuna_config import OptimizationDirection, OptunaConfig
 from common.config.training_config import TrainingConfig
@@ -31,7 +34,7 @@ from common.config.validation_config import (
 from common.dataset import TrainingDatasetMode
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
-from config import GeneralConfig, get_device
+from config import get_device
 from ml.dataset import TrainingDataset
 from ml.models.registry import get_model_class
 from ml.training.early_stopping import EarlyStopping
@@ -128,6 +131,10 @@ def run_training(
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: Optional[str],
+    *,
+    broker_config: BrokerConfig,
+    connector_config: GameServerConnectorConfig,
+    feature_config: FeatureConfig,
 ):
     def criterion_init():
         return nn.BCEWithLogitsLoss(reduction="sum")
@@ -191,6 +198,9 @@ def run_training(
                 map2results = ValidationCoverage(
                     model,
                     dataset,
+                    broker_config=broker_config,
+                    connector_config=connector_config,
+                    feature_config=feature_config,
                     model_kwargs=model_kwargs,
                     trial_dir=trial_directory,
                 ).validate_coverage(maps, validation_mode)
@@ -440,7 +450,7 @@ def main(config: str):
     config: Config = load_config(config)
 
     logging.basicConfig(
-        level=GeneralConfig.LOGGER_LEVEL,
+        level=config.logger_level,
         filename=LOG_PATH,
         filemode="a",
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
@@ -472,6 +482,9 @@ def main(config: str):
         training_config=config.training_config,
         validation_config=config.validation_config,
         weights_uri=weights_uri,
+        broker_config=config.broker_config,
+        connector_config=config.game_server_connector_config,
+        feature_config=config.feature_config,
     )
 
 

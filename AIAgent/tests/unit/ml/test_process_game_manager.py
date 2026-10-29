@@ -11,6 +11,7 @@ import socket
 import pytest
 import torch
 from common.classes import GameFailed, GameResult
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap
 from func_timeout import FunctionTimedOut
 from ml.validation.coverage.game_managers.model import process_game_manager as pgm
@@ -30,7 +31,10 @@ pytestmark = [pytest.mark.unit, pytest.mark.serial]
 
 def _manager(fake_namespace, tmp_path) -> ModelGameManager:
     return ModelGameManager(
-        fake_namespace, torch.nn.Linear(1, 1), svms_output_path=tmp_path
+        fake_namespace,
+        torch.nn.Linear(1, 1),
+        feature_config=FeatureConfig(),
+        svms_output_path=tmp_path,
     )
 
 
@@ -410,6 +414,10 @@ def test_play_game_map_timeout_kills_the_process(
     monkeypatch.setattr(
         manager, "_run_game_process", lambda g2s: (proc, 4000, object())
     )
+    # The timeout wrapper is the identity, so the FunctionTimedOut the fake
+    # _get_result raises reaches the except branch directly — the same
+    # exception a real wall-clock timeout would raise from the wrapper.
+    monkeypatch.setattr(pgm, "set_timeout_if_needed", lambda feature_config, func: func)
 
     def timeout(g2s, p):
         raise FunctionTimedOut(timedOutAfter=1800)

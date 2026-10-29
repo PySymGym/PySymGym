@@ -1,16 +1,21 @@
 from typing import Callable, TypeVar
 
 from common.classes import GameFailed
-from config import FeatureConfig
+from common.config.feature_config import FeatureConfig
 from func_timeout import func_set_timeout  # type: ignore
 
 T = TypeVar("T")
 
 
-def set_timeout_if_needed(func: Callable[..., T]) -> Callable[..., T]:
+def set_timeout_if_needed(
+    feature_config: FeatureConfig, func: Callable[..., T]
+) -> Callable[..., T]:
+    # Applied at call time (not as an import-time decorator) so the timeout
+    # comes from the run's feature config, which survives the spawn-based
+    # mp.Pool workers as a pickled instance attribute.
     return (
-        func_set_timeout(FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.timeout_sec)(func)
-        if FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.enabled
+        func_set_timeout(feature_config.save_if_fail_or_timeout.timeout_sec)(func)
+        if feature_config.save_if_fail_or_timeout.enabled
         else func
     )  # type: ignore
 
