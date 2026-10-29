@@ -35,8 +35,8 @@ OUTPUT_M2 = (
 )
 # Missing the "Total time" line -> parse_runner_output raises AttributeError.
 OUTPUT_NO_TIME = "Tests generated: 5\nErrors generated: 2\nPrecise coverage: 88.5\n"
-# Trailing text after the coverage -> float() raises ValueError (not caught by
-# entrypoint, which only catches AttributeError; #590-tracked).
+# Trailing text after the coverage -> float() raises ValueError, which
+# entrypoint catches per line (log + skip).
 OUTPUT_BAD_COVERAGE = (
     "Total time: 00:01:02.123\n"
     "Tests generated: 5\n"
@@ -257,12 +257,6 @@ def test_entrypoint_debug_reraises_attribute_error(
         runstrat.cli.entrypoint(args)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="#590: a ValueError from float(total_coverage) is not caught by "
-    "entrypoint (only AttributeError is), so one malformed line kills the run "
-    "and discards all results; per-line parse errors should be skipped",
-)
 def test_entrypoint_benchmarks_skips_a_value_error_method(
     entrypoint_env, tmp_path: Path
 ) -> None:
