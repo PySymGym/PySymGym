@@ -26,7 +26,7 @@ pipx install poetry==2.2.1
 poetry install
 ```
 
-For toolchain prerequisites (Python 3.11–3.13, .NET SDK, JDK), GPU installation,
+For toolchain prerequisites (Python 3.11, .NET SDK, JDK), GPU installation,
 and submodule repair, see the [setup guide](https://pysymgym.github.io/PySymGym/setup.html).
 
 ## Documentation

@@ -19,6 +19,12 @@ jobs:
           python-version: "3.11.8"
           cache: "poetry"
 
+      - name: Check the lockfile
+        # The lockfile must be in sync with pyproject.toml: a stale lock
+        # fails here, before the expensive install, instead of surfacing at
+        # install time per job.
+        run: poetry check --lock
+
       - name: Install dependencies
         env:
           # Upstream packaging noise that current poetry emits while
