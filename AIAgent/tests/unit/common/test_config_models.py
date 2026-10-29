@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from ml.dataset import TrainingDatasetMode
 from pydantic import ValidationError
 
 from common.config.config import Config
@@ -19,6 +18,7 @@ from common.config.validation_config import (
     SVMValidationSendModel,
     ValidationConfig,
 )
+from common.dataset import TrainingDatasetMode
 from common.validation_coverage.svm_info import SVMInfo
 
 pytestmark = pytest.mark.unit

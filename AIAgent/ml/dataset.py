@@ -9,7 +9,6 @@ import random
 import shutil
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass
-from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import (
@@ -26,6 +25,7 @@ from typing import (
 import numpy as np
 import torch
 import tqdm
+from common.dataset import TrainingDatasetMode
 from common.game import GameState, PathConditionVertex
 from config import get_device
 from ml.inference import TORCH
@@ -66,11 +66,6 @@ StatesDistribution: TypeAlias = torch.tensor
 class Step:
     graph: HeteroData
     states_distribution: StatesDistribution
-
-
-class TrainingDatasetMode(Enum):
-    TRAINING = "TRAINING"
-    VALIDATION = "VALIDATION"
 
 
 class TrainingDataset(Dataset):

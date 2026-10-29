@@ -28,10 +28,11 @@ from common.config.validation_config import (
     ValidationConfig,
     ValidationMode,
 )
+from common.dataset import TrainingDatasetMode
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from config import GeneralConfig, get_device
-from ml.dataset import TrainingDataset, TrainingDatasetMode
+from ml.dataset import TrainingDataset
 from ml.models.registry import get_model_class
 from ml.training.early_stopping import EarlyStopping
 from ml.training.seeds import derive_trial_seed, seed_everything
