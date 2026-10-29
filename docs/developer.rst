@@ -220,9 +220,10 @@ Four workflow files contain jobs that run on a self-hosted runner
 ``e2e_build_and_run.yml`` (the shared pipeline called by
 ``build_and_run.yaml`` and ``build_and_run_model_val.yaml``),
 ``build_and_test_usvm.yaml``, ``publish_image.yaml`` and
-``runstrat_tool.yaml``. All of those jobs also declare a ``container:``, so
-the work happens inside a container while the workflow itself is still driven
-by the runner.
+``runstrat_tool.yaml``. All of those jobs also declare a ``container:`` —
+except the ``ensure-image`` gate job in ``e2e_build_and_run.yml``, which
+runs container-less on a GitHub-hosted runner — so the work happens inside
+a container while the workflow itself is still driven by the runner.
 
 Every action referenced by ``.github/workflows/`` runs on Node.js 24, which
 requires Actions Runner ``v2.327.1`` or newer. The GitHub-hosted runners
@@ -272,6 +273,16 @@ is load-bearing: a PR that changes the Dockerfile must publish the image for
 the new Dockerfile hash, or the build workflows — which compute the same
 hash from the same merge-commit checkout — cannot pull it and die with an
 opaque container-pull failure.
+
+**The build jobs gate on the published image.** Publishing the image is a
+separate workflow from building with it, and on pull requests both start at
+the same time — so a build job can start before the image exists and die
+with an opaque container-pull failure. The e2e pipeline therefore starts
+with an ``ensure-image`` job that computes the same Dockerfile hash and polls
+GHCR (``.github/scripts/check_ci_image.sh``) until the image's manifest
+appears, bounded at 60 × 30 s. The gate runs on a GitHub-hosted runner on
+purpose: it must not occupy the single self-hosted runner the publish job
+needs, or the gate could starve the very job it waits for.
 
 **Servers live in the step that uses them.** MLflow and the game-server
 broker are started inside the same step as the training command that talks to
