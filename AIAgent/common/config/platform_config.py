@@ -6,8 +6,10 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
+_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-@pydantic_dataclass
+
+@pydantic_dataclass(config=_CONFIG)
 class Platform:
     name: PlatformName
     dataset_configs: list[DatasetConfig] = Field(alias="DatasetConfigs")
