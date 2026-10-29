@@ -108,11 +108,6 @@ jobs:
       # on it) is identical between runs; part of the #583 reproducibility fix.
       PYTHONHASHSEED: "0"
     steps:
-      - name: Debug
-        run: |
-          printenv
-          dotnet --version
-
       # Checkout, Python setup, pinned Poetry, and the self-healing
       # dependency install live once in the shared composite action; the
       # .NET builds (V# game server + maps) in the other one. See

@@ -63,11 +63,6 @@ jobs:
     permissions:
       packages: read
     steps:
-      - name: Debug
-        run: |
-          printenv
-          dotnet --version
-
       - name: Prepare the Python environment
         uses: ./.github/actions/checkout-poetry
 
