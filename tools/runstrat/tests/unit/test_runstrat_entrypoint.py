@@ -189,6 +189,42 @@ def test_entrypoint_benchmarks_skips_failed_methods(
     )
 
 
+def test_entrypoint_benchmarks_all_methods_fail_raises(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["CPE", "FTO", "AE"])
+    entrypoint_env["script"] = {
+        "CPE": subprocess.CalledProcessError(1, ["dotnet", "runner.dll"]),
+        "FTO": _timed_out("FTO"),
+        "AE": OUTPUT_NO_TIME,
+    }
+
+    with pytest.raises(
+        runstrat.cli.AllMethodsFailedError, match="all 3 methods failed"
+    ):
+        runstrat.cli.entrypoint(args)
+
+    # The empty CSV is written before the raise.
+    csv_path = tmp_path / "savedir" / "ExecutionTreeContributedCoverage.csv"
+    assert csv_path.read_text() == "\n"
+
+
+def test_entrypoint_persists_completed_rows_when_the_run_crashes(
+    entrypoint_env, tmp_path: Path
+) -> None:
+    args = make_args(tmp_path, ["M1", "CRASH"])
+    entrypoint_env["script"] = {"M1": OUTPUT_M1, "CRASH": MemoryError("boom")}
+
+    with pytest.raises(MemoryError):
+        runstrat.cli.entrypoint(args)
+
+    # The completed row survived the mid-run crash (incremental persistence).
+    csv_path = tmp_path / "savedir" / "ExecutionTreeContributedCoverage.csv"
+    assert csv_path.read_text() == (
+        "method,tests,errors,coverage,total_time_sec\nM1,5,2,88.5,62\n"
+    )
+
+
 def test_entrypoint_debug_reraises_called_process_error(
     entrypoint_env, tmp_path: Path
 ) -> None:

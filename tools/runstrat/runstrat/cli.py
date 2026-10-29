@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 from datetime import datetime
 import os
+import sys
 
 import func_timeout
 import pandas as pd
@@ -50,6 +51,10 @@ class Args:
     run_mode: RunMode = RunMode.BENCHMARKS
 
 
+class AllMethodsFailedError(RuntimeError):
+    """Raised when methods were benchmarked and none of them succeeded."""
+
+
 def entrypoint(args: Args) -> pd.DataFrame:
     runner_path = Path(args.pysymgym_path / PATH_TO_VSHARP).resolve()
     if not runner_path.is_file():
@@ -59,6 +64,7 @@ def entrypoint(args: Args) -> pd.DataFrame:
         )
 
     setup_logging(args.savedir, strategy_name=args.strategy.name)
+    csv_path = args.savedir / f"{args.strategy.name}.csv"
 
     assembled = list(
         itertools.chain(
@@ -136,9 +142,17 @@ def entrypoint(args: Args) -> pd.DataFrame:
         logging.info(f"method {launch_info.method} completed with {run_result}")
 
         results.append(asdict(run_result))
+        # Persist after every method so a crash mid-run keeps the results
+        # collected so far.
+        pd.DataFrame(results).to_csv(csv_path, index=False)
 
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(args.savedir, f"{args.strategy.name}.csv"), index=False)
+    df.to_csv(csv_path, index=False)
+    if assembled and not results:
+        raise AllMethodsFailedError(
+            f"all {len(assembled)} methods failed; see "
+            f"{args.savedir / f'{args.strategy.name}.log'} for details"
+        )
     return df
 
 
@@ -191,12 +205,17 @@ def main():
 
     default_savedir = args.savedir or Path(f"{timestamp}")
     os.makedirs(default_savedir)
-    entrypoint(
-        Args(
-            strategy=BasePSStrategy.parse(args.strategy, model_path=args.model_path),
-            timeout=args.timeout,
-            pysymgym_path=args.pysymgym_path,
-            savedir=default_savedir,
-            assembly_infos=args.assembly_infos,
+    try:
+        entrypoint(
+            Args(
+                strategy=BasePSStrategy.parse(
+                    args.strategy, model_path=args.model_path
+                ),
+                timeout=args.timeout,
+                pysymgym_path=args.pysymgym_path,
+                savedir=default_savedir,
+                assembly_infos=args.assembly_infos,
+            )
         )
-    )
+    except AllMethodsFailedError as e:
+        sys.exit(f"Error: {e}")
