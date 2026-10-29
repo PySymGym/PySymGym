@@ -9,6 +9,10 @@ on:
     paths:
       - 'tools/runstrat/**'
 
+concurrency:
+  group: runstrat_tool-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ensure-image:
     runs-on: ubuntu-latest
