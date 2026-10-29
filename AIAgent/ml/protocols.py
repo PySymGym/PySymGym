@@ -4,12 +4,7 @@ from typing import Protocol
 import torch
 
 from common.game import GameState
-
-
-class Named(ABC):
-    @abstractmethod
-    def name(self) -> str:
-        raise NotImplementedError
+from common.protocols import Named
 
 
 class Predictor(Named, ABC):
