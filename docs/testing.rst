@@ -428,19 +428,21 @@ exception-propagation branches (``CalledProcessError`` and
 recording ``entrypoint`` fake: the parsed ``Args`` (strategy dispatch through
 ``BasePSStrategy.parse``, the ``assembly_infos`` list-of-pairs shape, the
 timestamp default savedir), the argparse exits for missing
-``-s``/``-t``/``-ps``/``-as``, the unknown-strategy ``ValueError``, and the
-AI-without-model-path ``AssertionError``. The ``entrypoint()`` seam tests
+``-s``/``-t``/``-ps``/``-as``, the unknown-strategy ``ValueError``, the
+AI-without-model-path ``AssertionError``, and the nonzero exit for
+``AllMethodsFailedError``. The ``entrypoint()`` seam tests
 (``test_runstrat_entrypoint.py``) drive ``entrypoint()`` with a method-keyed
 ``call_test_runner`` fake and a recording ``logging.basicConfig``: the
 per-method loop, the ``RunResult`` → ``asdict`` → CSV column order
 (``method,tests,errors,coverage,total_time_sec``), the
 ``{strategy.name}.csv`` / ``{strategy.name}.log`` artifact names, the
-empty-maps empty-CSV case, and the ``setup_logging`` ``basicConfig`` call. The
+empty-maps empty-CSV case, the per-method incremental CSV persistence (a
+mid-run crash keeps the completed rows), the ``AllMethodsFailedError`` when
+every method fails, and the ``setup_logging`` ``basicConfig`` call. The
 error-handling tests pin the BENCHMARKS skip-versus-DEBUG re-raise for
 ``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError`` and the
 up-front ``FileNotFoundError`` for a missing V# runner; the
-``ValueError``-kills-the-run defect and the all-methods-fail exit-0 aggregate
-are #590-tracked (``xfail``).
+``ValueError``-kills-the-run defect is #590-tracked (``xfail``).
 
 The compstrat CLI tests (``tools/compstrat/tests/unit/test_compstrat_main.py``)
 pin ``main()`` with a patched ``sys.argv`` and a recording ``entrypoint`` fake
