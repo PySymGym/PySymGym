@@ -118,7 +118,12 @@ after the marker its tests carry:
 - ``e2e/`` — the full pipelines (``tools/runstrat/tests/e2e/``).
 
 A component only creates the tier directories it needs. The ``tests/`` tree at
-the repository root holds the cross-component infrastructure tests.
+the repository root holds the cross-component infrastructure tests, including
+the static guards: besides the marker taxonomy (``test_pytest_infra.py``),
+``test_import_boundaries.py`` pins the import boundary of the shared layer —
+no module under ``AIAgent/common`` may import ``ml.*`` or the top-level
+``config`` module (an AST walk, in the same pattern, that never imports the
+guarded code).
 
 The marker is the source of truth, not the directory: CI selects markers
 explicitly per component (``-m "not e2e"`` for the AIAgent and compstrat jobs,

@@ -13,4 +13,5 @@ class Named(ABC):
 
     @abstractmethod
     def name(self) -> str:
+        """Return the object's name."""
         raise NotImplementedError
