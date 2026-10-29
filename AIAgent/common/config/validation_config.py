@@ -2,9 +2,9 @@ from abc import ABC
 from typing import Literal, Union
 
 from common.config.platform_config import Platform
+from common.dataset import TrainingDatasetMode
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
-from ml.dataset import TrainingDatasetMode
 
 
 @pydantic_dataclass
