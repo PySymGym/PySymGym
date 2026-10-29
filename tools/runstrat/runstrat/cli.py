@@ -119,7 +119,7 @@ def entrypoint(args: Args) -> pd.DataFrame:
                 errs_generated,
                 runner_coverage,
             ) = parse_runner_output(runner_output)
-        except AttributeError as e:
+        except (AttributeError, ValueError) as e:
             logging.error(
                 f"""
                 {e} thrown on {launch_info.method}, this method will be skipped

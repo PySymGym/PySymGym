@@ -440,9 +440,8 @@ empty-maps empty-CSV case, the per-method incremental CSV persistence (a
 mid-run crash keeps the completed rows), the ``AllMethodsFailedError`` when
 every method fails, and the ``setup_logging`` ``basicConfig`` call. The
 error-handling tests pin the BENCHMARKS skip-versus-DEBUG re-raise for
-``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError`` and the
-up-front ``FileNotFoundError`` for a missing V# runner; the
-``ValueError``-kills-the-run defect is #590-tracked (``xfail``).
+``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError`` /
+``ValueError`` and the up-front ``FileNotFoundError`` for a missing V# runner.
 
 The compstrat CLI tests (``tools/compstrat/tests/unit/test_compstrat_main.py``)
 pin ``main()`` with a patched ``sys.argv`` and a recording ``entrypoint`` fake
