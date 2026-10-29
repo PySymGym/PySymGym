@@ -2,17 +2,26 @@
 
 Every path here is absolute and resolved from this file, so the suite runs from
 any working directory. ``integration/resources`` holds the golden inputs and
-configs; the ``pytest_generate_tests`` hook also reads it at collection time so
-a parametrized test never has to compute a path itself.
+configs; ``read_configs`` lists the config files in it and the
+``pytest_generate_tests`` hook parametrizes from that list at collection time
+so a parametrized test never has to compute a path itself.
 """
 
+import os
 from pathlib import Path
 
 import pytest
 
-from tests_utils import read_configs
-
 RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
+
+
+def read_configs(dir) -> list[Path]:
+    """The ``.yml``/``.yaml`` config files in a directory, as paths."""
+    return [
+        Path(dir) / file
+        for file in os.listdir(Path(dir))
+        if file.endswith(".yml") or file.endswith(".yaml")
+    ]
 
 
 @pytest.fixture

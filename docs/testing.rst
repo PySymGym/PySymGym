@@ -655,10 +655,10 @@ Coverage
 --------
 
 Coverage is measured over the production packages (``--cov=AIAgent
---cov=tools``) with ``pytest-cov``. The ``tests/`` trees, ``conftest.py`` files
-and the test helpers are excluded from the measurement, as are ``__main__``
-guards, so the number reflects the code under test rather than the tests
-themselves.
+--cov=tools``) with ``pytest-cov``. The ``tests/`` trees, ``conftest.py``
+files and ``__main__.py`` entrypoints are excluded from the measurement
+(``[tool.coverage.run] omit`` in ``pyproject.toml`` is the source of truth),
+so the number reflects the code under test rather than the tests themselves.
 
 The gated tier is unit + integration:
 
