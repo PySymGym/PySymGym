@@ -266,6 +266,13 @@ composite action ``.github/actions/checkout-poetry``, and the .NET builds
 (``runstrat_tool.yaml``) are thin configurations of those actions; the
 Poetry version they install is the one documented in ``README.md``.
 
+**Image publishing.** ``publish_image.yaml`` runs on pushes **and** pull
+requests that touch ``.github/docker/Dockerfile``. The pull-request trigger
+is load-bearing: a PR that changes the Dockerfile must publish the image for
+the new Dockerfile hash, or the build workflows — which compute the same
+hash from the same merge-commit checkout — cannot pull it and die with an
+opaque container-pull failure.
+
 **Servers live in the step that uses them.** MLflow and the game-server
 broker are started inside the same step as the training command that talks to
 them, gated on readiness polling (an HTTP ``/health`` check for MLflow, a TCP
