@@ -17,9 +17,9 @@ Run through these before creating new material:
       type that already does (or nearly does) the job. Prefer generalizing the
       existing one over adding a near-copy. Start from `AIAgent/common/` for
       shared data types and utilities.
-- [ ] **Config** — settings flow through `AIAgent/config.py` and the YAML files
-      in `configs/`; extend the existing config structures rather than adding a
-      parallel one.
+- [ ] **Config** — settings flow through the pydantic config models in
+      `AIAgent/common/config/` and the YAML files in `configs/`; extend the
+      existing config structures rather than adding a parallel one.
 - [ ] **Servers/connection** — the broker and game-server protocol lives in
       `AIAgent/connection/`; reuse those clients and message types instead of
       re-implementing transport.
