@@ -5,12 +5,22 @@ fail ``bind`` for a chosen set of ports. The tests assert the selection loop,
 the range bounds, the lock usage and the retry/exhaustion behaviour.
 """
 
+import inspect
+
 import pytest
 from common import network_utils
 from common.network_utils import look_for_free_port_locked, next_free_port
 from common.validation_coverage.svm_info import SVMInfo
 
 pytestmark = [pytest.mark.unit, pytest.mark.serial]
+
+
+def test_next_free_port_requires_an_explicit_range() -> None:
+    # The port range is the caller's policy: no broker-derived defaults
+    # (they used to import the script-level config into the shared layer).
+    params = inspect.signature(next_free_port).parameters
+    assert list(params) == ["min_port", "max_port"]
+    assert all(p.default is inspect.Parameter.empty for p in params.values())
 
 
 class FakeSocket:
