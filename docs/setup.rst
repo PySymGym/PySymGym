@@ -39,7 +39,7 @@ touch the system interpreter), then point Poetry at it:
 
 .. code-block:: console
 
-    pipx install poetry
+    pipx install poetry==2.2.1
     pipx install uv
     uv python install 3.13
     poetry env use $(uv python find 3.13)
