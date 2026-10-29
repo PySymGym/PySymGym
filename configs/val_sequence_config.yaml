@@ -1,3 +1,5 @@
+weights_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/<EPOCH_NUM>/model.pth
+
 OptunaConfig:
   n_startup_trials: 1
   n_trials: 1
@@ -12,11 +14,11 @@ TrainingConfig:
   load_to_cpu: False
   epochs: 10
   seed: 42
-  percentile: 80
 
 ValidationConfig:
+  validation_mode:
     val_type: custom
-    val_sequence: 
+    val_sequence:
       - val_type: svms_each_step
         fail_immediately: False
         PlatformsConfig:

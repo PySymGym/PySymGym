@@ -1477,6 +1477,31 @@ class TestMain:
                 "experiment_name": "CI",
                 "tracking_uri": None,
             },
+            "broker_config": {
+                "port": 35000,
+            },
+            "game_server_connector_config": {
+                "create_connection_timeout_sec": 1,
+                "wait_for_socket_reconnection_max_retries": 600,
+                "response_timeout_sec": 1801,
+                "skip_utf_validation": True,
+            },
+            "feature_config": {
+                "verbose_tables": True,
+                "disable_message_checks": False,
+                "save_if_fail_or_timeout": {
+                    "enabled": True,
+                    "timeout_sec": 1800,
+                    "save_path": REPORT_PATH / "timeouted_agents",
+                },
+                "on_game_server_restart": {
+                    "enabled": True,
+                    "wait_for_reset_retries": 600,
+                    "wait_for_reset_time": 0.1,
+                },
+                "dotnet_roll_forward": "LatestPatch",
+            },
+            "logger_level": logging.INFO,
             "weights_uri": None,
         }
 
