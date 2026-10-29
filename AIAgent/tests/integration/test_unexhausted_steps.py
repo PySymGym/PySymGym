@@ -14,6 +14,9 @@ from types import SimpleNamespace
 
 import pytest
 from common.classes import GameFailed, GameResult
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
 from common.config.validation_config import (
     SVMValidationSendEachStep,
     SVMValidationSendModel,
@@ -125,7 +128,7 @@ def make_model_manager(
 ) -> process_game_manager.ModelGameManager:
     monkeypatch.setattr(process_game_manager, "SVMS_OUTPUT_PATH", tmp_path)
     return process_game_manager.ModelGameManager(
-        FakeNamespace(), None, fail_immediately=flag
+        FakeNamespace(), None, feature_config=FeatureConfig(), fail_immediately=flag
     )
 
 
@@ -198,7 +201,7 @@ def make_fake_connector(coverage, steps):
     """A Connector that sends one game state, then ends with a fixed GameOver."""
 
     class FakeConnector(Connector):
-        def __init__(self, ws, game_map):
+        def __init__(self, ws, game_map, feature_config):
             self.map = game_map
             self._coverage = coverage
             self._steps = steps
@@ -232,7 +235,12 @@ def make_each_step_manager(monkeypatch, flag, coverage, steps):
         each_step_game_manager, "convert_input_to_tensor", lambda state: (dict(), {})
     )
     return each_step_game_manager.EachStepGameManager(
-        FakePredictor(), FakeNamespace(), fail_immediately=flag
+        FakePredictor(),
+        FakeNamespace(),
+        feature_config=FeatureConfig(),
+        connector_config=GameServerConnectorConfig(),
+        broker_config=BrokerConfig(),
+        fail_immediately=flag,
     )
 
 
@@ -273,12 +281,22 @@ class TestEachStepGameManagerUnexhaustedSteps:
         monkeypatch.setattr(
             each_step_game_manager,
             "game_server_socket_manager",
-            lambda svm_info: contextlib.nullcontext(None),
+            lambda svm_info, connector_config, broker_config: contextlib.nullcontext(
+                None
+            ),
         )
         game_map2svm = GameMap2SVM(make_game_map(), make_svm_info())
         result = manager._play_game_map(game_map2svm)
         assert isinstance(result.game_result, GameFailed)
         assert "TestMap" in result.game_result.reason
+
+
+def _sub_configs() -> dict:
+    return dict(
+        broker_config=BrokerConfig(),
+        connector_config=GameServerConnectorConfig(),
+        feature_config=FeatureConfig(),
+    )
 
 
 class TestGameManagerWiring:
@@ -287,9 +305,9 @@ class TestGameManagerWiring:
             validation_mode=svms_validation_mode("svms_model", fail_immediately=True)
         ).validation_mode
         with mp.Manager() as sync_manager:
-            manager = ValidationCoverage(None, None)._get_game_manager(
-                config, sync_manager
-            )
+            manager = ValidationCoverage(
+                None, None, **_sub_configs()
+            )._get_game_manager(config, sync_manager)
         assert manager._fail_immediately is True
 
     def test_each_step_manager_receives_flag(self):
@@ -299,9 +317,9 @@ class TestGameManagerWiring:
             )
         ).validation_mode
         with mp.Manager() as sync_manager:
-            manager = ValidationCoverage(None, None)._get_game_manager(
-                config, sync_manager
-            )
+            manager = ValidationCoverage(
+                None, None, **_sub_configs()
+            )._get_game_manager(config, sync_manager)
         assert manager._fail_immediately is True
 
     def test_sendmodel_manager_receives_kwargs_and_trial_dir(self):
@@ -312,7 +330,11 @@ class TestGameManagerWiring:
         trial_directory = Path("/tmp/trials/7")
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(
-                None, None, model_kwargs=model_kwargs, trial_dir=trial_directory
+                None,
+                None,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_directory,
+                **_sub_configs(),
             )._get_game_manager(config, sync_manager)
         assert manager._model_kwargs == model_kwargs
         assert manager._trial_dir == trial_directory
@@ -324,8 +346,8 @@ class TestGameManagerWiring:
             validation_mode=svms_validation_mode("svms_model")
         ).validation_mode
         with mp.Manager() as sync_manager:
-            manager = ValidationCoverage(None, None)._get_game_manager(
-                config, sync_manager
-            )
+            manager = ValidationCoverage(
+                None, None, **_sub_configs()
+            )._get_game_manager(config, sync_manager)
         assert manager._path_to_model.name == "model.pth"
         assert manager._onnx_path.name == "model.onnx"

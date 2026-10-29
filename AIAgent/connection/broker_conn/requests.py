@@ -3,14 +3,16 @@ import logging
 from urllib.parse import urlencode
 
 import httplib2
+from common.config.broker_config import BrokerConfig
 from common.validation_coverage.svm_info import SVMInfo
-from config import WebsocketSourceLinks
 from connection.broker_conn.classes import ServerInstanceInfo
 
 
-def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:
+def acquire_instance(
+    svm_info: SVMInfo, broker_config: BrokerConfig
+) -> ServerInstanceInfo:
     response, content = httplib2.Http().request(
-        WebsocketSourceLinks.GET_WS + "?" + urlencode(SVMInfo.to_dict(svm_info))
+        broker_config.get_ws_url + "?" + urlencode(SVMInfo.to_dict(svm_info))
     )
     if response.status != 200:
         logging.error(
@@ -24,11 +26,11 @@ def acquire_instance(svm_info: SVMInfo) -> ServerInstanceInfo:
     return acquired_instance
 
 
-def return_instance(instance: ServerInstanceInfo):
+def return_instance(instance: ServerInstanceInfo, broker_config: BrokerConfig):
     logging.info(f"returning: {instance}")
 
     response, _ = httplib2.Http().request(
-        WebsocketSourceLinks.POST_WS,
+        broker_config.post_ws_url,
         method="POST",
         body=instance.to_json(),
     )

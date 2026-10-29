@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Final, Optional, TypeVar
 
 from common.game import GameMap, GameState, Reward
-from config import FeatureConfig
 from connection.errors_connection import ProtocolVersionMismatchError
 from connection.game_server_conn.unsafe_json import BareObject, obj_from_dict
 from dataclasses_json import config, dataclass_json
@@ -140,17 +139,19 @@ class ServerMessage:
         pass
 
     @staticmethod
-    def from_json_handle(data: str, expected: type[_T]) -> _T | BareObject:
+    def from_json_handle(
+        data: str, expected: type[_T], disable_message_checks: bool
+    ) -> _T | BareObject:
         try:
             envelope = json.loads(data)
         except json.JSONDecodeError as e:
             raise ServerMessage.DeserializationException(f"invalid JSON: {e}") from e
 
         # The version check is a protocol-level invariant: it runs
-        # regardless of DISABLE_MESSAGE_CHECKS.
+        # regardless of disable_message_checks.
         check_protocol_version(envelope)
 
-        if FeatureConfig.DISABLE_MESSAGE_CHECKS:
+        if disable_message_checks:
             return obj_from_dict(envelope)
 
         try:

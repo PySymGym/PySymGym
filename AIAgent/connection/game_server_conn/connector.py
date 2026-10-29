@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Optional
 
 import websocket
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap, GameState
 from connection.errors_connection import ConnectionLostError
 
@@ -52,8 +53,10 @@ class Connector:
         self,
         ws: websocket.WebSocket,
         map: GameMap,
+        feature_config: FeatureConfig,
     ) -> None:
         self.ws = ws
+        self._disable_message_checks = feature_config.disable_message_checks
 
         start_message = ClientMessage(StartMessageBody.from_game_map(map))
         logging.debug(f"--> StartMessage  : {start_message}")
@@ -86,12 +89,16 @@ class Connector:
             raise self._gameover
 
         matching_message_type = ServerMessage.from_json_handle(
-            msg, expected=ServerMessage
+            msg,
+            expected=ServerMessage,
+            disable_message_checks=self._disable_message_checks,
         ).MessageType
         match matching_message_type:
             case ServerMessageType.GAMEOVER:
                 deser_msg = GameOverServerMessage.from_json_handle(
-                    msg, expected=GameOverServerMessage
+                    msg,
+                    expected=GameOverServerMessage,
+                    disable_message_checks=self._disable_message_checks,
                 )
                 self.game_is_over = True
                 self._gameover = Connector.GameOver(
@@ -110,6 +117,7 @@ class Connector:
         data = GameStateServerMessage.from_json_handle(
             self._raise_if_gameover(received),
             expected=GameStateServerMessage,
+            disable_message_checks=self._disable_message_checks,
         )
         logging.debug(f"<-- {data.MessageType}")
         return data.MessageBody
@@ -129,6 +137,7 @@ class Connector:
         decoded = RewardServerMessage.from_json_handle(
             self._raise_if_gameover(received),
             expected=RewardServerMessage,
+            disable_message_checks=self._disable_message_checks,
         )
         logging.debug(f"<-- MoveReward    : {decoded.MessageBody}")
 

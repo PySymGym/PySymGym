@@ -1,13 +1,16 @@
 import logging
 import traceback
+from datetime import datetime
 from multiprocessing.managers import Namespace
 from time import perf_counter
 from typing import Optional, TypeAlias
 
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap, GameMap2SVM
-from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.errors_connection import GameInterruptedError
 from connection.game_server_conn.connector import Connector
@@ -43,18 +46,27 @@ class EachStepGameManager(BaseGameManager):
         self,
         with_predictor: Predictor,
         namespace: Namespace,
+        *,
+        feature_config: FeatureConfig,
+        connector_config: GameServerConnectorConfig,
+        broker_config: BrokerConfig,
         fail_immediately: bool = False,
     ):
         self._game_states: dict[str, list[HeteroData]] = {}
         self._with_predictor = with_predictor
+        # The sub-configs are pickled to the spawn-based mp.Pool workers
+        # together with the manager, so every value the game loop reads
+        # arrives as an instance attribute, never a process global.
+        self._feature_config = feature_config
+        self._connector_config = connector_config
+        self._broker_config = broker_config
         self._fail_immediately = fail_immediately
         super().__init__(namespace)
 
-    @set_timeout_if_needed
     def _play_game_map_with_svm(
         self, game_map2svm: GameMap2SVM, ws: WebSocket
     ) -> tuple[GameResult | GameFailed, TimeDuration]:
-        with_connector = Connector(ws, game_map2svm.GameMap)
+        with_connector = Connector(ws, game_map2svm.GameMap, self._feature_config)
         steps_count = 0
         game_state = None
         actual_coverage = None
@@ -143,8 +155,16 @@ class EachStepGameManager(BaseGameManager):
         )
         need_to_save = False
         try:
-            with game_server_socket_manager(game_map2svm.SVMInfo) as ws:
-                game_result, time = self._play_game_map_with_svm(game_map2svm, ws)
+            with game_server_socket_manager(
+                game_map2svm.SVMInfo, self._connector_config, self._broker_config
+            ) as ws:
+                # Wrapped at call time (not at import time) so the timeout
+                # comes from this run's feature config; a wall-clock timeout
+                # raises FunctionTimedOut into the except below.
+                play_game_map_with_svm = set_timeout_if_needed(
+                    self._feature_config, self._play_game_map_with_svm
+                )
+                game_result, time = play_game_map_with_svm(game_map2svm, ws)
             if isinstance(game_result, GameResult):
                 logging.info(
                     f"<{self._with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
@@ -182,8 +202,15 @@ class EachStepGameManager(BaseGameManager):
             game_result = GameFailed(reason=type(error))
 
         if need_to_save:
-            FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
-                self._with_predictor.model(), with_name=self._with_predictor.name()
+            # The save-on-failure/timeout behavior, driven by the run's
+            # feature config (the data-only SaveIfFailOrTimeout model).
+            save_feature = self._feature_config.save_if_fail_or_timeout
+            save_feature.save_path.mkdir(exist_ok=True)
+            timestamp = datetime.fromtimestamp(datetime.now().timestamp())
+            torch.save(
+                self._with_predictor.model().state_dict(),
+                save_feature.save_path
+                / f"{self._with_predictor.name()}_{timestamp}.pt",
             )
         return Map2Result(game_map2svm, game_result)
 

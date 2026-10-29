@@ -8,7 +8,6 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from config import FeatureConfig
 
 from connection.game_server_conn.connector import Connector
 from connection.game_server_conn.messages import PROTOCOL_VERSION
@@ -38,10 +37,7 @@ def test_incorrect_sent_state_error_is_an_exception() -> None:
     assert issubclass(Connector.IncorrectSentStateError, Exception)
 
 
-def test_raise_if_gameover_parses_gameover_message(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", True)
+def test_raise_if_gameover_parses_gameover_message() -> None:
     payload = json.dumps(
         {
             "Version": PROTOCOL_VERSION,
@@ -54,7 +50,7 @@ def test_raise_if_gameover_parses_gameover_message(
             },
         }
     )
-    fake_self = SimpleNamespace(game_is_over=False)
+    fake_self = SimpleNamespace(game_is_over=False, _disable_message_checks=True)
 
     with pytest.raises(Connector.GameOver) as exc_info:
         Connector._raise_if_gameover(fake_self, payload)
@@ -66,14 +62,11 @@ def test_raise_if_gameover_parses_gameover_message(
     assert exc_info.value.errors_count == 2
 
 
-def test_raise_if_gameover_passes_through_other_messages(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+def test_raise_if_gameover_passes_through_other_messages() -> None:
     payload = json.dumps(
         {"Version": PROTOCOL_VERSION, "MessageType": "ReadyForNextStep"}
     )
-    fake_self = SimpleNamespace(game_is_over=False)
+    fake_self = SimpleNamespace(game_is_over=False, _disable_message_checks=False)
 
     assert Connector._raise_if_gameover(fake_self, payload) == payload
 
@@ -95,10 +88,7 @@ def test_raise_if_gameover_already_over_raises_gameover() -> None:
     assert exc_info.value.errors_count == 2
 
 
-def test_raise_if_gameover_strict_validation_reads_steps_count(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+def test_raise_if_gameover_strict_validation_reads_steps_count() -> None:
     payload = json.dumps(
         {
             "Version": PROTOCOL_VERSION,
@@ -111,7 +101,7 @@ def test_raise_if_gameover_strict_validation_reads_steps_count(
             },
         }
     )
-    fake_self = SimpleNamespace(game_is_over=False)
+    fake_self = SimpleNamespace(game_is_over=False, _disable_message_checks=False)
 
     with pytest.raises(Connector.GameOver) as exc_info:
         Connector._raise_if_gameover(fake_self, payload)

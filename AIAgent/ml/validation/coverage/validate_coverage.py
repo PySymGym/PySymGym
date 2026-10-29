@@ -8,6 +8,9 @@ from typing import Any, Optional
 import torch
 import tqdm
 from common.classes import GameResult, Map2Result
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
 from common.config.validation_config import (
     SVMValidation,
     SVMValidationSendEachStep,
@@ -42,11 +45,20 @@ class ValidationCoverage:
         self,
         model: torch.nn.Module,
         dataset: Optional[TrainingDataset],
+        *,
+        broker_config: BrokerConfig,
+        connector_config: GameServerConnectorConfig,
+        feature_config: FeatureConfig,
         model_kwargs: Optional[dict[str, Any]] = None,
         trial_dir: Optional[Path] = None,
     ):
         self.model = model
         self.dataset = dataset
+        # The sub-configs are handed to the game managers, which pickle them
+        # to the spawn-based mp.Pool workers.
+        self._broker_config = broker_config
+        self._connector_config = connector_config
+        self._feature_config = feature_config
         self._model_kwargs = model_kwargs
         self._trial_dir = trial_dir
         self._game_manager: Optional[BaseGameManager] = None
@@ -138,12 +150,16 @@ class ValidationCoverage:
             return EachStepGameManager(
                 TrainingModelWrapper(self.model),
                 namespace,
+                feature_config=self._feature_config,
+                connector_config=self._connector_config,
+                broker_config=self._broker_config,
                 fail_immediately=validation_config.fail_immediately,
             )
         elif isinstance(validation_config, SVMValidationSendModel):
             return ModelGameManager(
                 namespace,
                 self.model,
+                feature_config=self._feature_config,
                 trial_dir=self._trial_dir,
                 model_kwargs=self._model_kwargs,
                 fail_immediately=validation_config.fail_immediately,

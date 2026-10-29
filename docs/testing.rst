@@ -275,9 +275,10 @@ no-op-when-missing) and the full-coverage-without-oracle warning of
 ``_get_result`` is pinned via caplog. The ``EachStepGameManager`` tests
 (``test_each_step_game_manager.py``) pin the remaining branches: the
 ``FunctionTimedOut`` branch (the model is saved, the reason is the
-exception class, the exact warning) driven by shadowing the
-``func_set_timeout``-decorated ``_play_game_map_with_svm`` with an
-instance attribute, the ``GameInterruptedError`` branch (no save, the exact
+exception class, the exact warning) driven by making the call-time
+``set_timeout_if_needed`` wrapper the identity so the ``FunctionTimedOut``
+the fake connector raises reaches the except branch, the
+``GameInterruptedError`` branch (no save, the exact
 ``"<name> failed on map <map> with <class>: <desc>"`` message), the
 ``func_timeout`` swallow quirk (a ``FunctionTimedOut`` raised from inside
 the wrapped function is discarded by its worker thread, the method returns
@@ -517,7 +518,9 @@ Orchestration seams are tested with fakes, never real I/O:
 - **Connection layer.** The message deserialization helper in
   ``unsafe_json`` is pinned as a pure unit test: ``obj_from_dict`` builds
   the nested attribute objects (``BareObject``s) that the unchecked
-  ``from_json_handle`` returns when ``DISABLE_MESSAGE_CHECKS`` is set. The
+  ``from_json_handle`` returns when its ``disable_message_checks``
+  parameter is set (the flag is threaded from the run's
+  ``FeatureConfig``, not a process global). The
   ``errors_connection`` hierarchy is
   pinned as pure unit tests: ``GameInterruptedError`` is abstract with an
   abstract ``desc`` property (its no-op stub getter is pinned by calling
@@ -525,12 +528,14 @@ Orchestration seams are tested with fakes, never real I/O:
   concrete subclasses (``ProcessStoppedError``, ``ConnectionLostError``,
   ``ProtocolVersionMismatchError``) expose their exact ``desc`` strings. The broker HTTP
   calls are pinned with the ``httplib2.Http`` recording fake:
-  ``acquire_instance`` issues a ``GET`` to ``GET_WS`` with the urlencoded
+  ``acquire_instance`` issues a ``GET`` to the broker's ``get_ws_url``
+  (``BrokerConfig.get_ws_url``) with the urlencoded
   ``SVMInfo`` fields and raises ``RuntimeError`` on a non-200 (the request is
   issued before the decode, so the shape is pinned without touching the
   decode); the single-encoded 200 body returns the parsed
   ``ServerInstanceInfo``.
-  ``return_instance`` posts the instance's ``to_json`` to ``POST_WS`` and
+  ``return_instance`` posts the instance's ``to_json`` to
+  ``post_ws_url`` and
   raises ``RuntimeError`` on a non-200. The merged values are pinned on the
   pydantic models (``test_config_models.py``) as the drift net for #585
   (merge the constant classes into the pydantic YAML system), which carries
@@ -561,7 +566,7 @@ Orchestration seams are tested with fakes, never real I/O:
   per process** (the module-level throttle flag is reset per test via
   ``monkeypatch``; non-dict envelopes are ignored by the check and leave no
   warning). ``from_json_handle`` runs the check under **both**
-  ``DISABLE_MESSAGE_CHECKS`` settings (a foreign ``Version`` raises before
+  ``disable_message_checks`` settings (a foreign ``Version`` raises before
   the flag branch) and wraps ``json.JSONDecodeError`` in
   ``DeserializationException`` under both settings (#582). The reward
   channel's strict-mode decoding is pinned for **both** wire message types
@@ -619,8 +624,9 @@ Writing a test
   ``hetero_factory``) and assert exact tensor contents; the ``tmp_dataset``
   fixture yields an empty ``TrainingDataset`` for the filtering helpers.
 - Never open sockets in a unit test: drive the pure parsing helpers directly
-  and patch process-global switches such as ``FeatureConfig.DISABLE_MESSAGE_CHECKS``
-  with ``monkeypatch``.
+  (the ``disable_message_checks`` flag is a plain parameter of
+  ``from_json_handle``, threaded from the run's ``FeatureConfig``) and patch
+  process-global switches with ``monkeypatch``.
 - Write anything that touches disk under the ``tmp_path`` fixture.
 - Keep it deterministic: the autouse ``seeded_rng`` and ``cpu_device`` fixtures
   make the ``AIAgent`` suite reproducible, but a test must still not rely on
