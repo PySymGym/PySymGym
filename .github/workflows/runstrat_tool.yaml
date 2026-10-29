@@ -10,10 +10,10 @@ on:
       - 'tools/runstrat/**'
 
 jobs:
-  calculate-dockerfile-hash:
-    runs-on: self-hosted
-    container:
-      image: ubuntu:24.04
+  ensure-image:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
     outputs:
       dockerfile_hash: ${{ steps.hash.outputs.hash }}
     steps:
@@ -25,12 +25,37 @@ jobs:
         run: |
           HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
           echo "hash=$HASH" >> $GITHUB_OUTPUT
-          
+
+      - name: Wait for the image to be published
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # publish_image.yaml builds and pushes the image for this hash;
+          # on pull requests it starts at the same time as this pipeline,
+          # so the image may not be published yet. Poll instead of racing
+          # it. The gate runs on a GitHub-hosted runner on purpose:
+          # occupying the single self-hosted runner here could starve the
+          # publish job itself. Bounded: 60 x 30 s = 30 min.
+          for attempt in $(seq 1 60); do
+              status=0
+              .github/scripts/check_ci_image.sh "${{ steps.hash.outputs.hash }}" || status=$?
+              if [ "$status" -eq 0 ]; then
+                  exit 0
+              fi
+              if [ "$status" -ne 1 ]; then
+                  exit "$status"
+              fi
+              echo "attempt $attempt/60: image not published yet, retrying in 30 s"
+              sleep 30
+          done
+          echo "::error::image for Dockerfile hash ${{ steps.hash.outputs.hash }} was not published within 30 minutes"
+          exit 1
+
   build-and-launch:
-    needs: calculate-dockerfile-hash
+    needs: [ensure-image]
     runs-on: self-hosted
     container:
-      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+      image: ghcr.io/pysymgym/pysymgym:${{ needs.ensure-image.outputs.dockerfile_hash }}
     permissions:
       packages: read
     steps:
