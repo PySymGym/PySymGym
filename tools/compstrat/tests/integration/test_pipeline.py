@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from compstrat import Args, entrypoint
-from src.config_extractor import read_configs
+from compstrat.config_extractor import read_configs
 
 pytestmark = pytest.mark.integration
 

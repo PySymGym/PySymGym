@@ -4,7 +4,9 @@ The repository is a single Poetry project with per-component test trees. This
 conftest makes their modules importable regardless of the current working
 directory by putting each component directory on ``sys.path``; the project's
 modules are imported by their top-level names (``common.*``, ``ml.*``,
-``config``, ``compstrat``, ``runstrat``, ``src.*``).
+``config``), and each tool by its per-tool package (``runstrat.*``,
+``compstrat.*``) or its flat scripts (``clean``, ``generate_episodes``,
+``parse_pretty``).
 """
 
 import sys

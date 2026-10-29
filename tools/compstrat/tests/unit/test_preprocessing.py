@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pytest
-from src.preprocessing import preprocess
+from compstrat.preprocessing import preprocess
 
 pytestmark = pytest.mark.unit
 
