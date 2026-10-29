@@ -24,9 +24,12 @@ Toolchain
    * - JDK
      - 11–21; set ``JAVA_HOME`` when several JDKs are installed
      - ``GameServers/usvm/gradle/wrapper/gradle-wrapper.properties`` (Gradle 8.6 runs on Java ≤21), ``.github/workflows/build_and_test_usvm.yaml`` (pins 11)
-   * - Maven, cmake, clang
+   * - cmake, clang
      - any recent version
      - ``.github/docker/Dockerfile``
+   * - Maven
+     - any recent version
+     - ``Makefile`` (``build_LogicNG``, ``build_jflex``; local development only — CI never builds the Java maps)
    * - Python
      - 3.11–3.13
      - ``pyproject.toml`` (``^3.11``); the lockfile pins torch 2.7.1, which has no cp314 wheel; CI runs 3.11.8
