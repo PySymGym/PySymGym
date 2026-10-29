@@ -10,10 +10,10 @@ import func_timeout
 import pandas as pd
 import tqdm
 from attrs import asdict, define
-from src.parsing import load_config, parse_runner_output
-from src.psstrategy import BasePSStrategy
-from src.structs import RunResult
-from src.subprocess_calls import call_test_runner
+from runstrat.parsing import load_config, parse_runner_output
+from runstrat.psstrategy import BasePSStrategy
+from runstrat.structs import RunResult
+from runstrat.subprocess_calls import call_test_runner
 from enum import Enum
 
 
@@ -138,7 +138,7 @@ def entrypoint(args: Args) -> pd.DataFrame:
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="runstrat")
     parser.add_argument(
         "-s",
         "--strategy",
@@ -194,7 +194,3 @@ def main():
             assembly_infos=args.assembly_infos,
         )
     )
-
-
-if __name__ == "__main__":
-    main()

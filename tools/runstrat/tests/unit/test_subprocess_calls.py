@@ -4,9 +4,9 @@ import subprocess
 
 import func_timeout
 import pytest
-from src.psstrategy import AIStrategy, ExecutionTreeContributedCoverageStrategy
-from src.structs import LaunchInfo
-from src.subprocess_calls import call_test_runner
+from runstrat.psstrategy import AIStrategy, ExecutionTreeContributedCoverageStrategy
+from runstrat.structs import LaunchInfo
+from runstrat.subprocess_calls import call_test_runner
 
 pytestmark = pytest.mark.unit
 
@@ -20,7 +20,7 @@ def captured_call(monkeypatch: pytest.MonkeyPatch) -> list:
         return b"runner output"
 
     monkeypatch.setattr(
-        "src.subprocess_calls.subprocess.check_output", fake_check_output
+        "runstrat.subprocess_calls.subprocess.check_output", fake_check_output
     )
     return calls
 
@@ -70,7 +70,7 @@ def test_call_test_runner_propagates_called_process_error(
         raise subprocess.CalledProcessError(1, call)
 
     monkeypatch.setattr(
-        "src.subprocess_calls.subprocess.check_output", fake_check_output
+        "runstrat.subprocess_calls.subprocess.check_output", fake_check_output
     )
     launch_info = LaunchInfo(dll="/dlls/a.dll", method="Cls.M")
     strategy = ExecutionTreeContributedCoverageStrategy(
@@ -93,7 +93,7 @@ def test_call_test_runner_propagates_function_timed_out(
         )
 
     monkeypatch.setattr(
-        "src.subprocess_calls.func_timeout.func_timeout", fake_func_timeout
+        "runstrat.subprocess_calls.func_timeout.func_timeout", fake_func_timeout
     )
     launch_info = LaunchInfo(dll="/dlls/a.dll", method="Cls.M")
     strategy = ExecutionTreeContributedCoverageStrategy(
