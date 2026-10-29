@@ -39,59 +39,14 @@ jobs:
           printenv
           dotnet --version
 
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Prepare the Python environment
+        uses: ./.github/actions/checkout-poetry
+
+      - name: Build the .NET game server and maps
+        uses: ./.github/actions/dotnet-build
         with:
-          submodules: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.11.8"
-
-      - name: Install poetry
-        run: |
-          pip install poetry
-
-      - name: Install dependencies
-        run: |
-          # Same shared self-hosted venv as the e2e workflows: see the
-          # matching step in e2e_build_and_run.yml for why --sync is needed
-          # and why it must survive a cross-device downgrade failure
-          # ("Cannot install mlflow-skinny", #656) via TMPDIR on the venv's
-          # filesystem plus a from-scratch rebuild.
-          export TMPDIR="$(poetry config cache-dir)/pip-tmp"
-          mkdir -p "$TMPDIR"
-          if ! poetry --ansi install -q --sync; then
-              echo "poetry install --sync failed — rebuilding cached venv from scratch"
-              # env info -p fails when no venv exists yet (fresh runner);
-              # guard so the rebuild still proceeds.
-              venv_path="$(poetry env info -p 2>/dev/null || true)"
-              [ -n "$venv_path" ] && rm -rf "$venv_path"
-              poetry --ansi install -q --sync
-          fi
-
-      - name: Verify cached venv integrity
-        run: |
-          # Same shared self-hosted venv as the e2e workflows: see the
-          # matching step in e2e_build_and_run.yml for why a file-broken
-          # venv must be rebuilt when torch cannot import.
-          if ! poetry run python -c "import torch" 2>/dev/null; then
-              echo "torch import failed — rebuilding cached venv from scratch"
-              rm -rf "$(poetry env info -p)"
-              poetry --ansi install -q --sync
-              poetry run python -c "import torch"
-          fi
-
-      - name: Build V# game server
-        working-directory: ./GameServers/VSharp/
-        run: |
-          dotnet build VSharp.ML.GameServer.Runner -c Release
-
-      - name: Build .NET maps for tests
-        working-directory: ./tools/runstrat/resources
-        run: |
-          dotnet build ForTests -c Release
+          maps-working-directory: ./tools/runstrat/resources
+          maps-project: ForTests
 
       - name: Run tests
         working-directory: ./tools/runstrat
