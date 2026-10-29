@@ -115,6 +115,18 @@ jobs:
       - name: Prepare the Python environment
         uses: ./.github/actions/checkout-poetry
 
+      - name: Verify GPU compatibility with the locked torch
+        # The container may have a GPU device passed through (detect-gpu)
+        # that the locked torch cannot run on (a compute capability the
+        # wheel has no kernels for): the first CUDA op would then crash
+        # mid-training. The probe runs the exact torch the pipeline trains
+        # with (the venv exists only from this point on — the image ships
+        # no Python); on incompatibility it logs why and hides the device
+        # from torch for the rest of the run (CUDA_VISIBLE_DEVICES=) so the
+        # pipeline degrades to the CPU flow instead of failing. #662
+        run: |
+          poetry run python AIAgent/probe_gpu_torch.py
+
       - name: Build the .NET game server and maps
         uses: ./.github/actions/dotnet-build
         with:
