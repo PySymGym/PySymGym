@@ -273,7 +273,11 @@ requests that touch ``.github/docker/Dockerfile``. The pull-request trigger
 is load-bearing: a PR that changes the Dockerfile must publish the image for
 the new Dockerfile hash, or the build workflows — which compute the same
 hash from the same merge-commit checkout — cannot pull it and die with an
-opaque container-pull failure.
+opaque container-pull failure. The publish job first checks whether the
+image for the computed hash is already on GHCR (the same
+``.github/scripts/check_ci_image.sh`` the gates use) and skips the build and
+push when the manifest exists: the tag is a content hash, so a published
+image is immutable and re-pushing it is wasted work.
 
 **The build jobs gate on the published image.** Publishing the image is a
 separate workflow from building with it, and on pull requests both start at
