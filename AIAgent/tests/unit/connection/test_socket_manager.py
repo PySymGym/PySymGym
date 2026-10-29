@@ -6,8 +6,9 @@ crucially, that ``return_instance`` runs on every exit path.
 """
 
 import pytest
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
 from common.validation_coverage.svm_info import SVMInfo
-from config import GameServerConnectorConfig
 from connection.broker_conn import socket_manager
 from connection.broker_conn.classes import ServerInstanceInfo
 from connection.errors_connection import ProcessStoppedError
@@ -27,6 +28,14 @@ def _svm_info() -> SVMInfo:
 
 def _server_instance() -> ServerInstanceInfo:
     return ServerInstanceInfo(svm_name="svm", port=4000, ws_url="ws://host", pid=7)
+
+
+def _connector_config() -> GameServerConnectorConfig:
+    return GameServerConnectorConfig()
+
+
+def _broker_config() -> BrokerConfig:
+    return BrokerConfig()
 
 
 def test_process_running_yields_for_live_pid(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -71,11 +80,11 @@ def test_wait_for_connection_returns_the_connected_socket(
     monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: True)
 
     instance = _server_instance()
-    result = socket_manager.wait_for_connection(instance)
+    result = socket_manager.wait_for_connection(instance, _connector_config())
 
     assert result is ws
     assert ws.url == instance.ws_url
-    assert ws.timeout == GameServerConnectorConfig.CREATE_CONNECTION_TIMEOUT_SEC
+    assert ws.timeout == _connector_config().create_connection_timeout_sec
 
 
 def test_wait_for_connection_raises_after_retries(
@@ -86,12 +95,12 @@ def test_wait_for_connection_raises_after_retries(
     monkeypatch.setattr(socket_manager.websocket, "WebSocket", lambda: ws)
     monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: True)
     monkeypatch.setattr(socket_manager.time, "sleep", lambda seconds: None)
-    monkeypatch.setattr(
-        GameServerConnectorConfig, "WAIT_FOR_SOCKET_RECONNECTION_MAX_RETRIES", 2
-    )
 
     with pytest.raises(RuntimeError, match="Retries exhausted"):
-        socket_manager.wait_for_connection(_server_instance())
+        socket_manager.wait_for_connection(
+            _server_instance(),
+            GameServerConnectorConfig(wait_for_socket_reconnection_max_retries=2),
+        )
 
 
 def test_wait_for_connection_propagates_process_stopped(
@@ -103,7 +112,7 @@ def test_wait_for_connection_propagates_process_stopped(
     monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: False)
 
     with pytest.raises(ProcessStoppedError):
-        socket_manager.wait_for_connection(_server_instance())
+        socket_manager.wait_for_connection(_server_instance(), _connector_config())
 
 
 def test_game_server_socket_manager_returns_instance_on_success(
@@ -112,16 +121,28 @@ def test_game_server_socket_manager_returns_instance_on_success(
     ws = fake_websocket
     instance = _server_instance()
     returned: list[ServerInstanceInfo] = []
-    monkeypatch.setattr(socket_manager, "acquire_instance", lambda svm_info: instance)
     monkeypatch.setattr(
-        socket_manager, "wait_for_connection", lambda server_instance: ws
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
     )
-    monkeypatch.setattr(socket_manager, "return_instance", returned.append)
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "return_instance",
+        lambda instance, broker_config: returned.append(instance),
+    )
 
-    with socket_manager.game_server_socket_manager(_svm_info()) as sock:
+    with socket_manager.game_server_socket_manager(
+        _svm_info(), _connector_config(), _broker_config()
+    ) as sock:
         assert sock is ws
 
-    assert ws.timeout == GameServerConnectorConfig.RESPONCE_TIMEOUT_SEC
+    assert ws.timeout == _connector_config().response_timeout_sec
     assert ws.closed is True
     assert returned == [instance]
 
@@ -132,14 +153,26 @@ def test_game_server_socket_manager_returns_instance_on_body_failure(
     ws = fake_websocket
     instance = _server_instance()
     returned: list[ServerInstanceInfo] = []
-    monkeypatch.setattr(socket_manager, "acquire_instance", lambda svm_info: instance)
     monkeypatch.setattr(
-        socket_manager, "wait_for_connection", lambda server_instance: ws
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
     )
-    monkeypatch.setattr(socket_manager, "return_instance", returned.append)
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "return_instance",
+        lambda instance, broker_config: returned.append(instance),
+    )
 
     with pytest.raises(ValueError):
-        with socket_manager.game_server_socket_manager(_svm_info()):
+        with socket_manager.game_server_socket_manager(
+            _svm_info(), _connector_config(), _broker_config()
+        ):
             raise ValueError("body failed")
 
     assert ws.closed is True
@@ -151,16 +184,26 @@ def test_game_server_socket_manager_returns_instance_when_connect_fails(
 ) -> None:
     instance = _server_instance()
     returned: list[ServerInstanceInfo] = []
-    monkeypatch.setattr(socket_manager, "acquire_instance", lambda svm_info: instance)
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
 
-    def no_connection(server_instance: ServerInstanceInfo):
+    def no_connection(server_instance: ServerInstanceInfo, connector_config):
         raise RuntimeError("no connection")
 
     monkeypatch.setattr(socket_manager, "wait_for_connection", no_connection)
-    monkeypatch.setattr(socket_manager, "return_instance", returned.append)
+    monkeypatch.setattr(
+        socket_manager,
+        "return_instance",
+        lambda instance, broker_config: returned.append(instance),
+    )
 
     with pytest.raises(RuntimeError, match="no connection"):
-        with socket_manager.game_server_socket_manager(_svm_info()):
+        with socket_manager.game_server_socket_manager(
+            _svm_info(), _connector_config(), _broker_config()
+        ):
             pass
 
     assert returned == [instance]

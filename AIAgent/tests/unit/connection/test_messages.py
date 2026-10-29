@@ -5,7 +5,6 @@ import json
 import logging
 
 import pytest
-from config import FeatureConfig
 
 from common.game import GameMap
 from connection.errors_connection import ProtocolVersionMismatchError
@@ -73,13 +72,12 @@ def test_start_message_body_wire_json_equals_game_map_json() -> None:
 
 
 @pytest.mark.parametrize("disabled", [True, False])
-def test_from_json_handle_respects_message_checks(
-    disabled: bool, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
+def test_from_json_handle_respects_message_checks(disabled: bool) -> None:
     payload = json.dumps({"Version": PROTOCOL_VERSION, "MessageType": "GameOver"})
 
-    result = ServerMessage.from_json_handle(payload, expected=ServerMessage)
+    result = ServerMessage.from_json_handle(
+        payload, expected=ServerMessage, disable_message_checks=disabled
+    )
 
     if disabled:
         assert not isinstance(result, ServerMessage)
@@ -89,18 +87,18 @@ def test_from_json_handle_respects_message_checks(
         assert result.MessageType is ServerMessageType.GAMEOVER
 
 
-def test_from_json_handle_raises_on_malformed_payload(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+def test_from_json_handle_raises_on_malformed_payload() -> None:
     payload = json.dumps({"Version": PROTOCOL_VERSION, "MessageType": "GameOver"})
 
     with pytest.raises(ServerMessage.DeserializationException):
-        GameOverServerMessage.from_json_handle(payload, expected=GameOverServerMessage)
+        GameOverServerMessage.from_json_handle(
+            payload,
+            expected=GameOverServerMessage,
+            disable_message_checks=False,
+        )
 
 
-def test_game_over_message_exposes_body(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+def test_game_over_message_exposes_body() -> None:
     payload = json.dumps(
         {
             "Version": PROTOCOL_VERSION,
@@ -115,7 +113,7 @@ def test_game_over_message_exposes_body(monkeypatch: pytest.MonkeyPatch) -> None
     )
 
     decoded = GameOverServerMessage.from_json_handle(
-        payload, expected=GameOverServerMessage
+        payload, expected=GameOverServerMessage, disable_message_checks=False
     )
 
     assert decoded.MessageType is ServerMessageType.GAMEOVER
@@ -168,13 +166,12 @@ def test_check_protocol_version_warns_once_per_process_on_legacy(
 
 
 @pytest.mark.parametrize("disabled", [True, False])
-def test_from_json_handle_decodes_a_v2_envelope(
-    disabled: bool, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
+def test_from_json_handle_decodes_a_v2_envelope(disabled: bool) -> None:
     payload = json.dumps({"Version": PROTOCOL_VERSION, "MessageType": "GameOver"})
 
-    result = ServerMessage.from_json_handle(payload, expected=ServerMessage)
+    result = ServerMessage.from_json_handle(
+        payload, expected=ServerMessage, disable_message_checks=disabled
+    )
 
     if disabled:
         assert result.Version == PROTOCOL_VERSION
@@ -186,20 +183,19 @@ def test_from_json_handle_decodes_a_v2_envelope(
 
 @pytest.mark.parametrize("disabled", [True, False])
 def test_from_json_handle_rejects_a_foreign_version_under_both_flags(
-    disabled: bool, monkeypatch: pytest.MonkeyPatch
+    disabled: bool,
 ) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
     payload = json.dumps({"Version": PROTOCOL_VERSION + 1, "MessageType": "GameOver"})
 
     with pytest.raises(ProtocolVersionMismatchError):
-        ServerMessage.from_json_handle(payload, expected=ServerMessage)
+        ServerMessage.from_json_handle(
+            payload, expected=ServerMessage, disable_message_checks=disabled
+        )
 
 
 @pytest.mark.parametrize("disabled", [True, False])
-def test_from_json_handle_wraps_invalid_json_under_both_flags(
-    disabled: bool, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", disabled)
-
+def test_from_json_handle_wraps_invalid_json_under_both_flags(disabled: bool) -> None:
     with pytest.raises(ServerMessage.DeserializationException):
-        ServerMessage.from_json_handle("{not json", expected=ServerMessage)
+        ServerMessage.from_json_handle(
+            "{not json", expected=ServerMessage, disable_message_checks=disabled
+        )

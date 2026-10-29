@@ -11,6 +11,9 @@ from types import SimpleNamespace
 import pytest
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
 from common.config.validation_config import (
     CriterionValidation,
     SVMValidationSendEachStep,
@@ -82,8 +85,16 @@ class FakeSyncManager:
         return SimpleNamespace(value=value)
 
 
+def _sub_configs() -> dict:
+    return dict(
+        broker_config=BrokerConfig(),
+        connector_config=GameServerConnectorConfig(),
+        feature_config=FeatureConfig(),
+    )
+
+
 def _coverage(manager: FakeGameManager, dataset) -> ValidationCoverage:
-    coverage = ValidationCoverage(torch.nn.Linear(1, 1), dataset)
+    coverage = ValidationCoverage(torch.nn.Linear(1, 1), dataset, **_sub_configs())
     coverage._game_manager = manager
     return coverage
 
@@ -91,7 +102,7 @@ def _coverage(manager: FakeGameManager, dataset) -> ValidationCoverage:
 def test_evaluate_game_map_requires_an_initialized_manager(
     game_map2svm_factory,
 ) -> None:
-    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
+    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None, **_sub_configs())
 
     with pytest.raises(RuntimeError, match="not been initialized"):
         coverage._evaluate_game_map(game_map2svm_factory())
@@ -198,7 +209,8 @@ def test_evaluate_game_map_returns_exception_and_deletes(
 
 
 def test_get_game_manager_returns_each_step_manager() -> None:
-    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
+    sub_configs = _sub_configs()
+    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None, **sub_configs)
     config = SVMValidationSendEachStep(
         val_type="svms_each_step", PlatformsConfig=[], process_count=1
     )
@@ -206,10 +218,15 @@ def test_get_game_manager_returns_each_step_manager() -> None:
     manager = coverage._get_game_manager(config, FakeSyncManager())
 
     assert isinstance(manager, EachStepGameManager)
+    # The sub-configs are handed to the manager (pickled to the workers).
+    assert manager._feature_config is sub_configs["feature_config"]
+    assert manager._connector_config is sub_configs["connector_config"]
+    assert manager._broker_config is sub_configs["broker_config"]
 
 
 def test_get_game_manager_returns_model_manager() -> None:
-    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
+    sub_configs = _sub_configs()
+    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None, **sub_configs)
     config = SVMValidationSendModel(
         val_type="svms_model", PlatformsConfig=[], process_count=1
     )
@@ -217,10 +234,11 @@ def test_get_game_manager_returns_model_manager() -> None:
     manager = coverage._get_game_manager(config, FakeSyncManager())
 
     assert isinstance(manager, ModelGameManager)
+    assert manager._feature_config is sub_configs["feature_config"]
 
 
 def test_get_game_manager_raises_for_other_modes() -> None:
-    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
+    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None, **_sub_configs())
     config = CriterionValidation(val_type="loss", batch_size=1)
 
     with pytest.raises(RuntimeError, match="no game manager suitable"):
@@ -260,7 +278,7 @@ def test_validate_coverage_collects_all_results(
     }
     manager = FakeGameManager(result=None)
     manager.play_game_map = lambda game_map2svm: results[id(game_map2svm)]
-    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None)
+    coverage = ValidationCoverage(torch.nn.Linear(1, 1), None, **_sub_configs())
     config = SVMValidationSendEachStep(
         val_type="svms_each_step", PlatformsConfig=[], process_count=2
     )

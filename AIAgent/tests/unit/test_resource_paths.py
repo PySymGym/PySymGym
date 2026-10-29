@@ -12,6 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 import paths
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap
 from ml.validation.coverage.game_managers.model import process_game_manager as pgm
 
@@ -57,7 +58,12 @@ def test_preparator_and_manager_paths_are_injectable(tmp_path) -> None:
     assert preparator._gamestate_example_path == gamestate
     assert preparator._svms_output_path == svms_output
 
-    manager = pgm.ModelGameManager(namespace, model=None, svms_output_path=svms_output)
+    manager = pgm.ModelGameManager(
+        namespace,
+        model=None,
+        feature_config=FeatureConfig(),
+        svms_output_path=svms_output,
+    )
     assert manager._preparator._svms_output_path == svms_output
     game_map = GameMap(
         StepsToPlay=1,

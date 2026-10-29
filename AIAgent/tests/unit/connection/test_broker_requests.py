@@ -5,8 +5,8 @@ method and body without talking to the broker.
 """
 
 import pytest
+from common.config.broker_config import BrokerConfig
 from common.validation_coverage.svm_info import SVMInfo
-from config import WebsocketSourceLinks
 from connection.broker_conn import requests as broker_requests
 from connection.broker_conn.classes import ServerInstanceInfo
 from connection.broker_conn.requests import acquire_instance, return_instance
@@ -46,17 +46,21 @@ def _instance() -> ServerInstanceInfo:
     return ServerInstanceInfo(svm_name="svm", port=4000, ws_url="ws://host", pid=7)
 
 
+def _broker_config() -> BrokerConfig:
+    return BrokerConfig()
+
+
 def test_acquire_instance_raises_on_non_200(monkeypatch: pytest.MonkeyPatch) -> None:
     http = FakeHttp(status=500, content=b"boom")
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
     with pytest.raises(RuntimeError, match="Not ok response"):
-        acquire_instance(_svm_info())
+        acquire_instance(_svm_info(), _broker_config())
 
     # The request is issued before the response is decoded, so the non-200
     # path pins the request shape without touching the decode.
     url, method, body = http.calls[0]
-    assert url.startswith(f"{WebsocketSourceLinks.GET_WS}?")
+    assert url.startswith(f"{_broker_config().get_ws_url}?")
     assert "name=svm" in url
     assert "launch_command=run" in url
     assert "min_port=1" in url
@@ -75,7 +79,7 @@ def test_acquire_instance_decodes_single_encoded_body(
     http = FakeHttp(content=_instance().to_json().encode("utf-8"))
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
-    acquired = acquire_instance(_svm_info())
+    acquired = acquire_instance(_svm_info(), _broker_config())
 
     assert acquired == _instance()
 
@@ -84,10 +88,10 @@ def test_return_instance_posts_the_body(monkeypatch: pytest.MonkeyPatch) -> None
     http = FakeHttp(status=200)
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
-    return_instance(_instance())
+    return_instance(_instance(), _broker_config())
 
     url, method, body = http.calls[0]
-    assert url == WebsocketSourceLinks.POST_WS
+    assert url == _broker_config().post_ws_url
     assert method == "POST"
     assert body == _instance().to_json()
 
@@ -97,4 +101,4 @@ def test_return_instance_raises_on_non_200(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
     with pytest.raises(RuntimeError, match="Not ok response"):
-        return_instance(_instance())
+        return_instance(_instance(), _broker_config())
