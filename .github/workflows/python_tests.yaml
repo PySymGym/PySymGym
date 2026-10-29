@@ -38,16 +38,12 @@ jobs:
         run: |
           poetry install
 
-      - name: Run main repo tests
-        working-directory: ./AIAgent
-        run: |
-          poetry run pytest tests -sv -m "not e2e"
-      
-      - name: Run compstrat tool tests
-        working-directory: ./tools/compstrat
-        run: |
-          poetry run pytest tests -sv -m "not e2e"
-
+      # The single runner for every suite: the root testpaths cover all six
+      # test roots (root tests/, AIAgent, compstrat, runstrat, dataset_tools,
+      # util), so per-component steps would only run the AIAgent and compstrat
+      # suites a second time — a failing test would produce two failure
+      # reports, and the per-component steps add no coverage (they ran
+      # without --cov).
       - name: Enforce the coverage ratchet
         run: |
           poetry run pytest -m "not e2e" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
