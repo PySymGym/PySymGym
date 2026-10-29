@@ -279,6 +279,17 @@ image for the computed hash is already on GHCR (the same
 push when the manifest exists: the tag is a content hash, so a published
 image is immutable and re-pushing it is wasted work.
 
+**The base image is digest-pinned.** The tag is the sha1 of the Dockerfile,
+so the tag must address immutable content: a floating ``ubuntu:24.04`` tag
+would let the base update underneath an unchanged tag, and consumers would
+pull different content under the same name. The Dockerfile therefore pins
+the base by digest. Refreshing the pin is a deliberate act: inspect the
+current digest of ``ubuntu:24.04`` (for example with
+``docker buildx imagetools inspect ubuntu:24.04``) and update the ``FROM``
+line. The Dockerfile content changes, so does the tag, and the publish
+workflow republishes under the new tag — the ``ensure-image`` gates of the
+build workflows pick it up as usual.
+
 **The build jobs gate on the published image.** Publishing the image is a
 separate workflow from building with it, and on pull requests both start at
 the same time — so a build job can start before the image exists and die
