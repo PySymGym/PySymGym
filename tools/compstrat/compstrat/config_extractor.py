@@ -5,7 +5,7 @@ import typing as t
 import cattr
 import yaml
 
-from src.comparator import CompareConfig, DataSourceType
+from compstrat.comparator import CompareConfig, DataSourceType
 
 
 def _structure_config(config: dict[str, str]) -> CompareConfig:

@@ -9,7 +9,7 @@ import pandas as pd
 import tqdm
 from attrs import define
 
-from src.preprocessing import MIN_POSTFIX, MAX_POSTFIX
+from compstrat.preprocessing import MIN_POSTFIX, MAX_POSTFIX
 
 
 @define

@@ -5,9 +5,9 @@ import typing as t
 
 import pandas as pd
 from attrs import define
-from src.comparator import Color, Comparator, CompareConfig, Strategy
-from src.config_extractor import read_configs
-from src.preprocessing import preprocess
+from compstrat.comparator import Color, Comparator, CompareConfig, Strategy
+from compstrat.config_extractor import read_configs
+from compstrat.preprocessing import preprocess
 
 
 @define
@@ -53,7 +53,7 @@ def entrypoint(args: Args):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="compstrat")
     parser.add_argument(
         "-s1",
         "--strat1",
@@ -112,7 +112,3 @@ def main():
             configs=read_configs(args.configs_path),
         )
     )
-
-
-if __name__ == "__main__":
-    main()

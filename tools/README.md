@@ -53,9 +53,12 @@ python3 -m runstrat \
 
 ## `compstrat` tool
 
+The tool is the `compstrat` package; run it with `python3 -m compstrat` from
+this directory.
+
 Docs:
 ```bash
-usage: compstrat.py [-h] -s1 STRAT1 -r1 RUNS1 [RUNS1 ...] -s2 STRAT2 -r2 RUNS2 [RUNS2 ...] -cp CONFIGS_PATH [--savedir SAVEDIR]
+usage: compstrat [-h] -s1 STRAT1 -r1 RUNS1 [RUNS1 ...] -s2 STRAT2 -r2 RUNS2 [RUNS2 ...] -cp CONFIGS_PATH [--savedir SAVEDIR]
 
 options:
   -h, --help            show this help message and exit
@@ -74,7 +77,7 @@ options:
 To compare two results run
 
 ```bash
-python3 compstrat.py \
+python3 -m compstrat \
     -s1 ALHPA -r1 mock_runs/strat_alpha.csv \
     -s2 BETA -r2 mock_runs/strat_beta.csv \
     -cp resources/compare_confs.yaml
