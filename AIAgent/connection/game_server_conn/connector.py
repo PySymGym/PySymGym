@@ -151,7 +151,7 @@ class Connector:
                 )
                 return msg.MessageBody
 
-            case ServerMessageType.MOVE_REVARD:
+            case ServerMessageType.MOVE_REWARD:
                 self._current_step += 1
                 return msg.MessageBody
 
