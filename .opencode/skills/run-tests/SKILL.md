@@ -12,12 +12,13 @@ source of truth; do not restate it here.
 
 ## Quick reference
 
-- One canonical command from the repository root: ``poetry run pytest`` runs the
-  fast unit tier. The same tiers are wrapped as ``make test-unit`` /
-  ``make test-integration`` / ``make test-all`` / ``make test-cov``.
-- CI selects markers per component explicitly (``-m "not e2e"`` for AIAgent and
-  compstrat, ``-m e2e`` for runstrat); the root default filter deselects
-  ``integration`` and ``e2e``.
+- The fast unit tier runs across every component in one command:
+  ``make test-unit`` (``poetry run pytest -m "not integration and not e2e"``).
+  The same tiers are wrapped as ``make test-unit`` / ``make test-integration``
+  / ``make test-all`` / ``make test-cov``.
+- CI selects markers explicitly (``-m "not e2e"`` for the gated-tier ratchet
+  step, ``-m e2e`` for runstrat); ``addopts`` carries no tier filter, so a
+  node-ID invocation (``pytest path::test``) is never filtered by tier.
 
 ## Do not run bare pytest
 

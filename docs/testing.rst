@@ -4,10 +4,11 @@
 Testing
 =======
 
-PySymGym uses a local-first pytest setup. ``poetry run pytest`` from the
-repository root runs the fast **unit** tier across every component in one
-command, without network, GPU, ``.NET``, or built binary fixtures. Slower tiers
-are selected explicitly and the full end-to-end pipeline stays in CI.
+PySymGym uses a local-first pytest setup. The fast **unit** tier — no network,
+GPU, ``.NET``, or built binary fixtures — runs across every component in one
+command (``make test-unit`` or ``poetry run pytest -m "not integration and
+not e2e"``). Slower tiers are selected explicitly and the full end-to-end
+pipeline stays in CI.
 
 This page is the single source of truth for the testing system; the developer
 guide and the agent skills point here.
@@ -49,32 +50,35 @@ Tests are classified with pytest markers:
     Orthogonal constraints: require a CUDA device, require network, take
     noticeably long, or must not run in parallel.
 
-The default ``addopts`` deselects ``integration`` and ``e2e``, so a plain
-``poetry run pytest`` is the fast unit tier.
+Tier selection is explicit at the invocation: the Makefile targets and the CI
+steps pass ``-m``, and ``addopts`` carries only ``--import-mode=importlib`` —
+so a node-ID invocation (``pytest path::test``) is never filtered by tier.
 
 Commands
 --------
 
 .. code-block:: console
 
-    poetry run pytest            # fast unit tier (default)
+    poetry run pytest -m "not integration and not e2e"   # fast unit tier
     poetry run pytest -m integration
     poetry run pytest -m e2e
+    poetry run pytest            # every tier (e2e needs the built toolchain)
 
 The same tiers are wrapped in a root ``Makefile`` so nobody has to memorize the
 invocations:
 
 .. code-block:: console
 
-    make test-unit           # fast unit tier (same as `poetry run pytest`)
+    make test-unit           # fast unit tier
     make test-integration    # -m integration
     make test-all            # everything (e2e needs the built toolchain)
-    make test-cov            # unit tier with a coverage report
+    make test-cov            # gated tier (unit + integration) with the coverage ratchet
 
 The configuration lives in ``[tool.pytest.ini_options]`` in the root
 ``pyproject.toml``.
 
-To run a single component or a single test:
+To run a single component or a single test (a node-ID invocation is not
+filtered by tier — the named test runs whatever tier it carries):
 
 .. code-block:: console
 
@@ -127,8 +131,7 @@ guarded code).
 
 The marker is the source of truth, not the directory: CI selects markers
 explicitly (``-m "not e2e"`` for the gated-tier ratchet step, ``-m e2e`` for
-the runstrat job) and the root default filter deselects ``integration`` and
-``e2e``. A module may declare its tier once at module level
+the runstrat job). A module may declare its tier once at module level
 (``pytestmark = pytest.mark.unit``) or per function; every ``test_*`` function
 must resolve to exactly one tier, which ``tests/test_pytest_infra.py`` enforces
 statically together with the tier directory (``unit/``, ``integration/`` or
