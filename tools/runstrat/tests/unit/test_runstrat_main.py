@@ -212,12 +212,6 @@ def test_main_ai_without_model_path_asserts(run_main, tmp_path: Path) -> None:
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="#590: -ps is required=False but dereferenced unconditionally in "
-    "entrypoint(); omitting it should be an argparse error, not a deferred "
-    "TypeError",
-)
 def test_main_missing_pysymgym_path_is_an_argparse_error(
     run_main, tmp_path: Path
 ) -> None:
@@ -240,12 +234,6 @@ def test_main_missing_pysymgym_path_is_an_argparse_error(
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="#590: -as is required=False but dereferenced unconditionally in "
-    "entrypoint(); omitting it should be an argparse error, not a deferred "
-    "TypeError",
-)
 def test_main_missing_assembly_infos_is_an_argparse_error(
     run_main, tmp_path: Path
 ) -> None:
