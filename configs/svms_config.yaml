@@ -14,7 +14,6 @@ TrainingConfig:
   load_to_cpu: False
   epochs: 10
   seed: 42
-  percentile: 80
 
 ValidationConfig:
   validation_mode:
