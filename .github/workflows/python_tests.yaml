@@ -51,3 +51,15 @@ jobs:
       - name: Enforce the coverage ratchet
         run: |
           poetry run pytest -m "not e2e" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
+
+  # Every submodule pointer must be reachable from a stable ref (a tag, or
+  # the default branch) of its remote — see docs/developer.rst, "Submodules".
+  # Git-only check: no Python or toolchain needed.
+  submodule-pins:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Check submodule pin stability
+        run: make check_submodule_pins
