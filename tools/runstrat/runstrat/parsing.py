@@ -11,7 +11,7 @@ from runstrat.structs import LaunchInfo, PrebuiltConfig
 def parse_runner_output(runner_output: str):
     try:
         total_time = re.search(
-            r"Total time: (?P<hours>\d\d):(?P<minutes>\d\d):(?P<seconds>\d\d)\.*",
+            r"Total time: (?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\.*",
             runner_output,
         ).groupdict()
         total_time = (
@@ -26,7 +26,9 @@ def parse_runner_output(runner_output: str):
             r"Errors generated: (?P<count>\d+)", runner_output
         ).groupdict()["count"]
         total_coverage = re.search(
-            r"Precise coverage: (?P<count>.*)", runner_output
+            r"Precise coverage: (?P<count>\d+(?:\.\d+)?)\s*$",
+            runner_output,
+            re.MULTILINE,
         ).groupdict()["count"]
     except AttributeError as e:
         e.add_note(f"Parse failed on output:\n{runner_output}")
