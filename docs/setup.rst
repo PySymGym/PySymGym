@@ -31,8 +31,8 @@ Toolchain
      - any recent version
      - ``Makefile`` (``build_LogicNG``, ``build_jflex``; local development only — CI never builds the Java maps)
    * - Python
-     - 3.11–3.13
-     - ``pyproject.toml`` (``^3.11``); the lockfile pins torch 2.7.1, which has no cp314 wheel; CI runs 3.11.8
+     - 3.11.x
+     - ``pyproject.toml`` (``~3.11``); CI runs 3.11.8
 
 Python environment
 ------------------
@@ -44,13 +44,13 @@ touch the system interpreter), then point Poetry at it:
 
     pipx install poetry==2.2.1
     pipx install uv
-    uv python install 3.13
-    poetry env use $(uv python find 3.13)
+    uv python install 3.11
+    poetry env use $(uv python find 3.11)
     poetry install
 
 If the distribution's default ``python3`` is outside the supported range (for
 example Ubuntu 26.04 ships 3.14), skipping ``poetry env use`` makes Poetry pick
-it and the install fails on missing binary wheels.
+it and the install fails: the project supports 3.11.x only.
 
 Per-component build prerequisites
 ---------------------------------
