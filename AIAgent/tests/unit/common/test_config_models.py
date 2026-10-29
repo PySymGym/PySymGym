@@ -262,7 +262,7 @@ def test_feature_config_defaults_match_the_previous_constants() -> None:
     save = config.save_if_fail_or_timeout
     assert save.enabled is True
     assert save.timeout_sec == 1800
-    assert save.save_path == REPORT_PATH / "timeouted_agents"
+    assert save.save_path == REPORT_PATH / "timed_out_agents"
     restart = config.on_game_server_restart
     assert restart.enabled is True
     assert restart.wait_for_reset_retries == 600

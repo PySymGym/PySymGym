@@ -179,7 +179,7 @@ class EachStepGameManager(BaseGameManager):
         except FunctionTimedOut as error:
             need_to_save = True
             logging.warning(
-                f"<{self._with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
+                f"<{self._with_predictor.name()}> timed out on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
             )
             game_result = GameFailed(reason=type(error))
         except GameInterruptedError as error:

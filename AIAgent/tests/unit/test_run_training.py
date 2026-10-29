@@ -1581,7 +1581,7 @@ class TestMain:
                 "save_if_fail_or_timeout": {
                     "enabled": True,
                     "timeout_sec": 1800,
-                    "save_path": REPORT_PATH / "timeouted_agents",
+                    "save_path": REPORT_PATH / "timed_out_agents",
                 },
                 "on_game_server_restart": {
                     "enabled": True,

@@ -108,7 +108,7 @@ def _feature_config(tmp_path) -> FeatureConfig:
     # writes into the real report directory.
     return FeatureConfig(
         save_if_fail_or_timeout=SaveIfFailOrTimeout(
-            save_path=tmp_path / "timeouted_agents"
+            save_path=tmp_path / "timed_out_agents"
         )
     )
 
@@ -280,7 +280,7 @@ def test_play_game_map_saves_model_on_failure(
     assert set(state) == set(expected_state)
     for name in expected_state:
         assert torch.equal(state[name], expected_state[name])
-    assert path.parent == tmp_path / "timeouted_agents"
+    assert path.parent == tmp_path / "timed_out_agents"
     assert path.name.startswith("fake-predictor_")
     assert path.name.endswith(".pt")
 
@@ -324,7 +324,7 @@ def test_play_game_map_timeout_saves_the_model(
     # Current behaviour: the reason is the exception class, not an instance.
     assert result.game_result.reason is FunctionTimedOut
     assert len(saved) == 1
-    assert "timeouted on map Method_0 with 1800s" in caplog.text
+    assert "timed out on map Method_0 with 1800s" in caplog.text
 
 
 def test_play_game_map_inner_timeout_is_swallowed_by_the_timeout_wrapper(
