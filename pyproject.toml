@@ -83,7 +83,11 @@ testpaths = [
     "tools/dataset_tools/tests",
     "tools/util/tests",
 ]
-addopts = "--import-mode=importlib -m \"not integration and not e2e\""
+# No tier selection here: a global -m filter in addopts would also apply to
+# node-ID invocations (pytest path::test) and deselect the named test (exit 5).
+# Tiers are selected explicitly at the invocation — the Makefile targets and
+# the CI steps pass -m (see docs/testing.rst, "Commands").
+addopts = "--import-mode=importlib"
 timeout = 300
 markers = [
     "unit: pure, deterministic tests with no network, GPU, subprocess, or binary fixtures",

@@ -111,7 +111,7 @@ COV_ARGS = --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=xml 
 
 # Fast unit tier: no network, GPU, .NET or binary fixtures.
 test-unit:
-	$(PYTEST)
+	$(PYTEST) -m "not integration and not e2e"
 
 # In-process integration tier (fakes + golden fixtures).
 test-integration:
@@ -119,7 +119,7 @@ test-integration:
 
 # Everything, including the e2e pipelines (needs the built toolchain).
 test-all:
-	$(PYTEST) -o addopts="--import-mode=importlib"
+	$(PYTEST)
 
 # Unit + integration tier with the coverage ratchet (the gated tier).
 test-cov:
