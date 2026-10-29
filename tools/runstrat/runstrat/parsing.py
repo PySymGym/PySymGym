@@ -5,7 +5,7 @@ import re
 
 import cattrs
 import pandas as pd
-from src.structs import LaunchInfo, PrebuiltConfig
+from runstrat.structs import LaunchInfo, PrebuiltConfig
 
 
 def parse_runner_output(runner_output: str):

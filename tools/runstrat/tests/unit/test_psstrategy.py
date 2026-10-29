@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from src.psstrategy import (
+from runstrat.psstrategy import (
     AIStrategy,
     BasePSStrategy,
     ExecutionTreeContributedCoverageStrategy,

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from runstrat import Args, entrypoint, RunMode
-from src.psstrategy import ExecutionTreeContributedCoverageStrategy
+from runstrat.psstrategy import ExecutionTreeContributedCoverageStrategy
 
 pytestmark = pytest.mark.e2e
 

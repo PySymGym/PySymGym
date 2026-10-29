@@ -4,10 +4,13 @@ Prerequisites: cd into tools' directory
 
 ## `runstrat` tool
 
+The tool is the `runstrat` package; run it with `python3 -m runstrat` from
+this directory.
+
 Docs:
 
 ```bash
-usage: runstrat.py [-h] -s STRATEGY [-mp MODEL_PATH] -t TIMEOUT [-ps PYSYMGYM_PATH] [-as dlls-path launch-info-path]
+usage: runstrat [-h] -s STRATEGY [-mp MODEL_PATH] -t TIMEOUT [-ps PYSYMGYM_PATH] [-as dlls-path launch-info-path]
 
 options:
   -h, --help            show this help message and exit
@@ -26,7 +29,7 @@ options:
 To start benchmark, run
 
 ```bash
-python3 runstrat.py \
+python3 -m runstrat \
     --strategy AI \
     --model-path <..>/model.onnx \
     --timeout 120 \
@@ -39,7 +42,7 @@ python3 runstrat.py \
 Or shortened version:
 
 ```bash
-python3 runstrat.py \
+python3 -m runstrat \
     -s AI \
     -t 120 \
     -ps <abs-path-to-PySymGym> \

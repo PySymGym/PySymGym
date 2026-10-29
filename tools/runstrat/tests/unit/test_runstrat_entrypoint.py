@@ -1,10 +1,10 @@
 """Seam tests for the runstrat ``entrypoint()`` (happy path + result writing).
 
 ``entrypoint()`` is driven with a method-keyed fake for
-``runstrat.call_test_runner`` (the subprocess boundary) and a recording fake for
-``logging.basicConfig`` (no global logging side effect). ``load_config`` and
-``parse_runner_output`` run for real; ``tqdm`` is replaced by a passthrough so
-the loop is deterministic.
+``runstrat.cli.call_test_runner`` (the subprocess boundary) and a recording
+fake for ``logging.basicConfig`` (no global logging side effect).
+``load_config`` and ``parse_runner_output`` run for real; ``tqdm`` is
+replaced by a passthrough so the loop is deterministic.
 """
 
 import logging
@@ -13,9 +13,9 @@ from pathlib import Path
 
 import func_timeout
 import pytest
-import runstrat
+import runstrat.cli
 from runstrat import Args, RunMode
-from src.psstrategy import ExecutionTreeContributedCoverageStrategy
+from runstrat.psstrategy import ExecutionTreeContributedCoverageStrategy
 
 pytestmark = pytest.mark.unit
 
@@ -82,9 +82,9 @@ def entrypoint_env(monkeypatch: pytest.MonkeyPatch):
     def fake_tqdm(iterable, *args, **kwargs):
         return iterable
 
-    monkeypatch.setattr(runstrat, "call_test_runner", fake_call_test_runner)
+    monkeypatch.setattr(runstrat.cli, "call_test_runner", fake_call_test_runner)
     monkeypatch.setattr(logging, "basicConfig", fake_basicConfig)
-    monkeypatch.setattr(runstrat.tqdm, "tqdm", fake_tqdm)
+    monkeypatch.setattr(runstrat.cli.tqdm, "tqdm", fake_tqdm)
     return env
 
 
@@ -94,7 +94,7 @@ def test_setup_logging_configures_a_file_handler(
     calls: list = []
     monkeypatch.setattr(logging, "basicConfig", lambda **kw: calls.append(kw))
 
-    runstrat.setup_logging(tmp_path / "logs", "MyStrat")
+    runstrat.cli.setup_logging(tmp_path / "logs", "MyStrat")
 
     assert calls[0]["filename"] == str(tmp_path / "logs" / "MyStrat.log")
     assert calls[0]["level"] == logging.INFO
@@ -104,7 +104,7 @@ def test_entrypoint_writes_one_row_per_method(entrypoint_env, tmp_path: Path) ->
     args = make_args(tmp_path, ["M1", "M2"])
     entrypoint_env["script"] = {"M1": OUTPUT_M1, "M2": OUTPUT_M2}
 
-    df = runstrat.entrypoint(args)
+    df = runstrat.cli.entrypoint(args)
 
     assert list(df.columns) == [
         "method",
@@ -137,7 +137,7 @@ def test_entrypoint_returns_empty_dataframe_when_no_methods(
     args = make_args(tmp_path, [])
     entrypoint_env["script"] = {}
 
-    df = runstrat.entrypoint(args)
+    df = runstrat.cli.entrypoint(args)
 
     assert len(df) == 0
     assert list(df.columns) == []
@@ -163,7 +163,7 @@ def test_entrypoint_benchmarks_skips_failed_methods(
         "OK": OUTPUT_M1,
     }
 
-    df = runstrat.entrypoint(args)
+    df = runstrat.cli.entrypoint(args)
 
     # BENCHMARKS mode logs and skips each failure; only the successful method
     # is recorded.
@@ -183,7 +183,7 @@ def test_entrypoint_debug_reraises_called_process_error(
     }
 
     with pytest.raises(subprocess.CalledProcessError):
-        runstrat.entrypoint(args)
+        runstrat.cli.entrypoint(args)
 
 
 def test_entrypoint_debug_reraises_function_timed_out(
@@ -193,7 +193,7 @@ def test_entrypoint_debug_reraises_function_timed_out(
     entrypoint_env["script"] = {"FTO": _timed_out("FTO")}
 
     with pytest.raises(func_timeout.FunctionTimedOut):
-        runstrat.entrypoint(args)
+        runstrat.cli.entrypoint(args)
 
 
 def test_entrypoint_debug_reraises_attribute_error(
@@ -203,7 +203,7 @@ def test_entrypoint_debug_reraises_attribute_error(
     entrypoint_env["script"] = {"AE": OUTPUT_NO_TIME}
 
     with pytest.raises(AttributeError):
-        runstrat.entrypoint(args)
+        runstrat.cli.entrypoint(args)
 
 
 @pytest.mark.xfail(
@@ -218,6 +218,6 @@ def test_entrypoint_benchmarks_skips_a_value_error_method(
     args = make_args(tmp_path, ["BAD", "OK"])
     entrypoint_env["script"] = {"BAD": OUTPUT_BAD_COVERAGE, "OK": OUTPUT_M1}
 
-    df = runstrat.entrypoint(args)
+    df = runstrat.cli.entrypoint(args)
 
     assert df["method"].tolist() == ["OK"]

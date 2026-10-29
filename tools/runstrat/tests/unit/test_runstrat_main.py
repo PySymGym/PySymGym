@@ -1,10 +1,10 @@
 """CLI seam tests for the runstrat ``main()`` entrypoint.
 
 ``main()`` is driven with a patched ``sys.argv`` and a recording fake for
-``runstrat.entrypoint`` so no end-to-end strategy run happens. ``os.makedirs``
-is faked too, so the default (timestamp-named) savedir never touches the real
-filesystem. ``BasePSStrategy.parse`` runs for real — it is the dispatch under
-test.
+``runstrat.cli.entrypoint`` so no end-to-end strategy run happens.
+``os.makedirs`` is faked too, so the default (timestamp-named) savedir never
+touches the real filesystem. ``BasePSStrategy.parse`` runs for real — it is
+the dispatch under test.
 """
 
 import os
@@ -12,9 +12,9 @@ import sys
 from pathlib import Path
 
 import pytest
-import runstrat
+import runstrat.cli
 from runstrat import RunMode
-from src.psstrategy import AIStrategy, ExecutionTreeContributedCoverageStrategy
+from runstrat.psstrategy import AIStrategy, ExecutionTreeContributedCoverageStrategy
 
 pytestmark = pytest.mark.unit
 
@@ -34,10 +34,10 @@ def run_main(monkeypatch: pytest.MonkeyPatch):
         def fake_makedirs(path, *args, **kwargs):
             makedirs_calls.append(path)
 
-        monkeypatch.setattr(runstrat, "entrypoint", fake_entrypoint)
+        monkeypatch.setattr(runstrat.cli, "entrypoint", fake_entrypoint)
         monkeypatch.setattr(os, "makedirs", fake_makedirs)
         monkeypatch.setattr(sys, "argv", ["runstrat"] + argv)
-        result = runstrat.main()
+        result = runstrat.cli.main()
         return captured, makedirs_calls, result
 
     return _run
@@ -95,7 +95,7 @@ def test_main_default_savedir_is_the_timestamp(run_main, tmp_path: Path) -> None
         ]
     )
 
-    expected = Path(f"{runstrat.timestamp}")
+    expected = Path(f"{runstrat.cli.timestamp}")
     assert captured["args"].savedir == expected
     assert makedirs_calls == [expected]
 

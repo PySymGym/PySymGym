@@ -4,13 +4,13 @@ import json
 from pathlib import Path
 
 import pytest
-from src.parsing import (
+from runstrat.parsing import (
     load_config,
     load_prebuilt_config,
     parse_prebuilt,
     parse_runner_output,
 )
-from src.structs import PrebuiltConfig
+from runstrat.structs import PrebuiltConfig
 
 pytestmark = pytest.mark.unit
 
