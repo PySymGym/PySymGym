@@ -6,6 +6,7 @@ re-exported here; the implementation lives in :mod:`runstrat.cli`.
 """
 
 from runstrat.cli import (
+    AllMethodsFailedError,
     Args,
     AssemblyInfo,
     DOTNET_VERSION,
@@ -17,6 +18,7 @@ from runstrat.cli import (
 )
 
 __all__ = [
+    "AllMethodsFailedError",
     "Args",
     "AssemblyInfo",
     "DOTNET_VERSION",

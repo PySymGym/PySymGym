@@ -21,20 +21,26 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture
 def run_main(monkeypatch: pytest.MonkeyPatch):
-    """Run ``runstrat.main()`` with the given argv; return the captured state."""
+    """Run ``runstrat.main()`` with the given argv; return the captured state.
 
-    def _run(argv: list[str]):
+    ``entrypoint`` optionally replaces the recording fake (its return value
+    or exception propagates out of ``main()``).
+    """
+
+    def _run(argv: list[str], entrypoint=None):
         captured: dict = {}
         makedirs_calls: list = []
 
-        def fake_entrypoint(args):
+        def default_entrypoint(args):
             captured["args"] = args
             return "SENTINEL"
 
         def fake_makedirs(path, *args, **kwargs):
             makedirs_calls.append(path)
 
-        monkeypatch.setattr(runstrat.cli, "entrypoint", fake_entrypoint)
+        monkeypatch.setattr(
+            runstrat.cli, "entrypoint", entrypoint or default_entrypoint
+        )
         monkeypatch.setattr(os, "makedirs", fake_makedirs)
         monkeypatch.setattr(sys, "argv", ["runstrat"] + argv)
         result = runstrat.cli.main()
@@ -210,6 +216,33 @@ def test_main_ai_without_model_path_asserts(run_main, tmp_path: Path) -> None:
                 str(csv),
             ]
         )
+
+
+def test_main_exits_nonzero_when_all_methods_fail(run_main, tmp_path: Path) -> None:
+    def failing_entrypoint(args):
+        raise runstrat.cli.AllMethodsFailedError(
+            "all 2 methods failed; see /x/ExecutionTreeContributedCoverage.log"
+        )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_main(
+            [
+                "-s",
+                "ExecutionTreeContributedCoverage",
+                "-t",
+                "5",
+                "-ps",
+                str(tmp_path / "pysymgym"),
+                "-sd",
+                str(tmp_path / "savedir"),
+                "-as",
+                str(tmp_path / "dlls"),
+                str(tmp_path / "maps.csv"),
+            ],
+            entrypoint=failing_entrypoint,
+        )
+
+    assert str(exc_info.value.code).startswith("Error: all 2 methods failed")
 
 
 def test_main_missing_pysymgym_path_is_an_argparse_error(
