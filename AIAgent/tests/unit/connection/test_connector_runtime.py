@@ -10,8 +10,8 @@ import json
 
 import pytest
 import websocket
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap
-from config import FeatureConfig
 from connection.errors_connection import ConnectionLostError
 from connection.game_server_conn.connector import Connector
 from connection.game_server_conn.messages import PROTOCOL_VERSION
@@ -30,8 +30,13 @@ def _game_map() -> GameMap:
     )
 
 
-def _connector(ws) -> Connector:
-    return Connector(ws, _game_map())
+def _connector(ws, feature_config: FeatureConfig | None = None) -> Connector:
+    # The unchecked (BareObject) decode is the default here: the runtime
+    # loop tests are about the protocol flow, not strict validation (the
+    # strict path is pinned by the two tests that pass an explicit config).
+    return Connector(
+        ws, _game_map(), feature_config or FeatureConfig(disable_message_checks=True)
+    )
 
 
 def _queued(
@@ -48,11 +53,6 @@ def _queued(
     if body is not None:
         payload["MessageBody"] = body
     ws.incoming.append(json.dumps(payload))
-
-
-@pytest.fixture(autouse=True)
-def _disable_message_checks(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", True)
 
 
 def test_connector_sends_start_message_on_init(fake_websocket) -> None:
@@ -170,14 +170,11 @@ def test_incorrect_predicted_state_does_not_increment_step(fake_websocket) -> No
     assert connector._current_step == 0
 
 
-def test_strict_validation_decodes_incorrect_predicted_state(
-    fake_websocket, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_strict_validation_decodes_incorrect_predicted_state(fake_websocket) -> None:
     # Pre-#582, the strict path decoded the body as Reward and raised
     # DeserializationException on this normal protocol event.
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
     ws = fake_websocket
-    connector = _connector(ws)
+    connector = _connector(ws, FeatureConfig(disable_message_checks=False))
     connector.send_step(next_state_id=3, predicted_usefullness=42)
     _queued(ws, "IncorrectPredictedStateId", {"StateId": 9})
 
@@ -187,12 +184,9 @@ def test_strict_validation_decodes_incorrect_predicted_state(
     assert body.StateId == 9
 
 
-def test_strict_validation_decodes_move_reward(
-    fake_websocket, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(FeatureConfig, "DISABLE_MESSAGE_CHECKS", False)
+def test_strict_validation_decodes_move_reward(fake_websocket) -> None:
     ws = fake_websocket
-    connector = _connector(ws)
+    connector = _connector(ws, FeatureConfig(disable_message_checks=False))
     _queued(
         ws,
         "MoveReward",
