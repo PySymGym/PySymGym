@@ -104,7 +104,6 @@ source = ["AIAgent", "tools"]
 omit = [
     "*/tests/*",
     "*/conftest.py",
-    "AIAgent/tests_utils.py",
     "*/__main__.py",
 ]
 
