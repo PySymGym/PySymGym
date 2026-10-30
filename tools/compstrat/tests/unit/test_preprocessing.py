@@ -99,3 +99,57 @@ def test_preprocess_single_run_has_equal_min_and_max() -> None:
     assert list(strat2_df["coverage"]) == [5.0, 6.0]
     assert list(strat2_df["coverage_min"]) == [5, 6]
     assert list(strat2_df["coverage_max"]) == [5, 6]
+
+
+def test_preprocess_metrics_are_union_of_both_strategies() -> None:
+    strat1_runs = [
+        pd.DataFrame({"coverage": [1.0, 2.0], "steps": [10, 20]}, index=["m1", "m2"])
+    ]
+    strat2_runs = [
+        pd.DataFrame(
+            {"coverage": [5.0, 6.0], "steps": [50, 60], "extra": [7.0, 8.0]},
+            index=["m1", "m2"],
+        )
+    ]
+
+    strat1_df, strat2_df = preprocess(strat1_runs, strat2_runs)
+
+    # The strat2-only column is compared too, after the strat1 columns.
+    assert list(strat1_df.columns) == [
+        "coverage",
+        "coverage_min",
+        "coverage_max",
+        "steps",
+        "steps_min",
+        "steps_max",
+        "extra",
+        "extra_min",
+        "extra_max",
+    ]
+    assert list(strat2_df.columns) == list(strat1_df.columns)
+    # The strat1 runs lack the column: NaN on the missing side.
+    assert strat1_df["extra"].isna().all()
+    assert strat1_df["extra_min"].isna().all()
+    assert strat1_df["extra_max"].isna().all()
+    assert list(strat2_df["extra"]) == [7.0, 8.0]
+    assert list(strat2_df["extra_min"]) == [7.0, 8.0]
+    assert list(strat2_df["extra_max"]) == [7.0, 8.0]
+
+
+def test_preprocess_metric_present_in_only_some_runs() -> None:
+    strat1_runs = [
+        pd.DataFrame({"coverage": [1.0, 2.0], "extra": [7.0, 8.0]}, index=["m1", "m2"]),
+        pd.DataFrame({"coverage": [3.0, 4.0]}, index=["m1", "m2"]),
+    ]
+    strat2_runs = [pd.DataFrame({"coverage": [5.0, 6.0]}, index=["m1", "m2"])]
+
+    strat1_df, strat2_df = preprocess(strat1_runs, strat2_runs)
+
+    # Mean/min/max over the runs that carry the metric.
+    assert list(strat1_df["extra"]) == [7.0, 8.0]
+    assert list(strat1_df["extra_min"]) == [7.0, 8.0]
+    assert list(strat1_df["extra_max"]) == [7.0, 8.0]
+    # The other strategy never has the metric: all-NaN.
+    assert strat2_df["extra"].isna().all()
+    assert strat2_df["extra_min"].isna().all()
+    assert strat2_df["extra_max"].isna().all()
