@@ -73,4 +73,10 @@ def game_server_socket_manager(
         finally:
             socket.close()
     finally:
-        return_instance(server_instance, broker_config)
+        # A failed return must not mask the game body's exception: log it and
+        # let the original exception (if any) propagate. The broker's
+        # lease/TTL reaps an unreturned instance, so the slot is not lost.
+        try:
+            return_instance(server_instance, broker_config)
+        except Exception:
+            logging.exception(f"failed to return {server_instance}")
