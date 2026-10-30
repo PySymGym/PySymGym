@@ -24,13 +24,22 @@ class Color:
         return (self.r / 255, self.g / 255, self.b / 255, self.a)
 
     @staticmethod
-    def from_hex(hex_str: str):
+    def from_hex(hex_str: str, alpha: float = 1, name: str | None = None):
+        """Build a Color from a ``#RRGGBB`` string.
+
+        Parameters:
+            hex_str: The hex color, with or without a leading ``#``.
+            alpha: The opacity, 0 (transparent) to 1 (opaque).
+            name: The display name (used in plot labels); defaults to the
+                hex string without the leading ``#``.
+        """
         hex_str = hex_str.lstrip("#")
         return Color(
             r=int(hex_str[0:2], 16),
             g=int(hex_str[2:4], 16),
             b=int(hex_str[4:6], 16),
-            name=hex_str,
+            a=alpha,
+            name=name if name is not None else hex_str,
         )
 
 
