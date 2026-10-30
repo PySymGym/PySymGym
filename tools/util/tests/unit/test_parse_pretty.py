@@ -141,3 +141,107 @@ def test_parse_pretty_empty_table_returns_empty_frame() -> None:
 
     assert df.empty
     assert df.columns.tolist() == ["method", "steps", "tests", "errors", "coverage"]
+
+
+def test_parse_pretty_header_only_table_returns_empty_frame() -> None:
+    df = parse_pretty(["|               | A_Method_0 |\n"])
+
+    assert df.empty
+    assert df.columns.tolist() == ["method", "steps", "tests", "errors", "coverage"]
+
+
+CUSTOM_SUFFIX_TABLE = [
+    "|               | A_Custom_0 |\n",
+    "| Model One     | actual %: 88.50, steps: 12, test count: 5 error count: 2 |\n",
+]
+
+
+def test_parse_pretty_custom_map_name_suffix() -> None:
+    df = parse_pretty(CUSTOM_SUFFIX_TABLE, map_name_suffix="_Custom_0")
+
+    assert df["method"].tolist() == ["A"]
+    # The default suffix does not strip "_Custom_0".
+    df_default = parse_pretty(CUSTOM_SUFFIX_TABLE)
+
+    assert df_default["method"].tolist() == ["A_Custom_0"]
+
+
+def test_main_map_name_suffix_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "table.txt"
+    input_path.write_text("".join(CUSTOM_SUFFIX_TABLE))
+    output_path = tmp_path / "parsed.csv"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "parse_pretty",
+            "-in",
+            str(input_path),
+            "-o",
+            str(output_path),
+            "--map-name-suffix",
+            "_Custom_0",
+        ],
+    )
+    main()
+
+    df = pd.read_csv(output_path)
+    assert df["method"].tolist() == ["A"]
+
+
+def test_main_missing_input_exits_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    input_path = tmp_path / "missing.txt"
+
+    monkeypatch.setattr(sys, "argv", ["parse_pretty", "-in", str(input_path)])
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 1
+    assert capsys.readouterr().err.startswith(
+        f"Error: cannot read input file {input_path}:"
+    )
+
+
+def test_main_unwritable_output_exits_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    input_path = tmp_path / "table.txt"
+    input_path.write_text("".join(PRETTY_TABLE))
+    output_path = tmp_path / "no_such_dir" / "parsed.csv"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["parse_pretty", "-in", str(input_path), "-o", str(output_path)],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 1
+    assert capsys.readouterr().err.startswith(
+        f"Error: cannot write output file {output_path}:"
+    )
+
+
+def test_main_unparseable_table_exits_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    input_path = tmp_path / "table.txt"
+    input_path.write_text(
+        "|               | A_Method_0 |\n| Model One     | no statistics here |\n"
+    )
+
+    monkeypatch.setattr(sys, "argv", ["parse_pretty", "-in", str(input_path)])
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 1
+    assert "Error: failed to parse the pretty table:" in capsys.readouterr().err

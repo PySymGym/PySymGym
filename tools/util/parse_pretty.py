@@ -1,8 +1,13 @@
 import argparse
 import re
+import sys
 
 from attrs import asdict, define
 import pandas as pd
+
+# Suffix stripped from the map names in the table header to obtain the
+# method names (see parse_pretty).
+DEFAULT_MAP_NAME_SUFFIX = "_Method_0"
 
 # The columns of the single-model output; the multi-model output prepends
 # a "model" column (see parse_pretty).
@@ -29,7 +34,9 @@ def parse_stats(stats: str) -> tuple[int, int, int, float]:
     return (int(steps), int(tests), int(errors), float(coverage))
 
 
-def parse_pretty(data: list[str]) -> pd.DataFrame:
+def parse_pretty(
+    data: list[str], map_name_suffix: str = DEFAULT_MAP_NAME_SUFFIX
+) -> pd.DataFrame:
     # The first surviving line is the header: an empty corner cell followed
     # by one map-name cell per method column. Every subsequent surviving
     # line is one model row: a model-name cell followed by one stats cell
@@ -52,7 +59,7 @@ def parse_pretty(data: list[str]) -> pd.DataFrame:
     if header is None:
         return pd.DataFrame(columns=SINGLE_MODEL_COLUMNS)
 
-    methods = [cell.replace("_Method_0", "") for cell in header[1:]]
+    methods = [cell.replace(map_name_suffix, "") for cell in header[1:]]
     multi_model = len(rows) > 1
     records = []
     for model, stats_cells in rows:
@@ -69,10 +76,10 @@ def parse_pretty(data: list[str]) -> pd.DataFrame:
 
     if not records:
         return pd.DataFrame(columns=SINGLE_MODEL_COLUMNS)
-    return pd.DataFrame.from_dict(records)
+    return pd.DataFrame(records)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="This program parses Common Model results file formatted as a 'pretty' table"
     )
@@ -90,11 +97,37 @@ def main():
         help="path to save result to",
         default="./parsed.csv",
     )
+    parser.add_argument(
+        "--map-name-suffix",
+        type=str,
+        default=DEFAULT_MAP_NAME_SUFFIX,
+        help=(
+            "suffix stripped from the header map names to obtain the method "
+            f"names (default: {DEFAULT_MAP_NAME_SUFFIX})"
+        ),
+    )
     args = parser.parse_args()
 
-    with open(args.input, "r") as pretty_table_file:
-        data = pretty_table_file.readlines()
-    parse_pretty(data).to_csv(args.output, index=False)
+    try:
+        with open(args.input, "r") as pretty_table_file:
+            data = pretty_table_file.readlines()
+    except OSError as error:
+        print(f"Error: cannot read input file {args.input}: {error}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        result = parse_pretty(data, map_name_suffix=args.map_name_suffix)
+    except Exception as error:
+        print(f"Error: failed to parse the pretty table: {error}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        result.to_csv(args.output, index=False)
+    except OSError as error:
+        print(
+            f"Error: cannot write output file {args.output}: {error}", file=sys.stderr
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
