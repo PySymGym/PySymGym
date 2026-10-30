@@ -29,8 +29,9 @@ from common.game import (
     StateHistoryElem,
 )
 from common.validation_coverage.svm_info import SVMInfo
-from ml.dataset import NUM_STATE_FEATURES, TrainingDataset, convert_input_to_tensor
+from ml.dataset import TrainingDataset, convert_input_to_tensor
 from ml.inference import TORCH
+from ml.schema import NUM_STATE_FEATURES
 
 DEFAULT_GAME_FEATURES = 7
 RANDOM_SEED = 0

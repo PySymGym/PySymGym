@@ -15,11 +15,8 @@ from pathlib import Path
 
 import pytest
 import torch
-from ml.dataset import (
-    Result,
-    TrainingDataset,
-    convert_input_to_tensor,
-)
+from common.dataset import Result
+from ml.dataset import TrainingDataset, convert_input_to_tensor
 from ml.inference import TORCH
 
 pytestmark = pytest.mark.unit

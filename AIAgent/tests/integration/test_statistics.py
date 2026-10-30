@@ -7,7 +7,7 @@ import yaml
 from common.classes import GameFailed, GameResult, Map2Result
 from common.config.loader import anchor_paths
 from common.config.validation_config import ValidationConfig
-from ml.dataset import Result
+from common.dataset import Result
 from ml.validation.statistics import (
     AVERAGE_COVERAGE,
     AVERAGE_COVERAGE_OF_DATASET_STATE,
