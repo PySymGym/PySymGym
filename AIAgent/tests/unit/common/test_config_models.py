@@ -235,6 +235,10 @@ def test_broker_config_defaults_match_the_previous_constants() -> None:
     assert config.port == 35000
     assert config.get_ws_url == "http://0.0.0.0:35000/get_ws"
     assert config.post_ws_url == "http://0.0.0.0:35000/post_ws"
+    # The instance lease TTL: larger than the per-map timeout (1800 s) so a
+    # legitimate game is never reaped, bounding a hard-killed worker's leaked
+    # instance to 1 h (#599).
+    assert config.lease_ttl_sec == 3600
 
 
 def test_broker_config_urls_follow_the_port() -> None:

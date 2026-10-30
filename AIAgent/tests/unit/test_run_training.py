@@ -1605,6 +1605,7 @@ class TestMain:
             },
             "broker_config": {
                 "port": 35000,
+                "lease_ttl_sec": 3600,
             },
             "game_server_connector_config": {
                 "create_connection_timeout_sec": 1,
