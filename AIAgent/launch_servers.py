@@ -34,6 +34,19 @@ FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
 # must use the same address, or "free" would mean free on a different
 # interface than the one the server actually binds.
 GAME_SERVER_BIND_ADDRESS = "127.0.0.1"
+# The game server is a separate process that binds its own socket (the
+# listening socket cannot be passed to it), so a port the probe reported
+# free can be taken between the probe and the server's bind. The race is
+# accepted and mitigated with a retry on collision: a port that is open
+# while our server is dead means a foreign process holds it (our server
+# died on the bind), so the next port is tried. The bound keeps a
+# systematically busy range from looping; a collision attempt is cheap
+# (the foreign port is already open, so wait_for_port returns at once).
+# Residual window: if the foreign process opens the port while our server
+# is still booting, the instance is issued against the foreign server;
+# closing it fully needs the server to report its successful bind (a
+# .NET-side change, out of scope here).
+MAX_PORT_ATTEMPTS = 3
 avoid_same_free_port_lock = asyncio.Lock()
 # The loaded config the handlers read the feature settings from (the broker
 # is a single process, so the app context needs no other transport).
@@ -44,8 +57,9 @@ class InstanceIssuanceError(RuntimeError):
     """The broker cannot fulfil a /get_ws request.
 
     Raised when a live instance is dequeued while the restart feature is
-    disabled (the queue must hold placeholders only) or when a freshly
-    started game server does not open its port within the startup timeout.
+    disabled (the queue must hold placeholders only), when a freshly
+    started game server does not open its port within the startup
+    timeout, or when every port attempt collides with a foreign holder.
     """
 
 
@@ -182,17 +196,37 @@ async def run_server_instance(
         return proc, port
 
     async with avoid_same_free_port_lock:
-        proc, port = start_server()
-        # Track the handle from birth: the pid alone cannot be reaped.
-        PROCS[proc.pid] = proc
-        if not await wait_for_port(port):
-            # Fail fast: a server that never opens its port would make the
-            # client retry a dead port for the whole connection timeout.
-            # The kill runs in a worker thread so the async handler does
-            # not block on the reap.
+        for attempt in range(MAX_PORT_ATTEMPTS):
+            proc, port = start_server()
+            # Track the handle from birth: the pid alone cannot be reaped.
+            PROCS[proc.pid] = proc
+            if not await wait_for_port(port):
+                # Fail fast: a server that never opens its port would make
+                # the client retry a dead port for the whole connection
+                # timeout. A startup failure is not a collision — retrying
+                # a slow or crashing server on a fresh port would only
+                # multiply the load. The kill runs in a worker thread so
+                # the async handler does not block on the reap.
+                await asyncio.to_thread(kill_process, proc.pid)
+                raise InstanceIssuanceError(
+                    f"game server did not open port {port} within the startup timeout"
+                )
+            if proc.poll() is None:
+                # The server is alive on its port: issued.
+                break
+            # The port is open but our server is dead: a foreign process
+            # holds it and our server died on the bind (a collision — the
+            # port was taken between the probe and the server's own bind).
+            # Reap the corpse and retry on the next port.
+            logging.warning(
+                f"port {port} was taken between the probe and the bind "
+                f"(attempt {attempt + 1}/{MAX_PORT_ATTEMPTS}); retrying"
+            )
             await asyncio.to_thread(kill_process, proc.pid)
+        else:
             raise InstanceIssuanceError(
-                f"game server did not open port {port} within the startup timeout"
+                f"game server could not bind a free port in "
+                f"[{min_port}, {max_port}] after {MAX_PORT_ATTEMPTS} attempts"
             )
 
     launch_server = launcher(port)

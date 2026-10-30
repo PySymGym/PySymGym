@@ -485,6 +485,132 @@ class TestRunServerInstance:
         assert proc.waited is True
         assert procs == {}
 
+    def test_collision_retries_the_next_port(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_proc
+    ) -> None:
+        # A fresh lock: the module-level one binds to the first event loop.
+        monkeypatch.setattr(
+            launch_servers_module, "avoid_same_free_port_lock", asyncio.Lock()
+        )
+        ports = iter([35010, 35011])
+        monkeypatch.setattr(
+            launch_servers_module,
+            "next_free_port",
+            lambda min_port, max_port, address: next(ports),
+        )
+        # Attempt 1: the port is open but the server is dead (a foreign
+        # process holds it — the server died on the bind). Attempt 2: the
+        # server is alive on its port.
+        dead = fake_proc(pid=4321, poll_result=0)
+        alive = fake_proc(pid=4322)
+        procs_iter = iter([dead, alive])
+        popen_calls: list[tuple] = []
+
+        class FakePopen:
+            # The nested start_server annotates subprocess.Popen[bytes]; the
+            # annotation is evaluated at def time, so the fake must subscript.
+            def __class_getitem__(cls, item):
+                return cls
+
+            def __new__(cls, args, **kwargs):
+                popen_calls.append((args, kwargs))
+                return next(procs_iter)
+
+        monkeypatch.setattr(launch_servers_module.subprocess, "Popen", FakePopen)
+
+        async def fake_wait_for_port(port, timeout=10):
+            return True
+
+        monkeypatch.setattr(launch_servers_module, "wait_for_port", fake_wait_for_port)
+        procs: dict = {}
+        # The global is only created by main(); set it fresh for the test.
+        monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
+        monkeypatch.setattr(
+            launch_servers_module.os,
+            "killpg",
+            lambda pgid, sig: None,
+        )
+        monkeypatch.setattr(launch_servers_module.os, "getpgid", lambda pid: pid)
+
+        result = asyncio.run(
+            launch_servers_module.run_server_instance(
+                svm_info(server_working_dir=str(tmp_path)),
+                FeatureConfig(),
+            )
+        )
+
+        # The collided attempt was retried on the next port: the corpse
+        # was reaped and the winner is the only tracked handle.
+        assert [args for args, _ in popen_calls] == [
+            ["run", "--port", "35010"],
+            ["run", "--port", "35011"],
+        ]
+        assert dead.waited is True
+        assert alive.waited is False
+        assert result == ServerInstanceInfo(
+            "VSharp", 35011, "ws://0.0.0.0:35011/gameServer", 4322
+        )
+        assert procs == {4322: alive}
+
+    def test_collision_exhaustion_raises(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_proc
+    ) -> None:
+        # A fresh lock: the module-level one binds to the first event loop.
+        monkeypatch.setattr(
+            launch_servers_module, "avoid_same_free_port_lock", asyncio.Lock()
+        )
+        monkeypatch.setattr(
+            launch_servers_module,
+            "next_free_port",
+            lambda min_port, max_port, address: 35012,
+        )
+        # Every attempt collides: the port is open, the server is dead.
+        corpses = [
+            fake_proc(pid=4300 + i, poll_result=0)
+            for i in range(launch_servers_module.MAX_PORT_ATTEMPTS)
+        ]
+        procs_iter = iter(corpses)
+
+        class FakePopen:
+            # The nested start_server annotates subprocess.Popen[bytes]; the
+            # annotation is evaluated at def time, so the fake must subscript.
+            def __class_getitem__(cls, item):
+                return cls
+
+            def __new__(cls, args, **kwargs):
+                return next(procs_iter)
+
+        monkeypatch.setattr(launch_servers_module.subprocess, "Popen", FakePopen)
+
+        async def fake_wait_for_port(port, timeout=10):
+            return True
+
+        monkeypatch.setattr(launch_servers_module, "wait_for_port", fake_wait_for_port)
+        procs: dict = {}
+        # The global is only created by main(); set it fresh for the test.
+        monkeypatch.setattr(launch_servers_module, "PROCS", procs, raising=False)
+        monkeypatch.setattr(
+            launch_servers_module.os,
+            "killpg",
+            lambda pgid, sig: None,
+        )
+        monkeypatch.setattr(launch_servers_module.os, "getpgid", lambda pid: pid)
+
+        with pytest.raises(
+            launch_servers_module.InstanceIssuanceError,
+            match=f"after {launch_servers_module.MAX_PORT_ATTEMPTS} attempts",
+        ):
+            asyncio.run(
+                launch_servers_module.run_server_instance(
+                    svm_info(server_working_dir=str(tmp_path)),
+                    FeatureConfig(),
+                )
+            )
+
+        # Every corpse was reaped and no dead handle is left behind.
+        assert all(c.waited for c in corpses)
+        assert procs == {}
+
 
 class TestRunServers:
     def test_placeholders(self) -> None:
