@@ -5,7 +5,7 @@ Usage
 =====
 
 This guide assumes the environment is already set up as described in the
-`repository README <https://github.com/PySymGym/PySymGym#install>`__.
+:doc:`setup` page.
 
 Main loop
 ---------
@@ -37,7 +37,7 @@ Build symbolic virtual machines and maps
 
 To build the symbolic virtual machines (`V# <https://github.com/VSharp-team/VSharp>`_
 and `usvm <https://github.com/UnitTestBot/usvm>`_) and the methods used for
-training, install .NET 7, cmake, clang, and maven, then run:
+training, set up the toolchain as described in the :doc:`setup` page, then run:
 
 .. code-block:: console
 
@@ -60,6 +60,9 @@ can produce. This project generates it with one of the strategies from V#:
 saved under ``./AIAgent/report/SerializedEpisodes`` and is later updated by the
 neural network when it finds a better solution.
 
+Generation is deterministic: two runs with the same seed produce
+byte-identical serialized path conditions.
+
 Hyper-parameters tuning
 -----------------------
 
@@ -74,31 +77,45 @@ improving the dataset in the other kind of run.
    .. code-block:: yaml
 
        ValidationConfig:
-         validation:
+         validation_mode:
            val_type: loss
            batch_size: <DEPENDS_ON_YOUR_RAM_SIZE>
 
-    Configure Optuna, for example:
+   Configure Optuna, for example:
 
-    .. code-block:: yaml
+   .. code-block:: yaml
 
-        OptunaConfig:
-          n_startup_trials: 10
-          n_trials: 30
-          n_jobs: 1
-          study_direction: "minimize"
+     OptunaConfig:
+       n_startup_trials: 10
+       n_trials: 30
+       n_jobs: 1
+       study_direction: "minimize"
 
-    The ``TrainingConfig`` section requires a ``seed``. It makes the run
-    reproducible: the dataset split, step sampling, validation map order, and
-    model weight initialization are seeded with it, each trial re-seeds from a
-    seed derived from (study seed, trial number), and the Optuna sampler is
-    seeded with the study seed — so two runs of the same configuration produce
-    identical splits, samples, and hyper-parameter suggestions.
+   The ``TrainingConfig`` section requires a ``seed``. It makes the run
+   reproducible: the dataset split, step sampling, validation map order, and
+   model weight initialization are seeded with it, each trial re-seeds from a
+   seed derived from (study seed, trial number), and the Optuna sampler is
+   seeded with the study seed — so two runs of the same configuration produce
+   identical splits, samples, and hyper-parameter suggestions.
 
-    Each trial writes its artifacts to ``report/trials/<trial_number>/``
-    (model weights, model kwargs, and the SVM statistics table for SVM
-    validation), so parallel trials cannot overwrite each other; the study
-    snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
+   Each trial writes its artifacts to ``report/trials/<trial_number>/``
+   (model weights, model kwargs, and the SVM statistics table for SVM
+   validation), so parallel trials cannot overwrite each other; the study
+   snapshots ``study.pkl`` and ``trial.pkl`` stay at the top of ``report/``.
+
+   Each trial also runs in its own MLflow run named after the trial number.
+   After each trial finishes, the ``study.pkl`` and ``trial.pkl`` snapshots
+   are logged to that run together with a ``best_trial_number`` tag holding
+   the best trial among those completed so far;
+   ``derive_dataset_improvement_config.py`` locates the best trial's
+   artifacts through that tag.
+
+   A trial stops early when its validation result stops improving. On early
+   stop (or after the final epoch), the best checkpoint — the epoch with the
+   best validation result — is restored into the model and exported, so the
+   retained ``model.pth`` and the highest-epoch ``<epoch>/model.pth`` MLflow
+   artifact hold the best weights, and the trial's value is that best
+   result, not the last epoch's.
 
 2. Move to the ``AIAgent`` directory and run training:
 
@@ -106,6 +123,11 @@ improving the dataset in the other kind of run.
 
        cd AIAgent
        poetry run python3 run_training.py --config path/to/config.yml
+
+   The entrypoints are CWD-independent: the artifacts always land under
+   ``AIAgent/`` and the config's relative paths resolve against the config
+   file's own directory, so the command works from any directory (the
+   ``cd`` only locates the script).
 
 Dataset improvement with symbolic virtual machines
 ---------------------------------------------------
@@ -140,6 +162,9 @@ from the previous step are used to obtain relatively good ones:
          ...
          trial_uri: mlflow-artifacts:/<EXPERIMENT_ID>/<RUN_ID>/artifacts/trial.pkl
 
+   The derived config's path values are absolute (anchored against the base
+   config's directory), so it loads from any directory.
+
 4. Move to the ``AIAgent`` directory, launch the server manager, and run
    training with the derived config:
 
@@ -148,6 +173,12 @@ from the previous step are used to obtain relatively good ones:
        cd AIAgent
        poetry run python3 launch_servers.py --config path/to/derived.yml
        poetry run python3 run_training.py --config path/to/derived.yml
+
+   The improvement run replays the frozen trial through a fresh study,
+   enqueuing its hyper-parameters once per replay. It persists
+   ``study.pkl``/``trial.pkl`` and the per-trial MLflow artifacts exactly
+   like a tuning run, so the next round of the loop derives its config the
+   same way.
 
 SVM validation failure flag
 ---------------------------
@@ -162,6 +193,22 @@ When enabled:
   a warning; and
 - any failed map (timeout, engine error, ...) fails the run with a non-zero
   exit.
+
+.. _svm-validation-step-metric:
+
+SVM validation step metric
+--------------------------
+
+The ``steps_count`` reported per map (in the per-trial statistics table and in
+the dataset ``Result``) is the number of **steps the model/agent played**: the
+server-reported total trace steps minus ``StepsToStart``. The first
+``StepsToStart`` steps of a map are played by the default searcher (BFS/DFS)
+before the model takes over — in ``svms_each_step`` mode the agent's connection
+is only used after that start phase, and in ``svms_model`` mode the server plays
+the start steps itself before handing control to the ONNX model. Subtracting
+them makes the metric identical across both validation modes for an identical
+game outcome, so per-map statistics and early-stopping signals are comparable
+regardless of the mode used.
 
 .. _guide-symbolic-execution:
 

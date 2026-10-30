@@ -9,11 +9,15 @@ on:
     paths:
       - 'tools/runstrat/**'
 
+concurrency:
+  group: runstrat_tool-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  calculate-dockerfile-hash:
-    runs-on: self-hosted
-    container:
-      image: ubuntu:24.04
+  ensure-image:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
     outputs:
       dockerfile_hash: ${{ steps.hash.outputs.hash }}
     steps:
@@ -25,66 +29,53 @@ jobs:
         run: |
           HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
           echo "hash=$HASH" >> $GITHUB_OUTPUT
-          
+
+      - name: Wait for the image to be published
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # publish_image.yaml builds and pushes the image for this hash;
+          # on pull requests it starts at the same time as this pipeline,
+          # so the image may not be published yet. Poll instead of racing
+          # it. The gate runs on a GitHub-hosted runner on purpose:
+          # occupying the single self-hosted runner here could starve the
+          # publish job itself. Bounded: 60 x 30 s = 30 min.
+          for attempt in $(seq 1 60); do
+              status=0
+              .github/scripts/check_ci_image.sh "${{ steps.hash.outputs.hash }}" || status=$?
+              if [ "$status" -eq 0 ]; then
+                  exit 0
+              fi
+              if [ "$status" -ne 1 ]; then
+                  exit "$status"
+              fi
+              echo "attempt $attempt/60: image not published yet, retrying in 30 s"
+              sleep 30
+          done
+          echo "::error::image for Dockerfile hash ${{ steps.hash.outputs.hash }} was not published within 30 minutes"
+          exit 1
+
   build-and-launch:
-    needs: calculate-dockerfile-hash
+    needs: [ensure-image]
     runs-on: self-hosted
     container:
-      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+      image: ghcr.io/pysymgym/pysymgym:${{ needs.ensure-image.outputs.dockerfile_hash }}
     permissions:
       packages: read
     steps:
-      - name: Debug
-        run: |
-          printenv
-          dotnet --version
+      - name: Prepare the Python environment
+        uses: ./.github/actions/checkout-poetry
 
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Build the .NET game server and maps
+        uses: ./.github/actions/dotnet-build
         with:
-          submodules: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.11.8"
-
-      - name: Install poetry
-        run: |
-          pip install poetry
-
-      - name: Install dependencies
-        run: |
-          # --sync: self-hosted runners cache poetry's venv across runs; a
-          # plain install never removes packages dropped from the lockfile.
-          poetry --ansi install -q --sync
-
-      - name: Verify cached venv integrity
-        run: |
-          # Same shared self-hosted venv as the e2e workflows: see the
-          # matching step in e2e_build_and_run.yml for why a file-broken
-          # venv must be rebuilt when torch cannot import.
-          if ! poetry run python -c "import torch" 2>/dev/null; then
-              echo "torch import failed — rebuilding cached venv from scratch"
-              rm -rf "$(poetry env info -p)"
-              poetry --ansi install -q --sync
-              poetry run python -c "import torch"
-          fi
-
-      - name: Build V# game server
-        working-directory: ./GameServers/VSharp/
-        run: |
-          dotnet build VSharp.ML.GameServer.Runner -c Release
-
-      - name: Build .NET maps for tests
-        working-directory: ./tools/runstrat/resources
-        run: |
-          dotnet build ForTests -c Release
+          maps-working-directory: ./tools/runstrat/resources
+          maps-project: ForTests
 
       - name: Run tests
         working-directory: ./tools/runstrat
         run: |
-          poetry run pytest tests -sv -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
+          poetry run pytest tests -sv -m e2e -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
 
       - name: Upload artifacts
         if: always()

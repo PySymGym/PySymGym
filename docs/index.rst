@@ -28,5 +28,7 @@ Documentation map
    integration
    dataset
    results
+   setup
    developer
+   testing
    reference/index

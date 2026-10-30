@@ -1,29 +1,34 @@
 """Small helpers shared across the agent packages."""
 
-from typing import TypeVar
-
-T = TypeVar("T")
+from pathlib import Path
 
 
-def inheritors(cls: T) -> set[T]:
-    """Return every transitive subclass of ``cls``.
+def require_absolute_path(value: str | Path) -> Path:
+    """Return ``value`` as an absolute :class:`~pathlib.Path`.
+
+    Relative paths are rejected: they are ambiguous without an anchor, and
+    the config loader resolves them against the config file's location
+    before the config models see them.
 
     Parameters
     ----------
-    cls : T
-        The base class to collect subclasses of.
+    value : str | Path
+        The path to check.
 
     Returns
     -------
-    set[T]
-        All direct and indirect subclasses of ``cls``.
+    Path
+        The same path, as an absolute Path.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not absolute.
     """
-    subclasses: set[T] = set()
-    work = [cls]
-    while work:
-        parent = work.pop()
-        for child in parent.__subclasses__():
-            if child not in subclasses:
-                subclasses.add(child)
-                work.append(child)
-    return subclasses
+    path = Path(value)
+    if not path.is_absolute():
+        raise ValueError(
+            f"{value!r} is not an absolute path; relative config paths are "
+            "resolved against the config file's location at load time"
+        )
+    return path

@@ -1,0 +1,26 @@
+
+# comparison by coverage on all methods (outer join)
+- by_column: coverage
+  datasource: OUTER_JOIN_DF
+  divider_line: true
+  exp_name: coverage
+  less_is_winning: false
+  metric: '%'
+
+# comparison by number of tests on all methods (outer join)
+- by_column: tests
+  datasource: OUTER_JOIN_DF
+  divider_line: true
+  exp_name: tests
+  less_is_winning: true
+  metric: count
+  scale: symlog
+
+# comparison by number of errors on all methods (outer join)
+- by_column: errors
+  datasource: OUTER_JOIN_DF
+  divider_line: true
+  exp_name: errors
+  less_is_winning: false
+  metric: count
+  scale: symlog

@@ -1,12 +1,20 @@
 from pathlib import Path
 
-# CWD-relative artifact root. Everything under it (models, trials, datasets,
-# study/trial pickles, the app log) is generated at runtime and git-ignored.
-REPORT_PATH = Path("./report")
+AI_AGENT_PATH = Path(__file__).resolve().parent
+REPO_ROOT = AI_AGENT_PATH.parent
+RESOURCES_PATH = REPO_ROOT / "resources"
+
+# Artifact root, anchored to the AIAgent directory (located via __file__, the
+# same mechanism RESOURCES_PATH uses for the repo root) instead of the CWD:
+# running the entrypoints from anywhere writes the generated artifacts
+# (models, trials, datasets, study/trial pickles, the app log) to the same
+# place. Everything under it is generated at runtime and git-ignored.
+REPORT_PATH = AI_AGENT_PATH / "report"
 PRETRAINED_MODEL_PATH = REPORT_PATH / "models"
 RAW_DATASET_PATH = REPORT_PATH / "SerializedEpisodes"
 PROCESSED_DATASET_PATH = REPORT_PATH / "dataset_path_condition"
-LOG_PATH = Path("./ml_app.log")
+LOG_PATH = AI_AGENT_PATH / "ml_app.log"
+BROKER_LOG_PATH = AI_AGENT_PATH / "instance_manager.log"
 MODEL_FILE_NAME = "model.pth"
 CURRENT_STUDY_PATH = REPORT_PATH / "study.pkl"
 CURRENT_TRIAL_PATH = REPORT_PATH / "trial.pkl"

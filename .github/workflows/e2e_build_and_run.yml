@@ -21,10 +21,10 @@ on:
         default: ""
 
 jobs:
-  calculate-dockerfile-hash:
-    runs-on: self-hosted
-    container:
-      image: ubuntu:24.04
+  ensure-image:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
     outputs:
       dockerfile_hash: ${{ steps.hash.outputs.hash }}
     steps:
@@ -36,6 +36,31 @@ jobs:
         run: |
           HASH=$(sha1sum .github/docker/Dockerfile | cut -d ' ' -f 1)
           echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Wait for the image to be published
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # publish_image.yaml builds and pushes the image for this hash;
+          # on pull requests it starts at the same time as this pipeline,
+          # so the image may not be published yet. Poll instead of racing
+          # it. The gate runs on a GitHub-hosted runner on purpose:
+          # occupying the single self-hosted runner here could starve the
+          # publish job itself. Bounded: 60 x 30 s = 30 min.
+          for attempt in $(seq 1 60); do
+              status=0
+              .github/scripts/check_ci_image.sh "${{ steps.hash.outputs.hash }}" || status=$?
+              if [ "$status" -eq 0 ]; then
+                  exit 0
+              fi
+              if [ "$status" -ne 1 ]; then
+                  exit "$status"
+              fi
+              echo "attempt $attempt/60: image not published yet, retrying in 30 s"
+              sleep 30
+          done
+          echo "::error::image for Dockerfile hash ${{ steps.hash.outputs.hash }} was not published within 30 minutes"
+          exit 1
 
   detect-gpu:
     runs-on: self-hosted
@@ -49,10 +74,8 @@ jobs:
           # nvidia-container-toolkit configuration; probe both and verify the
           # device is actually injected into a disposable container. When no
           # flag works (no GPU, broken driver, missing toolkit) pass nothing:
-          # the container then starts device-less and AIAgent/config.py falls
-          # back to CPU at runtime.
-          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
-          echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
+          # the container then starts device-less and ml.device.get_device
+          # falls back to CPU at runtime.
           echo "docker client: $(docker version --format '{{.Client.Version}}' 2>&1)"
           for flag in "--gpus all" "--runtime nvidia"; do
               if err=$(docker run --rm $flag ubuntu:24.04 test -e /dev/nvidia0 2>&1); then
@@ -73,10 +96,10 @@ jobs:
           echo "options=" >> "$GITHUB_OUTPUT"
 
   build-and-launch:
-    needs: [calculate-dockerfile-hash, detect-gpu]
+    needs: [ensure-image, detect-gpu]
     runs-on: self-hosted
     container:
-      image: ghcr.io/pysymgym/pysymgym:${{ needs.calculate-dockerfile-hash.outputs.dockerfile_hash }}
+      image: ghcr.io/pysymgym/pysymgym:${{ needs.ensure-image.outputs.dockerfile_hash }}
       options: ${{ needs.detect-gpu.outputs.container-options }}
     permissions:
       packages: read
@@ -85,58 +108,30 @@ jobs:
       # on it) is identical between runs; part of the #583 reproducibility fix.
       PYTHONHASHSEED: "0"
     steps:
-      - name: Debug
-        run: |
-          printenv
-          dotnet --version
+      # Checkout, Python setup, pinned Poetry, and the self-healing
+      # dependency install live once in the shared composite action; the
+      # .NET builds (V# game server + maps) in the other one. See
+      # docs/developer.rst, "Self-hosted end-to-end workflows".
+      - name: Prepare the Python environment
+        uses: ./.github/actions/checkout-poetry
 
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Verify GPU compatibility with the locked torch
+        # The container may have a GPU device passed through (detect-gpu)
+        # that the locked torch cannot run on (a compute capability the
+        # wheel has no kernels for): the first CUDA op would then crash
+        # mid-training. The probe runs the exact torch the pipeline trains
+        # with (the venv exists only from this point on — the image ships
+        # no Python); on incompatibility it logs why and hides the device
+        # from torch for the rest of the run (CUDA_VISIBLE_DEVICES=) so the
+        # pipeline degrades to the CPU flow instead of failing. #662
+        run: |
+          poetry run python AIAgent/probe_gpu_torch.py
+
+      - name: Build the .NET game server and maps
+        uses: ./.github/actions/dotnet-build
         with:
-          submodules: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.11.8"
-
-      - name: Install poetry
-        run: |
-          pip install poetry==2.2.1
-
-      - name: Install dependencies
-        run: |
-          # Self-hosted runners cache poetry's venv across runs, and a plain
-          # install never removes packages dropped from the lockfile (stale
-          # pynvml kept leaking into the env after #617-S1 removed it).
-          # --sync purges them.
-          poetry --ansi install --sync
-
-      - name: Verify cached venv integrity
-        run: |
-          # The cached venv can be file-broken even when poetry considers it
-          # complete: a foreign CUDA stack (nvidia-*-cu13) that once lived
-          # here shares site-packages paths with our nvidia-*-cu12 packages
-          # (both own e.g. nvidia/cudnn/lib/libcudnn.so.9), and --sync's
-          # removal of the foreign stack deletes the shared libraries,
-          # breaking 'import torch'. If torch cannot import, rebuild the
-          # venv from scratch once; --sync keeps it clean afterwards.
-          if ! poetry run python -c "import torch" 2>/dev/null; then
-              echo "torch import failed — rebuilding cached venv from scratch"
-              rm -rf "$(poetry env info -p)"
-              poetry --ansi install --sync
-              poetry run python -c "import torch"
-          fi
-
-      - name: Build V# game server
-        working-directory: ./GameServers/VSharp/
-        run: |
-          dotnet build VSharp.ML.GameServer.Runner -c Release
-
-      - name: Build .NET game maps
-        working-directory: ./maps/DotNet/Maps
-        run: |
-          dotnet build Root -c Release
+          maps-working-directory: ./maps/DotNet/Maps
+          maps-project: Root
 
       - name: Generate initial data for training
         working-directory: ./GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0

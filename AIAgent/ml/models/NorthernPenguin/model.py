@@ -1,7 +1,7 @@
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv, GCN
-from ml.dataset import NUM_PC_FEATURES
+from ml.schema import NUM_PC_FEATURES
 
 
 class StateModelEncoder(torch.nn.Module):
@@ -62,7 +62,7 @@ class StateModelEncoder(torch.nn.Module):
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 
         # RGCNConv on empty edges is not the identity (it returns x@root+bias),
-        # and empty v-v edges are realistic (null_if_empty in ml/dataset.py),
+        # and empty v-v edges are realistic (null_if_empty in ml/dataset/tensors.py),
         # so skipping conv1 must stay data-driven. A Python `if` on a tensor
         # property makes the ONNX tracer bake the sample's value in with a
         # TracerWarning; torch.where keeps the skip data-driven (the exporter

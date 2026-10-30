@@ -1,0 +1,8 @@
+
+# comparison by coverage without an exp_name (fallback filename)
+- by_column: coverage
+  datasource: INNER_JOIN_DF
+  divider_line: true
+  exp_name: null
+  less_is_winning: false
+  metric: '%'

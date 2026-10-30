@@ -16,7 +16,6 @@ TrainingConfig:
 ValidationConfig:
   validation_mode:
     val_type: loss
-    process_count: 1
     batch_size: 50
 
 MLFlowConfig:

@@ -15,6 +15,7 @@ from pathlib import Path
 import mlflow
 import yaml
 from common.config.config import Config
+from common.config.loader import anchor_paths
 from mlflow.tracking import MlflowClient
 from paths import MODEL_FILE_NAME, CURRENT_TRIAL_PATH
 from run_training import BEST_TRIAL_NUMBER_TAG
@@ -193,13 +194,20 @@ def derive_config(base_config_path: Path, output_config_path: Path) -> tuple[str
         raise SystemExit(f"{base_config_path} has no OptunaConfig section")
     data["weights_uri"] = weights_uri
     data["OptunaConfig"]["trial_uri"] = trial_uri
-    # Reuse the config model's validation (notably that weights_uri and
-    # trial_uri must be set together) before writing anything.
-    Config(**data)
+    # The derived config is written next to the tuning artifacts (report/),
+    # not next to the base config, so the base's relative path values would
+    # anchor against the wrong directory when the consuming entrypoint loads
+    # it (they resolve against the config file's own location). Anchor them
+    # against the base config's own directory and write the result absolute:
+    # the derived config is self-contained and loads from any CWD. The
+    # anchored copy doubles as the validation input (notably that weights_uri
+    # and trial_uri must be set together).
+    anchored = anchor_paths(data, base_config_path.resolve().parent)
+    Config(**anchored)
 
     output_config_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_config_path, "w") as file:
-        yaml.safe_dump(data, file, sort_keys=False)
+        yaml.safe_dump(anchored, file, sort_keys=False)
 
     print(f"weights_uri: {weights_uri}")
     print(f"trial_uri: {trial_uri}")

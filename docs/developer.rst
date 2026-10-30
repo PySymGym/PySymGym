@@ -73,21 +73,103 @@ links must resolve. The pull request template lists these checks, and the docs
 build (``.github/workflows/docs.yaml``) enforces them. See ``CONTRIBUTING.md``
 for the pointers.
 
+Submodules
+----------
+
+The repository pins third-party code as submodules; ``.gitmodules`` is the
+source of truth for their URLs and paths.
+
+**Pointer bumps.** Moving a submodule to a new commit is an explicit task, not
+an incidental change: the bump must pass the matching build target (for maps,
+``make build_maps``) and CI before it lands.
+
+**Pin stability.** A submodule pointer is *stable* when the commit it names
+is reachable from a stable ref of the submodule's remote — a tag, or the
+default branch. A pointer to a bare feature-branch commit is unstable: if the
+branch is force-pushed or deleted, ``git submodule update`` breaks on every
+clone and the build stops being reproducible, while CI silently tracks moving
+WIP code instead of a stable baseline. Every pointer must therefore be
+stable, and CI enforces it: the ``submodule-pins`` job of
+``.github/workflows/python_tests.yaml`` runs ``make check_submodule_pins``,
+which fails when a pointer is not reachable from any tag or from the default
+branch of its remote. No ``branch =`` entries are used in ``.gitmodules``:
+tracking a moving branch with ``git submodule update --remote`` is the
+opposite of pinning.
+
+**How to bump a pin.** The procedure depends on who owns the remote:
+
+- **Engine forks** (``GameServers/VSharp``, ``GameServers/usvm`` — both in
+  the PySymGym org): pin to a tag. When new fork work must be pinned, cut an
+  annotated tag on the fork at that commit and point the submodule at the
+  tag's commit. The tag series starts at ``v0.2.0`` for VSharp (after the
+  inherited 2019 upstream ``v0.1.0``) and at ``v0.1.0`` for usvm; bump the
+  patch level for fixes and the minor level for new functionality.
+- **.NET map forks** (``maps/DotNet/Maps/*``): pin to a commit on the fork's
+  default branch. Land fork-local changes on the default branch first (a
+  fast-forward when the branch has no unique commits), then point the
+  submodule at the landed commit.
+- **Upstream repositories** (``maps/Java/Maps/LogicNG``,
+  ``maps/Java/Maps/jflex``): no refs can be created there, so pin to a commit
+  that is already reachable from the upstream default branch or a tag.
+
+**.NET forks.** The .NET repositories — the maps and the V# game server
+(``GameServers/VSharp``) — are forks in the PySymGym org: they are pinned,
+not dependencies to track. Syncing a fork to newer upstream content is an
+explicit task and must keep the fork's ``TargetFramework`` compatible with
+``maps/DotNet/Maps/Root`` (net8.0).
+
+**Health.** Submodule worktrees can arrive wiped on a fresh clone; detection
+and repair are documented on the :doc:`setup` page
+(``make check_submodules``).
+
+Path conventions
+----------------
+
+Nothing in the entrypoints resolves a path against the current working
+directory; two anchors cover the two kinds of paths:
+
+- **Runtime artifact paths** (``AIAgent/paths.py``: ``REPORT_PATH``,
+  ``LOG_PATH``, ``BROKER_LOG_PATH`` and everything derived from them, plus the
+  ``SaveIfFailOrTimeout.save_path`` default) are anchored to
+  the **AIAgent directory**, located via ``__file__`` the same way
+  ``RESOURCES_PATH`` locates the repo root. The entrypoints therefore run from
+  any CWD and always write their generated artifacts (models, trials,
+  datasets, study/trial pickles, logs) under ``AIAgent/``. AIAgent — rather
+  than the repo root — is the anchor because the e2e pipeline stages the
+  dataset at ``AIAgent/report/SerializedEpisodes`` and collects
+  ``AIAgent/report/study.pkl`` and ``AIAgent/*.log``.
+- **Config-file paths** (``dataset_base_path``, ``dataset_description``,
+  ``server_working_dir``) are anchored to the **config file's own directory**:
+  a relative value in the config is resolved against the directory the config
+  file lives in, never against the CWD. The config models themselves require
+  absolute paths — a relative value is ambiguous without an anchor and is
+  rejected at construction. The entrypoints load their config through
+  ``common.config.loader.load_config``, which does the anchoring and then
+  validates that every path names an existing filesystem object of the
+  required kind (``dataset_base_path`` and ``server_working_dir``: directory,
+  ``dataset_description``: file), failing with an error that names every
+  offending key and its location in the config.
+  ``derive_dataset_improvement_config.py`` writes its derived config with the
+  path values anchored against the **base** config's directory (absolute):
+  the derived config is written next to the tuning artifacts, not next to the
+  base, so the base's relative values would anchor against the wrong
+  directory there.
+
 Test pipeline
 -------------
 
-Tests are run per component with pytest:
+The testing system — the ``unit``/``integration``/``e2e`` taxonomy, the exact
+commands, the fixtures, and the coverage policy — is documented in
+:doc:`testing`, which is the single source of truth. The fast tier is one
+command from the repository root:
 
 .. code-block:: console
 
-    poetry run pytest tests -sv
+    poetry run pytest        # or: make test-unit
 
-from ``AIAgent/``, ``tools/compstrat/``, and ``tools/runstrat/``. CI runs the
-same commands in the "Run main repo tests" and "Run compstrat tool tests"
-steps of ``.github/workflows/python_tests.yaml``.
-
-There is no coverage threshold; the suite is expected to report 0 failures and
-0 skipped.
+CI (``.github/workflows/python_tests.yaml``) runs each component suite and then
+a repository-root coverage step that enforces the ratchet documented in
+:doc:`testing`.
 
 Quality checks
 --------------
@@ -138,9 +220,11 @@ Four workflow files contain jobs that run on a self-hosted runner
 ``e2e_build_and_run.yml`` (the shared pipeline called by
 ``build_and_run.yaml`` and ``build_and_run_model_val.yaml``),
 ``build_and_test_usvm.yaml``, ``publish_image.yaml`` and
-``runstrat_tool.yaml``. All of those jobs also declare a ``container:``, so
-the work happens inside a container while the workflow itself is still driven
-by the runner.
+``runstrat_tool.yaml``. All of those jobs also declare a ``container:`` —
+except the ``ensure-image`` gate jobs in ``e2e_build_and_run.yml`` and
+``runstrat_tool.yaml``, which run container-less on GitHub-hosted runners —
+so the work happens inside a container while the workflow itself is still
+driven by the runner.
 
 Every action referenced by ``.github/workflows/`` runs on Node.js 24, which
 requires Actions Runner ``v2.327.1`` or newer. The GitHub-hosted runners
@@ -175,6 +259,47 @@ training run, relative to ``AIAgent/``) and the optional
 such a thin caller with its own name and concurrency group — do not copy the
 pipeline.
 
+**Shared setup and build steps.** The pipeline's environment preparation
+(checkout with submodules, Python 3.11.8, pinned Poetry, the self-healing
+dependency install, the cached-venv integrity check) lives once in the
+composite action ``.github/actions/checkout-poetry``, and the .NET builds
+(V# game server plus the caller-selected maps project) in
+``.github/actions/dotnet-build``. The e2e pipeline and the runstrat pipeline
+(``runstrat_tool.yaml``) are thin configurations of those actions; the
+Poetry version they install is the one documented in ``README.md``.
+
+**Image publishing.** ``publish_image.yaml`` runs on pushes **and** pull
+requests that touch ``.github/docker/Dockerfile``. The pull-request trigger
+is load-bearing: a PR that changes the Dockerfile must publish the image for
+the new Dockerfile hash, or the build workflows — which compute the same
+hash from the same merge-commit checkout — cannot pull it and die with an
+opaque container-pull failure. The publish job first checks whether the
+image for the computed hash is already on GHCR (the same
+``.github/scripts/check_ci_image.sh`` the gates use) and skips the build and
+push when the manifest exists: the tag is a content hash, so a published
+image is immutable and re-pushing it is wasted work.
+
+**The base image is digest-pinned.** The tag is the sha1 of the Dockerfile,
+so the tag must address immutable content: a floating ``ubuntu:24.04`` tag
+would let the base update underneath an unchanged tag, and consumers would
+pull different content under the same name. The Dockerfile therefore pins
+the base by digest. Refreshing the pin is a deliberate act: inspect the
+current digest of ``ubuntu:24.04`` (for example with
+``docker buildx imagetools inspect ubuntu:24.04``) and update the ``FROM``
+line. The Dockerfile content changes, so does the tag, and the publish
+workflow republishes under the new tag — the ``ensure-image`` gates of the
+build workflows pick it up as usual.
+
+**The build jobs gate on the published image.** Publishing the image is a
+separate workflow from building with it, and on pull requests both start at
+the same time — so a build job can start before the image exists and die
+with an opaque container-pull failure. Both pipelines therefore start
+with an ``ensure-image`` job that computes the same Dockerfile hash and polls
+GHCR (``.github/scripts/check_ci_image.sh``) until the image's manifest
+appears, bounded at 60 × 30 s. The gate runs on a GitHub-hosted runner on
+purpose: it must not occupy the single self-hosted runner the publish job
+needs, or the gate could starve the very job it waits for.
+
 **Servers live in the step that uses them.** MLflow and the game-server
 broker are started inside the same step as the training command that talks to
 them, gated on readiness polling (an HTTP ``/health`` check for MLflow, a TCP
@@ -185,15 +310,16 @@ a fixed sleep additionally races with the variable startup time. The polling
 itself is ``AIAgent/wait_for_service.py`` (stdlib only, ``http`` and ``tcp``
 subcommands), called from the workflow step.
 
-**Triggers and concurrency.** The four self-hosted workflows that build or
-test code (``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
-``runstrat_tool.yaml``, ``build_and_test_usvm.yaml``) run only on pushes to
-``main`` and on pull requests — feature-branch pushes do not trigger them, so
-a dependabot bump does not trigger the long e2e pipeline twice (push and pull
-request) and stale runs do not queue up. The two e2e workflows additionally
-use a per-workflow concurrency group keyed by ref that cancels in-progress
-runs for pull requests only: a new push to the same branch supersedes the
-stale run, while a run started by a push to ``main`` is never cancelled.
+**Triggers and concurrency.** The five self-hosted workflows
+(``build_and_run.yaml``, ``build_and_run_model_val.yaml``,
+``runstrat_tool.yaml``, ``build_and_test_usvm.yaml``,
+``publish_image.yaml``) run only on pushes to ``main`` and on pull requests —
+feature-branch pushes do not trigger them, so a dependabot bump does not
+trigger the long pipelines twice (push and pull request) and stale runs do
+not queue up. Each uses a per-workflow concurrency group keyed by ref that
+cancels in-progress runs for pull requests only: a new push to the same
+branch supersedes the stale run, while a run started by a push to ``main`` is
+never cancelled.
 
 **Dataset improvement continues from tuning.** In ``build_and_run.yaml`` the
 tuning run and the dataset-improvement run share one MLflow experiment. The
@@ -227,7 +353,7 @@ Two properties make this a workflow-only change:
   Python dependencies are installed at runtime by ``poetry install`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
   with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
-- Device selection needs no code change: ``AIAgent/config.py`` picks
+- Device selection needs no code change: ``ml.device.get_device`` picks
   ``cuda:0`` when available and falls back to CPU, and the training step
   prints the selected device at startup — every CI run logs which path it
   took.
@@ -242,6 +368,26 @@ flag to the build-and-launch job as ``container.options``. When no flag
 works (no GPU, broken driver, missing toolkit) it passes nothing: the
 container starts device-less and the Python side runs on CPU — the e2e run
 degrades instead of failing.
+
+**The locked torch must be able to run the GPU (#662).** Passthrough is
+necessary but not sufficient: a GPU whose compute capability the locked
+torch build has no kernels for would pass the passthrough probe and then
+crash the first CUDA op mid-training ("no kernel image is available for
+execution on the device"). The pipeline therefore verifies compatibility
+where torch is actually available — a step in the build-and-launch job,
+after the Python environment is prepared: the image itself ships no Python
+(the venv with the locked torch is created at runtime by the
+checkout-poetry action), so the probe cannot run earlier.
+``AIAgent/probe_gpu_torch.py`` runs a small CUDA op on ``cuda:0`` with the
+exact torch the pipeline trains with. The verdict is the op, not the
+arch-list membership: a capability absent from
+``torch.cuda.get_arch_list()`` can still work through driver JIT of bundled
+PTX (the locked torch 2.7.1 runs on the runner's sm_61 GPU this way), and
+an arch-list hit proves nothing if the op fails. On failure the probe logs
+the device, its compute capability, the torch version and arch list, and
+hides the device from torch for the rest of the run (an empty
+``CUDA_VISIBLE_DEVICES`` via ``$GITHUB_ENV``), so ``ml.device.get_device``
+falls back to CPU and the e2e run degrades instead of failing.
 
 CI as source of truth
 ---------------------

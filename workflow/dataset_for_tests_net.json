@@ -167,23 +167,7 @@
       "NameOfObjectToCover": "_2D_DynamicProgramming.InterleavingString.InterleavingStringProblem.IsInterleave",
       "MapName": "IsInterleave_0"
    },
-   {
-      "StepsToPlay": 500,
-      "DefaultSearcher": "BFS",
-      "StepsToStart": 0,
-      "AssemblyFullName": "AdvancedGraphs.dll",
-      "NameOfObjectToCover": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice",
-      "MapName": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice_0"
-   },
-   {
-      "StepsToPlay": 500,
-      "DefaultSearcher": "DFS",
-      "StepsToStart": 50,
-      "AssemblyFullName": "AdvancedGraphs.dll",
-      "NameOfObjectToCover": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice",
-      "MapName": "AdvancedGraphs.CheapestFlightsWithinKStops.CheapestFlightsWithinKStopsProblem.FindCheapestPrice_50_DFS"
-   },
-   {
+    {
       "StepsToPlay": 500,
       "DefaultSearcher": "BFS",
       "StepsToStart": 0,

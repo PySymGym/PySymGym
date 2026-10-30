@@ -3,9 +3,17 @@ import os
 from pathlib import Path
 import argparse
 
-sys.path.append(os.path.join("..", "..", "AIAgent"))
-
+from atomic_io import atomic_write_text
 from common.game import GameMap
+
+# The training log (AIAgent/ml_app.log) is free-form text, so bad-episode
+# detection is coupled to its exact phrasing: a bad episode is logged as
+# "<GAME_OVER_MARKER> on <MapName> ...". Until a structured log source
+# exists, the coupling is kept explicit in these two constants -- the single
+# place that knows the log format -- instead of literals scattered through
+# the parsing loop.
+GAME_OVER_MARKER = "immediate GameOver"
+GAME_OVER_MAP_DELIMITER = "on "
 
 
 def get_bad_episodes(log_path):
@@ -18,8 +26,8 @@ def get_bad_episodes(log_path):
         lines = f.readlines()
 
     for line in lines:
-        if "immediate GameOver" in line:
-            parts = line.split("on ")
+        if GAME_OVER_MARKER in line:
+            parts = line.split(GAME_OVER_MAP_DELIMITER)
             if len(parts) > 1:
                 episode_name = parts[1].split()[0]
                 if episode_name not in bad_episodes:
@@ -43,8 +51,7 @@ def clean(log_path, dataset_path):
         key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher)
     )
 
-    with open(dataset_path, "w") as f:
-        f.write(GameMap.schema().dumps(result, many=True, indent=4))
+    atomic_write_text(dataset_path, GameMap.schema().dumps(result, many=True, indent=4))
 
 
 def main():
