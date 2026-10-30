@@ -31,6 +31,17 @@ directory with ``AIAgent`` on ``PYTHONPATH``:
     (indicated by an "immediate GameOver"). Such episodes are useless for
     training and are discarded.
 
+Both tools rewrite the dataset file atomically: the new content is written
+to a temporary file in the same directory and then renamed over the dataset
+(``os.replace``, see ``tools/dataset_tools/atomic_io.py``), so a crash or
+``KeyboardInterrupt`` mid-write leaves the previous dataset intact instead
+of a truncated file.
+
+``clean.py`` detects bad episodes from the free-form training log; the log
+phrasing it matches (``immediate GameOver on <MapName>``) is pinned by the
+named constants at the top of the module until a structured log source
+exists.
+
 Basic usage:
 
 .. code-block:: console
