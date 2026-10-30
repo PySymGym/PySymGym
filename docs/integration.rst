@@ -98,6 +98,8 @@ envelope** (JSON-in-JSON) — see the encoding note below.
   ``NameOfObjectToCover`` (str), ``DefaultSearcher`` (str, ``"BFS"`` or
   ``"DFS"``), ``MapName`` (str).
 - ``step`` — body: ``StateId`` (int), ``PredictedStateUsefulness`` (float).
+  In ``svms_each_step`` mode the agent sends the model's predicted value for
+  the chosen (argmax) state.
 - ``stop`` — body: an empty object. The servers handle it; the client does
   not send it today.
 

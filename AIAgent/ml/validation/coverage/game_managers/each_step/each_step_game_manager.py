@@ -33,6 +33,9 @@ from torch_geometric.data.hetero_data import HeteroData
 from websocket import WebSocket
 
 TimeDuration: TypeAlias = float
+# How often the play loop logs a progress heartbeat (#616): a stuck/slow map
+# must be diagnosable from the log alone.
+PROGRESS_LOG_EVERY_N_STEPS = 50
 # TODO: docs
 
 
@@ -108,12 +111,22 @@ class EachStepGameManager(BaseGameManager):
 
                 with_connector.send_step(
                     next_state_id=predicted_state_id,
-                    predicted_usefullness=42.0,  # left it a constant for now
+                    # The model's predicted value for the chosen (argmax)
+                    # state (#671): the output is (num_states, 1) and the
+                    # chosen state is the argmax, so its value is the max
+                    # element.
+                    predicted_usefullness=float(nn_output.max()),
                 )
 
                 _ = with_connector.recv_reward_or_throw_gameover()
                 steps_count += 1
                 self._last_step = steps_count
+                if steps_count % PROGRESS_LOG_EVERY_N_STEPS == 0:
+                    logging.info(
+                        f"<{self._with_predictor.name()}> {with_connector.map.MapName}: "
+                        f"step {steps_count}/{steps_to_play}, "
+                        f"{perf_counter() - start_time:.1f}s elapsed"
+                    )
         except Connector.GameOver as gameover:
             if game_state is None:
                 logging.warning(
