@@ -263,10 +263,13 @@ class TestEachStepGameManagerUnexhaustedSteps:
         assert "TestMap" in result.reason
         assert "67 of 200" in result.reason
 
-    def test_flag_on_fails_step_overrun(self, monkeypatch):
+    def test_flag_on_step_overrun_is_not_a_failure(self, monkeypatch):
+        # Unified with the send-model mode (#596): only an under-exhausted
+        # game (fewer steps than the budget without full coverage) is an
+        # engine defect; playing more steps than the budget is not.
         result = self.play(monkeypatch, True, coverage=96, steps=201)
-        assert isinstance(result, GameFailed)
-        assert "201 of 200" in result.reason
+        assert isinstance(result, GameResult)
+        assert result.steps_count == 201
 
     def test_flag_on_full_coverage_is_not_a_failure(self, monkeypatch):
         result = self.play(monkeypatch, True, coverage=100, steps=67)
