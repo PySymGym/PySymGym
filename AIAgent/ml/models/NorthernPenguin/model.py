@@ -1,7 +1,7 @@
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import TAGConv, SAGEConv, RGCNConv, ResGatedGraphConv, GCN
-from ml.dataset import NUM_PC_FEATURES
+from ml.schema import NUM_PC_FEATURES
 
 
 class StateModelEncoder(torch.nn.Module):

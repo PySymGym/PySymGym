@@ -14,13 +14,9 @@ import logging
 import pytest
 import torch
 import torch.nn as nn
-from ml.dataset import (
-    NUM_CFG_VERTEX_FEATURES,
-    NUM_PC_FEATURES,
-    NUM_STATE_FEATURES,
-    convert_input_to_tensor,
-)
+from ml.dataset import convert_input_to_tensor
 from ml.inference import TORCH, degenerate_counts, infer
+from ml.schema import NUM_CFG_VERTEX_FEATURES, NUM_PC_FEATURES, NUM_STATE_FEATURES
 from ml.models.NorthernPenguin.model import StateModelEncoder as NorthernPenguinEncoder
 from ml.training.train import train
 from torch_geometric.loader import DataLoader

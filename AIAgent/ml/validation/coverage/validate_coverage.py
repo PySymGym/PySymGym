@@ -16,8 +16,9 @@ from common.config.validation_config import (
     SVMValidationSendEachStep,
     SVMValidationSendModel,
 )
+from common.dataset import Result
 from common.game import GameMap2SVM
-from ml.dataset import Result, TrainingDataset
+from ml.dataset import TrainingDataset
 from ml.training.wrapper import TrainingModelWrapper
 from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
 from ml.validation.coverage.game_managers.each_step.each_step_game_manager import (

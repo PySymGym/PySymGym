@@ -8,15 +8,15 @@ from the production tensor schema; ``tmp_dataset`` provides an empty
 
 import pytest
 import torch
+from common.dataset import Result
 from ml.dataset import (
-    NUM_STATE_FEATURES,
-    Result,
     convert_input_to_tensor,
     flatten_dict,
     get_hetero_data,
     remove_extra_attrs,
 )
 from ml.inference import TORCH
+from ml.schema import NUM_STATE_FEATURES
 from torch_geometric.data import HeteroData
 
 pytestmark = pytest.mark.unit

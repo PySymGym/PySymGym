@@ -19,7 +19,7 @@ from common.config.validation_config import (
     SVMValidationSendEachStep,
     SVMValidationSendModel,
 )
-from ml.dataset import Result
+from common.dataset import Result
 from ml.validation.coverage import validate_coverage as vc
 from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
 from ml.validation.coverage.game_managers.each_step.each_step_game_manager import (

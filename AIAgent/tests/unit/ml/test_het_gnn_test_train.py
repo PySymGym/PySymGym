@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 import torch
 from ml import het_gnn_test_train
-from ml.dataset import NUM_PC_FEATURES, NUM_STATE_FEATURES
+from ml.schema import NUM_PC_FEATURES, NUM_STATE_FEATURES
 from ml.het_gnn_test_train import HetGNNTestTrain
 from ml.inference import TORCH
 from torch_geometric.data import HeteroData
