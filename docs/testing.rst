@@ -422,8 +422,9 @@ registry-resolved model class). The ``TestMain`` CLI seam tests drive
 fake (no export run): the exact dispatch kwargs (the loaded sample
 ``GameState``, the verification ``GameState``s in argv order, the
 registry-resolved model class, the ``yaml.safe_load``ed model kwargs, the
-forwarded paths), the empty ``--verify-on`` default, and the argparse
-``SystemExit`` for each missing required flag. The ``TestONNXVerification``
+forwarded paths), the empty ``--verify-on`` default, the argparse
+``SystemExit`` for each missing required flag, and the opset version
+(the default and ``--opset-version`` forwarded). The ``TestONNXVerification``
 tests pin the verification failure path with real exports and a
 monkeypatched ``onyx.onnx_run``: the verification compares the full torch
 and ONNX Runtime outputs element-wise with an explicit tolerance and raises
