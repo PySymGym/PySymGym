@@ -14,11 +14,13 @@ runs:
   using: composite
   steps:
     - name: Build V# game server
+      shell: bash
       working-directory: ./GameServers/VSharp/
       run: |
         dotnet build VSharp.ML.GameServer.Runner -c Release
 
     - name: Build .NET maps
+      shell: bash
       working-directory: ${{ inputs.maps-working-directory }}
       run: |
         dotnet build ${{ inputs.maps-project }} -c Release
