@@ -148,6 +148,120 @@ def test_double_process_is_idempotent(tmp_path, gamestate_factory, serial_pool):
 
 
 # ---------------------------------------------------------------------------
+# Degenerate-step filtering in the processing pipeline (#619)
+#
+# process_and_save_step skips steps whose converted graph is degenerate
+# (zero states or zero game vertices, per ml.inference.degenerate_counts)
+# and keeps zero-path-condition steps. The mutation helpers mirror
+# test_degenerate_graphs.py (cross-test imports are not possible under
+# --import-mode=importlib): zeroing a node type also clears the
+# cross-references to it, or convert_input_to_tensor would KeyError.
+# ---------------------------------------------------------------------------
+
+
+def _zero_states(gamestate_factory):
+    gs = gamestate_factory()
+    gs.States = []
+    for vertex in gs.GraphVertices:
+        vertex.States = []
+    return gs
+
+
+def _zero_vertices(gamestate_factory):
+    gs = gamestate_factory()
+    gs.GraphVertices = []
+    gs.Map = []
+    for state in gs.States:
+        state.History = []
+    return gs
+
+
+def _zero_pc(gamestate_factory):
+    gs = gamestate_factory()
+    gs.PathConditionVertices = []
+    for state in gs.States:
+        state.PathCondition = []
+    return gs
+
+
+def _add_raw_step(map_dir: Path, step_id: str, gs, moved_state: int) -> None:
+    (map_dir / f"{step_id}_gameState").write_text(json.dumps(gs.to_dict()))
+    (map_dir / f"{step_id}_movedState").write_text(str(moved_state))
+
+
+def test_process_skips_a_zero_states_step(
+    tmp_path, gamestate_factory, serial_pool, caplog
+):
+    raw = tmp_path / "raw"
+    processed = tmp_path / "processed"
+    raw.mkdir()
+    processed.mkdir()
+    ds = TrainingDataset(
+        raw_dir=raw, processed_dir=processed, train_percentage=1.0, n_jobs=1
+    )
+    map_dir = _populate_raw_map(raw, "mapA", gamestate_factory, {"3": 0})
+    _add_raw_step(map_dir, "7", _zero_states(gamestate_factory), 0)
+
+    with caplog.at_level(logging.WARNING):
+        ds.process()
+
+    # Only the normal step (raw id "3" -> 0.pt) is saved; the zero-states
+    # step (raw id "7") is skipped. Both the degenerate_counts warning and
+    # the skip warning (with the map/step identity) are expected.
+    out_dir = processed / "mapA"
+    assert sorted(p.name for p in out_dir.iterdir()) == ["0.pt", "result"]
+    assert "degenerate graph: 0 states, 3 game vertices" in caplog.messages
+    assert (
+        "skipping degenerate step mapA/7: 0 states, 3 game vertices" in caplog.messages
+    )
+
+
+def test_process_skips_a_zero_vertices_step(
+    tmp_path, gamestate_factory, serial_pool, caplog
+):
+    raw = tmp_path / "raw"
+    processed = tmp_path / "processed"
+    raw.mkdir()
+    processed.mkdir()
+    ds = TrainingDataset(
+        raw_dir=raw, processed_dir=processed, train_percentage=1.0, n_jobs=1
+    )
+    map_dir = _populate_raw_map(raw, "mapA", gamestate_factory, {"3": 0})
+    _add_raw_step(map_dir, "7", _zero_vertices(gamestate_factory), 0)
+
+    with caplog.at_level(logging.WARNING):
+        ds.process()
+
+    out_dir = processed / "mapA"
+    assert sorted(p.name for p in out_dir.iterdir()) == ["0.pt", "result"]
+    assert "degenerate graph: 2 states, 0 game vertices" in caplog.messages
+    assert (
+        "skipping degenerate step mapA/7: 2 states, 0 game vertices" in caplog.messages
+    )
+
+
+def test_process_keeps_a_zero_pc_step(tmp_path, gamestate_factory, serial_pool, caplog):
+    raw = tmp_path / "raw"
+    processed = tmp_path / "processed"
+    raw.mkdir()
+    processed.mkdir()
+    ds = TrainingDataset(
+        raw_dir=raw, processed_dir=processed, train_percentage=1.0, n_jobs=1
+    )
+    map_dir = _populate_raw_map(raw, "mapA", gamestate_factory, {"3": 0})
+    _add_raw_step(map_dir, "7", _zero_pc(gamestate_factory), 0)
+
+    with caplog.at_level(logging.WARNING):
+        ds.process()
+
+    # A state with no path condition is valid: the step is saved and no
+    # skip is logged.
+    out_dir = processed / "mapA"
+    assert sorted(p.name for p in out_dir.iterdir()) == ["0.pt", "1.pt", "result"]
+    assert not any("skipping degenerate step" in m for m in caplog.messages)
+
+
+# ---------------------------------------------------------------------------
 # update_map / _save_steps branch matrix
 #
 # Steps come from ``step_factory`` (the deterministic ``hetero_factory``
