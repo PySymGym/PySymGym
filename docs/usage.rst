@@ -194,6 +194,8 @@ When enabled:
 - any failed map (timeout, engine error, ...) fails the run with a non-zero
   exit.
 
+.. _svm-validation-step-metric:
+
 SVM validation step metric
 --------------------------
 
