@@ -262,9 +262,17 @@ class ModelGameManager(BaseGameManager):
         game_map = game_map2svm.GameMap
         map_name = game_map.MapName
         output_dir = self._get_output_dir(game_map)
-        result_file = (
-            output_dir / f"{map_name}result"
-        )  # TODO: the path to result must be documented
+        # The result file contract is documented in docs/integration.rst
+        # ("Result and steps files"): four space-separated integers
+        # actual_coverage_percent tests_count steps_count errors_count,
+        # where steps_count is the TOTAL trace steps (the startup steps are
+        # subtracted below).
+        result_file = output_dir / f"{map_name}result"
+        # Bound the poll by the per-map timeout so a misbehaving SVM cannot
+        # hang the worker even with SAVE_IF_FAIL_OR_TIMEOUT disabled (the
+        # timeout wrapper around this call is optional).
+        timeout_sec = self._feature_config.save_if_fail_or_timeout.timeout_sec
+        deadline = time.monotonic() + timeout_sec
         while True:
             try:
                 with open(result_file, "r") as f:
@@ -315,6 +323,16 @@ class ModelGameManager(BaseGameManager):
             except (FileNotFoundError, ValueError) as e:
                 ret_code = proc.poll()
                 if ret_code is None:
+                    if time.monotonic() >= deadline:
+                        # A fresh timeout condition, not a consequence of the
+                        # caught file error.
+                        raise FunctionTimedOut(
+                            msg=(
+                                f"the result of {map_name} did not appear "
+                                f"within {timeout_sec}s"
+                            ),
+                            timedOutAfter=timeout_sec,
+                        ) from None
                     time.sleep(3)
                     continue
                 if isinstance(e, ValueError):
@@ -355,11 +373,23 @@ class ModelGameManager(BaseGameManager):
             self._get_and_log_proc_output(game_map_info.proc, logging.error)
             return
 
-        def get_conn():
+        def get_conn() -> Optional[socket.socket]:
             svm_connection_info = game_result.svm_connection_info
             port = svm_connection_info.occupied_port
             logging.debug(f"Server listening on port {port}")
-            conn, addr = svm_connection_info.socket.accept()
+            # Bounded accept: a server that never connects must not block the
+            # worker indefinitely. On timeout the steps are simply not saved
+            # (soft failure).
+            timeout_sec = self._feature_config.save_if_fail_or_timeout.timeout_sec
+            svm_connection_info.socket.settimeout(timeout_sec)
+            try:
+                conn, addr = svm_connection_info.socket.accept()
+            except socket.timeout:
+                logging.warning(
+                    f"The server of {map_name} did not connect to save the "
+                    f"steps within {timeout_sec}s; the steps will not be saved."
+                )
+                return None
             logging.debug(f"Connection from {addr}")
             return conn
 
@@ -368,6 +398,8 @@ class ModelGameManager(BaseGameManager):
             conn.shutdown(socket.SHUT_WR)
 
         conn = get_conn()
+        if conn is None:
+            return
         alert_svm_about_step_saving(conn, required)
 
         self._get_and_log_proc_output(

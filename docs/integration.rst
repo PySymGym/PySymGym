@@ -129,6 +129,30 @@ a nested JSON **object**. This asymmetry is a known wart of the current
 protocol, flagged for a future protocol revision; changing it is a
 breaking wire change (a future version).
 
+.. _result-and-steps-files:
+
+Result and steps files
+----------------------
+
+In ``svms_model`` (send-model) mode the agent launches the engine as a
+subprocess (the platform's ``SVMSInfo.launch_command``, with ``{OutputDir}``
+substituted) and collects the outcome from two files the engine writes into
+that output directory. The agent polls for the result file until it appears
+or the per-map timeout elapses:
+
+- ``<OutputDir>/<MapName>result`` — four space-separated integers::
+
+    actual_coverage_percent tests_count steps_count errors_count
+
+  ``steps_count`` is the **total** trace steps (the startup steps included);
+  the agent subtracts ``StepsToStart`` to obtain the model-played count (see
+  :ref:`svm-validation-step-metric`).
+- ``<OutputDir>/<MapName>_steps`` — a JSON array with one entry per
+  model-played step (the game state and the model output). The engine writes
+  it only on request: after writing the result file it connects to the
+  agent's listening port (the ``{Port}`` substitution) and reads one byte —
+  ``1`` = save the steps, ``0`` = skip — and writes the file only for ``1``.
+
 .. _onnx-conversion:
 
 ONNX conversion
