@@ -122,5 +122,6 @@ test-all:
 	$(PYTEST)
 
 # Unit + integration tier with the coverage ratchet (the gated tier).
+# Excludes gpu/network so the tier runs on any machine (mirrors CI).
 test-cov:
-	$(PYTEST) -m "not e2e" $(COV_ARGS)
+	$(PYTEST) -m "not e2e and not gpu and not network" $(COV_ARGS)
