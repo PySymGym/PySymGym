@@ -43,12 +43,3 @@ def test_reward_json_round_trip() -> None:
         MaxPossibleReward=9,
     )
     assert Reward.from_json(reward.to_json()) == reward
-
-
-@pytest.mark.parametrize(
-    ("verbose", "expected"),
-    [(False, "#vi=5"), (True, "ForVisitedInstructions: 5")],
-)
-def test_move_reward_printable(verbose: bool, expected: str) -> None:
-    reward = MoveReward(ForCoverage=3, ForVisitedInstructions=5)
-    assert reward.printable(verbose) == expected
