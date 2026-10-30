@@ -18,10 +18,12 @@ runs:
         python-version: "3.11.8"
 
     - name: Install poetry
+      shell: bash
       run: |
         pip install poetry==2.2.1
 
     - name: Install dependencies
+      shell: bash
       run: |
         # Self-hosted runners cache poetry's venv across runs, and a plain
         # install never removes packages dropped from the lockfile (stale
@@ -49,6 +51,7 @@ runs:
         fi
 
     - name: Verify cached venv integrity
+      shell: bash
       run: |
         # The cached venv can be file-broken even when poetry considers it
         # complete: a foreign CUDA stack (nvidia-*-cu13) that once lived
