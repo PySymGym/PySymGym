@@ -23,6 +23,16 @@ def test_color_from_hex_normalizes_to_rgba() -> None:
     assert color.to_rgba() == (1.0, 115 / 255, 0.0, 1)
 
 
+def test_color_from_hex_defaults_name_to_hex_string() -> None:
+    assert Color.from_hex("#FF7300").name == "FF7300"
+
+
+def test_color_from_hex_accepts_alpha_and_name() -> None:
+    color = Color.from_hex("#0077FF", alpha=0.5, name="translucent_blue")
+    assert color.to_rgba() == (0.0, 119 / 255, 1.0, 0.5)
+    assert color.name == "translucent_blue"
+
+
 def test_color_keeps_default_alpha() -> None:
     assert Color("orange", 255, 115, 0).to_rgba() == (1.0, 115 / 255, 0.0, 1)
 
@@ -62,12 +72,18 @@ def _run_entrypoint_with_fake_comparator(
     mock_compare_confs_dir: Path,
     configs_file: str,
     tmp_path: Path,
-) -> list[str]:
+) -> tuple[list[str], dict]:
+    """Run the entrypoint with a stubbed Comparator.
+
+    Returns the recorded method calls and the Comparator constructor
+    kwargs (the Strategy objects and savedir).
+    """
     calls: list[str] = []
+    init_kwargs: dict = {}
 
     class FakeComparator:
         def __init__(self, **kwargs):
-            pass
+            init_kwargs.update(kwargs)
 
         def drop_failed(self):
             calls.append("drop_failed")
@@ -86,7 +102,7 @@ def _run_entrypoint_with_fake_comparator(
         savedir=tmp_path,
     )
     compstrat.cli.entrypoint(args)
-    return calls
+    return calls, init_kwargs
 
 
 def test_entrypoint_drops_failed_runs_by_default(
@@ -97,7 +113,7 @@ def test_entrypoint_drops_failed_runs_by_default(
 ) -> None:
     # compare_confs_1.yaml sets no drop_failed key: the default (true)
     # applies to every config, so the pipeline drops failed runs.
-    calls = _run_entrypoint_with_fake_comparator(
+    calls, _ = _run_entrypoint_with_fake_comparator(
         monkeypatch,
         mock_runs_dir,
         mock_compare_confs_dir,
@@ -116,7 +132,7 @@ def test_entrypoint_keeps_failed_runs_when_disabled(
 ) -> None:
     # compare_confs_4.yaml sets drop_failed: false: the pipeline-level
     # flag is off for the whole run.
-    calls = _run_entrypoint_with_fake_comparator(
+    calls, _ = _run_entrypoint_with_fake_comparator(
         monkeypatch,
         mock_runs_dir,
         mock_compare_confs_dir,
@@ -125,6 +141,31 @@ def test_entrypoint_keeps_failed_runs_when_disabled(
     )
 
     assert calls == ["compare"]
+
+
+def test_entrypoint_colors_come_from_hex(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_runs_dir: Path,
+    mock_compare_confs_dir: Path,
+    tmp_path: Path,
+) -> None:
+    _, captured = _run_entrypoint_with_fake_comparator(
+        monkeypatch,
+        mock_runs_dir,
+        mock_compare_confs_dir,
+        "compare_confs_1.yaml",
+        tmp_path,
+    )
+
+    # The color names appear in the plot xlabel — pin them against drift.
+    assert captured["strat1"].color.to_rgba() == (1.0, 115 / 255, 0.0, 1)
+    assert captured["strat1"].color.name == "orange"
+    assert captured["strat1"].ecolor.to_rgba() == (1.0, 115 / 255, 0.0, 0.5)
+    assert captured["strat1"].ecolor.name == "translucent_orange"
+    assert captured["strat2"].color.to_rgba() == (0.0, 119 / 255, 1.0, 1)
+    assert captured["strat2"].color.name == "blue"
+    assert captured["strat2"].ecolor.to_rgba() == (0.0, 119 / 255, 1.0, 0.5)
+    assert captured["strat2"].ecolor.name == "translucent_blue"
 
 
 def test_compare_without_exp_name_saves_fallback_pdf(tmp_path: Path) -> None:

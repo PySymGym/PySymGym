@@ -21,13 +21,13 @@ class Args:
 
 
 def entrypoint(args: Args):
-    PHILIPPINE_ORANGE, TRANSLUCENT_PHILIPPINE_ORANGE = (
-        Color("orange", 255, 115, 0),
-        Color("translucent_orange", 255, 115, 0, 0.5),
+    PHILIPPINE_ORANGE = Color.from_hex("#FF7300", name="orange")
+    TRANSLUCENT_PHILIPPINE_ORANGE = Color.from_hex(
+        "#FF7300", alpha=0.5, name="translucent_orange"
     )
-    BLUE_SPARKLE, TRANSLUCENT_BLUE_SPARKLE = (
-        Color("blue", 0, 119, 255),
-        Color("translucent_blue", 0, 119, 255, 0.5),
+    BLUE_SPARKLE = Color.from_hex("#0077FF", name="blue")
+    TRANSLUCENT_BLUE_SPARKLE = Color.from_hex(
+        "#0077FF", alpha=0.5, name="translucent_blue"
     )
     os.makedirs(args.savedir, exist_ok=True)
     strat1_df, strat2_df = preprocess(
