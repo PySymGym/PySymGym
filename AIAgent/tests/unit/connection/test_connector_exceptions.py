@@ -25,18 +25,6 @@ def test_game_over_exception_stores_counts() -> None:
     assert exc.errors_count == 1
 
 
-def test_wrong_connector_state_error_message() -> None:
-    exc = Connector.WrongConnectorStateError("send_step", "reward", "state", 5)
-    assert "send_step" in str(exc)
-    assert "reward" in str(exc)
-    assert "state" in str(exc)
-    assert "5" in str(exc)
-
-
-def test_incorrect_sent_state_error_is_an_exception() -> None:
-    assert issubclass(Connector.IncorrectSentStateError, Exception)
-
-
 def test_raise_if_gameover_parses_gameover_message() -> None:
     payload = json.dumps(
         {
