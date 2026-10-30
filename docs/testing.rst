@@ -397,10 +397,8 @@ contract's enforcement. ``modelop.filemanager.save_model`` is exercised
 with ``tmp_path`` and a patched ``datetime``.
 
 The ONNX export tests pin ``onyx.py``. The unit tests
-(``AIAgent/tests/unit/test_onyx.py``) pin the pure helpers: ``shorten_output``
-(flatten, round to ``round_to`` decimals, truncate to the first 10 elements
-plus ``"..."`` — the truncation is part of the #597 weak verification, pinned
-as current behaviour), the tensor-input builders (the exact 11 ONNX wire names
+(``AIAgent/tests/unit/test_onyx.py``) pin the pure helpers: the tensor-input
+builders (the exact 11 ONNX wire names
 as literals — the V# contract and the drift net for #597's single-source input
 names — each mapped to its ``hetero_factory`` tensor, the modifier
 application, the ``.numpy()`` conversion, and the ``input_names`` order),
@@ -427,14 +425,12 @@ registry-resolved model class, the ``yaml.safe_load``ed model kwargs, the
 forwarded paths), the empty ``--verify-on`` default, and the argparse
 ``SystemExit`` for each missing required flag. The ``TestONNXVerification``
 tests pin the verification failure path with real exports and a
-monkeypatched ``onyx.onnx_run``: the current verification compares
-``shorten_output`` results (rounded to 3 decimals, truncated to the first 10
-elements) with an ``assert``, and both weaknesses are #597-tracked, so the
-tests pin the crash-level post-fix properties as strict ``xfail``s — a
-numerically divergent conversion must raise a proper (non-``AssertionError``)
-error, and a divergence beyond the first 10 elements (a synthesized
-12-state verification gamestate) must be rejected; #597 owns removing the
-markers when it lands.
+monkeypatched ``onyx.onnx_run``: the verification compares the full torch
+and ONNX Runtime outputs element-wise with an explicit tolerance and raises
+``ValueError`` on divergence (#597) — a numerically divergent conversion
+must raise that proper (non-``AssertionError``) error, and a divergence
+beyond the first 10 elements (a synthesized 12-state verification
+gamestate) must be rejected.
 
 The runstrat CLI tests (``tools/runstrat/tests/unit/``) pin the benchmarking
 tool without end-to-end strategy runs. The parsing tests (``test_parsing.py``)
