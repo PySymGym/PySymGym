@@ -190,6 +190,18 @@ How the game-server port is bound differs by validation mode:
   (see :ref:`result-and-steps-files`); there is no cross-process bind
   race for that socket.
 
+In broker-launched mode the broker also leases each issued instance: the
+issue is recorded with a monotonic timestamp and the lease ends when the
+client returns the instance on ``/post_ws``. A hard-killed worker never
+returns its instance, so a background reaper on the broker's event loop
+scans every ``LEASE_REAP_INTERVAL_SEC`` (60 s) and reaps any issued
+instance older than ``BrokerConfig.lease_ttl_sec`` (default 1 h — larger
+than the per-map timeout, so a legitimate game is never reaped): the game
+server is killed and a placeholder is re-queued, so the slot is
+re-issuable instead of lost forever. A kill failure is logged and the slot
+is still re-queued (the surviving process is cleaned up at broker
+shutdown).
+
 .. _onnx-conversion:
 
 ONNX conversion

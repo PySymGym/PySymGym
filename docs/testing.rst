@@ -355,9 +355,15 @@ The companion entrypoint seam tests
 the same way: ``wait_for_port`` with a scripted socket (the probe socket
 is closed on success and timeout alike), the four broker handlers with
 fake requests and queues (the dequeue success / empty / failure-requeue
-paths, the live-instance ``InstanceIssuanceError`` with the re-queue, the
-enqueue kill-and-rewrap versus keep-pid paths, the results append /
-recv), ``run_server_instance`` with a fake ``Popen`` (the
+paths — the success also pins the lease recording in ``ISSUED`` —, the
+live-instance ``InstanceIssuanceError`` with the re-queue, the enqueue
+kill-and-rewrap versus keep-pid paths — the return also pins the lease
+ending —, the results append / recv), ``reap_expired_leases`` with a
+faked clock and a faked loop sleep (the expired entry is reaped — the
+game server is killed and a placeholder re-queued —, the fresh entry is
+left alone, and an entry returned between the snapshot and the kill is
+skipped, no double-kill; a kill failure is logged without stopping the
+reaper, the slot re-queued anyway), ``run_server_instance`` with a fake ``Popen`` (the
 DEVNULL stdout, the pinned ``DOTNET_ROLL_FORWARD`` environment, the
 pid-keyed handle registration in ``PROCS``, the fail-fast group kill
 + reap with ``InstanceIssuanceError`` when the port never opens, and
@@ -370,10 +376,14 @@ exhaustion), a pinned port and a fresh port lock, the
 ``os.getpgid`` and the ``fake_proc`` stand-in (the untracked-pid warning,
 the process-group kill with the ``proc.wait()`` reap, the vanished-group
 suppression, the never-dies ``RuntimeError``), ``server_manager`` (queue
-on enter, kill-all on exit that survives a per-pid failure), and
+on enter, kill-all on exit that survives a per-pid failure), the reaper
+lifecycle hooks (``_on_startup`` creates the reaper task with the live
+globals and the configured TTL, ``_on_cleanup`` cancels and awaits it),
+and
 ``main()`` (the parsed ``process_count`` handed to ``server_manager``
 with a fresh queue, the four declared broker routes on the application,
-the broker port, and the module-global reset). The
+the broker port, the reaper hooks registered on the application, and the
+module-global reset). The
 ``derive_dataset_improvement_config.py`` pins are split by tier: the unit tests
 (``AIAgent/tests/unit/test_derive_dataset_improvement_config.py``) pin the
 ``main()`` CLI seam (the parsed ``--base-config`` / ``--output-config``

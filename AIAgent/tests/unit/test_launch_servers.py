@@ -158,6 +158,8 @@ class TestDequeueInstance:
         queue = Queue()
         queue.put(ServerInstanceInfo("VSharp", 0, "None", pid=Undefined))
         self._setup(monkeypatch, queue)
+        # The global is only created by main(); set it fresh for the test.
+        monkeypatch.setattr(launch_servers_module, "ISSUED", {}, raising=False)
         issued = ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
         )
@@ -184,6 +186,12 @@ class TestDequeueInstance:
         # The response body is the single-encoded JSON of the issued info.
         assert json.loads(response.text) == issued.to_dict()
         assert queue.empty()
+        # The issued instance is leased (pid → (info, monotonic issue time))
+        # so the reaper can reap it if the worker is hard-killed.
+        assert list(launch_servers_module.ISSUED) == [1234]
+        leased_info, issue_time = launch_servers_module.ISSUED[1234]
+        assert leased_info == issued
+        assert isinstance(issue_time, float)
 
     def test_empty_queue_raises(self, monkeypatch: pytest.MonkeyPatch):
         self._setup(monkeypatch, Queue())
@@ -261,6 +269,10 @@ class TestEnqueueInstance:
         original = ServerInstanceInfo(
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", 1234
         )
+        # The instance is currently leased; returning it must end the lease.
+        monkeypatch.setattr(
+            launch_servers_module, "ISSUED", {1234: (original, 0.0)}, raising=False
+        )
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
@@ -273,6 +285,8 @@ class TestEnqueueInstance:
             "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid=Undefined
         )
         assert response.status == 200
+        # The lease is ended on return: the reaper must not reap it.
+        assert launch_servers_module.ISSUED == {}
 
     def test_restart_disabled_keeps_the_pid(self, monkeypatch: pytest.MonkeyPatch):
         feature_config = FeatureConfig(
@@ -285,6 +299,7 @@ class TestEnqueueInstance:
         monkeypatch.setattr(
             launch_servers_module, "SERVER_INSTANCES", queue, raising=False
         )
+        monkeypatch.setattr(launch_servers_module, "ISSUED", {}, raising=False)
         kill_calls: list[tuple] = []
         monkeypatch.setattr(
             launch_servers_module,
@@ -766,6 +781,195 @@ class TestKillProcess:
         assert "the process doesn't exist" in caplog.text
 
 
+class TestReapExpiredLeases:
+    """The lease reaper: unreturned instances are killed and re-queued.
+
+    The clock and the loop's sleep are faked (``time.monotonic`` starts at a
+    fixed value and advances by the interval per scan; ``asyncio.sleep``
+    advances the clock and stops the loop once the scan budget is spent), so
+    the tests are deterministic and never wait in real time.
+    """
+
+    class _ScanLimitReached(Exception):
+        """Raised by the fake sleep once the scan budget is spent."""
+
+    def _run_scans(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        issued: dict,
+        queue: Queue,
+        feature_config: FeatureConfig,
+        *,
+        lease_ttl_sec: float,
+        interval_sec: float = 60,
+        start_clock: float = 0.0,
+        scans: int = 1,
+    ) -> None:
+        state = {"clock": start_clock, "sleeps": 0}
+
+        async def fake_sleep(seconds):
+            state["clock"] += seconds
+            state["sleeps"] += 1
+            if state["sleeps"] > scans:
+                raise self._ScanLimitReached()
+
+        monkeypatch.setattr(launch_servers_module.asyncio, "sleep", fake_sleep)
+        monkeypatch.setattr(
+            launch_servers_module.time, "monotonic", lambda: state["clock"]
+        )
+
+        with pytest.raises(self._ScanLimitReached):
+            asyncio.run(
+                launch_servers_module.reap_expired_leases(
+                    issued, queue, feature_config, lease_ttl_sec, interval_sec
+                )
+            )
+
+    def _info(self, pid: int) -> ServerInstanceInfo:
+        return ServerInstanceInfo("VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid)
+
+    def test_expired_entry_is_reaped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        info = self._info(1234)
+        issued = {1234: (info, 0.0)}
+        queue: Queue = Queue()
+        feature_config = FeatureConfig()
+        kill_calls: list[tuple] = []
+
+        async def fake_kill_server(server_info, feature_config_arg):
+            kill_calls.append((server_info, feature_config_arg))
+
+        monkeypatch.setattr(launch_servers_module, "kill_server", fake_kill_server)
+
+        # Issued at t=0; the first scan runs at t=3600, the TTL, so the
+        # lease is expired.
+        self._run_scans(
+            monkeypatch,
+            issued,
+            queue,
+            feature_config,
+            lease_ttl_sec=3600,
+            start_clock=3540,
+        )
+
+        # The game server was killed and the slot re-queued as a placeholder
+        # (a fresh server starts on the next /get_ws).
+        assert kill_calls == [(info, feature_config)]
+        assert issued == {}
+        assert queue.get_nowait() == ServerInstanceInfo(
+            "VSharp", 0, "None", pid=Undefined
+        )
+        assert queue.empty()
+
+    def test_fresh_entry_is_left_alone(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        info = self._info(1234)
+        issued = {1234: (info, 3590.0)}
+        queue: Queue = Queue()
+        feature_config = FeatureConfig()
+        kill_calls: list[tuple] = []
+        monkeypatch.setattr(
+            launch_servers_module,
+            "kill_server",
+            lambda server_info, feature_config_arg: kill_calls.append(
+                (server_info, feature_config_arg)
+            ),
+        )
+
+        # Issued at t=3590; the first scan runs at t=3600, ten seconds
+        # before the TTL expires.
+        self._run_scans(
+            monkeypatch,
+            issued,
+            queue,
+            feature_config,
+            lease_ttl_sec=3600,
+            start_clock=3540,
+        )
+
+        assert kill_calls == []
+        assert issued == {1234: (info, 3590.0)}
+        assert queue.empty()
+
+    def test_entry_returned_between_snapshot_and_kill_is_skipped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Two expired entries. While the reaper kills the first, a
+        # concurrent /post_ws returns the second (ending its lease, as
+        # enqueue_instance does); the reaper must not kill it again.
+        first = self._info(1234)
+        second = self._info(5678)
+        issued = {1234: (first, 0.0), 5678: (second, 0.0)}
+        queue: Queue = Queue()
+        feature_config = FeatureConfig()
+        kill_calls: list[ServerInstanceInfo] = []
+
+        async def fake_kill_server(server_info, feature_config_arg):
+            kill_calls.append(server_info)
+            if server_info.pid == 1234:
+                # The concurrent /post_ws ends the second lease.
+                issued.pop(5678, None)
+
+        monkeypatch.setattr(launch_servers_module, "kill_server", fake_kill_server)
+
+        self._run_scans(
+            monkeypatch,
+            issued,
+            queue,
+            feature_config,
+            lease_ttl_sec=3600,
+            start_clock=3540,
+        )
+
+        # Only the first was reaped; the second was skipped (no double-kill,
+        # no KeyError on the stale snapshot entry).
+        assert kill_calls == [first]
+        assert issued == {}
+        assert queue.get_nowait() == ServerInstanceInfo(
+            "VSharp", 0, "None", pid=Undefined
+        )
+        assert queue.empty()
+
+    def test_kill_failure_does_not_stop_the_reaper(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # A kill failure (a process that survives SIGKILL) must not kill the
+        # reaper task: the slot is re-queued anyway and the next entry is
+        # still reaped in the same scan.
+        failing = self._info(1234)
+        healthy = self._info(5678)
+        issued = {1234: (failing, 0.0), 5678: (healthy, 0.0)}
+        queue: Queue = Queue()
+        feature_config = FeatureConfig()
+        kill_calls: list[ServerInstanceInfo] = []
+
+        async def fake_kill_server(server_info, feature_config_arg):
+            kill_calls.append(server_info)
+            if server_info.pid == 1234:
+                raise RuntimeError(f"{server_info} could not be killed")
+
+        monkeypatch.setattr(launch_servers_module, "kill_server", fake_kill_server)
+
+        with caplog.at_level(logging.ERROR):
+            self._run_scans(
+                monkeypatch,
+                issued,
+                queue,
+                feature_config,
+                lease_ttl_sec=3600,
+                start_clock=3540,
+            )
+
+        # Both entries were processed (the reaper survived the failure), both
+        # slots re-queued, and the failure was logged.
+        assert kill_calls == [failing, healthy]
+        assert issued == {}
+        placeholders = [queue.get_nowait() for _ in range(2)]
+        assert placeholders == [
+            ServerInstanceInfo("VSharp", 0, "None", pid=Undefined) for _ in range(2)
+        ]
+        assert queue.empty()
+        assert "failed to reap expired lease" in caplog.text
+
+
 class TestServerManager:
     def test_enter_queues_exit_kills(
         self, monkeypatch: pytest.MonkeyPatch, fake_proc
@@ -813,6 +1017,54 @@ class TestServerManager:
         assert killed == [222]
         assert launch_servers_module.PROCS == {}
         assert "Failed to kill server 111 during shutdown" in caplog.text
+
+
+class TestReaperLifecycle:
+    """The reaper task is created on startup and cancelled on cleanup."""
+
+    def test_startup_creates_and_cleanup_cancels_the_reaper(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The globals are only created by main(); set them fresh for the test.
+        issued: dict = {}
+        queue: Queue = Queue()
+        monkeypatch.setattr(launch_servers_module, "ISSUED", issued, raising=False)
+        monkeypatch.setattr(
+            launch_servers_module, "SERVER_INSTANCES", queue, raising=False
+        )
+        feature_config = FeatureConfig()
+        app = {
+            launch_servers_module.CONFIG_KEY: SimpleNamespace(
+                feature_config=feature_config,
+                broker_config=SimpleNamespace(lease_ttl_sec=3600.0),
+            )
+        }
+        reap_args: list[tuple] = []
+
+        async def fake_reaper(*args):
+            reap_args.append(args)
+            await asyncio.Event().wait()
+
+        monkeypatch.setattr(launch_servers_module, "reap_expired_leases", fake_reaper)
+        tasks: list[asyncio.Task] = []
+
+        async def scenario():
+            await launch_servers_module._on_startup(app)
+            tasks.append(app["reaper_task"])
+            # Yield so the reaper task starts (and records its args) before
+            # the cleanup cancels it: a task cancelled before its first step
+            # never runs its body.
+            await asyncio.sleep(0)
+            assert not tasks[0].done()
+            await launch_servers_module._on_cleanup(app)
+
+        asyncio.run(scenario())
+
+        # The reaper runs on the app's event loop with the live globals and
+        # the configured TTL.
+        assert reap_args == [(issued, queue, feature_config, 3600.0)]
+        # The cleanup cancelled (and awaited) the task.
+        assert tasks[0].cancelled()
 
 
 def launch_servers_main_config(base: Path) -> dict:
@@ -939,7 +1191,14 @@ class TestMain:
             ("POST", "/send_res"),
         ]
 
+        # The lease reaper is wired into the app lifecycle: created on
+        # startup, cancelled on cleanup (alongside aiohttp's built-in
+        # cleanup context).
+        assert launch_servers_module._on_startup in list(app.on_startup)
+        assert launch_servers_module._on_cleanup in list(app.on_cleanup)
+
         # The module globals are reset for the run.
         assert isinstance(launch_servers_module.SERVER_INSTANCES, Queue)
         assert launch_servers_module.PROCS == {}
         assert launch_servers_module.RESULTS == []
+        assert launch_servers_module.ISSUED == {}
