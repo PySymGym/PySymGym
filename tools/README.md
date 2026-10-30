@@ -89,6 +89,31 @@ python3 -m compstrat \
 
 Output example
 ![resources/alpha_beta_comp_vis_example.png](resources/alpha_beta_comp_vis_example.png)
+
+### Compare configs
+
+The `-cp` file is a YAML list of comparison configs; each entry renders
+one comparison plot and one row of `result_count.csv`:
+
+| key | type | default | meaning |
+|---|---|---|---|
+| `by_column` | str | — (required) | the run column to compare (e.g. `coverage`) |
+| `datasource` | str | — (required) | the method set to compare over: `INNER_JOIN_DF` (methods completed by both strats), `OUTER_JOIN_DF` (methods completed by at least one strat; one-sided methods have no counterpart and are excluded from the win/loss/eq counts), `INNER_JOIN_COVERAGE_EQ_DF` (the inner join restricted to equal coverage) |
+| `metric` | str | — (required) | the unit label of the plot axes |
+| `divider_line` | bool | `false` | draw the y = x divider line |
+| `less_is_winning` | bool | `false` | whether the smaller value wins |
+| `exp_name` | str | `null` | the output PDF name; `null` falls back to `<by_column>_<datasource>.pdf` |
+| `scale` | str | `null` | matplotlib axis scale (e.g. `symlog`) |
+| `drop_failed` | bool | `true` | pipeline-level: exclude failed runs (`coverage == -1`) from every comparison; if any config sets it to `false`, failed runs are kept for the whole run |
+
+Preprocessing notes:
+
+- The runs are joined on the method index; methods present in only one
+  strategy's runs are dropped by the join, and a warning lists them per
+  strategy.
+- The compared metrics are the union of both strategies' run columns; a
+  column present in only one strategy's runs is compared with NaN on the
+  missing side.
 ## Dataset Management
 Tools for managing training episodes in dataset.json. `generate_episodes` expands the dataset by creating episodes with different starting points for diverse training data, analyzing existing episodes and adding new ones at regular intervals with both BFS and DFS variants while preserving all existing episodes. `clean` removes useless episodes by analyzing training logs for "immediate GameOver" entries — these occur when too many preliminary BFS/DFS steps complete the task during the StepsToStart phase before the neural network is needed. Since the neural network was simply not used in these episodes, they are worthless for training and are removed.
 
