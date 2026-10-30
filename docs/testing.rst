@@ -298,18 +298,25 @@ exception branches killing the process and storing the exception CLASS as
 the ``GameFailed`` reason, and the no-process warning; the preparator is
 pinned (clean-then-export order, the existing-dir delete, the
 no-op-when-missing) and the full-coverage-without-oracle warning of
-``_get_result`` is pinned via caplog. The ``EachStepGameManager`` tests
+``_get_result`` is pinned via caplog. The shared game-manager utilities
+(``test_game_managers_utils.py``) pin ``play_with_timeout`` against the
+real worker-thread wrapper: the result pass-through, the direct
+propagation of an inner ``FunctionTimedOut`` (``timedOutAfter`` intact —
+the ``func_timeout`` swallow quirk, #672, is gone), the
+``None``-return-as-timeout-signal translation, the plain-exception
+pass-through, the disabled pass-through, and the wall-clock timeout
+(raised ``FunctionTimedOut`` plus the worker thread registered in the
+tracker, pruned once it finishes). The ``EachStepGameManager`` tests
 (``test_each_step_game_manager.py``) pin the remaining branches: the
 ``FunctionTimedOut`` branch (the model is saved, the reason is the
-exception class, the exact warning) driven by making the call-time
-``set_timeout_if_needed`` wrapper the identity so the ``FunctionTimedOut``
-the fake connector raises reaches the except branch, the
+structured timeout message, the exact warning) driven by a
+``play_with_timeout`` that raises on a simulated wall-clock timeout, the
+inner-timeout case (a ``FunctionTimedOut`` raised from inside the game
+loop propagates directly through the real ``play_with_timeout`` into the
+same branch, #672), the
 ``GameInterruptedError`` branch (no save, the exact
 ``"<name> failed on map <map> with <class>: <desc>"`` message), the
-``func_timeout`` swallow quirk (a ``FunctionTimedOut`` raised from inside
-the wrapped function is discarded by its worker thread, the method returns
-``None`` and the unpacking ``TypeError`` is handled by the generic branch),
-the hardcoded ``42.0`` predicted usefulness, ``delete_game_artifacts``
+hardcoded ``42.0`` predicted usefulness, ``delete_game_artifacts``
 (drop and no-op), the ``notify_steps_requirement`` no-op, and the
 preparator's ``prepare``.
 
