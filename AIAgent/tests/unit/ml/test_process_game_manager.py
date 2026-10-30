@@ -414,24 +414,26 @@ def test_play_game_map_timeout_kills_the_process(
     monkeypatch.setattr(
         manager, "_run_game_process", lambda g2s: (proc, 4000, object())
     )
-    # The timeout wrapper is the identity, so the FunctionTimedOut the fake
-    # _get_result raises reaches the except branch directly — the same
-    # exception a real wall-clock timeout would raise from the wrapper.
-    monkeypatch.setattr(pgm, "set_timeout_if_needed", lambda feature_config, func: func)
 
-    def timeout(g2s, p):
+    # Simulates the wrapper raising on a real wall-clock timeout; the same
+    # exception reaches the except branch below.
+    def wall_clock_timeout(*args, **kwargs):
         raise FunctionTimedOut(timedOutAfter=1800)
 
-    monkeypatch.setattr(manager, "_get_result", timeout)
+    monkeypatch.setattr(pgm, "play_with_timeout", wall_clock_timeout)
 
     with caplog.at_level(logging.WARNING):
         result = manager._play_game_map(game_map2svm)
 
     assert proc.killed is True
     assert isinstance(result.game_result, GameFailed)
-    # Current behaviour: the reason is the exception class, not an instance.
-    assert result.game_result.reason is FunctionTimedOut
-    assert "Timeouted on map Method_0 with 1800s after 0 steps" in caplog.text
+    # The reason is the structured timeout message (#616), not the exception.
+    assert result.game_result.reason.startswith(
+        "[send-model] map Method_0 timed out after"
+    )
+    assert "(step budget 10)" in result.game_result.reason
+    assert "at step" not in result.game_result.reason
+    assert result.game_result.reason in caplog.text
 
 
 def test_play_game_map_exception_kills_the_process(
@@ -457,7 +459,8 @@ def test_play_game_map_exception_kills_the_process(
 
     assert proc.killed is True
     assert isinstance(result.game_result, GameFailed)
-    assert result.game_result.reason is RuntimeError
+    # The reason names the exception type and message, not the class (#673).
+    assert result.game_result.reason == "RuntimeError: boom"
 
 
 def test_play_game_map_failure_without_process_warns(
@@ -483,7 +486,7 @@ def test_play_game_map_failure_without_process_warns(
 
     assert "There is no such proc?! Can't kill instance of Method_0." in caplog.text
     assert isinstance(result.game_result, GameFailed)
-    assert result.game_result.reason is RuntimeError
+    assert result.game_result.reason == "RuntimeError: boom"
 
 
 class FakeConnectionSocket:

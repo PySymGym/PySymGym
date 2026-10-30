@@ -1,8 +1,8 @@
-from typing import Callable, TypeVar
+from typing import Any, Callable, TypeVar
 
 from common.classes import GameFailed
 from common.config.feature_config import FeatureConfig
-from func_timeout import func_set_timeout  # type: ignore
+from func_timeout import FunctionTimedOut, func_set_timeout  # type: ignore
 
 T = TypeVar("T")
 
@@ -18,6 +18,36 @@ def set_timeout_if_needed(
         if feature_config.save_if_fail_or_timeout.enabled
         else func
     )  # type: ignore
+
+
+def play_with_timeout(
+    feature_config: FeatureConfig, func: Callable[..., T], *args: Any, **kwargs: Any
+) -> T:
+    """Call ``func`` under the run's per-map timeout.
+
+    Wraps ``func`` with :func:`set_timeout_if_needed` and calls it. A real
+    wall-clock timeout raises ``FunctionTimedOut`` from the wrapper, which
+    propagates to the caller's timeout branch.
+
+    ``func_timeout``'s worker thread, however, *swallows* a ``FunctionTimedOut``
+    raised from inside the wrapped function (``except FunctionTimedOut: pass``)
+    and returns ``None`` instead (#672). The game-play functions contractually
+    return a non-``None`` result, so a ``None`` return is an unambiguous signal
+    of a swallowed inner timeout: translate it back into a raised
+    ``FunctionTimedOut`` so the caller's timeout branch handles it rather than
+    misreporting it as a generic failure. With the timeout feature disabled
+    there is no wrapper to swallow anything, so the return value is passed
+    through untouched.
+    """
+    save_if_fail_or_timeout = feature_config.save_if_fail_or_timeout
+    wrapped = set_timeout_if_needed(feature_config, func)
+    result = wrapped(*args, **kwargs)
+    if result is None and save_if_fail_or_timeout.enabled:
+        raise FunctionTimedOut(
+            msg="the wrapped game-play function timed out internally",
+            timedOutAfter=save_if_fail_or_timeout.timeout_sec,
+        )
+    return result
 
 
 def unexhausted_steps_failure(

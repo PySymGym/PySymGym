@@ -307,6 +307,8 @@ def test_play_game_map_saves_model_on_failure(
     result = manager._play_game_map(game_map2svm)
 
     assert isinstance(result.game_result, GameFailed)
+    # The reason names the exception type and message, not the class (#673).
+    assert result.game_result.reason == "RuntimeError: predictor exploded"
     # The failed model's state dict is saved under the feature config's
     # save path, named after the predictor with a timestamp suffix.
     assert len(saved) == 1
@@ -328,26 +330,19 @@ def test_play_game_map_timeout_saves_the_model(
     tmp_path,
 ) -> None:
     game_map2svm = game_map2svm_factory(steps_to_play=1)
-    fake = FakeConnector(
-        game_map2svm.GameMap,
-        states=[],
-        gameover_after=0,
-        gameover=_gameover(0, 0, 0, 0),
-        fail_with=FunctionTimedOut(timedOutAfter=1800),
-    )
-    _patch_connector(monkeypatch, fake)
 
     @contextmanager
     def fake_socket_manager(svm_info, connector_config, broker_config):
         yield object()
 
     monkeypatch.setattr(esgm, "game_server_socket_manager", fake_socket_manager)
-    # The timeout wrapper is the identity, so the FunctionTimedOut the
-    # connector raises reaches the except branch directly — the same
-    # exception a real wall-clock timeout would raise from the wrapper.
-    monkeypatch.setattr(
-        esgm, "set_timeout_if_needed", lambda feature_config, func: func
-    )
+
+    # Simulates the wrapper raising on a real wall-clock timeout; the same
+    # exception reaches the except branch below.
+    def wall_clock_timeout(*args, **kwargs):
+        raise FunctionTimedOut(timedOutAfter=1800)
+
+    monkeypatch.setattr(esgm, "play_with_timeout", wall_clock_timeout)
     saved = _patch_torch_save(monkeypatch)
     predictor = FakePredictor()
     manager = _manager(fake_namespace, predictor, _feature_config(tmp_path))
@@ -356,13 +351,18 @@ def test_play_game_map_timeout_saves_the_model(
         result = manager._play_game_map(game_map2svm)
 
     assert isinstance(result.game_result, GameFailed)
-    # Current behaviour: the reason is the exception class, not an instance.
-    assert result.game_result.reason is FunctionTimedOut
+    # The reason is the structured timeout message (#616), not the exception.
+    assert result.game_result.reason.startswith(
+        "[each-step] map Method_0 timed out after"
+    )
+    assert "(step budget 1)" in result.game_result.reason
+    # The loop never completed a step, so the last observed step is 0.
+    assert "at step 0/1" in result.game_result.reason
     assert len(saved) == 1
-    assert "timed out on map Method_0 with 1800s" in caplog.text
+    assert result.game_result.reason in caplog.text
 
 
-def test_play_game_map_inner_timeout_is_swallowed_by_the_timeout_wrapper(
+def test_play_game_map_inner_timeout_is_reported_as_a_timeout(
     fake_namespace,
     game_map2svm_factory,
     monkeypatch: pytest.MonkeyPatch,
@@ -371,8 +371,9 @@ def test_play_game_map_inner_timeout_is_swallowed_by_the_timeout_wrapper(
 ) -> None:
     # func_timeout's worker swallows a FunctionTimedOut raised from inside
     # the wrapped function (it only raises one on a real wall-clock
-    # timeout), so _play_game_map_with_svm returns None, the unpacking
-    # raises TypeError, and the generic exception branch handles it.
+    # timeout) and returns None instead. play_with_timeout translates that
+    # None back into a FunctionTimedOut (#672), so the timeout branch — not
+    # the generic exception branch — handles it and saves the model.
     game_map2svm = game_map2svm_factory(steps_to_play=1)
     fake = FakeConnector(
         game_map2svm.GameMap,
@@ -396,10 +397,13 @@ def test_play_game_map_inner_timeout_is_swallowed_by_the_timeout_wrapper(
         result = manager._play_game_map(game_map2svm)
 
     assert isinstance(result.game_result, GameFailed)
-    assert result.game_result.reason is TypeError
+    assert result.game_result.reason.startswith(
+        "[each-step] map Method_0 timed out after"
+    )
+    assert "(step budget 1)" in result.game_result.reason
+    assert "at step 0/1" in result.game_result.reason
     assert len(saved) == 1
-    assert "failed on map Method_0:" in caplog.text
-    assert "TypeError" in caplog.text
+    assert result.game_result.reason in caplog.text
 
 
 def test_play_game_map_game_interrupted_does_not_save(
@@ -431,7 +435,10 @@ def test_play_game_map_game_interrupted_does_not_save(
         result = manager._play_game_map(game_map2svm)
 
     assert isinstance(result.game_result, GameFailed)
-    assert result.game_result.reason is ProcessStoppedError
+    # The reason carries the type and the ``desc`` message (#673).
+    assert result.game_result.reason == (
+        "ProcessStoppedError: SVM's process unexpectedly stopped"
+    )
     # Unlike the timeout/failure branches, an interrupted game does not save.
     assert saved == []
     assert (

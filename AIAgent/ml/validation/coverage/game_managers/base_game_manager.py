@@ -1,8 +1,10 @@
+import logging
 from abc import ABC, abstractmethod
 from multiprocessing.managers import Namespace
-from typing import Optional
+from typing import ClassVar, Optional
 
-from common.classes import Map2Result
+from common.classes import GameFailed, Map2Result
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap, GameMap2SVM
 from torch_geometric.data.hetero_data import HeteroData
 
@@ -49,15 +51,82 @@ class BaseGamePreparator(ABC):
 
 
 class BaseGameManager(ABC):
-    # TODO: docs
-    def __init__(self, namespace: Namespace):
+    """Base class for the coverage-validation game managers.
+
+    Owns the prepare-once lifecycle and the failure/timeout handling shared by
+    every manager: building a ``GameFailed`` whose reason names the exception
+    (not the class, #673) and the structured per-map timeout message (#616).
+    Subclasses implement the mode-specific play loop and artifact handling.
+    """
+
+    #: The validation mode name, used in structured failure/timeout logs (#616).
+    mode: ClassVar[str]
+
+    def __init__(self, namespace: Namespace, *, feature_config: FeatureConfig):
         self._namespace = namespace
+        # The sub-config is pickled to the spawn-based mp.Pool workers together
+        # with the manager, so it arrives as an instance attribute, never a
+        # process global.
+        self._feature_config = feature_config
         self._preparator = self._create_preparator()
 
     def play_game_map(self, game_map2svm: GameMap2SVM) -> Map2Result:
         """Executes GameMap on symbolic engine"""
         self._preparator.prepare()
         return self._play_game_map(game_map2svm)
+
+    # -- shared failure/timeout handling ---------------------------------
+
+    @staticmethod
+    def _failure_reason(error: BaseException) -> str:
+        """The ``GameFailed`` reason for an unexpected error (#673).
+
+        Carries the exception type and a human-readable message so consumers
+        can distinguish failure causes; the old code stored the exception class
+        object itself (e.g. ``<class 'TypeError'>``), which carried no message.
+        ``GameInterruptedError`` subclasses expose their message via ``desc``
+        (they are constructed without one), so prefer that over ``str``.
+        """
+        message = getattr(error, "desc", None) or str(error)
+        return f"{type(error).__name__}: {message}"
+
+    def _timeout_message(
+        self,
+        *,
+        map_name: str,
+        steps_budget: int,
+        elapsed: float,
+        last_step: Optional[int] = None,
+    ) -> str:
+        """A structured per-map timeout message (#616): no raw args reprs.
+
+        Names the map, the mode, the step budget, the elapsed time, and the
+        last observed step (when the mode observes steps) so a timed-out map is
+        diagnosable from the log alone.
+        """
+        last = f" at step {last_step}/{steps_budget}" if last_step is not None else ""
+        return (
+            f"[{self.mode}] map {map_name} timed out after {elapsed:.1f}s "
+            f"(step budget {steps_budget}){last}"
+        )
+
+    def _timeout_failure(
+        self,
+        *,
+        map_name: str,
+        steps_budget: int,
+        elapsed: float,
+        last_step: Optional[int] = None,
+    ) -> GameFailed:
+        """Log the structured timeout message at ERROR and build the failure."""
+        message = self._timeout_message(
+            map_name=map_name,
+            steps_budget=steps_budget,
+            elapsed=elapsed,
+            last_step=last_step,
+        )
+        logging.error(message)
+        return GameFailed(reason=message)
 
     @abstractmethod
     def _create_preparator(self) -> BaseGamePreparator: ...

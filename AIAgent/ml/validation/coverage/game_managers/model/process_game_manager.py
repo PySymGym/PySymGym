@@ -29,7 +29,7 @@ from ml.validation.coverage.game_managers.model.game_utils import (
     get_steps_from_svm,
 )
 from ml.validation.coverage.game_managers.utils import (
-    set_timeout_if_needed,
+    play_with_timeout,
     unexhausted_steps_failure,
 )
 from onyx import (
@@ -113,6 +113,8 @@ class ModelGamePreparator(BaseGamePreparator):
 
 
 class ModelGameManager(BaseGameManager):
+    mode = "send-model"
+
     def __init__(
         self,
         namespace: Namespace,
@@ -124,12 +126,8 @@ class ModelGameManager(BaseGameManager):
         fail_immediately: bool = False,
         svms_output_path: Optional[Path] = None,
     ):
-        self._namespace = namespace
         self._shared_lock = namespace.shared_lock
         self._model = model
-        # Pickled to the spawn-based mp.Pool workers with the manager, so
-        # the timeout arrives as an instance attribute, never a global.
-        self._feature_config = feature_config
         # Per-trial artifacts (model weights and the exported ONNX) live in the
         # trial's directory so concurrent trials cannot overwrite each other;
         # without a trial dir they fall back to the report root.
@@ -140,7 +138,7 @@ class ModelGameManager(BaseGameManager):
             svms_output_path if svms_output_path is not None else SVMS_OUTPUT_PATH
         )
         self._games_info: dict[str, ModelGameMapInfo] = dict()
-        super().__init__(self._namespace)
+        super().__init__(namespace, feature_config=feature_config)
 
     @property
     def _path_to_model(self) -> Path:
@@ -176,14 +174,18 @@ class ModelGameManager(BaseGameManager):
                 GameFailed(reason=f"Failed to instantiate process for {map_name}"),
             )
 
+        start_time = time.perf_counter()
         try:
             game_info.proc = proc
             svm_connection_info = SVMConnectionInfo(occupied_port=port, socket=socket)
             # Wrapped at call time (not at import time) so the timeout comes
             # from this run's feature config; a wall-clock timeout raises
-            # FunctionTimedOut into the except below.
-            get_result = set_timeout_if_needed(self._feature_config, self._get_result)
-            game_success_or_failure = get_result(game_map2svm, proc)
+            # FunctionTimedOut into the except below, and a FunctionTimedOut
+            # raised inside _get_result is translated back into one by
+            # play_with_timeout (#672).
+            game_success_or_failure = play_with_timeout(
+                self._feature_config, self._get_result, game_map2svm, proc
+            )
             # TODO: There is confusion here because of the ambiguous name of the 'GameResult'. Renaming is needed.
             if isinstance(game_success_or_failure, GameResult):
                 game_result = GameResultDetails(
@@ -192,16 +194,21 @@ class ModelGameManager(BaseGameManager):
                 )
             else:
                 game_result = GameFailedDetails(game_failed=game_success_or_failure)
-        except FunctionTimedOut as error:
-            logging.warning(
-                f"Timeouted on map {map_name} with {error.timedOutAfter}s after {len(game_info.total_steps)} steps"
-            )
+        except FunctionTimedOut:
             kill_proc(proc, logging.warning)
-            game_result = GameFailedDetails(game_failed=GameFailed(reason=type(error)))
+            game_result = GameFailedDetails(
+                game_failed=self._timeout_failure(
+                    map_name=map_name,
+                    steps_budget=game_map.StepsToPlay,
+                    elapsed=time.perf_counter() - start_time,
+                )
+            )
         except Exception as error:
             logging.error(error, exc_info=True)
             kill_proc(proc, logging.error)
-            game_result = GameFailedDetails(game_failed=GameFailed(reason=type(error)))
+            game_result = GameFailedDetails(
+                game_failed=GameFailed(reason=self._failure_reason(error))
+            )
         finally:
             torch.cuda.empty_cache()
         game_info.game_result = game_result
