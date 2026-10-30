@@ -47,6 +47,10 @@ GAME_SERVER_BIND_ADDRESS = "127.0.0.1"
 # closing it fully needs the server to report its successful bind (a
 # .NET-side change, out of scope here).
 MAX_PORT_ATTEMPTS = 3
+# How often the lease reaper scans for expired (unreturned) instances. A
+# leaked instance is reaped within one interval of its TTL expiring; 60 s is
+# fine because the TTL (hours) dwarfs the interval.
+LEASE_REAP_INTERVAL_SEC = 60
 avoid_same_free_port_lock = asyncio.Lock()
 # The loaded config the handlers read the feature settings from (the broker
 # is a single process, so the app context needs no other transport).
@@ -97,6 +101,13 @@ async def dequeue_instance(request):
             request.app[CONFIG_KEY].feature_config,
         )
         logging.info(f"issued {server_info}: {psutil.Process(server_info.pid)}")
+        # Lease the issued instance: a hard-killed worker never calls
+        # /post_ws, so the reaper reaps it after the TTL (the slot is not
+        # lost). Recorded last, so a failure above re-queues without leaking
+        # a lease. The restart-disabled placeholder (pid Undefined) is not
+        # leased: the broker does not own that server.
+        if server_info.pid is not Undefined:
+            ISSUED[server_info.pid] = (server_info, time.monotonic())
         return web.json_response(server_info.to_dict())
     except Empty:
         logging.error("Couldn't dequeue instance, the queue is not replenishing")
@@ -114,6 +125,12 @@ async def enqueue_instance(request):
         returned_instance_info_raw.decode("utf-8")
     )
     logging.info(f"got {returned_instance_info} from client")
+
+    # End the lease before the (async) kill: the instance is being returned,
+    # so the reaper must not reap it. A pid that was never leased (or already
+    # reaped) is a no-op.
+    if returned_instance_info.pid is not Undefined:
+        ISSUED.pop(returned_instance_info.pid, None)
 
     feature_config = request.app[CONFIG_KEY].feature_config
     if feature_config.on_game_server_restart.enabled:
@@ -307,6 +324,55 @@ def kill_process(pid: int) -> None:
     PROCS.pop(pid, None)
 
 
+async def reap_expired_leases(
+    issued: dict[int, tuple[ServerInstanceInfo, float]],
+    server_queue: Queue[ServerInstanceInfo],
+    feature_config: FeatureConfig,
+    lease_ttl_sec: float,
+    interval_sec: float = LEASE_REAP_INTERVAL_SEC,
+) -> None:
+    """Reap issued instances not returned within the lease TTL.
+
+    A hard-killed worker never calls ``/post_ws``, so its instance (and
+    game-server process) would leak in the broker forever. This task runs on
+    the broker's event loop and, every ``interval_sec``, kills the game server
+    of any issued instance older than ``lease_ttl_sec`` and re-queues a
+    placeholder so the slot is re-issuable (a fresh server starts on the next
+    ``/get_ws``).
+
+    The entry is re-checked against the live ``issued`` dict before killing:
+    a concurrent ``/post_ws`` may have returned (and dropped) it since the
+    snapshot, and a stale entry must not trigger a double-kill. ``kill_server``
+    already tolerates an untracked/vanished pid, so a residual race is
+    harmless. A kill failure (a process that survives SIGKILL) is logged and
+    the slot is re-queued anyway — the surviving process stays tracked in
+    ``PROCS`` for the shutdown loop — so it must not kill the reaper task.
+    """
+    while True:
+        await asyncio.sleep(interval_sec)
+        now = time.monotonic()
+        for pid, (server_info, issue_time) in list(issued.items()):
+            if now - issue_time < lease_ttl_sec:
+                continue
+            if issued.get(pid) != (server_info, issue_time):
+                continue
+            del issued[pid]
+            logging.warning(
+                f"reaping expired lease {server_info} (pid={pid}, "
+                f"held {now - issue_time:.0f}s > {lease_ttl_sec:.0f}s TTL)"
+            )
+            try:
+                await kill_server(server_info, feature_config)
+            except Exception:
+                # A kill failure must not kill the reaper: the surviving
+                # process stays tracked in PROCS (the shutdown loop reaches
+                # it), and the slot is re-queued below so it is not lost.
+                logging.exception(f"failed to reap expired lease {server_info}")
+            server_queue.put(
+                ServerInstanceInfo(server_info.svm_name, 0, "None", pid=Undefined)
+            )
+
+
 @contextmanager
 def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
     servers_info = asyncio.run(run_servers(server_count))
@@ -326,8 +392,34 @@ def server_manager(server_queue: Queue[ServerInstanceInfo], server_count: int):
         PROCS.clear()
 
 
+async def _on_startup(app: web.Application) -> None:
+    """Start the lease reaper when the broker begins serving.
+
+    The reaper runs on the broker's event loop for the app's lifetime; it is
+    cancelled in ``_on_cleanup``.
+    """
+    config = app[CONFIG_KEY]
+    app["reaper_task"] = asyncio.create_task(
+        reap_expired_leases(
+            ISSUED,
+            SERVER_INSTANCES,
+            config.feature_config,
+            config.broker_config.lease_ttl_sec,
+        )
+    )
+
+
+async def _on_cleanup(app: web.Application) -> None:
+    """Cancel the lease reaper when the broker shuts down."""
+    task = app.get("reaper_task")
+    if task is not None:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
 def main(config: str):
-    global SERVER_INSTANCES, PROCS, RESULTS
+    global SERVER_INSTANCES, PROCS, RESULTS, ISSUED
 
     # Load the config first: a broken config must fail before the broker
     # sets up its state and starts serving.
@@ -344,6 +436,7 @@ def main(config: str):
     SERVER_INSTANCES = Queue()
     PROCS = {}
     RESULTS = []
+    ISSUED = {}
 
     server_count = config.validation_config.validation_mode.process_count
 
@@ -351,6 +444,8 @@ def main(config: str):
         app = web.Application()
         app.add_routes(routes)
         app[CONFIG_KEY] = config
+        app.on_startup.append(_on_startup)
+        app.on_cleanup.append(_on_cleanup)
         web.run_app(app, port=config.broker_config.port)
 
 
