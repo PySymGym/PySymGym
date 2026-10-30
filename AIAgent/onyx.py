@@ -3,6 +3,7 @@ import json
 import pathlib
 import typing as t
 import warnings
+from dataclasses import dataclass
 
 import onnx
 import onnxruntime
@@ -21,6 +22,100 @@ from ml.models.registry import get_model_class
 ONNX_OPSET_VERSION = 17
 
 
+@dataclass(frozen=True)
+class ModelInput:
+    """One input of the ONNX model.
+
+    The single source of the model's input contract (#597): the tensor
+    builders, the legacy exporter's ``dynamic_axes`` mapping, the dynamo
+    exporter's ``dynamic_shapes`` mapping, and the ``input_names`` list are
+    all derived from ``MODEL_INPUTS``, so the 11 inputs can no longer drift
+    apart.
+    """
+
+    #: ONNX wire name (the V# contract; see ``ml.inference.ONNX``)
+    name: str
+    #: HeteroData key: a node-type str or an edge-type (src, rel, dst) tuple
+    torch_key: t.Union[str, t.Tuple[str, str, str]]
+    #: Attribute of the HeteroData entry holding the tensor
+    attr: str
+    #: Dynamic axes: axis index -> symbolic dimension name; absent axes are
+    #: static. Axis names are required: torch.onnx.utils._validate_dynamic_axes
+    #: warns once per input whose value is an axis list ("No names were found
+    #: for specified dynamic axes") and auto-generates the dim params
+    #: instead. Names must be unique per distinct size — ONNX treats equal
+    #: dim_param strings as the same symbolic dimension — except that an edge
+    #: index's axis 1 and the matching edge type's (or per-edge attributes')
+    #: axis 0 always hold the same number of edges, so they share a name.
+    dynamic_axes: t.Mapping[int, str]
+
+
+#: The 11 ONNX model inputs in the exact ``input_names`` order (the V# wire
+#: contract).
+MODEL_INPUTS: tuple[ModelInput, ...] = (
+    ModelInput(ONNX.game_vertex, TORCH.game_vertex, "x", {0: "num_game_vertices"}),
+    ModelInput(ONNX.state_vertex, TORCH.state_vertex, "x", {0: "num_state_vertices"}),
+    ModelInput(
+        ONNX.path_condition_vertex,
+        TORCH.path_condition_vertex,
+        "x",
+        {0: "num_pc_vertices"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_to_gamevertex_index,
+        TORCH.gamevertex_to_gamevertex,
+        "edge_index",
+        {1: "num_gv_gv_edges"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_to_gamevertex_type,
+        TORCH.gamevertex_to_gamevertex,
+        "edge_type",
+        {0: "num_gv_gv_edges"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_history_statevertex_index,
+        TORCH.gamevertex_history_statevertex,
+        "edge_index",
+        {1: "num_gv_history_sv_edges"},
+    ),
+    # Axis 1 is the fixed per-edge attribute vector
+    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset/tensors.py),
+    # so only axis 0 is dynamic; torch.export rejects a
+    # user-specified dynamic dim that tracing infers as static.
+    ModelInput(
+        ONNX.gamevertex_history_statevertex_attrs,
+        TORCH.gamevertex_history_statevertex,
+        "edge_attr",
+        {0: "num_gv_history_sv_edges"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_in_statevertex,
+        TORCH.gamevertex_in_statevertex,
+        "edge_index",
+        {1: "num_gv_in_sv_edges"},
+    ),
+    ModelInput(
+        ONNX.statevertex_parentof_statevertex,
+        TORCH.statevertex_parentof_statevertex,
+        "edge_index",
+        {1: "num_sv_parentof_sv_edges"},
+    ),
+    ModelInput(
+        ONNX.pathcondvertex_to_pathcondvertex,
+        TORCH.pathcondvertex_to_pathcondvertex,
+        "edge_index",
+        {1: "num_pc_pc_edges"},
+    ),
+    ModelInput(
+        ONNX.pathcondvertex_to_statevertex,
+        TORCH.pathcondvertex_to_statevertex,
+        "edge_index",
+        {1: "num_pc_sv_edges"},
+    ),
+)
+
+
 def load_gamestate(f: t.TextIO) -> GameState:
     return GameState.from_dict(json.load(f))
 
@@ -29,35 +124,10 @@ def create_model_input(
     hetero_data: HeteroData, modifier: t.Callable[[t.Any], t.Any] = lambda x: x
 ):
     return {
-        ONNX.game_vertex: modifier(hetero_data[TORCH.game_vertex].x),
-        ONNX.state_vertex: modifier(hetero_data[TORCH.state_vertex].x),
-        ONNX.path_condition_vertex: modifier(
-            hetero_data[TORCH.path_condition_vertex].x
-        ),
-        ONNX.gamevertex_to_gamevertex_index: modifier(
-            hetero_data[TORCH.gamevertex_to_gamevertex].edge_index
-        ),
-        ONNX.gamevertex_to_gamevertex_type: modifier(
-            hetero_data[TORCH.gamevertex_to_gamevertex].edge_type
-        ),
-        ONNX.gamevertex_history_statevertex_index: modifier(
-            hetero_data[TORCH.gamevertex_history_statevertex].edge_index
-        ),
-        ONNX.gamevertex_history_statevertex_attrs: modifier(
-            hetero_data[TORCH.gamevertex_history_statevertex].edge_attr
-        ),
-        ONNX.gamevertex_in_statevertex: modifier(
-            hetero_data[TORCH.gamevertex_in_statevertex].edge_index
-        ),
-        ONNX.statevertex_parentof_statevertex: modifier(
-            hetero_data[TORCH.statevertex_parentof_statevertex].edge_index
-        ),
-        ONNX.pathcondvertex_to_pathcondvertex: modifier(
-            hetero_data[TORCH.pathcondvertex_to_pathcondvertex].edge_index
-        ),
-        ONNX.pathcondvertex_to_statevertex: modifier(
-            hetero_data[TORCH.pathcondvertex_to_statevertex].edge_index
-        ),
+        model_input.name: modifier(
+            getattr(hetero_data[model_input.torch_key], model_input.attr)
+        )
+        for model_input in MODEL_INPUTS
     }
 
 
@@ -67,6 +137,19 @@ def create_onnxruntime_input(hetero_data: HeteroData):
 
 def create_torch_input(hetero_data: HeteroData):
     return tuple(create_model_input(hetero_data).values())
+
+
+def input_names() -> list[str]:
+    """The ONNX input names in model order (derived from ``MODEL_INPUTS``)."""
+    return [model_input.name for model_input in MODEL_INPUTS]
+
+
+def dynamic_axes() -> dict[str, dict[int, str]]:
+    """The legacy exporter's ``dynamic_axes`` mapping (derived from
+    ``MODEL_INPUTS``)."""
+    return {
+        model_input.name: dict(model_input.dynamic_axes) for model_input in MODEL_INPUTS
+    }
 
 
 def save_in_onnx(
@@ -111,50 +194,8 @@ def save_in_onnx(
                 args=create_torch_input(sample_input),
                 f=save_path,
                 verbose=verbose,
-                # Axis names are required: torch.onnx.utils._validate_dynamic_axes
-                # warns once per input whose value is an axis list ("No names were
-                # found for specified dynamic axes") and auto-generates the dim
-                # params instead. Names must be unique per distinct size — ONNX
-                # treats equal dim_param strings as the same symbolic dimension —
-                # except that an edge type's index (axis 1) and its per-edge
-                # attributes (axis 0) always hold the same number of edges, so
-                # they share a name.
-                dynamic_axes={
-                    ONNX.game_vertex: {0: "num_game_vertices"},
-                    ONNX.state_vertex: {0: "num_state_vertices"},
-                    ONNX.path_condition_vertex: {0: "num_pc_vertices"},
-                    ONNX.gamevertex_to_gamevertex_index: {1: "num_gv_gv_edges"},
-                    ONNX.gamevertex_to_gamevertex_type: {0: "num_gv_gv_edges"},
-                    ONNX.gamevertex_history_statevertex_index: {
-                        1: "num_gv_history_sv_edges"
-                    },
-                    # Axis 1 is the fixed per-edge attribute vector
-                    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset/tensors.py),
-                    # so only axis 0 is dynamic; torch.export rejects a
-                    # user-specified dynamic dim that tracing infers as static.
-                    ONNX.gamevertex_history_statevertex_attrs: {
-                        0: "num_gv_history_sv_edges"
-                    },
-                    ONNX.gamevertex_in_statevertex: {1: "num_gv_in_sv_edges"},
-                    ONNX.statevertex_parentof_statevertex: {
-                        1: "num_sv_parentof_sv_edges"
-                    },
-                    ONNX.pathcondvertex_to_pathcondvertex: {1: "num_pc_pc_edges"},
-                    ONNX.pathcondvertex_to_statevertex: {1: "num_pc_sv_edges"},
-                },
-                input_names=[
-                    ONNX.game_vertex,
-                    ONNX.state_vertex,
-                    ONNX.path_condition_vertex,
-                    ONNX.gamevertex_to_gamevertex_index,
-                    ONNX.gamevertex_to_gamevertex_type,
-                    ONNX.gamevertex_history_statevertex_index,
-                    ONNX.gamevertex_history_statevertex_attrs,
-                    ONNX.gamevertex_in_statevertex,
-                    ONNX.statevertex_parentof_statevertex,
-                    ONNX.pathcondvertex_to_pathcondvertex,
-                    ONNX.pathcondvertex_to_statevertex,
-                ],
+                dynamic_axes=dynamic_axes(),
+                input_names=input_names(),
                 output_names=["out"],
                 opset_version=ONNX_OPSET_VERSION,
             )

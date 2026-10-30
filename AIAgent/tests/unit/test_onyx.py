@@ -18,6 +18,8 @@ from onyx import (
     create_model_input,
     create_onnxruntime_input,
     create_torch_input,
+    dynamic_axes,
+    input_names,
     load_gamestate,
     shorten_output,
 )
@@ -156,6 +158,30 @@ class TestCreateTorchInput:
         assert len(result) == len(EXPECTED_INPUTS)
         for value, (_name, key, attr) in zip(result, EXPECTED_INPUTS, strict=True):
             assert value is getattr(hetero[key], attr)
+
+
+class TestInputNames:
+    def test_matches_the_expected_wire_names_in_order(self):
+        assert input_names() == [name for name, _, _ in EXPECTED_INPUTS]
+
+
+class TestDynamicAxes:
+    def test_matches_the_legacy_dynamic_axes_mapping(self):
+        # The dim names are part of the ONNX wire contract (the V# engine
+        # matches dynamic dims by name); pinned as literals.
+        assert dynamic_axes() == {
+            "game_vertex": {0: "num_game_vertices"},
+            "state_vertex": {0: "num_state_vertices"},
+            "path_condition_vertex": {0: "num_pc_vertices"},
+            "gamevertex_to_gamevertex_index": {1: "num_gv_gv_edges"},
+            "gamevertex_to_gamevertex_type": {0: "num_gv_gv_edges"},
+            "gamevertex_history_statevertex_index": {1: "num_gv_history_sv_edges"},
+            "gamevertex_history_statevertex_attrs": {0: "num_gv_history_sv_edges"},
+            "gamevertex_in_statevertex": {1: "num_gv_in_sv_edges"},
+            "statevertex_parentof_statevertex": {1: "num_sv_parentof_sv_edges"},
+            "pathconditionvertex_to_pathconditionvertex": {1: "num_pc_pc_edges"},
+            "pathconditionvertex_to_statevertex": {1: "num_pc_sv_edges"},
+        }
 
 
 class TestLoadGamestate:
