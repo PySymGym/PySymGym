@@ -178,11 +178,10 @@ class ModelGameManager(BaseGameManager):
         try:
             game_info.proc = proc
             svm_connection_info = SVMConnectionInfo(occupied_port=port, socket=socket)
-            # Wrapped at call time (not at import time) so the timeout comes
-            # from this run's feature config; a wall-clock timeout raises
-            # FunctionTimedOut into the except below, and a FunctionTimedOut
-            # raised inside _get_result is translated back into one by
-            # play_with_timeout (#672).
+            # Called under the run's per-map timeout (from this run's feature
+            # config); a wall-clock timeout raises FunctionTimedOut into the
+            # except below, and a FunctionTimedOut raised inside _get_result
+            # propagates directly into it.
             game_success_or_failure = play_with_timeout(
                 self._feature_config, self._get_result, game_map2svm, proc
             )

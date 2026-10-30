@@ -185,11 +185,10 @@ class EachStepGameManager(BaseGameManager):
             with game_server_socket_manager(
                 game_map2svm.SVMInfo, self._connector_config, self._broker_config
             ) as ws:
-                # Wrapped at call time (not at import time) so the timeout
-                # comes from this run's feature config; a wall-clock timeout
-                # raises FunctionTimedOut into the except below, and a
-                # FunctionTimedOut raised inside the loop is translated back
-                # into one by play_with_timeout (#672).
+                # Called under the run's per-map timeout (from this run's
+                # feature config); a wall-clock timeout raises FunctionTimedOut
+                # into the except below, and a FunctionTimedOut raised inside
+                # the loop propagates directly into it.
                 game_result, time = play_with_timeout(
                     self._feature_config, self._play_game_map_with_svm, game_map2svm, ws
                 )
