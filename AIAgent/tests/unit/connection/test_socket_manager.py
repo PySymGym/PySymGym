@@ -5,6 +5,8 @@ patched so no real process is inspected. The tests assert the retry loop and,
 crucially, that ``return_instance`` runs on every exit path.
 """
 
+import logging
+
 import pytest
 from common.config.broker_config import BrokerConfig
 from common.config.connector_config import GameServerConnectorConfig
@@ -179,6 +181,78 @@ def test_game_server_socket_manager_returns_instance_on_body_failure(
 
     assert ws.closed is True
     assert returned == [instance]
+
+
+def test_game_server_socket_manager_return_failure_does_not_mask_body_error(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_websocket,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A return_instance failure (non-200 → RuntimeError) must not mask the
+    # game body's original exception: the body error propagates, the return
+    # failure is logged only.
+    ws = fake_websocket
+    instance = _server_instance()
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+
+    def failing_return(instance_arg, broker_config):
+        raise RuntimeError("broker down")
+
+    monkeypatch.setattr(socket_manager, "return_instance", failing_return)
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(ValueError, match="body failed"):
+            with socket_manager.game_server_socket_manager(
+                _svm_info(), _connector_config(), _broker_config()
+            ):
+                raise ValueError("body failed")
+
+    assert "failed to return" in caplog.text
+    assert ws.closed is True
+
+
+def test_game_server_socket_manager_return_failure_logged_when_body_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_websocket,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # When the body succeeds, a return_instance failure is logged but does not
+    # turn a successful game into a failure.
+    ws = fake_websocket
+    instance = _server_instance()
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+
+    def failing_return(instance_arg, broker_config):
+        raise RuntimeError("broker down")
+
+    monkeypatch.setattr(socket_manager, "return_instance", failing_return)
+
+    with caplog.at_level(logging.ERROR):
+        with socket_manager.game_server_socket_manager(
+            _svm_info(), _connector_config(), _broker_config()
+        ) as sock:
+            assert sock is ws
+
+    assert "failed to return" in caplog.text
+    assert ws.closed is True
 
 
 def test_game_server_socket_manager_returns_instance_when_connect_fails(
