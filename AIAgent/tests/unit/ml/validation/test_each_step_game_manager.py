@@ -44,9 +44,11 @@ class FakePredictor(Predictor):
         return self._model
 
     def predict(self, input, map_name=None):
+        # The real predictors return the model output as a tensor
+        # ((num_states, 1)); the fake mirrors that shape.
         output = self._outputs[min(self.steps, len(self._outputs) - 1)]
         self.steps += 1
-        return 0, output
+        return 0, torch.tensor(output)
 
 
 class FakeConnector:
@@ -183,8 +185,9 @@ def test_play_game_map_with_svm_returns_result_and_steps(
     )
     assert duration >= 0
     assert fake.sent_steps == [0, 0]
-    # The predicted usefulness is a hardcoded constant (TODO in the source).
-    assert fake.sent_usefulness == [42.0, 42.0]
+    # The predicted usefulness is the model's predicted value for the chosen
+    # (argmax) state (#671): the max element of the (num_states, 1) output.
+    assert fake.sent_usefulness == [1.0, 1.0]
     steps = manager.get_game_steps(game_map2svm.GameMap)
     assert steps is not None
     assert len(steps) == 2
@@ -223,6 +226,43 @@ def test_play_game_map_with_svm_reports_model_played_steps(
     assert isinstance(result, GameResult)
     assert result.steps_count == 2
     assert result.actual_coverage_percent == 100
+
+
+def test_play_game_map_logs_progress_at_the_interval(
+    fake_namespace,
+    game_map2svm_factory,
+    gamestate_factory,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A stuck/slow map must be diagnosable from the log alone (#616): the
+    # loop logs a heartbeat every PROGRESS_LOG_EVERY_N_STEPS steps with the
+    # map name, the step count, and the elapsed time.
+    game_map2svm = game_map2svm_factory(steps_to_play=2)
+    first = gamestate_factory()
+    second = gamestate_factory()
+    delta = GameState(
+        GraphVertices=second.GraphVertices,
+        States=second.States,
+        PathConditionVertices=[],
+        Map=second.Map,
+    )
+    fake = FakeConnector(
+        game_map2svm.GameMap,
+        states=[first, delta],
+        gameover_after=2,
+        gameover=_gameover(100, 1, 2, 0),
+    )
+    _patch_connector(monkeypatch, fake)
+    # Log every step so the 2-step game produces a heartbeat per step.
+    monkeypatch.setattr(esgm, "PROGRESS_LOG_EVERY_N_STEPS", 1)
+    manager = _manager(fake_namespace, FakePredictor())
+
+    with caplog.at_level(logging.INFO):
+        manager._play_game_map_with_svm(game_map2svm, object())
+
+    assert "Method_0: step 1/2" in caplog.text
+    assert "Method_0: step 2/2" in caplog.text
 
 
 def test_play_game_map_with_svm_immediate_gameover(
