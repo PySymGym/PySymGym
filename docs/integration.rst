@@ -155,6 +155,41 @@ or the per-map timeout elapses:
   agent's listening port (the ``{Port}`` substitution) and reads one byte —
   ``1`` = save the steps, ``0`` = skip — and writes the file only for ``1``.
 
+.. _port-allocation:
+
+Port allocation
+---------------
+
+Two ports are involved in an SVM run: the broker's own port and the
+per-instance game-server port.
+
+- **Broker port.** The websocket broker serves ``/get_ws`` and ``/post_ws``
+  on ``BrokerConfig.port`` (default ``35000``). It is a single fixed port
+  per broker process.
+- **Game-server port.** Each game server instance gets its own port from
+  the platform's ``SVMSInfo`` range (``min_port``/``max_port``). The
+  shipped configs keep the ranges disjoint from the broker port: the
+  broker occupies ``35000`` and the SVM ranges start at ``35100``
+  (``35000``–``35099`` is reserved for broker(s)).
+
+How the game-server port is bound differs by validation mode:
+
+- ``svms_each_step`` (broker-launched): the broker probes the range for a
+  free port — binding the probe on the same interface the server binds
+  (``127.0.0.1`` for the V# runner) — and launches the server with it.
+  The server is a separate process that binds its own socket, so the
+  listening socket cannot be passed to it and the probe→bind window is a
+  cross-process race. The race is accepted with a bounded
+  retry-on-collision: if the port is open while the server process is
+  dead (it died on the bind — a foreign process holds the port), the
+  broker reaps the corpse and retries the next port, up to
+  ``MAX_PORT_ATTEMPTS`` attempts. A port that never opens within the
+  startup timeout is a startup failure, not a collision, and fails fast.
+- ``svms_model`` (send-model): the agent binds and holds the listening
+  socket itself and passes the port to the engine, which connects to it
+  (see :ref:`result-and-steps-files`); there is no cross-process bind
+  race for that socket.
+
 .. _onnx-conversion:
 
 ONNX conversion
