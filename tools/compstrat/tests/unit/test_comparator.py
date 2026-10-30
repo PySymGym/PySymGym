@@ -127,6 +127,25 @@ def test_entrypoint_keeps_failed_runs_when_disabled(
     assert calls == ["compare"]
 
 
+def test_compare_without_exp_name_saves_fallback_pdf(tmp_path: Path) -> None:
+    comparator = Comparator(
+        strat1=_coverage_strategy("A", ["m1", "m2", "m3"], [1.0, 2.0, 3.0]),
+        strat2=_coverage_strategy("B", ["m1", "m2", "m3"], [2.0, 1.0, 3.0]),
+        savedir=str(tmp_path),
+    )
+
+    # exp_name defaults to None; the save used to crash with
+    # AttributeError (config.on). The fallback name is derived from the
+    # by_column and the datasource.
+    comparator._compare(
+        CompareConfig(
+            datasource=DataSourceType.INNER_JOIN_DF, by_column="coverage", metric="%"
+        )
+    )
+
+    assert (tmp_path / "coverage_inner_join_df.pdf").exists()
+
+
 def _coverage_strategy(name: str, index: list[str], coverage: list[float]) -> Strategy:
     color = Color(name, 1, 2, 3)
     return Strategy(

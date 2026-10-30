@@ -107,3 +107,19 @@ def test_pipeline_keeps_failed_runs_when_disabled(mock_runs_dir: Path, tmp_path:
     # m3 70>-1 EPSILON.
     counts = pd.read_csv(tmp_path / "result_count.csv", index_col=0)
     assert list(counts.loc["coverage"]) == [2, 1, 0]
+
+
+def test_pipeline_exp_name_null_saves_fallback_pdf(mock_runs_dir: Path, tmp_path: Path):
+    args = Args(
+        strat1="ALPHA",
+        strat2="BETA",
+        runs1=[str(mock_runs_dir / "strat_alpha.csv")],
+        runs2=[str(mock_runs_dir / "strat_beta.csv")],
+        configs=read_configs(MOCK_COMPARE_CONFS_DIR / "compare_confs_5.yaml"),
+        savedir=tmp_path,
+    )
+    entrypoint(args)
+
+    # exp_name: null used to crash with AttributeError (config.on); the
+    # fallback filename is derived from the by_column and the datasource.
+    assert (tmp_path / "coverage_inner_join_df.pdf").exists()
