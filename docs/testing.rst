@@ -182,7 +182,11 @@ transforms, training and experiment helpers, model-forward smoke tests) and
 and the coverage-validation flow). They reuse the ``AIAgent/conftest.py``
 fixtures and build every graph input through
 ``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
-production tensor schema. The malformed-input branches of
+production tensor schema. The dataset's domain types (``Result``,
+``TrainingDatasetMode``) live in ``common.dataset`` and the graph tensor
+feature widths in ``ml.schema``; ``ml.dataset`` re-exports both, and the
+lifecycle tests pin that the re-exports are the same objects. The
+malformed-input branches of
 ``convert_input_to_tensor`` are pinned by mutating a ``gamestate_factory``
 copy (exact error type and message, the ``(None, None)`` return) rather than
 hand-rolled gamestates. The ``TrainingDataset`` lifecycle tests

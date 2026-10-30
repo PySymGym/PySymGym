@@ -15,7 +15,6 @@ from typing import (
     Any,
     DefaultDict,
     Dict,
-    Iterator,
     List,
     Optional,
     Sequence,
@@ -26,10 +25,11 @@ from typing import (
 import numpy as np
 import torch
 import tqdm
-from common.dataset import TrainingDatasetMode
+from common.dataset import Result, TrainingDatasetMode
 from common.game import GameState, PathConditionVertex
 from ml.device import get_device
 from ml.inference import TORCH
+from ml.schema import NUM_CFG_VERTEX_FEATURES, NUM_PC_FEATURES, NUM_STATE_FEATURES
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
@@ -37,10 +37,6 @@ from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 GAMESTATESUFFIX = "_gameState"
 STATESUFFIX = "_statesInfo"
 MOVEDSTATESUFFIX = "_movedState"
-
-NUM_PC_FEATURES = 48
-NUM_STATE_FEATURES = 6
-NUM_CFG_VERTEX_FEATURES = 7
 
 StateId: TypeAlias = int
 StateIndex: TypeAlias = int
@@ -51,68 +47,6 @@ VertexIndex: TypeAlias = int
 VertexMap: TypeAlias = Dict[VertexId, VertexIndex]
 
 MapName: TypeAlias = str
-
-
-@dataclass(frozen=True)
-class Result:
-    """A map's validation result, ordered so that better results sort first.
-
-    Better means: higher coverage, then fewer tests, then fewer steps, then
-    fewer errors. The ordering lives solely in :attr:`sort_key` and
-    ``__lt__``; construction sites pass the plain (non-negated) counts.
-
-    The on-disk representation (:meth:`to_tuple`/:meth:`from_tuple`) keeps
-    the historical sign-flipped tuple format
-    ``(coverage, -tests, -steps, errors)`` so existing processed datasets
-    remain readable.
-    """
-
-    coverage_percent: float
-    tests_number: int
-    steps_number: int
-    errors_number: int
-
-    @property
-    def sort_key(self) -> Tuple[float, int, int, int]:
-        """The lexicographic key implementing the ordering above (larger = better)."""
-        return (
-            self.coverage_percent,
-            -self.tests_number,
-            -self.steps_number,
-            -self.errors_number,
-        )
-
-    def __lt__(self, other: "Result") -> bool:
-        if not isinstance(other, Result):
-            return NotImplemented
-        return self.sort_key < other.sort_key
-
-    def __iter__(self) -> Iterator[float | int]:
-        yield from (
-            self.coverage_percent,
-            self.tests_number,
-            self.steps_number,
-            self.errors_number,
-        )
-
-    def to_tuple(self) -> Tuple[float, int, int, int]:
-        """The on-disk representation: tests and steps negated."""
-        return (
-            self.coverage_percent,
-            -self.tests_number,
-            -self.steps_number,
-            self.errors_number,
-        )
-
-    @classmethod
-    def from_tuple(cls, values: Sequence[float | int]) -> "Result":
-        coverage_percent, tests_number, steps_number, errors_number = values
-        return cls(
-            coverage_percent,
-            -tests_number,
-            -steps_number,
-            errors_number,
-        )
 
 
 StatesDistribution: TypeAlias = torch.tensor

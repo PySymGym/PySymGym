@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 import torch
-from common.dataset import TrainingDatasetMode
+from common.dataset import Result, TrainingDatasetMode
 from ml.dataset import (
-    Result,
+    Result as MlResult,
     TrainingDataset,
     TrainingDatasetMode as MlTrainingDatasetMode,
 )
@@ -26,6 +26,26 @@ pytestmark = pytest.mark.unit
 def test_training_dataset_mode_is_reexported_by_ml_dataset():
     # One class, two import paths: the ml-side name is the common-side one.
     assert MlTrainingDatasetMode is TrainingDatasetMode
+
+
+def test_result_is_reexported_by_ml_dataset():
+    # One class, two import paths: the ml-side name is the common-side one.
+    assert MlResult is Result
+
+
+def test_feature_widths_are_reexported_by_ml_dataset():
+    # One constant set, two import paths: the ml-side names are the
+    # ml.schema ones.
+    from ml import schema
+    from ml.dataset import (
+        NUM_CFG_VERTEX_FEATURES,
+        NUM_PC_FEATURES,
+        NUM_STATE_FEATURES,
+    )
+
+    assert NUM_PC_FEATURES is schema.NUM_PC_FEATURES
+    assert NUM_STATE_FEATURES is schema.NUM_STATE_FEATURES
+    assert NUM_CFG_VERTEX_FEATURES is schema.NUM_CFG_VERTEX_FEATURES
 
 
 def _save_processed_map(
