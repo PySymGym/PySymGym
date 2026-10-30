@@ -21,7 +21,7 @@ from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
 )
-from ml.validation.coverage.game_managers.each_step.game_states_utils import (
+from ml.validation.coverage.game_managers.game_states_utils import (
     get_states,
     update_game_state,
 )
