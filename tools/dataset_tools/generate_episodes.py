@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import defaultdict
 import argparse
 
+from atomic_io import atomic_write_text
 from common.game import GameMap
 
 
@@ -78,8 +79,9 @@ def generate_episodes(dataset_path):
         key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher)
     )
 
-    with open(dataset_path, "w") as f:
-        f.write(GameMap.schema().dumps(dataset, many=True, indent=4))
+    atomic_write_text(
+        dataset_path, GameMap.schema().dumps(dataset, many=True, indent=4)
+    )
 
 
 def main():

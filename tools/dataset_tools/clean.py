@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import argparse
 
+from atomic_io import atomic_write_text
 from common.game import GameMap
 
 
@@ -41,8 +42,7 @@ def clean(log_path, dataset_path):
         key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher)
     )
 
-    with open(dataset_path, "w") as f:
-        f.write(GameMap.schema().dumps(result, many=True, indent=4))
+    atomic_write_text(dataset_path, GameMap.schema().dumps(result, many=True, indent=4))
 
 
 def main():
