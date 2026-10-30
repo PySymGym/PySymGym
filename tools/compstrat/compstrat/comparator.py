@@ -84,18 +84,42 @@ class Comparator:
         self.eq_color = eq_color
         self.eq_ecolor = eq_ecolor
 
+        self._build_joins()
+
+    def _build_joins(self) -> None:
+        """Compute the joined dataframes and the derived statistics.
+
+        Joins the strategy dataframes on the shared ``method`` index level
+        (inner and outer) and writes the per-join artifacts:
+        ``symdiff_starts_methods.json`` (methods present in only one
+        strategy), ``mean_statistics.csv`` (inner-join column means), and
+        the equal-coverage subset of the inner join. Called from
+        ``__init__`` and again by ``drop_failed`` after the strategy
+        dataframes change.
+        """
         with open(os.path.join(self.savedir, "symdiff_starts_methods.json"), "w") as f:
             json.dump(
-                list(set(strat1.df.index).symmetric_difference(set(strat2.df.index))),
+                list(
+                    set(self.strat1.df.index).symmetric_difference(
+                        set(self.strat2.df.index)
+                    )
+                ),
                 f,
                 indent=4,
             )
 
+        suffixes = (f"_{self.strat1.name}", f"_{self.strat2.name}")
         self.inner_df = self.strat1.df.merge(
             self.strat2.df,
             on="method",
             how="inner",
-            suffixes=(f"_{self.strat1.name}", f"_{self.strat2.name}"),
+            suffixes=suffixes,
+        )
+        self.outer_df = self.strat1.df.merge(
+            self.strat2.df,
+            on="method",
+            how="outer",
+            suffixes=suffixes,
         )
 
         self.inner_df.mean().to_csv(os.path.join(self.savedir, "mean_statistics.csv"))
@@ -134,9 +158,9 @@ class Comparator:
         comparison_datasource_description = "datasource: "
         match config.datasource:
             case DataSourceType.OUTER_JOIN_DF:
-                all_results = self.inner_df
+                all_results = self.outer_df
                 comparison_datasource_description += (
-                    "methods, completed by both strats (inner join)"
+                    "methods, completed by at least one strat (outer join)"
                 )
             case DataSourceType.INNER_JOIN_DF:
                 all_results = self.inner_df
@@ -146,6 +170,11 @@ class Comparator:
             case DataSourceType.INNER_JOIN_COVERAGE_EQ_DF:
                 all_results = self.inner_coverage_eq
                 comparison_datasource_description += "methods, completed by both strats with equal coverage (inner join, cov1 == cov2)"
+        # For the outer join, methods completed by only one strategy carry
+        # NaN on the missing side. Every comparison below evaluates to
+        # False for NaN, so those methods enter none of the win/loss/eq
+        # subsets and are absent from the plot; no NaN ever reaches the
+        # statistics or matplotlib.
         strat1_win = all_results.loc[
             left_win_comparison(
                 all_results[strat1_col],
