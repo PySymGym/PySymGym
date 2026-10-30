@@ -60,6 +60,10 @@ class CompareConfig:
     less_is_winning: bool = False
     exp_name: Optional[str] = None
     scale: Optional[str] = None
+    # Pipeline-level flag: failed runs (coverage == -1) are excluded from
+    # every comparison unless any config sets this to false (see
+    # tools/README.md).
+    drop_failed: bool = True
 
 
 class Comparator:
@@ -134,8 +138,24 @@ class Comparator:
         return df.drop(failed)
 
     def drop_failed(self) -> int:
-        self.strat1.df = self._drop_failed(self.strat1.df)
-        self.strat2.df = self._drop_failed(self.strat2.df)
+        """Drop failed runs (``coverage == -1``) from both strategies.
+
+        Rebuilds the joined dataframes and the derived statistics
+        (``_build_joins``) so every downstream comparison sees the
+        filtered data.
+
+        Returns:
+            The total number of dropped rows across both strategies.
+        """
+        kept1 = self._drop_failed(self.strat1.df)
+        kept2 = self._drop_failed(self.strat2.df)
+        dropped = (len(self.strat1.df) - len(kept1)) + (
+            len(self.strat2.df) - len(kept2)
+        )
+        self.strat1.df = kept1
+        self.strat2.df = kept2
+        self._build_joins()
+        return dropped
 
     def _compare(self, config: CompareConfig):
         def left_win_comparison(left, right):
