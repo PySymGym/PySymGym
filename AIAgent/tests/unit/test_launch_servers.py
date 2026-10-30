@@ -363,8 +363,8 @@ class TestRunServerInstance:
         )
         next_free_port_calls: list[tuple] = []
 
-        def fake_next_free_port(min_port, max_port):
-            next_free_port_calls.append((min_port, max_port))
+        def fake_next_free_port(min_port, max_port, address):
+            next_free_port_calls.append((min_port, max_port, address))
             return 35012
 
         monkeypatch.setattr(
@@ -384,6 +384,10 @@ class TestRunServerInstance:
                 popen_instances.append(self)
                 self.pid = 4321
 
+            def poll(self):
+                # None = still running: the server is alive on its port.
+                return None
+
         monkeypatch.setattr(launch_servers_module.subprocess, "Popen", FakePopen)
 
         async def fake_wait_for_port(port, timeout=10):
@@ -401,7 +405,9 @@ class TestRunServerInstance:
             )
         )
 
-        assert next_free_port_calls == [(35000, 35050)]
+        # The probe uses the interface the game server actually binds
+        # (127.0.0.1 in the V# runner), not all interfaces.
+        assert next_free_port_calls == [(35000, 35050, "127.0.0.1")]
         (args, kwargs) = popen_calls[0]
         assert args == ["run", "--port", "35012"]
         assert kwargs == {
@@ -432,7 +438,7 @@ class TestRunServerInstance:
         monkeypatch.setattr(
             launch_servers_module,
             "next_free_port",
-            lambda min_port, max_port: 35012,
+            lambda min_port, max_port, address: 35012,
         )
         proc = fake_proc(pid=4321)
 

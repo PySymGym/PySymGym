@@ -28,6 +28,12 @@ from connection.broker_conn.classes import (
 routes = web.RouteTableDef()
 
 FAILED_TO_INSTANTIATE_ERROR = "TCP server failed"
+# The interface the game server binds: the V# server listens on 127.0.0.1
+# (GameServers/VSharp/VSharp.ML.GameServer.Runner/Main.fs,
+# ``HttpBinding.createSimple HTTP "127.0.0.1" port``). The free-port probe
+# must use the same address, or "free" would mean free on a different
+# interface than the one the server actually binds.
+GAME_SERVER_BIND_ADDRESS = "127.0.0.1"
 avoid_same_free_port_lock = asyncio.Lock()
 # The loaded config the handlers read the feature settings from (the broker
 # is a single process, so the app context needs no other transport).
@@ -149,7 +155,7 @@ async def run_server_instance(
         return ServerInstanceInfo(svm_name, 0, "None", pid=Undefined)
 
     def start_server() -> tuple[subprocess.Popen[bytes], int]:
-        port = next_free_port(min_port, max_port)
+        port = next_free_port(min_port, max_port, GAME_SERVER_BIND_ADDRESS)
         launch_server = launcher(port)
         proc = subprocess.Popen(
             launch_server.split(),
