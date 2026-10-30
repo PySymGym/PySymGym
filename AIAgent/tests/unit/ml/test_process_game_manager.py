@@ -11,7 +11,7 @@ import socket
 import pytest
 import torch
 from common.classes import GameFailed, GameResult
-from common.config.feature_config import FeatureConfig
+from common.config.feature_config import FeatureConfig, SaveIfFailOrTimeout
 from common.game import GameMap
 from func_timeout import FunctionTimedOut
 from ml.validation.coverage.game_managers.model import process_game_manager as pgm
@@ -139,6 +139,45 @@ def test_get_result_retries_while_process_runs(
     assert isinstance(result, GameResult)
     assert result.actual_coverage_percent == 50
     assert len(sleeps) == 1
+
+
+def test_get_result_bounded_poll_raises_when_the_file_never_appears(
+    fake_namespace,
+    game_map2svm_factory,
+    tmp_path,
+    fake_proc,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Even with SAVE_IF_FAIL_OR_TIMEOUT disabled the poll is bounded by the
+    # per-map timeout, so a misbehaving SVM cannot hang the worker.
+    manager = ModelGameManager(
+        fake_namespace,
+        torch.nn.Linear(1, 1),
+        feature_config=FeatureConfig(
+            save_if_fail_or_timeout=SaveIfFailOrTimeout(timeout_sec=6)
+        ),
+        svms_output_path=tmp_path,
+    )
+    game_map2svm = game_map2svm_factory()
+    clock = {"now": 0.0}
+    sleeps: list[float] = []
+
+    def fake_monotonic() -> float:
+        return clock["now"]
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock["now"] += seconds
+
+    monkeypatch.setattr(pgm.time, "monotonic", fake_monotonic)
+    monkeypatch.setattr(pgm.time, "sleep", fake_sleep)
+
+    with pytest.raises(FunctionTimedOut) as excinfo:
+        manager._get_result(game_map2svm, fake_proc(poll_result=None))
+
+    # The poll slept until the per-map timeout elapsed.
+    assert sum(sleeps) == 6
+    assert "the result of Method_0 did not appear within 6s" in str(excinfo.value)
 
 
 def test_log_proc_output_forwards_both_streams(fake_namespace, tmp_path) -> None:
@@ -505,10 +544,22 @@ class FakeServerSocket:
     def __init__(self, connection: FakeConnectionSocket) -> None:
         self._connection = connection
         self.accepted = 0
+        self.timeouts: list[float] = []
+
+    def settimeout(self, timeout: float) -> None:
+        self.timeouts.append(timeout)
 
     def accept(self):
         self.accepted += 1
         return self._connection, ("localhost", 0)
+
+
+class TimeoutServerSocket(FakeServerSocket):
+    """A server socket whose ``accept`` times out (the server never connects)."""
+
+    def accept(self):
+        self.accepted += 1
+        raise socket.timeout
 
 
 def _game_result_details(server_socket) -> GameResultDetails:
@@ -539,6 +590,32 @@ def test_notify_steps_requirement_sends_the_flag(
     assert connection.sent == [bytes([1]), bytes([0])]
     assert connection.shutdowns == [socket.SHUT_WR, socket.SHUT_WR]
     assert server_socket.accepted == 2
+    # The accept is bounded by the per-map timeout (default 1800s).
+    assert server_socket.timeouts == [1800, 1800]
+
+
+def test_notify_steps_requirement_accept_timeout_is_a_soft_failure(
+    fake_namespace, game_map_factory, tmp_path, caplog: pytest.LogCaptureFixture
+) -> None:
+    manager = _manager(fake_namespace, tmp_path)
+    connection = FakeConnectionSocket()
+    server_socket = TimeoutServerSocket(connection)
+    game_map = game_map_factory("M")
+    manager._games_info["M"] = ModelGameMapInfo(
+        total_game_state=None,
+        total_steps=[],
+        proc=None,
+        game_result=_game_result_details(server_socket),
+    )
+
+    with caplog.at_level(logging.WARNING):
+        manager.notify_steps_requirement(game_map, True)
+
+    # No flag is sent and no exception escapes: the steps are simply not
+    # saved.
+    assert connection.sent == []
+    assert server_socket.accepted == 1
+    assert "did not connect to save the steps" in caplog.text
 
 
 def test_notify_steps_requirement_unknown_map_is_a_noop(
