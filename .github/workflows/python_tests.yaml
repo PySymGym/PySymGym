@@ -51,8 +51,11 @@ jobs:
       # reports, and the per-component steps add no coverage (they ran
       # without --cov).
       - name: Enforce the coverage ratchet
+        # The gated tier must run on any machine: gpu/network-marked tests
+        # are excluded so the tier (and its coverage number) is identical
+        # with or without a GPU or network access (docs/testing.rst).
         run: |
-          poetry run pytest -m "not e2e" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
+          poetry run pytest -m "not e2e and not gpu and not network" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
 
   # Every submodule pointer must be reachable from a stable ref (a tag, or
   # the default branch) of its remote — see docs/developer.rst, "Submodules".

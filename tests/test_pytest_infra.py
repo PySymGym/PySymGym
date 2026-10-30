@@ -2,8 +2,10 @@
 
 These guard the root configuration every component suite depends on: the marker
 taxonomy is registered, the import mode is ``importlib`` (required so the three
-same-named ``tests/test_pipeline.py`` modules can coexist), and every component
-has a test directory wired into ``testpaths``.
+same-named ``tests/test_pipeline.py`` modules can coexist), every component has
+a test directory wired into ``testpaths``, every test resolves to exactly one
+tier (a unit test never carries a ``gpu``/``network`` constraint), and the
+suite runs serially in a single process (no xdist).
 """
 
 import ast
@@ -16,6 +18,13 @@ from pytest import Config
 pytestmark = pytest.mark.unit
 
 TIERS = ("unit", "integration", "e2e")
+
+# Constraint markers that contradict the unit tier: unit tests are pure (no
+# network, GPU, subprocess, or binary fixtures), so a unit test carrying one
+# is a taxonomy violation, not a legitimate selection.
+CONSTRAINT_MARKERS = ("gpu", "network")
+
+MARKERS = TIERS + CONSTRAINT_MARKERS
 
 UNIT_MARKERS = {
     "unit",
@@ -75,11 +84,11 @@ def test_every_component_contributes_at_least_one_test() -> None:
         assert test_files, f"{component_dir} has no test files"
 
 
-def _tier_of_attribute(node: ast.AST) -> str | None:
-    """Return the tier of a ``pytest.mark.<tier>`` attribute, else ``None``."""
+def _marker_of_attribute(node: ast.AST) -> str | None:
+    """Return the name of a recognized ``pytest.mark.<marker>`` attribute, else ``None``."""
     if (
         isinstance(node, ast.Attribute)
-        and node.attr in TIERS
+        and node.attr in MARKERS
         and isinstance(node.value, ast.Attribute)
         and node.value.attr == "mark"
         and isinstance(node.value.value, ast.Name)
@@ -89,19 +98,19 @@ def _tier_of_attribute(node: ast.AST) -> str | None:
     return None
 
 
-def _tiers_in(value: ast.AST) -> set[str]:
+def _markers_in(value: ast.AST) -> set[str]:
     if isinstance(value, (ast.List, ast.Tuple)):
         return {
-            tier
+            marker
             for element in value.elts
-            if (tier := _tier_of_attribute(element)) is not None
+            if (marker := _marker_of_attribute(element)) is not None
         }
-    tier = _tier_of_attribute(value)
-    return {tier} if tier is not None else set()
+    marker = _marker_of_attribute(value)
+    return {marker} if marker is not None else set()
 
 
-def _module_tiers(tree: ast.Module) -> set[str]:
-    tiers: set[str] = set()
+def _module_markers(tree: ast.Module) -> set[str]:
+    markers: set[str] = set()
     for node in tree.body:
         if isinstance(node, ast.Assign):
             targets = node.targets
@@ -116,8 +125,8 @@ def _module_tiers(tree: ast.Module) -> set[str]:
             )
             and node.value is not None
         ):
-            tiers |= _tiers_in(node.value)
-    return tiers
+            markers |= _markers_in(node.value)
+    return markers
 
 
 def _test_functions(tree: ast.Module) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
@@ -137,22 +146,29 @@ def _test_modules() -> list[Path]:
 
 
 def test_every_test_has_exactly_one_tier_marker() -> None:
-    """Every test resolves to exactly one tier, matching its tier directory."""
+    """Every test resolves to exactly one tier, matching its tier directory.
+
+    A unit test never carries a ``gpu``/``network`` constraint: the unit tier
+    is pure (no network, GPU, subprocess, or binary fixtures), so such a
+    combination is a taxonomy violation, not a legitimate selection.
+    """
     problems: list[str] = []
     for path in _test_modules():
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        module_tiers = _module_tiers(tree)
+        module_markers = _module_markers(tree)
+        module_tiers = module_markers & set(TIERS)
         functions = _test_functions(tree)
         if not functions:
             problems.append(f"{path}: no test functions")
             continue
         expected_dir = path.parent.name if path.parent.name in TIERS else None
         for func in functions:
-            decorator_tiers = {
-                tier
+            decorator_markers = {
+                marker
                 for decorator in func.decorator_list
-                if (tier := _tier_of_attribute(decorator)) is not None
+                if (marker := _marker_of_attribute(decorator)) is not None
             }
+            decorator_tiers = decorator_markers & set(TIERS)
             tiers = decorator_tiers or module_tiers
             if len(tiers) != 1:
                 label = sorted(tiers) if tiers else "no"
@@ -161,5 +177,11 @@ def test_every_test_has_exactly_one_tier_marker() -> None:
                 problems.append(
                     f"{path}:{func.lineno} {func.name} is marked "
                     f"{next(iter(tiers))} but lives in {expected_dir}/"
+                )
+            constraints = (decorator_markers | module_markers) & set(CONSTRAINT_MARKERS)
+            if "unit" in tiers and constraints:
+                problems.append(
+                    f"{path}:{func.lineno} {func.name} is a unit test but "
+                    f"carries the {sorted(constraints)} constraint"
                 )
     assert not problems, "misclassified tests:\n" + "\n".join(problems)

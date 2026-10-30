@@ -46,9 +46,18 @@ Tests are classified with pytest markers:
     Full pipeline tests that need built servers, maps, or the ``.NET``
     toolchain.
 
-``gpu`` / ``network`` / ``slow``
-    Orthogonal constraints: require a CUDA device, require network, or take
-    noticeably long.
+``gpu``
+    Requires a CUDA device. Excluded from the gated tier (see "Coverage"), so
+    the tier runs identically with or without a GPU; keep a runtime guard (for
+    example ``@pytest.mark.skipif(not torch.cuda.is_available())``) for when
+    the test is selected explicitly on a CUDA-less machine (``make test-all``,
+    ``pytest -m integration``). ``TestForwardOnCUDA`` is the example.
+
+``network``
+    Requires network access. Excluded from the gated tier (see "Coverage").
+
+``slow``
+    Takes noticeably long to run.
 
 ``serial``
     Must not run in parallel with other tests. The suite runs serially in a
@@ -139,12 +148,12 @@ no module under ``AIAgent/common`` may import ``ml.*`` or the top-level
 guarded code).
 
 The marker is the source of truth, not the directory: CI selects markers
-explicitly (``-m "not e2e"`` for the gated-tier ratchet step, ``-m e2e`` for
-the runstrat job). A module may declare its tier once at module level
-(``pytestmark = pytest.mark.unit``) or per function; every ``test_*`` function
-must resolve to exactly one tier, which ``tests/test_pytest_infra.py`` enforces
-statically together with the tier directory (``unit/``, ``integration/`` or
-``e2e/``) it lives in.
+explicitly (``-m "not e2e and not gpu and not network"`` for the gated-tier
+ratchet step, ``-m e2e`` for the runstrat job). A module may declare its tier
+once at module level (``pytestmark = pytest.mark.unit``) or per function;
+every ``test_*`` function must resolve to exactly one tier, which
+``tests/test_pytest_infra.py`` enforces statically together with the tier
+directory (``unit/``, ``integration/`` or ``e2e/``) it lives in.
 
 Fixtures
 --------
@@ -677,9 +686,10 @@ Writing a test
   ``tools/*/tests``) and in the directory named after its tier (``unit/``,
   ``integration/`` or ``e2e/``).
 - Mark it with exactly one of ``unit``/``integration``/``e2e`` (plus any
-  orthogonal ``gpu``/``network``/``slow``/``serial`` marker). The directory must
-  match the tier marker; an unmarked test still runs in the fast tier, so an
-  omitted marker silently changes the tier it appears in.
+  orthogonal ``gpu``/``network``/``slow``/``serial`` marker — but never
+  ``gpu``/``network`` on a unit test; the guard test rejects the combination).
+  The directory must match the tier marker; an unmarked test still runs in the
+  fast tier, so an omitted marker silently changes the tier it appears in.
 - Depend on the fixtures from your component's ``conftest.py`` and build project
   objects through the production code paths so they cannot drift from the real
   schema.
@@ -722,11 +732,13 @@ files and ``__main__.py`` entrypoints are excluded from the measurement
 (``[tool.coverage.run] omit`` in ``pyproject.toml`` is the source of truth),
 so the number reflects the code under test rather than the tests themselves.
 
-The gated tier is unit + integration:
+The gated tier is unit + integration, minus the ``gpu``/``network``-marked
+tests, so it runs on any machine (no GPU, no network guarantees) and its
+coverage number is identical with or without either:
 
 .. code-block:: console
 
-    poetry run pytest -m "not e2e" --cov=AIAgent --cov=tools --cov-report=term-missing
+    poetry run pytest -m "not e2e and not gpu and not network" --cov=AIAgent --cov=tools --cov-report=term-missing
     make test-cov     # same tier, plus XML and JSON reports
 
 The threshold is a ratchet: ``[tool.coverage.report] fail_under`` in

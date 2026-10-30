@@ -86,11 +86,17 @@ class TestONNXExportWarnings:
         ]
 
 
+@pytest.mark.gpu
 class TestForwardOnCUDA:
     """Regression guard for #617: StateModelEncoder.forward must run on CUDA.
     The v-v skip condition is a Python-int-derived tensor; if it is created
     without an explicit device it lands on CPU and torch.where raises
-    "Expected all tensors to be on the same device" for CUDA inputs."""
+    "Expected all tensors to be on the same device" for CUDA inputs.
+
+    The ``gpu`` marker keeps the test out of the gated tier (machine-agnostic
+    coverage ratchet); the ``skipif`` is the runtime guard for when the test
+    is selected explicitly on a CUDA-less machine (``make test-all``,
+    ``pytest -m integration``)."""
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
     def test_forward_matches_cpu_with_and_without_v_v_edges(self, config):
