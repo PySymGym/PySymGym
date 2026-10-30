@@ -48,6 +48,19 @@ def test_import_mode_is_importlib(pytestconfig: Config) -> None:
     assert pytestconfig.getoption("importmode") == "importlib"
 
 
+def test_suite_runs_serially(pytestconfig: Config) -> None:
+    """The suite runs serially in a single process (no xdist).
+
+    ``serial`` is a documented convention, not a runtime lock: it names the
+    modules that must not run in parallel (they spawn processes, bind ports,
+    or mutate global state). The convention is only safe while the suite runs
+    in a single process, so this guard pins that invariant: if pytest-xdist is
+    ever installed or enabled, it fails and forces a scheduling decision for
+    the serial modules before parallelism can land.
+    """
+    assert not pytestconfig.pluginmanager.has_plugin("xdist")
+
+
 def test_every_component_test_dir_is_on_testpaths(pytestconfig: Config) -> None:
     configured = cast("list[str]", pytestconfig.getini("testpaths"))
     testpaths = {str(Path(path)) for path in configured}
