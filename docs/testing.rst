@@ -404,7 +404,9 @@ as current behaviour), the tensor-input builders (the exact 11 ONNX wire names
 as literals — the V# contract and the drift net for #597's single-source input
 names — each mapped to its ``hetero_factory`` tensor, the modifier
 application, the ``.numpy()`` conversion, and the ``input_names`` order),
-and ``load_gamestate`` (a reference gamestate JSON into the exact
+the ``input_names()``/``dynamic_axes()`` derivations from the single-source
+``MODEL_INPUTS`` (the literal wire names and the legacy dim names as the V#
+contract), and ``load_gamestate`` (a reference gamestate JSON into the exact
 ``GameState``); model selection goes through the registry (pinned in
 ``test_registry.py``). The integration
 tests (``AIAgent/tests/integration/test_onnx.py``) are config-driven from
