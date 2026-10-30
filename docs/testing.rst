@@ -596,9 +596,12 @@ Orchestration seams are tested with fakes, never real I/O:
   port and url properties (replacing ``WebsocketSourceLinks``), the
   ``FeatureConfig`` defaults and the ``GameServerConnectorConfig`` values —
   the CWD-relative ``save_path`` value is pinned (the #584 target is the
-  CWD-dependence, not the value) and the ``response_timeout_sec`` value 1801
-  is pinned as an explicit field, without the old cross-feature derivation
-  (the #585 target). The save-on-failure behavior is pinned as a pure unit
+  CWD-dependence, not the value) and the ``GameServerConnectorConfig``
+  budgets are pinned as the sane defaults (#599): the connect-retry budget
+  (``wait_for_socket_reconnection_max_retries`` 60 → 2 min, not the old ~20
+  min) and the ``response_timeout_sec`` value 60, an explicit field smaller
+  than the per-map timeout (without the old cross-feature derivation, the
+  #585 target). The save-on-failure behavior is pinned as a pure unit
   test: ``ml.model_io.save_state_dict`` creates the save directory and writes
   the model's ``state_dict`` to a ``{with_name}_{timestamp}.pt`` file (the
   ``str(datetime)`` pattern, not the exact wall-clock time). Strict validation
