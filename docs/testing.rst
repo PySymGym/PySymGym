@@ -46,9 +46,18 @@ Tests are classified with pytest markers:
     Full pipeline tests that need built servers, maps, or the ``.NET``
     toolchain.
 
-``gpu`` / ``network`` / ``slow`` / ``serial``
-    Orthogonal constraints: require a CUDA device, require network, take
-    noticeably long, or must not run in parallel.
+``gpu`` / ``network`` / ``slow``
+    Orthogonal constraints: require a CUDA device, require network, or take
+    noticeably long.
+
+``serial``
+    Must not run in parallel with other tests. The suite runs serially in a
+    single process (pytest-xdist is deliberately not a dependency), so the
+    marker is a documented convention, not a runtime lock: it names the
+    modules that must not be parallelized (they spawn processes, bind ports,
+    or mutate global state) and constrains any future parallelization. The
+    guard test in ``tests/test_pytest_infra.py`` fails if xdist is ever
+    enabled, forcing a scheduling decision for the serial modules first.
 
 Tier selection is explicit at the invocation: the Makefile targets and the CI
 steps pass ``-m``, and ``addopts`` carries only ``--import-mode=importlib`` —

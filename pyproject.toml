@@ -43,7 +43,6 @@ onnxscript = "^0.7.2"
 pytest = "^9.0.3"
 pytest-cov = "^7.1.0"
 pytest-timeout = "^2.4.0"
-pytest-xdist = "^3.8.0"
 
 [tool.poetry.group.formatter.dependencies]
 ruff = ">=0.15.10,<0.17.0"
