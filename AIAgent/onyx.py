@@ -18,7 +18,7 @@ from torch_geometric.data import HeteroData
 from ml.inference import infer
 from ml.models.registry import get_model_class
 
-# working version
+# Default ONNX opset version for the export; override with --opset-version.
 ONNX_OPSET_VERSION = 17
 
 
@@ -157,6 +157,7 @@ def save_in_onnx(
     sample_input: HeteroData,
     save_path: pathlib.Path,
     verbose: bool = False,
+    opset_version: int = ONNX_OPSET_VERSION,
 ):
     # With use_segment_matmul unset (None), PyG's RGCNConv selects a kernel
     # via a data-dependent heuristic on the input sizes, which torch.export
@@ -197,7 +198,7 @@ def save_in_onnx(
                 dynamic_axes=dynamic_axes(),
                 input_names=input_names(),
                 output_names=["out"],
-                opset_version=ONNX_OPSET_VERSION,
+                opset_version=opset_version,
             )
     finally:
         pyg_backend.use_segment_matmul = previous_use_segment_matmul
@@ -308,6 +309,14 @@ def main():
         default=[],
         help="Paths to game states to verify against",
     )
+    parser.add_argument(
+        "--opset-version",
+        dest="opset_version",
+        type=int,
+        required=False,
+        default=ONNX_OPSET_VERSION,
+        help=(f"ONNX opset version to export with (default: {ONNX_OPSET_VERSION})"),
+    )
 
     args = parser.parse_args()
 
@@ -329,6 +338,7 @@ def main():
         model_def=get_model_class(args.model_name),
         model_kwargs=model_kwargs,
         verification_gamestates=veification_gamestates,
+        opset_version=args.opset_version,
     )
 
 
@@ -339,6 +349,7 @@ def entrypoint(
     model_def: t.Type[torch.nn.Module],
     model_kwargs: dict[str, t.Any],
     verification_gamestates: list[GameState] = None,
+    opset_version: int = ONNX_OPSET_VERSION,
 ):
     torch_model = model_def(**model_kwargs)
     hetero_sample_gamestate, _ = convert_input_to_tensor(sample_gamestate)
@@ -351,7 +362,12 @@ def entrypoint(
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
     torch_model.load_state_dict(state_dict)
 
-    save_in_onnx(torch_model, hetero_sample_gamestate, onnx_savepath)
+    save_in_onnx(
+        torch_model,
+        hetero_sample_gamestate,
+        onnx_savepath,
+        opset_version=opset_version,
+    )
     model_onnx = onnx.load(onnx_savepath)
     onnx.checker.check_model(model_onnx)
 

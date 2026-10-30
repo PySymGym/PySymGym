@@ -170,13 +170,15 @@ To convert a PyTorch model to ONNX, run ``onyx.py``:
         --savepath <converted_model_save_path>.onnx \
         --model-name <model_name> \
         --model-kwargs <yaml_with_model_args>.yml \
-        [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ...
+        [optional] --verify-on <game_state1.json> <game_state2.json> <game_state3.json> ... \
+        [optional] --opset-version <n>
 
 - ``pytorch-model`` is the path to the PyTorch model weights.
 - Examples of the ``model-kwargs`` YAML file, verification game states, and a
   ``sample-gamestate`` (any can be used) are under ``resources/onnx/``.
 - ``model-name`` is the registry name of the model to convert (see
   ``AIAgent/ml/models/registry.py``), for example ``NorthernPenguin``.
+- ``--opset-version`` is the ONNX opset version to export with (default: 17).
 
 See :ref:`guide-symbolic-execution` for how to run execution with the
 converted model.
