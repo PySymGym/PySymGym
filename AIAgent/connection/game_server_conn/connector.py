@@ -22,18 +22,6 @@ from .messages import (
 
 
 class Connector:
-    class WrongConnectorStateError(Exception):
-        def __init__(
-            self, source: str, received: str, expected: str, at_step: int
-        ) -> None:
-            super().__init__(
-                f"Wrong operations order at step #{at_step}: at function \
-                <{source}> received {received}, expected {expected}",
-            )
-
-    class IncorrectSentStateError(Exception):
-        pass
-
     class GameOver(Exception):
         def __init__(
             self,
