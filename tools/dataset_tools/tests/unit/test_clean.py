@@ -4,10 +4,25 @@ import sys
 from pathlib import Path
 
 import pytest
-from clean import clean, get_bad_episodes, main
+from clean import (
+    GAME_OVER_MAP_DELIMITER,
+    GAME_OVER_MARKER,
+    clean,
+    get_bad_episodes,
+    main,
+)
 from common.game import GameMap
 
 pytestmark = pytest.mark.unit
+
+
+def test_log_format_constants_pin_the_expected_phrasing() -> None:
+    # The constants are the single explicit coupling to the free-form
+    # training-log phrasing (see the comment in clean.py); a change to the
+    # log format must change these together with the log lines fed by the
+    # tests below.
+    assert GAME_OVER_MARKER == "immediate GameOver"
+    assert GAME_OVER_MAP_DELIMITER == "on "
 
 
 def _map(map_name: str, steps_to_start: int) -> GameMap:
