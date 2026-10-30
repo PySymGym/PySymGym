@@ -331,8 +331,9 @@ a fresh ``BCEWithLogitsLoss(reduction="sum")``, and names the metric
 ``BCEWithLogitsLoss__<DATASET MODE>``; the SVM mode writes the per-trial
 ``svms_result_table.csv`` (sorted map-name header, written once), drives
 ``ValidationCoverage`` and ``get_svms_statistics``, logs the table, and
-raises ``RuntimeError("Validation failed")`` on a failed map when
-``fail_immediately`` is set; the custom mode runs the sequence in order,
+raises ``RuntimeError("Validation failed: ...")`` naming each failed map
+and its reason when ``fail_immediately`` is set; the custom mode runs the
+sequence in order,
 merges the metrics, and returns the first stage's result. Each mode also
 pins its ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch. The
 per-trial ``objective`` loop is pinned with a scripted trial and a recording

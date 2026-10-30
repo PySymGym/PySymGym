@@ -209,12 +209,19 @@ def run_training(
                 )
                 mlflow.log_artifact(table_path)
 
-                for map2result in map2results:
-                    if (
-                        isinstance(map2result.game_result, GameFailed)
-                        and validation_mode.fail_immediately
-                    ):
-                        raise RuntimeError("Validation failed")
+                # "Validation failed" must never be the only clue (#616):
+                # name every failed map and its reason (timeout, unexhausted
+                # steps, game error, ...).
+                failed_maps = [
+                    (map2result.map.GameMap.MapName, map2result.game_result.reason)
+                    for map2result in map2results
+                    if isinstance(map2result.game_result, GameFailed)
+                ]
+                if failed_maps and validation_mode.fail_immediately:
+                    details = "; ".join(
+                        f"{name}: {reason}" for name, reason in failed_maps
+                    )
+                    raise RuntimeError(f"Validation failed: {details}")
                 return metrics[AVERAGE_COVERAGE], metrics
 
             return validate
