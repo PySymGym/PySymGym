@@ -185,7 +185,11 @@ fixtures and build every graph input through
 production tensor schema. The dataset's domain types (``Result``,
 ``TrainingDatasetMode``) live in ``common.dataset`` and the graph tensor
 feature widths in ``ml.schema``; ``ml.dataset`` re-exports both, and the
-lifecycle tests pin that the re-exports are the same objects. The
+lifecycle tests pin that the re-exports are the same objects. The dataset
+code itself is the ``ml/dataset/`` package (``processing``: the
+``TrainingDataset`` class; ``tensors``: domain→tensor conversion;
+``maintenance``: the online-update mixin), and the lifecycle tests pin that
+``TrainingDataset`` is defined in ``ml.dataset.processing``. The
 malformed-input branches of
 ``convert_input_to_tensor`` are pinned by mutating a ``gamestate_factory``
 copy (exact error type and message, the ``(None, None)`` return) rather than
@@ -208,7 +212,8 @@ excluded, default device) and ``_merge_steps`` directly (graph-match merge
 math, unique-step append order, new vertex-count groups). The
 ``merge_distributions`` device-mismatch branch (3 statements) is not
 coverable on a CPU-only machine — meta tensors cannot be copied out — so
-``ml/dataset.py`` tops out at 99.0%. The protocol tests
+``ml/dataset/maintenance.py`` misses exactly those 3 statements. The
+protocol tests
 (``test_protocols.py``) pin the ``ml.protocols`` abstract interfaces:
 abstractness, the abstract-method set, a concrete subclass satisfying the
 interface, the abstract bodies raising ``NotImplementedError`` when invoked
