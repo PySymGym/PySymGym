@@ -65,3 +65,45 @@ def test_pipeline_outer_join_with_disjoint_methods(mock_runs_dir: Path, tmp_path
     assert list(counts.loc["coverage"]) == [0, 3, 1]
     assert list(counts.loc["tests"]) == [0, 4, 0]
     assert list(counts.loc["errors"]) == [4, 0, 0]
+
+
+def _epsilon_zeta_args(configs_file: str, mock_runs_dir: Path, tmp_path: Path) -> Args:
+    return Args(
+        strat1="EPSILON",
+        strat2="ZETA",
+        runs1=[str(mock_runs_dir / "strat_epsilon.csv")],
+        runs2=[str(mock_runs_dir / "strat_zeta.csv")],
+        configs=read_configs(MOCK_COMPARE_CONFS_DIR / configs_file),
+        savedir=tmp_path,
+    )
+
+
+def test_pipeline_drops_failed_runs_by_default(mock_runs_dir: Path, tmp_path: Path):
+    args = _epsilon_zeta_args("compare_confs_1.yaml", mock_runs_dir, tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        entrypoint(args)
+
+    matplotlib_warnings = _matplotlib_warnings(caught)
+    assert not matplotlib_warnings, [str(w.message) for w in matplotlib_warnings]
+
+    # m2 (EPSILON failed) and m3 (ZETA failed) are dropped by default,
+    # leaving the inner join {m1}: coverage 100.0 vs 90.0 → EPSILON wins.
+    counts = pd.read_csv(tmp_path / "result_count.csv", index_col=0)
+    assert list(counts.loc["coverage"]) == [1, 0, 0]
+
+
+def test_pipeline_keeps_failed_runs_when_disabled(mock_runs_dir: Path, tmp_path: Path):
+    args = _epsilon_zeta_args("compare_confs_4.yaml", mock_runs_dir, tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        entrypoint(args)
+
+    matplotlib_warnings = _matplotlib_warnings(caught)
+    assert not matplotlib_warnings, [str(w.message) for w in matplotlib_warnings]
+
+    # drop_failed: false keeps the failed runs: inner join {m1, m2, m3};
+    # coverage (higher wins): m1 100>90 EPSILON, m2 -1<80 ZETA,
+    # m3 70>-1 EPSILON.
+    counts = pd.read_csv(tmp_path / "result_count.csv", index_col=0)
+    assert list(counts.loc["coverage"]) == [2, 1, 0]
