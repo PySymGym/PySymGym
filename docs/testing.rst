@@ -197,7 +197,11 @@ missing state child raises the ``KeyError`` keyed by the missing child Id.
 The ``get_hetero_data`` single-row contract (the model's one output tensor
 flattened to one row of per-state values) is pinned both ways: the one-row
 input becomes the ``[S, 1]`` ``y_true`` column and a multi-row input raises
-``ValueError``. The ``TrainingDataset`` lifecycle tests
+``ValueError``. ``filter_map_steps`` enforces the same ``[S, 1]`` shape on
+the steps it receives (one logit per state, which is what makes the global
+argmax the winning row): a wide ``y_true`` raises ``ValueError``, while
+single-row and all-NaN steps are dropped and the remaining steps are
+one-hot-encoded. The ``TrainingDataset`` lifecycle tests
 (``test_dataset_lifecycle.py``) cover the in-memory (``load_to_cpu``) and
 on-disk loading paths, the train/validation index switching, and the
 metadata refresh; they pin the stale ``len()`` before the first
@@ -206,7 +210,9 @@ metadata refresh; they pin the stale ``len()`` before the first
 maintenance tests (``test_dataset_maintenance.py``) build the raw dataset
 layout (per map a ``result`` file plus ``<id>_gameState`` /
 ``<id>_movedState`` step files) and drive ``process()`` through the
-``serial_pool`` fixture as well. They also walk the ``update_map`` branch
+``serial_pool`` fixture as well; a double-``process()`` pin verifies that a
+re-run over an already-processed map is idempotent (the ``result`` file and
+the saved step are unchanged). They also walk the ``update_map`` branch
 matrix (new map, below-threshold result-only save, merge, reproduced,
 replace, and the two no-op cases) with ``step_factory`` steps, pinning the
 exact ``logging.info`` messages via caplog (including the trailing space of

@@ -12,7 +12,6 @@ online-maintenance methods are mixed in from
 import ast
 import glob
 import json
-import logging
 import multiprocessing as mp
 import os
 import os.path as osp
@@ -261,13 +260,15 @@ class TrainingDataset(MaintenanceMixin, Dataset):
                     (raw_step_id, processed_step_id)
                     for processed_step_id, raw_step_id in enumerate(sorted(raw_ids))
                 )
-                is_successful: list[bool] = list(
-                    p.map(process_and_save_step_task, tasks)
-                )
-                if len(is_successful) != len(raw_ids):
-                    logging.warning(f"Processing of map {map_name} failed somewhere.")
+                # p.map re-raises worker exceptions, so a step that fails to
+                # convert aborts the run instead of leaving a partial map.
+                p.map(process_and_save_step_task, tasks)
                 result = process_result(map_name)
-                result_file = open(os.path.join(processed_map_path, "result"), mode="x")
+                # mode="w": re-running process() over an already-processed
+                # map overwrites the result file (the .pt steps are already
+                # overwritten in place by torch.save), so the re-run is
+                # idempotent.
+                result_file = open(os.path.join(processed_map_path, "result"), mode="w")
                 result_file.write(str(result.to_tuple()))
                 result_file.close()
         self.update_meta_data()
