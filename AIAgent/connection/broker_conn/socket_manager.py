@@ -50,8 +50,11 @@ def wait_for_connection(
             f"Try connecting to {server_instance.ws_url}, {retries_left} attempts left; {server_instance}"
         )
         retries_left -= 1
+    # Report the total budget, not the (always-zero) remaining count: the
+    # message must say how long the client gave up, not "0 left".
     raise RuntimeError(
-        f"Retries exhausted when trying to connect to {server_instance.ws_url}: {retries_left} left"
+        f"Retries exhausted when trying to connect to {server_instance.ws_url} "
+        f"after {connector_config.wait_for_socket_reconnection_max_retries} attempts"
     )
 
 
