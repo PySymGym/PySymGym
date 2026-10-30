@@ -864,7 +864,11 @@ class TestValidateClosures:
     def test_svm_validate_fail_immediately(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
     ) -> None:
-        maps = [game_map2svm_factory("MapA")]
+        maps = [
+            game_map2svm_factory("MapA"),
+            game_map2svm_factory("MapB"),
+            game_map2svm_factory("MapC"),
+        ]
         monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
 
         def coverage_factory(
@@ -885,8 +889,33 @@ class TestValidateClosures:
                 model_kwargs=model_kwargs,
                 trial_dir=trial_dir,
             )
+            # The failure correlation (#616): the aggregate error must name
+            # every failed map with its reason; the successful map is not
+            # mentioned.
             instance.result = [
-                Map2Result(maps[0], GameFailed(reason=Exception("boom")))
+                Map2Result(
+                    maps[0],
+                    GameFailed(
+                        "[each-step] map MapA timed out after 1800.0s "
+                        "(step budget 10) at step 0/10"
+                    ),
+                ),
+                Map2Result(
+                    maps[1],
+                    GameResult(
+                        steps_count=10,
+                        tests_count=1,
+                        errors_count=0,
+                        actual_coverage_percent=100,
+                    ),
+                ),
+                Map2Result(
+                    maps[2],
+                    GameFailed(
+                        "Not all steps exhausted on MapC: 5 of 10 steps "
+                        "taken, actual coverage 50.00% != 100%"
+                    ),
+                ),
             ]
             return instance
 
@@ -905,8 +934,16 @@ class TestValidateClosures:
         trial_dir = tmp_path / "trial"
         trial_dir.mkdir()
 
-        with pytest.raises(RuntimeError, match="Validation failed"):
+        with pytest.raises(RuntimeError) as excinfo:
             validate(model, dataset, trial_dir, {})
+
+        assert str(excinfo.value) == (
+            "Validation failed: "
+            "MapA: [each-step] map MapA timed out after 1800.0s "
+            "(step budget 10) at step 0/10; "
+            "MapC: Not all steps exhausted on MapC: 5 of 10 steps "
+            "taken, actual coverage 50.00% != 100%"
+        )
 
     def test_svm_validate_failed_map_without_fail_immediately(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
