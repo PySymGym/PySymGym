@@ -28,6 +28,16 @@ def _format_index(index: pd.Index) -> str:
     return shown
 
 
+def _single_metric(
+    all_runs: pd.DataFrame, keys: list[str], metric: str
+) -> pd.DataFrame:
+    """The per-run values of one metric, skipping runs that lack it."""
+    parts = [all_runs[key][metric] for key in keys if metric in all_runs[key].columns]
+    if not parts:
+        return pd.DataFrame(index=all_runs.index)
+    return pd.concat(parts, axis=1, keys=list(range(len(parts))))
+
+
 def preprocess(
     strat1_runs: list[pd.DataFrame], strat2_runs: list[pd.DataFrame]
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -55,12 +65,22 @@ def preprocess(
         )
 
     strat1_df, strat2_df = pd.DataFrame(), pd.DataFrame()
-    metrics = strat1_runs[0].keys()
+    # The compared metrics are the union of both strategies' run columns
+    # (first-seen order): a column present in only one strategy's runs is
+    # still compared, with NaN on the missing side.
+    metrics = list(
+        dict.fromkeys(
+            column for run in strat1_runs + strat2_runs for column in run.columns
+        )
+    )
 
     for metric in metrics:
 
         def get_mean_by_key(keys, metric):
-            return all_runs.loc[:, [(key, metric) for key in keys]].mean(axis=1)
+            cols = [(key, metric) for key in keys if (key, metric) in all_runs.columns]
+            if not cols:
+                return pd.Series(index=all_runs.index, dtype="float64")
+            return all_runs.loc[:, cols].mean(axis=1)
 
         strat1_df[metric], strat2_df[metric] = (
             get_mean_by_key(strat1_keys, metric),
@@ -68,16 +88,8 @@ def preprocess(
         )
 
         strat1_single_metric, strat2_single_metric = (
-            pd.concat(
-                [all_runs[strat1_key][metric] for strat1_key in strat1_keys],
-                axis=1,
-                keys=list(range(len(strat1_runs))),
-            ),
-            pd.concat(
-                [all_runs[strat2_key][metric] for strat2_key in strat2_keys],
-                axis=1,
-                keys=list(range(len(strat2_runs))),
-            ),
+            _single_metric(all_runs, strat1_keys, metric),
+            _single_metric(all_runs, strat2_keys, metric),
         )
 
         strat1_df[f"{metric}{MIN_POSTFIX}"], strat1_df[f"{metric}{MAX_POSTFIX}"] = (
