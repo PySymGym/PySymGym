@@ -556,7 +556,10 @@ Orchestration seams are tested with fakes, never real I/O:
   instead of returned), so ``Connector``'s start/step/reward loop can be
   asserted without a server. ``game_server_socket_manager`` must call
   ``return_instance`` on **both** the success and failure paths — assert it
-  explicitly rather than trusting the ``finally``. ``process_running`` is
+  explicitly rather than trusting the ``finally`` — and a
+  ``return_instance`` failure must not mask the game body's exception (the
+  body error propagates and the return failure is logged only, #599).
+  ``process_running`` is
   pinned for a live pid (yields), a dead pid (``ProcessStoppedError``) and
   a ``None`` pid (the restart-disabled placeholder: the check is skipped
   instead of letting ``psutil.pid_exists(None)`` raise ``TypeError``).
