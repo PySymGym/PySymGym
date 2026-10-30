@@ -1,10 +1,8 @@
-from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Optional, TypeAlias, Union
+from typing import Optional, Union
 
-from common.game import GameMap, GameMap2SVM
-from common.protocols import Named
+from common.game import GameMap2SVM
 
 
 @dataclass_json
@@ -53,18 +51,8 @@ class GameFailed:
         return "FAILED"
 
 
-@dataclass
-class Agent2Result:
-    agent: Named
-    game_result: GameResult
-
-
 @dataclass_json
 @dataclass
 class Map2Result:
     map: GameMap2SVM
     game_result: Union[GameResult, GameFailed]
-
-
-GameMapsModelResults: TypeAlias = defaultdict[GameMap, list[Agent2Result]]
-AgentResultsOnGameMaps: TypeAlias = defaultdict[Named, list[Map2Result]]
