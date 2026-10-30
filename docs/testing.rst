@@ -192,8 +192,12 @@ code itself is the ``ml/dataset/`` package (``processing``: the
 ``TrainingDataset`` is defined in ``ml.dataset.processing``. The
 malformed-input branches of
 ``convert_input_to_tensor`` are pinned by mutating a ``gamestate_factory``
-copy (exact error type and message, the ``(None, None)`` return) rather than
-hand-rolled gamestates. The ``TrainingDataset`` lifecycle tests
+copy (exact error type and message) rather than hand-rolled gamestates: a
+missing state child raises the ``KeyError`` keyed by the missing child Id.
+The ``get_hetero_data`` single-row contract (the model's one output tensor
+flattened to one row of per-state values) is pinned both ways: the one-row
+input becomes the ``[S, 1]`` ``y_true`` column and a multi-row input raises
+``ValueError``. The ``TrainingDataset`` lifecycle tests
 (``test_dataset_lifecycle.py``) cover the in-memory (``load_to_cpu``) and
 on-disk loading paths, the train/validation index switching, and the
 metadata refresh; they pin the stale ``len()`` before the first
