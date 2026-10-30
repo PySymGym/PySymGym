@@ -266,7 +266,7 @@ def run_training(
             # The checkpoint may have been saved on another device (a
             # CUDA-saved model loaded on a CPU-only machine crashes a bare
             # torch.load, #667); map it to the device we train on, with the
-            # same storage-class allow-list ml/dataset.py uses.
+            # same storage-class allow-list ml/dataset/processing.py uses.
             with torch.serialization.safe_globals(
                 [BaseStorage, NodeStorage, EdgeStorage]
             ):

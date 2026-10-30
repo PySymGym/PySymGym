@@ -176,7 +176,7 @@ these rules (they apply to the issue body):
 - **Specify type genericity**. If a module must handle arbitrary types, state
   it explicitly (e.g., "generic over the graph and feature types").
 - **Specify reuse expectations**. If the task builds on existing infrastructure
-  (e.g., "reuse the dataset abstractions from `AIAgent/ml/dataset.py`"), name
+  (e.g., "reuse the dataset abstractions from `AIAgent/ml/dataset/`"), name
   the dependencies. This prevents reinvention.
 
 ## Task Completeness Verification
