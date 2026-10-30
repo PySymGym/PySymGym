@@ -23,8 +23,8 @@ ValidationConfig:
         SVMSInfo:
           - name: VSharp
             launch_command: dotnet VSharp.ML.GameServer.Runner.dll --mode server --port {port}
-            min_port: 35000
-            max_port: 35050
+            min_port: 35100
+            max_port: 35150
             server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
