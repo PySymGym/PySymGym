@@ -49,6 +49,10 @@ def entrypoint(args: Args):
         ),
         savedir=args.savedir,
     )
+    # drop_failed is pipeline-level (see CompareConfig): any config opting
+    # out keeps failed runs for the whole run.
+    if all(config.drop_failed for config in args.configs):
+        comparator.drop_failed()
     comparator.compare(args.configs)
 
 
