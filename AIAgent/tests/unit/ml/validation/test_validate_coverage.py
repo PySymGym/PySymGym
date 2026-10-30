@@ -127,7 +127,7 @@ def test_evaluate_game_map_updates_dataset_when_required(
     assert returned is result
     assert manager.notified == [(game_map2svm.GameMap, True)]
     assert dataset.updates == [
-        (game_map2svm.GameMap.MapName, Result(90, -2, -5, 0), ["step"])
+        (game_map2svm.GameMap.MapName, Result(90, 2, 5, 0), ["step"])
     ]
     assert manager.deleted == [game_map2svm.GameMap]
 
