@@ -23,25 +23,6 @@ class GameResult:
             )
         )
 
-    def printable(self, verbose) -> str:
-        steps_format = (
-            f"steps: {self.steps_count}," if verbose else f"#s={self.steps_count}"
-        )
-        tests_count_format = (
-            f"test count: {self.tests_count}" if verbose else f"#t={self.tests_count}"
-        )
-        errors_count_format = (
-            f"error count: {self.errors_count}"
-            if verbose
-            else f"#e={self.errors_count}"
-        )
-        actual_coverage_percent_format = (
-            f"actual %: {self.actual_coverage_percent:.2f},"
-            if verbose
-            else f"%ac={self.actual_coverage_percent:.2f}"
-        )
-        return f"{actual_coverage_percent_format} {steps_format} {tests_count_format} {errors_count_format}"
-
 
 class GameFailed:
     def __init__(self, reason) -> None:
