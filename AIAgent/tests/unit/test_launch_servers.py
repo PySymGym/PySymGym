@@ -323,39 +323,6 @@ class TestEnqueueInstance:
         assert response.status == 200
 
 
-class TestAppendResults:
-    def test_appends_the_decoded_body(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # The global is only created by main(); set it fresh for the test.
-        monkeypatch.setattr(launch_servers_module, "RESULTS", [], raising=False)
-
-        response = asyncio.run(
-            launch_servers_module.append_results(make_read_request(b'{"r": 1}'))
-        )
-
-        assert launch_servers_module.RESULTS == ['{"r": 1}']
-        assert response.status == 200
-
-
-class TestRecvRes:
-    def test_empty_results_raise(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # The global is only created by main(); set it fresh for the test.
-        monkeypatch.setattr(launch_servers_module, "RESULTS", [], raising=False)
-
-        with pytest.raises(RuntimeError, match="Must play a game first"):
-            asyncio.run(launch_servers_module.send_and_clear_results(SimpleNamespace()))
-
-    def test_returns_and_clears(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # The global is only created by main(); set it fresh for the test.
-        monkeypatch.setattr(launch_servers_module, "RESULTS", ["a", "b"], raising=False)
-
-        response = asyncio.run(
-            launch_servers_module.send_and_clear_results(SimpleNamespace())
-        )
-
-        assert response.text == json.dumps(["a", "b"])
-        assert launch_servers_module.RESULTS == []
-
-
 class TestRunServerInstance:
     def test_should_not_start_returns_placeholder(self) -> None:
         feature_config = FeatureConfig(
@@ -1172,7 +1139,7 @@ class TestMain:
         assert basic_config_calls[0]["level"] == logging.INFO
         assert basic_config_calls[0]["filename"] == tmp_path / "instance_manager.log"
 
-        # The app carries exactly the four declared broker routes (aiohttp
+        # The app carries exactly the two declared broker routes (aiohttp
         # adds implicit HEAD routes for the GETs, which are filtered out)
         # and the loaded config, which the handlers read the feature
         # settings from.
@@ -1186,9 +1153,7 @@ class TestMain:
         )
         assert routes == [
             ("GET", "/get_ws"),
-            ("GET", "/recv_res"),
             ("POST", "/post_ws"),
-            ("POST", "/send_res"),
         ]
 
         # The lease reaper is wired into the app lifecycle: created on
@@ -1200,5 +1165,4 @@ class TestMain:
         # The module globals are reset for the run.
         assert isinstance(launch_servers_module.SERVER_INSTANCES, Queue)
         assert launch_servers_module.PROCS == {}
-        assert launch_servers_module.RESULTS == []
         assert launch_servers_module.ISSUED == {}

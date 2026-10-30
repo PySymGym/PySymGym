@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import json
 import logging
 import os
 import signal
@@ -145,25 +144,6 @@ async def enqueue_instance(request):
     SERVER_INSTANCES.put(returned_instance_info)
     logging.info(f"enqueue {returned_instance_info}")
     return web.HTTPOk()
-
-
-@routes.post("/send_res")
-async def append_results(request):
-    global RESULTS
-    data = await request.read()
-    decoded = data.decode("utf-8")
-    RESULTS.append(decoded)
-    return web.HTTPOk()
-
-
-@routes.get("/recv_res")
-async def send_and_clear_results(request):
-    global RESULTS
-    if not RESULTS:
-        raise RuntimeError("Must play a game first")
-    rst = json.dumps(RESULTS)
-    RESULTS = []
-    return web.Response(text=rst)
 
 
 def get_socket_url(port: int) -> WSUrl:
@@ -419,7 +399,7 @@ async def _on_cleanup(app: web.Application) -> None:
 
 
 def main(config: str):
-    global SERVER_INSTANCES, PROCS, RESULTS, ISSUED
+    global SERVER_INSTANCES, PROCS, ISSUED
 
     # Load the config first: a broken config must fail before the broker
     # sets up its state and starts serving.
@@ -435,7 +415,6 @@ def main(config: str):
     # Queue[ServerInstanceInfo]
     SERVER_INSTANCES = Queue()
     PROCS = {}
-    RESULTS = []
     ISSUED = {}
 
     server_count = config.validation_config.validation_mode.process_count
