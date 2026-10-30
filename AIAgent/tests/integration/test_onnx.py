@@ -234,22 +234,13 @@ class TestMain:
 class TestONNXVerification:
     """The verification failure path of ``entrypoint``.
 
-    The current verification compares ``shorten_output`` results (rounded
-    to 3 decimals, truncated to the first 10 elements) with an ``assert``;
-    both weaknesses are #597-tracked. These tests pin the crash-level
-    post-fix properties as strict ``xfail``s; #597 owns removing the
-    markers when it lands.
+    The verification compares the full torch and ONNX Runtime outputs
+    element-wise with an explicit tolerance and raises ``ValueError`` on
+    divergence (#597). These tests pin that a numerically divergent
+    conversion — including a divergence beyond the first 10 elements —
+    is rejected with a proper (non-``AssertionError``) error.
     """
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "#597: the verification compares shorten_output results with an "
-            "assert, so a numerically divergent conversion surfaces as an "
-            "AssertionError; #597's fix spec pins a proper (non-assert) "
-            "error, so this pins that crash-level property"
-        ),
-    )
     def test_divergent_verification_raises_proper_error(
         self, tmp_path, monkeypatch, config
     ):
@@ -273,7 +264,7 @@ class TestONNXVerification:
 
         monkeypatch.setattr(onyx, "onnx_run", divergent_onnx_run)
 
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(ValueError, match="ONNX verification failed"):
             entrypoint(
                 sample_gamestate=_load_gamestate(sample),
                 pytorch_model_path=mock_model_path,
@@ -283,18 +274,6 @@ class TestONNXVerification:
                 verification_gamestates=[_load_gamestate(path) for path in verify],
             )
 
-        assert not isinstance(excinfo.value, AssertionError)
-
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "#597: the verification truncates both outputs to the first 10 "
-            "elements, so a divergence beyond element 10 passes the current "
-            "assert; #597's fix spec compares the full tensors with a proper "
-            "(non-assert) error, so this pins that such a divergence is "
-            "rejected with a proper error"
-        ),
-    )
     def test_divergence_beyond_first_ten_elements_is_rejected(
         self, tmp_path, monkeypatch, config
     ):
@@ -319,7 +298,7 @@ class TestONNXVerification:
 
         monkeypatch.setattr(onyx, "onnx_run", beyond_truncation_onnx_run)
 
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(ValueError, match="ONNX verification failed"):
             entrypoint(
                 sample_gamestate=_load_gamestate(sample),
                 pytorch_model_path=mock_model_path,
@@ -328,8 +307,6 @@ class TestONNXVerification:
                 model_kwargs=model_kwargs,
                 verification_gamestates=[_twelve_state_gamestate()],
             )
-
-        assert not isinstance(excinfo.value, AssertionError)
 
 
 def _twelve_state_gamestate() -> GameState:

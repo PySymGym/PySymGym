@@ -1,10 +1,10 @@
 """Unit tests for the pure helpers of the ONNX export entrypoint ``onyx.py``.
 
-These pin the current (pre-#578) behaviour of the tensor-input builders, the
-output shortener, and the gamestate loader. The ONNX input names are pinned
-as literal strings: they are the V# wire contract and the drift net for
-#597's single-source input-names change. Model selection goes through the
-registry (pinned in ``test_registry.py``).
+These pin the current (pre-#578) behaviour of the tensor-input builders and
+the gamestate loader. The ONNX input names are pinned as literal strings:
+they are the V# wire contract and the drift net for #597's single-source
+input-names change. Model selection goes through the registry (pinned in
+``test_registry.py``).
 """
 
 import json
@@ -21,7 +21,7 @@ from onyx import (
     dynamic_axes,
     input_names,
     load_gamestate,
-    shorten_output,
+    verify_outputs,
 )
 from paths import RESOURCES_PATH
 
@@ -66,55 +66,6 @@ EXPECTED_INPUTS = [
         "edge_index",
     ),
 ]
-
-
-class TestShortenOutput:
-    def test_flattens_and_rounds_to_three_decimals(self):
-        out = torch.tensor([[1.23456], [2.0], [-0.5]])
-
-        assert shorten_output(out) == [1.235, 2.0, -0.5]
-
-    def test_truncates_longer_than_ten_elements_with_ellipsis(self):
-        # The truncation is part of the #597 weak verification (a divergence
-        # beyond element 10 passes the current assert); the helper's contract
-        # is pinned as current behaviour and #597 owns updating this pin if
-        # the helper changes.
-        out = torch.arange(12, dtype=torch.float)
-
-        assert shorten_output(out) == [
-            0.0,
-            1.0,
-            2.0,
-            3.0,
-            4.0,
-            5.0,
-            6.0,
-            7.0,
-            8.0,
-            9.0,
-            "...",
-        ]
-
-    def test_exactly_ten_elements_are_not_truncated(self):
-        out = torch.arange(10, dtype=torch.float)
-
-        assert shorten_output(out) == [
-            0.0,
-            1.0,
-            2.0,
-            3.0,
-            4.0,
-            5.0,
-            6.0,
-            7.0,
-            8.0,
-            9.0,
-        ]
-
-    def test_custom_round_to(self):
-        out = torch.tensor([1.23456])
-
-        assert shorten_output(out, round_to=1) == [1.2]
 
 
 class TestCreateModelInput:
@@ -182,6 +133,39 @@ class TestDynamicAxes:
             "pathconditionvertex_to_pathconditionvertex": {1: "num_pc_pc_edges"},
             "pathconditionvertex_to_statevertex": {1: "num_pc_sv_edges"},
         }
+
+
+class TestVerifyOutputs:
+    def test_matching_outputs_pass(self):
+        out = torch.randn(4, 1)
+
+        verify_outputs(out, out.numpy())
+
+    def test_within_tolerance_passes(self):
+        out = torch.randn(4, 1)
+
+        verify_outputs(out, out.numpy() + 1e-5)
+
+    def test_beyond_tolerance_raises_with_the_max_difference(self):
+        out = torch.zeros(4, 1)
+        perturbed = out.numpy().copy()
+        perturbed[2, 0] = 1e-3
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"max absolute difference 1\.000e-03 exceeds the tolerance "
+                r"1\.0e-04 \(max difference at flattened index 2\)"
+            ),
+        ):
+            verify_outputs(out, perturbed)
+
+    def test_shape_mismatch_raises(self):
+        with pytest.raises(ValueError, match="shape mismatch"):
+            verify_outputs(torch.zeros(4, 1), np.zeros((3, 1)))
+
+    def test_empty_outputs_pass(self):
+        verify_outputs(torch.empty(0, 1), np.empty((0, 1)))
 
 
 class TestLoadGamestate:

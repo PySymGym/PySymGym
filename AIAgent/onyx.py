@@ -207,11 +207,55 @@ def onnx_run(ort_session: onnxruntime.InferenceSession, data: HeteroData) -> ...
     return ort_session.run(None, create_onnxruntime_input(data))
 
 
-def shorten_output(torch_out, round_to: int = 3):
-    shortened = list(map(lambda x: round(x, round_to), torch_out.flatten().tolist()))
-    if len(shortened) > 10:
-        shortened = shortened[:10] + ["..."]
-    return shortened
+# The maximum absolute element-wise difference between the torch and the
+# ONNX Runtime outputs that verification tolerates. The two runtimes use
+# different float32 kernels (matmul orderings, fused ops), so a small
+# nonzero difference is legitimate; 1e-4 is tight enough to catch a
+# numerically broken conversion while staying above that kernel noise
+# (the pre-#597 check effectively allowed 5e-4 by rounding to 3 decimals).
+VERIFICATION_ATOL = 1e-4
+
+
+def verify_outputs(torch_out: torch.Tensor, onnx_out: t.Any) -> None:
+    """Verify the ONNX Runtime output against the torch output.
+
+    Compares the full tensors element-wise with an explicit absolute
+    tolerance (no rounding, no truncation) and raises ``ValueError`` on
+    any divergence beyond it, so a numerically broken conversion cannot
+    pass silently (#597).
+
+    Parameters
+    ----------
+    torch_out:
+        The torch model's output for the verification gamestate.
+    onnx_out:
+        The ONNX Runtime's output (the first element of ``onnx_run``'s
+        result).
+
+    Raises
+    ------
+    ValueError
+        If the shapes differ or any element diverges beyond
+        ``VERIFICATION_ATOL``.
+    """
+    onnx_tensor = torch.as_tensor(onnx_out)
+    if torch_out.shape != onnx_tensor.shape:
+        raise ValueError(
+            "ONNX verification failed: shape mismatch "
+            f"{tuple(torch_out.shape)} != {tuple(onnx_tensor.shape)}"
+        )
+    if torch_out.numel() == 0:
+        # Both outputs are empty (a degenerate gamestate with no states):
+        # there is nothing to diverge.
+        return
+    diff = (torch_out - onnx_tensor).abs()
+    max_diff = diff.max().item()
+    if max_diff > VERIFICATION_ATOL:
+        raise ValueError(
+            "ONNX verification failed: max absolute difference "
+            f"{max_diff:.3e} exceeds the tolerance {VERIFICATION_ATOL:.1e} "
+            f"(max difference at flattened index {int(diff.argmax())})"
+        )
 
 
 def main():
@@ -299,7 +343,11 @@ def entrypoint(
     torch_model = model_def(**model_kwargs)
     hetero_sample_gamestate, _ = convert_input_to_tensor(sample_gamestate)
     torch_model.eval()
-    infer(torch_model, hetero_sample_gamestate)
+    # Warm-up forward with the freshly initialized (random) weights: it
+    # triggers the model's lazy initialization before the weights are
+    # loaded and the graph is traced.
+    with torch.no_grad():
+        infer(torch_model, hetero_sample_gamestate)
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
     torch_model.load_state_dict(state_dict)
 
@@ -309,20 +357,14 @@ def entrypoint(
 
     if verification_gamestates:
         ort_session = onnxruntime.InferenceSession(onnx_savepath)
-        for idx, verification_gamestate in enumerate(verification_gamestates, start=1):
+        for verification_gamestate in verification_gamestates:
             hetero_verification_gamestate, _ = convert_input_to_tensor(
                 verification_gamestate
             )
-            torch_out = infer(torch_model, hetero_verification_gamestate)
+            with torch.no_grad():
+                torch_out = infer(torch_model, hetero_verification_gamestate)
             onnx_out = onnx_run(ort_session, hetero_verification_gamestate)
-
-            print(len(verification_gamestate.States))
-            print(f"{shorten_output(torch_out)=}")
-            print(f"{shorten_output(onnx_out[0])=}")
-            print(f"{idx}/{len(verification_gamestates)}")
-            assert shorten_output(torch_out) == shorten_output(onnx_out[0]), (
-                f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
-            )
+            verify_outputs(torch_out, onnx_out[0])
 
 
 if __name__ == "__main__":
