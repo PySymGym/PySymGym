@@ -188,10 +188,10 @@ feature widths in ``ml.schema``; ``ml.dataset`` re-exports both, and the
 lifecycle tests pin that the re-exports are the same objects. The dataset
 code itself is the ``ml/dataset/`` package (``processing``: the
 ``TrainingDataset`` class; ``tensors``: domain→tensor conversion;
-``maintenance``: the online-update mixin), and the lifecycle tests pin that
-``TrainingDataset`` is defined in ``ml.dataset.processing``. The
-malformed-input branches of
-``convert_input_to_tensor`` are pinned by mutating a ``gamestate_factory``
+``maintenance``: the online-maintenance mixin), and the lifecycle tests pin
+that ``TrainingDataset`` is defined in ``ml.dataset.processing``. The
+transforms tests (``test_dataset_transforms.py``) pin the malformed-input
+branches of ``convert_input_to_tensor`` by mutating a ``gamestate_factory``
 copy (exact error type and message) rather than hand-rolled gamestates: a
 missing state child raises the ``KeyError`` keyed by the missing child Id.
 The ``get_hetero_data`` single-row contract (the model's one output tensor
