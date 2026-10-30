@@ -359,9 +359,13 @@ paths, the live-instance ``InstanceIssuanceError`` with the re-queue, the
 enqueue kill-and-rewrap versus keep-pid paths, the results append /
 recv), ``run_server_instance`` with a fake ``Popen`` (the
 DEVNULL stdout, the pinned ``DOTNET_ROLL_FORWARD`` environment, the
-pid-keyed handle registration in ``PROCS``, and the fail-fast group kill
-+ reap with ``InstanceIssuanceError`` when the port never opens), a
-pinned port and a fresh port lock, the ``run_servers`` placeholders,
+pid-keyed handle registration in ``PROCS``, the fail-fast group kill
++ reap with ``InstanceIssuanceError`` when the port never opens, and
+the collision retry — a port that is open while the server is dead
+reaps the corpse and retries the next port, bounded by
+``MAX_PORT_ATTEMPTS`` with an ``InstanceIssuanceError`` on
+exhaustion), a pinned port and a fresh port lock, the
+``run_servers`` placeholders,
 ``kill_server`` / ``kill_process`` with fake ``os.killpg`` /
 ``os.getpgid`` and the ``fake_proc`` stand-in (the untracked-pid warning,
 the process-group kill with the ``proc.wait()`` reap, the vanished-group
