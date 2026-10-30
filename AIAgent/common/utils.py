@@ -1,9 +1,6 @@
 """Small helpers shared across the agent packages."""
 
 from pathlib import Path
-from typing import TypeVar
-
-T = TypeVar("T")
 
 
 def require_absolute_path(value: str | Path) -> Path:
@@ -35,27 +32,3 @@ def require_absolute_path(value: str | Path) -> Path:
             "resolved against the config file's location at load time"
         )
     return path
-
-
-def inheritors(cls: T) -> set[T]:
-    """Return every transitive subclass of ``cls``.
-
-    Parameters
-    ----------
-    cls : T
-        The base class to collect subclasses of.
-
-    Returns
-    -------
-    set[T]
-        All direct and indirect subclasses of ``cls``.
-    """
-    subclasses: set[T] = set()
-    work = [cls]
-    while work:
-        parent = work.pop()
-        for child in parent.__subclasses__():
-            if child not in subclasses:
-                subclasses.add(child)
-                work.append(child)
-    return subclasses
