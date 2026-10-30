@@ -123,10 +123,11 @@ def test_process_and_save_step_saves_the_converted_graph(
     assert torch.equal(step["y_true"], torch.tensor([[0.0], [1.0]]))
 
 
-def test_double_process_raises_file_exists(tmp_path, gamestate_factory, serial_pool):
-    # Pinned current behaviour (finding on #632): the processed result file
-    # is opened exclusively, so reprocessing an already-processed map
-    # crashes; the supported update path is update_map.
+def test_double_process_is_idempotent(tmp_path, gamestate_factory, serial_pool):
+    # The FileExistsError pin is retired: the processed result file is now
+    # overwritten, and the .pt steps are rewritten in place, so re-running
+    # process() over an already-processed map converges to the same
+    # on-disk state.
     raw = tmp_path / "raw"
     processed = tmp_path / "processed"
     _populate_raw_map(raw, "mapA", gamestate_factory, {"7": 0})
@@ -135,9 +136,15 @@ def test_double_process_raises_file_exists(tmp_path, gamestate_factory, serial_p
         raw_dir=raw, processed_dir=processed, train_percentage=1.0, n_jobs=1
     )
     # Construction already auto-processed mapA.
+    map_dir = processed / "mapA"
+    result_before = (map_dir / "result").read_text()
+    y_true_before = _load_step(map_dir / "0.pt")["y_true"]
 
-    with pytest.raises(FileExistsError):
-        ds.process()
+    ds.process()
+
+    assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "result"]
+    assert (map_dir / "result").read_text() == result_before
+    assert torch.equal(_load_step(map_dir / "0.pt")["y_true"], y_true_before)
 
 
 # ---------------------------------------------------------------------------
