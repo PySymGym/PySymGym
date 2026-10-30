@@ -1,0 +1,6 @@
+method,tests,errors,coverage,total_time_sec
+m2,15,0,90.0,8
+m3,25,1,70.0,12
+m4,35,2,50.0,18
+m5,45,3,30.0,22
+m6,55,4,10.0,28
