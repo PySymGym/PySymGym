@@ -212,7 +212,11 @@ layout (per map a ``result`` file plus ``<id>_gameState`` /
 ``<id>_movedState`` step files) and drive ``process()`` through the
 ``serial_pool`` fixture as well; a double-``process()`` pin verifies that a
 re-run over an already-processed map is idempotent (the ``result`` file and
-the saved step are unchanged). They also walk the ``update_map`` branch
+the saved step are unchanged). The degenerate-step filter (#619) is pinned
+there too: a step whose converted graph has zero states or zero game
+vertices is skipped (reusing ``ml.inference.degenerate_counts``) with a
+warning naming the map and step, while a zero-path-condition step is saved
+as usual. They also walk the ``update_map`` branch
 matrix (new map, below-threshold result-only save, merge, reproduced,
 replace, and the two no-op cases) with ``step_factory`` steps, pinning the
 exact ``logging.info`` messages via caplog (including the trailing space of
