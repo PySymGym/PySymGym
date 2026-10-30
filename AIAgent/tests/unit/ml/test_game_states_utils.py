@@ -9,7 +9,7 @@ from common.game import (
     PathConditionVertex,
     State,
 )
-from ml.validation.coverage.game_managers.each_step.game_states_utils import (
+from ml.validation.coverage.game_managers.game_states_utils import (
     get_states,
     update_game_state,
 )
