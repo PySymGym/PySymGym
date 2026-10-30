@@ -12,6 +12,7 @@ online-maintenance methods are mixed in from
 import ast
 import glob
 import json
+import logging
 import multiprocessing as mp
 import os
 import os.path as osp
@@ -26,6 +27,7 @@ import tqdm
 from common.dataset import Result, TrainingDatasetMode
 from common.game import GameState
 from ml.device import get_device
+from ml.inference import degenerate_counts
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
@@ -291,6 +293,18 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         data = json.load(f)
         f.close()
         graph, state_map = convert_input_to_tensor(GameState.from_dict(data))
+        # Degenerate steps (#619) are skipped before get_states_distribution:
+        # with an empty state_map the moved-state lookup would KeyError.
+        # Zero-path-condition graphs are not degenerate and are saved as usual.
+        counts = degenerate_counts(graph)
+        if counts is not None:
+            logging.warning(
+                "skipping degenerate step %s/%s: %d states, %d game vertices",
+                raw_map_path.name,
+                raw_step_id,
+                *counts,
+            )
+            return False
         distribution = get_states_distribution(
             os.path.join(raw_map_path, raw_step_id + MOVEDSTATESUFFIX), state_map
         )
