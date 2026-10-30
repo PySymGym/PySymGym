@@ -293,8 +293,13 @@ class Comparator:
         )
         plt.ylabel(f"{self.strat1.name} {config.by_column}, {config.metric}")
 
+        # exp_name is optional (default None); fall back to a name derived
+        # from the comparison itself so distinct datasources of the same
+        # by_column do not collide.
         savename = (
-            f"{config.on}.pdf" if config.exp_name is None else f"{config.exp_name}.pdf"
+            f"{config.exp_name}.pdf"
+            if config.exp_name is not None
+            else f"{config.by_column}_{config.datasource.name.lower()}.pdf"
         )
         plt.savefig(
             os.path.join(self.savedir, savename), format="pdf", bbox_inches="tight"
