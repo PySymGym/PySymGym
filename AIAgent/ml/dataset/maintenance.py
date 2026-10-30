@@ -34,11 +34,40 @@ class MaintenanceMixin:
     """The online-maintenance half of :class:`TrainingDataset`."""
 
     def filter_map_steps(self, map_steps: list[HeteroData]) -> list[HeteroData]:
+        """
+        Binarize each step's ``y_true`` at its argmax, dropping unusable steps.
+
+        ``y_true`` must be a ``[S, 1]`` column — one logit per state. Under
+        that shape the global argmax is the winning row, so the one-hot
+        encoding below is well-defined. Single-row and all-NaN steps are
+        dropped (there is nothing to binarize); every other step is kept
+        with its ``y_true`` replaced by the one-hot column.
+
+        Parameters
+        ----------
+        map_steps : list[HeteroData]
+            The steps of one map.
+
+        Returns
+        -------
+        list[HeteroData]
+            The kept steps, with ``y_true`` replaced by its one-hot column.
+
+        Raises
+        ------
+        ValueError
+            If a step's ``y_true`` is not a 2-D tensor with one column.
+        """
         filtered_map_steps = []
         for step in map_steps:
-            if step["y_true"].size()[0] != 1 and not step["y_true"].isnan().any():
-                max_ind = torch.argmax(step["y_true"])
-                step["y_true"] = torch.zeros_like(step["y_true"])
+            y_true = step["y_true"]
+            if y_true.dim() != 2 or y_true.size(1) != 1:
+                raise ValueError(
+                    f"y_true must be a [S, 1] column, got shape {tuple(y_true.shape)}"
+                )
+            if y_true.size()[0] != 1 and not y_true.isnan().any():
+                max_ind = torch.argmax(y_true)
+                step["y_true"] = torch.zeros_like(y_true)
                 step["y_true"][max_ind] = 1.0
                 filtered_map_steps.append(step)
         return filtered_map_steps

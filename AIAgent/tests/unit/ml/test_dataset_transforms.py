@@ -154,6 +154,15 @@ def test_filter_map_steps_keeps_multi_state_rows_and_one_hot_encodes(tmp_dataset
     assert torch.equal(kept[0]["y_true"], torch.tensor([[0.0], [1.0]]))
 
 
+def test_filter_map_steps_rejects_non_column_y_true(tmp_dataset):
+    # The [S, 1] contract: one logit per state. A wide y_true would make the
+    # global argmax meaningless, so it must fail loudly.
+    wide = _step(torch.tensor([[0.2, 0.8], [0.6, 0.4]]))
+
+    with pytest.raises(ValueError, match=r"\[S, 1\]"):
+        tmp_dataset.filter_map_steps([wide])
+
+
 def test_remove_similar_steps_keeps_steps_with_differing_state_counts(tmp_dataset):
     first = _step(torch.tensor([[1.0], [0.0]]), state_rows=2)
     second = _step(torch.tensor([[1.0], [0.0], [0.0]]), state_rows=3)
