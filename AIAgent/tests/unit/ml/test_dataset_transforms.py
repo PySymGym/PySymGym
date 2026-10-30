@@ -195,3 +195,64 @@ def test_is_update_map_required_for_worse_result(tmp_dataset):
     tmp_dataset.maps_results = {"m": Result(60, 0, 0, 0)}
 
     assert tmp_dataset.is_update_map_required("m", Result(50, 0, 0, 0)) is False
+
+
+# ---------------------------------------------------------------------------
+# Result ordering (#594)
+#
+# Convention: ``a < b`` means *b is better* than a (the call-site
+# convention of ``is_update_map_required``/``update_map``). Better means:
+# higher coverage, then fewer tests, then fewer steps, then fewer errors.
+# ---------------------------------------------------------------------------
+
+
+def test_result_ordering_more_errors_ranks_worse():
+    # The #594 regression: at equal coverage/tests/steps, the errorful run
+    # must rank worse than the error-free one (it used to rank better).
+    assert Result(100, 5, 10, 3) < Result(100, 5, 10, 0)
+    assert not (Result(100, 5, 10, 0) < Result(100, 5, 10, 3))
+
+
+def test_result_ordering_fewer_tests_rank_better():
+    assert Result(100, 2, 5, 0) < Result(100, 1, 5, 0)
+    assert not (Result(100, 1, 5, 0) < Result(100, 2, 5, 0))
+
+
+def test_result_ordering_fewer_steps_rank_better():
+    assert Result(100, 1, 6, 0) < Result(100, 1, 5, 0)
+    assert not (Result(100, 1, 5, 0) < Result(100, 1, 6, 0))
+
+
+def test_result_ordering_coverage_dominates():
+    assert Result(99, 0, 0, 0) < Result(100, 9, 9, 9)
+
+
+def test_result_ordering_mixed_comparison_raises_type_error():
+    with pytest.raises(TypeError):
+        _ = Result(100, 1, 5, 0) < 42
+
+
+def test_result_to_from_tuple_round_trips_the_disk_format():
+    assert Result(100, 1, 5, 0).to_tuple() == (100, -1, -5, 0)
+    assert Result.from_tuple((100, -1, -5, 0)) == Result(100, 1, 5, 0)
+
+
+def test_is_update_map_required_rejects_more_errors_at_equal_rest(tmp_dataset):
+    # The defect scenario: a run with errors must not replace an error-free
+    # run at equal coverage/tests/steps.
+    tmp_dataset.maps_results = {"m": Result(100, 5, 10, 0)}
+
+    assert tmp_dataset.is_update_map_required("m", Result(100, 5, 10, 3)) is False
+
+
+def test_is_update_map_required_accepts_fewer_errors_at_equal_rest(tmp_dataset):
+    tmp_dataset.maps_results = {"m": Result(100, 5, 10, 3)}
+
+    assert tmp_dataset.is_update_map_required("m", Result(100, 5, 10, 0)) is True
+
+
+def test_is_update_map_required_accepts_fewer_tests_or_steps(tmp_dataset):
+    tmp_dataset.maps_results = {"m": Result(100, 5, 10, 0)}
+
+    assert tmp_dataset.is_update_map_required("m", Result(100, 4, 10, 0)) is True
+    assert tmp_dataset.is_update_map_required("m", Result(100, 5, 9, 0)) is True
