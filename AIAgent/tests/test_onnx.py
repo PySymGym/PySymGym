@@ -10,6 +10,7 @@ import pytest
 import torch
 import yaml
 from common.game import GameState
+from device import select_device
 from ml.dataset import convert_input_to_tensor
 from ml.inference import TORCH
 from ml.models.NorthernPenguin.model import (
@@ -98,7 +99,10 @@ class TestForwardOnCUDA:
     without an explicit device it lands on CPU and torch.where raises
     "Expected all tensors to be on the same device" for CUDA inputs."""
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
+    @pytest.mark.skipif(
+        select_device().type != "cuda",
+        reason="requires a CUDA device the installed torch build can run on",
+    )
     def test_forward_matches_cpu_with_and_without_v_v_edges(self):
         with open(read_configs("tests/resources/model_configurations")[0]) as file:
             model_kwargs = yaml.safe_load(file)

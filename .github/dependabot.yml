@@ -3,10 +3,10 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
   # GitHub Actions used by the workflows in this directory. Submodules keep
   # their own CI and are covered by their upstream repositories.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"

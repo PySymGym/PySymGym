@@ -110,7 +110,26 @@ jobs:
           # install never removes packages dropped from the lockfile (stale
           # pynvml kept leaking into the env after #617-S1 removed it).
           # --sync purges them.
-          poetry --ansi install --sync
+          #
+          # --sync can also fail outright when it must downgrade a cached
+          # package: pip's uninstall renames the old files into a temp dir,
+          # and on this runner /tmp is on a different filesystem than the
+          # venv, so the rename dies with "Invalid cross-device link"
+          # ("Cannot install mlflow-skinny" after #654 bumped mlflow on
+          # main while older branches still lock 3.11.1). Pointing TMPDIR
+          # at the venv's own filesystem keeps the rename on-device; if the
+          # install fails for any other reason, rebuild the venv from
+          # scratch — a fresh install never uninstalls.
+          export TMPDIR="$(poetry config cache-dir)/pip-tmp"
+          mkdir -p "$TMPDIR"
+          if ! poetry --ansi install --sync; then
+              echo "poetry install --sync failed — rebuilding cached venv from scratch"
+              # env info -p fails when no venv exists yet (fresh runner);
+              # guard so the rebuild still proceeds.
+              venv_path="$(poetry env info -p 2>/dev/null || true)"
+              [ -n "$venv_path" ] && rm -rf "$venv_path"
+              poetry --ansi install --sync
+          fi
 
       - name: Verify cached venv integrity
         run: |
@@ -127,6 +146,17 @@ jobs:
               poetry --ansi install --sync
               poetry run python -c "import torch"
           fi
+
+      - name: Check GPU compatibility
+        working-directory: ./AIAgent
+        run: |
+          # The locked torch may ship no kernels for the runner's GPU
+          # (torch >=2.9 dropped Pascal sm_61, #644): the probe runs a real
+          # kernel on the installed build, and when the build has no kernels
+          # for the device the run degrades to the CPU flow (config.py)
+          # instead of dying on the first training batch. Informational only
+          # — device.py always exits 0.
+          poetry run python device.py
 
       - name: Build V# game server
         working-directory: ./GameServers/VSharp/

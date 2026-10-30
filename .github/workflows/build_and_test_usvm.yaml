@@ -16,7 +16,18 @@ jobs:
       image: ubuntu:24.04
     steps:
       - name: Download & install necessary dependencies
+        # git is required for the submodule checkout; node/npm come from
+        # setup-node below
         run: apt update && apt install -y git
+
+      - name: Setup Node.js
+        # :usvm-ts-fast-check runs the fast-check adapter's JS tests, whose
+        # TS entry-point loading needs node >= 20-class CJS/ESM interop.
+        # ubuntu 24.04's apt node is 18.19.1, which breaks it
+        # (entrypoint.export.not-found, 41/138 tests) — see #659.
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Checkout repository
         uses: actions/checkout@v7
