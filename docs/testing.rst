@@ -252,18 +252,7 @@ or the neutral zeros without calling the model and logging a warning with
 both counts, the zero-PC graph forwarding through the real small model to
 a finite output (the exact #619 crash input), and ``train`` skipping a
 degenerate step as a no-op (bit-identical weights) while still training a
-normal step in a mixed dataloader. The
-experiment-helper tests (``test_experiments_utils.py``) pin the remaining
-``ml.training.experiments_utils`` helpers: ``get_model`` reloading a saved
-state dict with the ``lin_last`` weights overwritten by the exact seeded
-random values, ``find_unfinished_maps`` printing the started-but-not-finished
-maps parsed from a server log (per port, a ``Finish`` without a ``Start``
-prints nothing), ``sync_dataset_with_description`` pruning dataset dirs
-missing from the map description, ``find_dominators_in_cfg`` appending the
-dominator edges (type 3, dominator to dominated, self-loops skipped) per
-entry point and raising ``ValueError`` without one, and ``sample_dataset``
-copying the rounded percentage of ``.pt`` files (with the map's ``result``
-file on first copy) from a two-levels-deep relative dataset. The inference
+normal step in a mixed dataloader. The inference
 tests (``test_predict_wrapper.py``) pin ``ml.predict.predict_state_with_dict``
 with a fixed-output fake model (the exact max-row-sum selection, the
 state-map remapping, the ``no_grad`` output) plus one real-model run, and
