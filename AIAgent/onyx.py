@@ -152,6 +152,51 @@ def dynamic_axes() -> dict[str, dict[int, str]]:
     }
 
 
+# torch 2.13 switched torch.onnx.export's default to the dynamo-based
+# exporter, which does not accept dynamic_axes without routing them
+# through the deprecated from_dynamic_axes_to_dynamic_shapes compat path
+# (four warnings the #617 guard forbids, #646). Below this version the
+# legacy exporter is the default and dynamic_shapes is a dynamo-only
+# option it ignores.
+_DYNAMO_EXPORTER_MIN_TORCH = (2, 13)
+
+
+def _torch_uses_dynamo_exporter() -> bool:
+    """Whether the installed torch.onnx.export defaults to the dynamo
+    exporter (torch >= 2.13)."""
+    major_minor = tuple(int(part) for part in torch.__version__.split(".")[:2])
+    return major_minor >= _DYNAMO_EXPORTER_MIN_TORCH
+
+
+def _dynamic_shapes() -> dict[str, dict[int, t.Any]]:
+    """The dynamo exporter's ``dynamic_shapes`` mapping (derived from
+    ``MODEL_INPUTS``).
+
+    One ``torch.onnx.Dim`` instance per symbolic dimension name: axes
+    that share a name (an edge index's axis 1 and the matching edge
+    type's axis 0) receive the same Dim object, which the dynamo
+    exporter treats as one symbolic dimension — the shared-dimension
+    semantics of the legacy mapping without the "shares the same shape
+    constraints" warning the from_dynamic_axes_to_dynamic_shapes compat
+    path emits (#646). Requires torch >= 2.13 (``torch.onnx.Dim``).
+    """
+    from torch.onnx import Dim
+
+    dims: dict[str, t.Any] = {}
+
+    def dim(name: str) -> t.Any:
+        if name not in dims:
+            dims[name] = Dim(name)
+        return dims[name]
+
+    return {
+        model_input.name: {
+            axis: dim(dim_name) for axis, dim_name in model_input.dynamic_axes.items()
+        }
+        for model_input in MODEL_INPUTS
+    }
+
+
 def save_in_onnx(
     model: torch.nn.Module,
     sample_input: HeteroData,
@@ -190,16 +235,26 @@ def save_in_onnx(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"torch\.onnx\.utils"
             )
-            torch.onnx.export(
+            export_kwargs: dict[str, t.Any] = dict(
                 model=model,
                 args=create_torch_input(sample_input),
                 f=save_path,
                 verbose=verbose,
-                dynamic_axes=dynamic_axes(),
                 input_names=input_names(),
                 output_names=["out"],
                 opset_version=opset_version,
             )
+            if _torch_uses_dynamo_exporter():
+                # The dynamo exporter (the torch >= 2.13 default) takes
+                # dynamic_shapes; passing dynamic_axes would route through
+                # the deprecated compat path and warn (#646).
+                export_kwargs["dynamic_shapes"] = _dynamic_shapes()
+            else:
+                # The legacy exporter (the torch < 2.13 default) takes
+                # dynamic_axes; dynamic_shapes is a dynamo-only option it
+                # ignores.
+                export_kwargs["dynamic_axes"] = dynamic_axes()
+            torch.onnx.export(**export_kwargs)
     finally:
         pyg_backend.use_segment_matmul = previous_use_segment_matmul
 
