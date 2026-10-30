@@ -13,6 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import torch
 from common.classes import GameFailed, GameResult
 from common.config.broker_config import BrokerConfig
 from common.config.connector_config import GameServerConnectorConfig
@@ -191,7 +192,9 @@ class FakePredictor:
         return "fake"
 
     def predict(self, game_state):
-        return 0, 0.5
+        # The real predictors return the model output as a tensor
+        # ((num_states, 1)); the fake mirrors that shape.
+        return 0, torch.tensor([[0.5]])
 
     def model(self):
         return None
