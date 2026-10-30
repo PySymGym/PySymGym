@@ -190,6 +190,41 @@ def test_play_game_map_with_svm_returns_result_and_steps(
     assert len(steps) == 2
 
 
+def test_play_game_map_with_svm_reports_model_played_steps(
+    fake_namespace,
+    game_map2svm_factory,
+    gamestate_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The server reports the total trace steps (start + play); the metric is
+    # the model-played count (total minus StepsToStart), identical to the
+    # send-model mode. The agent plays 2 steps here, so the server total is
+    # 2 (play) + 3 (start) = 5 and the reported steps_count is 5 - 3 = 2.
+    game_map2svm = game_map2svm_factory(steps_to_play=5, steps_to_start=3)
+    first = gamestate_factory()
+    second = gamestate_factory()
+    delta = GameState(
+        GraphVertices=second.GraphVertices,
+        States=second.States,
+        PathConditionVertices=[],
+        Map=second.Map,
+    )
+    fake = FakeConnector(
+        game_map2svm.GameMap,
+        states=[first, delta],
+        gameover_after=2,
+        gameover=_gameover(100, 1, 5, 0),
+    )
+    _patch_connector(monkeypatch, fake)
+    manager = _manager(fake_namespace, FakePredictor())
+
+    result, _ = manager._play_game_map_with_svm(game_map2svm, object())
+
+    assert isinstance(result, GameResult)
+    assert result.steps_count == 2
+    assert result.actual_coverage_percent == 100
+
+
 def test_play_game_map_with_svm_immediate_gameover(
     fake_namespace, game_map2svm_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -194,6 +194,20 @@ When enabled:
 - any failed map (timeout, engine error, ...) fails the run with a non-zero
   exit.
 
+SVM validation step metric
+--------------------------
+
+The ``steps_count`` reported per map (in the per-trial statistics table and in
+the dataset ``Result``) is the number of **steps the model/agent played**: the
+server-reported total trace steps minus ``StepsToStart``. The first
+``StepsToStart`` steps of a map are played by the default searcher (BFS/DFS)
+before the model takes over — in ``svms_each_step`` mode the agent's connection
+is only used after that start phase, and in ``svms_model`` mode the server plays
+the start steps itself before handing control to the ONNX model. Subtracting
+them makes the metric identical across both validation modes for an identical
+game outcome, so per-map statistics and early-stopping signals are comparable
+regardless of the mode used.
+
 .. _guide-symbolic-execution:
 
 Guide symbolic execution with a trained model
