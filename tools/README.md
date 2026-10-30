@@ -164,6 +164,37 @@ Use custom dataset and log paths:
 PYTHONPATH=../../AIAgent python3 clean.py -d <path-to-dataset> -l <path-to-log>
 ```
 
+## `parse_pretty` tool
+
+This tool parses a Common Model results file formatted as a 'pretty' table
+(one row per model, one column per method) into a CSV with one row per
+(model, method) pair.
+
+Docs:
+```bash
+usage: parse_pretty.py [-h] -in INPUT [-o OUTPUT] [--map-name-suffix MAP_NAME_SUFFIX]
+
+options:
+  -h, --help            show this help message and exit
+  -in INPUT, --input INPUT
+                        path to file with 'pretty' table
+  -o OUTPUT, --output OUTPUT
+                        path to save result to (default: ./parsed.csv)
+  --map-name-suffix MAP_NAME_SUFFIX
+                        suffix stripped from the header map names to obtain
+                        the method names (default: _Method_0)
+```
+Run:
+```bash
+python3 parse_pretty.py -in <path-to-pretty-table> -o <path-to-csv>
+```
+
+A single-model table yields the columns `method,steps,tests,errors,coverage`;
+a table with more than one model row yields
+`model,method,steps,tests,errors,coverage`. On a missing input file, an
+unparseable table, or an unwritable output, the tool prints an error to
+stderr and exits with status 1.
+
 ## Dependencies
 
 The tools are standalone except for one explicit, one-way dependency on the

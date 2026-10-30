@@ -459,33 +459,44 @@ The dataset_tools tests (``tools/dataset_tools/tests/unit/``) drive the
 dataset maintenance CLIs over temporary datasets decoded through
 ``GameMap.schema()``. The ``clean`` tests (``test_clean.py``) pin
 ``get_bad_episodes`` (the ``immediate GameOver on <name>`` extraction with
-deduplication, the empty result for a missing log) and ``clean`` (bad
-episodes removed, the ``(method, step, searcher)`` sort order); the
-``main()`` seam tests pin the CLI wiring end-to-end (argv ``Path``-typed
-arguments into the real ``clean``) and the exact ``sys.exit`` messages for a
-missing dataset (checked before the log) and a missing log. The
-``generate_episodes`` tests (``test_generate_episodes.py``) pin the helpers
-(``generate_steps`` bucket sizes, the ``create_episode`` map-name rules,
-``is_duplicate``) and their composition in ``generate_episodes()``: the
-per-method grouping, the grid from each method's FIRST episode's
+deduplication, the empty result for a missing log, the named log-format
+constants ``GAME_OVER_MARKER``/``GAME_OVER_MAP_DELIMITER`` that are the
+single explicit coupling to the free-form log phrasing) and ``clean`` (bad
+episodes removed, the ``(method, step, searcher)`` sort order, the atomic
+rewrite); the ``main()`` seam tests pin the CLI wiring end-to-end (argv
+``Path``-typed arguments into the real ``clean``) and the exact ``sys.exit``
+messages for a missing dataset (checked before the log) and a missing log.
+The ``generate_episodes`` tests (``test_generate_episodes.py``) pin the
+helpers (``generate_steps`` bucket sizes, the ``create_episode`` map-name
+rules, ``is_duplicate``) and their composition in ``generate_episodes()``:
+the per-method grouping, the grid from each method's FIRST episode's
 ``StepsToPlay`` crossed with ``BFS``/``DFS`` plus the step-0 ``BFS``
 episode, the deduplication that matches on ``(method, step, searcher)`` and
 ignores the ``MapName``, and the exact sorted ``MapName`` list read back
 from the rewritten file (including the empty-dataset case); the ``main()``
 seam tests pin the CLI wiring and the missing-dataset behaviour (the error
-printed to stdout, then ``sys.exit(1)``).
+printed to stdout, then ``sys.exit(1)``). The ``atomic_io`` tests
+(``test_atomic_io.py``) pin the shared atomic rewrite: the content
+round-trip, the temp file living in the target's directory, and the
+crash-safety property (the original intact and the temp removed on a
+write-phase failure, a replace-phase failure, a concurrent temp cleanup,
+and a ``KeyboardInterrupt``).
 
 The util tests (``tools/util/tests/unit/test_parse_pretty.py``) pin the
 ``parse_pretty`` results-table parser: ``parse_stats`` (the exact
 ``(steps, tests, errors, coverage)`` tuple from a stats cell, the
-``AttributeError`` on a malformed cell), the single-model transpose (one
-row per method, the ``_Method_0`` map-name suffix stripped), the
-``Epoch#`` and ``+|-`` separator line skips, and ``main()`` (the parsed
-CSV written to ``-o``, the ``./parsed.csv`` default in the current working
-directory). The multi-model-table crash (a table with more than one model
-row raises ``ValueError`` at the transpose) is #592-tracked and pinned as a
-strict ``xfail`` asserting the crash-level post-fix property; the exact
-post-fix layout is owned by #592.
+``AttributeError`` on a malformed cell, the ``\d+`` regexes rejecting a
+non-digit count), the single-model transpose (one row per method, the
+``_Method_0`` map-name suffix stripped), the multi-model transpose (one row
+per (model, method) pair, model-major, with a leading ``model`` column —
+the former #592 strict ``xfail`` for the transpose crash, flipped to a
+passing test by #592), the ``ValueError`` on a model row whose stats-cell
+count mismatches the header, the empty and header-only tables (an empty
+frame with the standard columns), the configurable ``map_name_suffix`` (the
+``--map-name-suffix`` CLI flag), the ``Epoch#`` and ``+|-`` separator line
+skips, and ``main()`` (the parsed CSV written to ``-o``, the ``./parsed.csv``
+default in the current working directory, the stderr message and exit code
+1 for a missing input, an unparseable table, and an unwritable output).
 
 Adding a fixture
     Put it in the ``conftest.py`` of the component it serves, resolve resources
