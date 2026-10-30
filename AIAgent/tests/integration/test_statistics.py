@@ -59,8 +59,8 @@ class TestSVMsStatistics:
 
         dataset = TrainingDatasetMock(
             mock_maps_results={
-                "Map1": Result(100, -4, -9028, 5),
-                "Map2": Result(0, -1, -8, 0),
+                "Map1": Result(100, 4, 9028, 5),
+                "Map2": Result(0, 1, 8, 0),
             }
         )
         maps = get_maps(val_config)

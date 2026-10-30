@@ -82,8 +82,8 @@ class ValidationCoverage:
             game_result = result.game_result
             map_result = Result(
                 coverage_percent=game_result.actual_coverage_percent,
-                negative_tests_number=-game_result.tests_count,
-                negative_steps_number=-game_result.steps_count,
+                tests_number=game_result.tests_count,
+                steps_number=game_result.steps_count,
                 errors_number=game_result.errors_count,
             )
             map_name = game_map.MapName

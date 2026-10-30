@@ -4,7 +4,7 @@
 ``mp.Pool`` workers are invisible to pytest-cov, and the pool is an
 orchestration seam, not the behaviour under test. The raw dataset layout
 mirrors what the game servers serialize: per map a ``result`` file
-(space-separated ``coverage negative_tests negative_steps errors``) and, per
+(space-separated ``coverage tests steps errors``, all non-negative) and, per
 step, ``<id>_gameState`` (JSON ``GameState``) plus ``<id>_movedState``
 (decimal state Id).
 """
@@ -62,7 +62,7 @@ def test_construction_auto_processes_the_raw_dir(
     map_dir = processed / "mapA"
     assert sorted(p.name for p in map_dir.iterdir()) == ["0.pt", "result"]
     assert (map_dir / "result").read_text() == "(100, -1, -5, 0)"
-    assert ds.maps_results == {"mapA": Result(100, -1, -5, 0)}
+    assert ds.maps_results == {"mapA": Result(100, 1, 5, 0)}
     assert ds.processed_paths == [str(map_dir / "0.pt")]
     assert torch.equal(
         _load_step(map_dir / "0.pt")["y_true"], torch.tensor([[1.0], [0.0]])
@@ -94,7 +94,7 @@ def test_process_orders_steps_by_sorted_raw_id(
         _load_step(map_dir / "1.pt")["y_true"], torch.tensor([[1.0], [0.0]])
     )
     assert (map_dir / "result").read_text() == "(100, -1, -5, 0)"
-    assert ds.maps_results == {"mapA": Result(100, -1, -5, 0)}
+    assert ds.maps_results == {"mapA": Result(100, 1, 5, 0)}
     assert ds.processed_paths == [str(map_dir / "0.pt"), str(map_dir / "1.pt")]
 
 
@@ -159,7 +159,7 @@ def test_double_process_raises_file_exists(tmp_path, gamestate_factory, serial_p
 
 def test_update_map_saves_a_new_map(tmp_dataset, step_factory, serial_pool, caplog):
     map_name = "mapA"
-    result = Result(100, -1, -5, 0)
+    result = Result(100, 1, 5, 0)
     steps = [
         step_factory(torch.tensor([[1.0], [0.0]])),
         step_factory(torch.tensor([[0.0], [1.0]])),
@@ -207,7 +207,7 @@ def test_update_map_merges_matching_steps(
     tmp_dataset, step_factory, serial_pool, caplog
 ):
     map_name = "mapA"
-    result = Result(100, -1, -5, 0)
+    result = Result(100, 1, 5, 0)
     tmp_dataset.update_map(
         map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
     )
@@ -247,7 +247,7 @@ def test_update_map_merges_matching_steps(
 
 def test_update_map_reproduced_branch(tmp_dataset, step_factory, serial_pool, caplog):
     map_name = "mapA"
-    result = Result(100, -1, -5, 0)
+    result = Result(100, 1, 5, 0)
     tmp_dataset.update_map(
         map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
     )
@@ -277,7 +277,7 @@ def test_update_map_replaces_a_worse_result(
 ):
     map_name = "mapA"
     old_result = Result(50, 0, 0, 0)
-    new_result = Result(100, -1, -5, 0)
+    new_result = Result(100, 1, 5, 0)
     tmp_dataset.update_map(
         map_name, old_result, [step_factory(torch.tensor([[1.0], [0.0]]))]
     )
@@ -335,7 +335,7 @@ def test_update_map_no_op_on_worse_result(
     # not worse than the incoming one takes no branch, so the stored steps
     # and result are untouched.
     map_name = "mapA"
-    result = Result(100, -1, -5, 0)
+    result = Result(100, 1, 5, 0)
     tmp_dataset.update_map(
         map_name, result, [step_factory(torch.tensor([[1.0], [0.0]]))]
     )
@@ -369,7 +369,7 @@ def test_update_map_updates_the_load_to_cpu_cache(tmp_path, step_factory, serial
     )
     steps = [step_factory(torch.tensor([[1.0], [0.0]]))]
 
-    ds.update_map("mapA", Result(100, -1, -5, 0), steps)
+    ds.update_map("mapA", Result(100, 1, 5, 0), steps)
 
     assert list(ds._loaded_to_cpu) == ["mapA"]
     assert len(ds._loaded_to_cpu["mapA"]) == 1
@@ -393,7 +393,7 @@ def test_get_map_steps_loads_sorted_pt_files_on_cpu(
 ):
     tmp_dataset.update_map(
         "mapA",
-        Result(100, -1, -5, 0),
+        Result(100, 1, 5, 0),
         [
             step_factory(torch.tensor([[1.0], [0.0]])),
             step_factory(torch.tensor([[0.0], [1.0]])),
@@ -415,7 +415,7 @@ def test_merge_steps_combines_unique_new_and_all_old(
     tmp_dataset, step_factory, serial_pool
 ):
     tmp_dataset.update_map(
-        "mapA", Result(100, -1, -5, 0), [step_factory(torch.tensor([[1.0], [0.0]]))]
+        "mapA", Result(100, 1, 5, 0), [step_factory(torch.tensor([[1.0], [0.0]]))]
     )
 
     # Same graph as the stored step -> merged into it, not appended.
@@ -436,7 +436,7 @@ def test_merge_steps_appends_a_new_vertex_group_without_comparison(
     tmp_dataset, step_factory, serial_pool
 ):
     tmp_dataset.update_map(
-        "mapA", Result(100, -1, -5, 0), [step_factory(torch.tensor([[1.0], [0.0]]))]
+        "mapA", Result(100, 1, 5, 0), [step_factory(torch.tensor([[1.0], [0.0]]))]
     )
 
     # Dropping a game-vertex row moves the step into a vertex-count group
@@ -456,7 +456,7 @@ def test_merge_steps_appends_a_new_vertex_group_without_comparison(
 def test_merge_steps_disjoint_distributions(tmp_dataset, step_factory, serial_pool):
     tmp_dataset.update_map(
         "mapA",
-        Result(100, -1, -5, 0),
+        Result(100, 1, 5, 0),
         [step_factory(torch.tensor([[1.0], [0.0], [0.0]]))],
     )
 

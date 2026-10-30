@@ -114,15 +114,15 @@ def test_update_meta_data_picks_up_new_maps(tmp_path, step_factory):
     _save_processed_map(processed, "mapA", [step_factory(torch.tensor([[1.0], [0.0]]))])
     ds = _make_dataset(tmp_path, processed)
     assert len(ds.processed_paths) == 1
-    assert ds.maps_results == {"mapA": Result(100, -1, -5, 0)}
+    assert ds.maps_results == {"mapA": Result(100, 1, 5, 0)}
 
     _save_processed_map(processed, "mapB", [step_factory(torch.tensor([[0.0], [1.0]]))])
     ds.update_meta_data()
 
     assert len(ds.processed_paths) == 2
     assert ds.maps_results == {
-        "mapA": Result(100, -1, -5, 0),
-        "mapB": Result(100, -1, -5, 0),
+        "mapA": Result(100, 1, 5, 0),
+        "mapB": Result(100, 1, 5, 0),
     }
     ds.switch_to(TrainingDatasetMode.TRAINING)
     assert ds.len() == 2

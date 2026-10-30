@@ -7,7 +7,7 @@ import os
 import os.path as osp
 import random
 import shutil
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -15,6 +15,7 @@ from typing import (
     Any,
     DefaultDict,
     Dict,
+    Iterator,
     List,
     Optional,
     Sequence,
@@ -50,15 +51,70 @@ VertexIndex: TypeAlias = int
 VertexMap: TypeAlias = Dict[VertexId, VertexIndex]
 
 MapName: TypeAlias = str
-Result = namedtuple(
-    "Result",
-    [
-        "coverage_percent",
-        "negative_tests_number",
-        "negative_steps_number",
-        "errors_number",
-    ],
-)
+
+
+@dataclass(frozen=True)
+class Result:
+    """A map's validation result, ordered so that better results sort first.
+
+    Better means: higher coverage, then fewer tests, then fewer steps, then
+    fewer errors. The ordering lives solely in :attr:`sort_key` and
+    ``__lt__``; construction sites pass the plain (non-negated) counts.
+
+    The on-disk representation (:meth:`to_tuple`/:meth:`from_tuple`) keeps
+    the historical sign-flipped tuple format
+    ``(coverage, -tests, -steps, errors)`` so existing processed datasets
+    remain readable.
+    """
+
+    coverage_percent: float
+    tests_number: int
+    steps_number: int
+    errors_number: int
+
+    @property
+    def sort_key(self) -> Tuple[float, int, int, int]:
+        """The lexicographic key implementing the ordering above (larger = better)."""
+        return (
+            self.coverage_percent,
+            -self.tests_number,
+            -self.steps_number,
+            -self.errors_number,
+        )
+
+    def __lt__(self, other: "Result") -> bool:
+        if not isinstance(other, Result):
+            return NotImplemented
+        return self.sort_key < other.sort_key
+
+    def __iter__(self) -> Iterator[float | int]:
+        yield from (
+            self.coverage_percent,
+            self.tests_number,
+            self.steps_number,
+            self.errors_number,
+        )
+
+    def to_tuple(self) -> Tuple[float, int, int, int]:
+        """The on-disk representation: tests and steps negated."""
+        return (
+            self.coverage_percent,
+            -self.tests_number,
+            -self.steps_number,
+            self.errors_number,
+        )
+
+    @classmethod
+    def from_tuple(cls, values: Sequence[float | int]) -> "Result":
+        coverage_percent, tests_number, steps_number, errors_number = values
+        return cls(
+            coverage_percent,
+            -tests_number,
+            -steps_number,
+            errors_number,
+        )
+
+
 StatesDistribution: TypeAlias = torch.tensor
 
 
@@ -238,7 +294,7 @@ class TrainingDataset(Dataset):
             )
             if path_to_map_steps.exists():
                 result_file = open(path_to_map_steps)
-                result = Result(*ast.literal_eval(result_file.read()))
+                result = Result.from_tuple(ast.literal_eval(result_file.read()))
                 results[map_name] = result
                 result_file.close()
         return results
@@ -251,8 +307,8 @@ class TrainingDataset(Dataset):
             result = tuple(map(lambda x: int(x), result.split()))
             return Result(
                 coverage_percent=result[0],
-                negative_tests_number=-result[1],
-                negative_steps_number=-result[2],
+                tests_number=result[1],
+                steps_number=result[2],
                 errors_number=result[3],
             )
 
@@ -291,7 +347,7 @@ class TrainingDataset(Dataset):
                     logging.warning(f"Processing of map {map_name} failed somewhere.")
                 result = process_result(map_name)
                 result_file = open(os.path.join(processed_map_path, "result"), mode="x")
-                result_file.write(str(tuple(result)))
+                result_file.write(str(result.to_tuple()))
                 result_file.close()
         self.update_meta_data()
 
@@ -467,11 +523,11 @@ class TrainingDataset(Dataset):
         if path_to_map_steps.exists():
             shutil.rmtree(path_to_map_steps)
         os.makedirs(path_to_map_steps)
-        if map_result[0] >= self.threshold_coverage:
+        if map_result.coverage_percent >= self.threshold_coverage:
             for idx, step in enumerate(steps):
                 torch.save(step, os.path.join(path_to_map_steps, str(idx) + ".pt"))
         result_file = open(os.path.join(path_to_map_steps, "result"), mode="x")
-        result_file.write(str(tuple(map_result)))
+        result_file.write(str(map_result.to_tuple()))
         result_file.close()
         if self._load_to_cpu:
             self._loaded_to_cpu[map_name] = steps
