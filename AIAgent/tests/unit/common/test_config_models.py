@@ -243,12 +243,15 @@ def test_broker_config_urls_follow_the_port() -> None:
     assert config.post_ws_url == "http://0.0.0.0:1234/post_ws"
 
 
-def test_connector_config_defaults_match_the_previous_constants() -> None:
+def test_connector_config_defaults_are_the_sane_budgets() -> None:
     config = GameServerConnectorConfig()
     assert config.create_connection_timeout_sec == 1
-    assert config.wait_for_socket_reconnection_max_retries == 600
-    # An explicit field: no longer derived from the save feature's timeout.
-    assert config.response_timeout_sec == 1801
+    # Connect-retry budget: 60 × (1 s connect + 1 s sleep) = 2 min, not the
+    # old ~20 min (600 retries).
+    assert config.wait_for_socket_reconnection_max_retries == 60
+    # An explicit field, smaller than the per-map timeout so a dead
+    # connection is detected by the recv, not the wall-clock timeout.
+    assert config.response_timeout_sec == 60
     assert config.skip_utf_validation is True
 
 
@@ -272,7 +275,7 @@ def test_feature_config_defaults_match_the_previous_constants() -> None:
 def test_config_exposes_the_merged_sub_configs_with_previous_defaults() -> None:
     config = _config()
     assert config.broker_config.port == 35000
-    assert config.game_server_connector_config.response_timeout_sec == 1801
+    assert config.game_server_connector_config.response_timeout_sec == 60
     assert config.feature_config.dotnet_roll_forward == "LatestPatch"
     assert config.logger_level == logging.INFO
 

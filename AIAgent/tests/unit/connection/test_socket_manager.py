@@ -96,7 +96,9 @@ def test_wait_for_connection_raises_after_retries(
     monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: True)
     monkeypatch.setattr(socket_manager.time, "sleep", lambda seconds: None)
 
-    with pytest.raises(RuntimeError, match="Retries exhausted"):
+    # The exhaustion message reports the total budget (2 attempts), not the
+    # always-zero remaining count.
+    with pytest.raises(RuntimeError, match="Retries exhausted.*after 2 attempts"):
         socket_manager.wait_for_connection(
             _server_instance(),
             GameServerConnectorConfig(wait_for_socket_reconnection_max_retries=2),

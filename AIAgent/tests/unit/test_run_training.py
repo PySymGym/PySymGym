@@ -1608,8 +1608,8 @@ class TestMain:
             },
             "game_server_connector_config": {
                 "create_connection_timeout_sec": 1,
-                "wait_for_socket_reconnection_max_retries": 600,
-                "response_timeout_sec": 1801,
+                "wait_for_socket_reconnection_max_retries": 60,
+                "response_timeout_sec": 60,
                 "skip_utf_validation": True,
             },
             "feature_config": {
