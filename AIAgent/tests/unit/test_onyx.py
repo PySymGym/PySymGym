@@ -10,6 +10,7 @@ input-names change. Model selection goes through the registry (pinned in
 import json
 
 import numpy as np
+import onyx
 import pytest
 import torch
 from common.game import GameState
@@ -166,6 +167,68 @@ class TestVerifyOutputs:
 
     def test_empty_outputs_pass(self):
         verify_outputs(torch.empty(0, 1), np.empty((0, 1)))
+
+
+class TestDynamicShapes:
+    """The dynamo exporter's ``dynamic_shapes`` derivation (#646).
+
+    ``torch.onnx.Dim`` does not exist in the locked torch (2.7.1), so a
+    recording stand-in is monkeypatched in; the derivation logic — one
+    Dim instance per symbolic dimension name, shared across the axes
+    that carry the name — is what the tests pin.
+    """
+
+    @staticmethod
+    def _install_fake_dim(monkeypatch):
+        class FakeDim:
+            def __init__(self, name):
+                self.name = name
+
+        monkeypatch.setattr(torch.onnx, "Dim", FakeDim, raising=False)
+
+    def test_covers_every_input_in_model_order(self, monkeypatch):
+        self._install_fake_dim(monkeypatch)
+
+        shapes = onyx._dynamic_shapes()
+
+        assert list(shapes) == [name for name, _, _ in EXPECTED_INPUTS]
+
+    def test_shares_one_dim_instance_per_name(self, monkeypatch):
+        self._install_fake_dim(monkeypatch)
+
+        shapes = onyx._dynamic_shapes()
+
+        gv_gv = shapes["gamevertex_to_gamevertex_index"][1]
+        assert gv_gv is shapes["gamevertex_to_gamevertex_type"][0]
+        assert gv_gv.name == "num_gv_gv_edges"
+        history = shapes["gamevertex_history_statevertex_index"][1]
+        assert history is shapes["gamevertex_history_statevertex_attrs"][0]
+        assert history.name == "num_gv_history_sv_edges"
+
+    def test_distinct_names_get_distinct_dims(self, monkeypatch):
+        self._install_fake_dim(monkeypatch)
+
+        shapes = onyx._dynamic_shapes()
+
+        assert shapes["game_vertex"][0] is not shapes["state_vertex"][0]
+        assert shapes["game_vertex"][0].name == "num_game_vertices"
+        assert shapes["state_vertex"][0].name == "num_state_vertices"
+
+
+class TestDynamoExporterVersionGuard:
+    @pytest.mark.parametrize(
+        ("version", "expected"),
+        [
+            ("2.7.1+cu126", False),
+            ("2.12.0", False),
+            ("2.13.0", True),
+            ("2.14.1", True),
+        ],
+    )
+    def test_parses_torch_versions(self, monkeypatch, version, expected):
+        monkeypatch.setattr(torch, "__version__", version)
+
+        assert onyx._torch_uses_dynamo_exporter() is expected
 
 
 class TestLoadGamestate:

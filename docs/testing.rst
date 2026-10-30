@@ -404,7 +404,11 @@ names — each mapped to its ``hetero_factory`` tensor, the modifier
 application, the ``.numpy()`` conversion, and the ``input_names`` order),
 the ``input_names()``/``dynamic_axes()`` derivations from the single-source
 ``MODEL_INPUTS`` (the literal wire names and the legacy dim names as the V#
-contract), and ``load_gamestate`` (a reference gamestate JSON into the exact
+contract), the dynamo exporter's ``dynamic_shapes`` derivation (one ``Dim``
+instance per symbolic dimension name, shared across the axes that carry the
+name — #646; a monkeypatched ``torch.onnx.Dim`` stand-in, since the locked
+torch predates it) and the torch-version guard that selects the exporter
+API, and ``load_gamestate`` (a reference gamestate JSON into the exact
 ``GameState``); model selection goes through the registry (pinned in
 ``test_registry.py``). The integration
 tests (``AIAgent/tests/integration/test_onnx.py``) are config-driven from
@@ -413,7 +417,9 @@ gamestates through ``AIAgent/paths.py``: ``TestONNXConversion`` runs the full
 ``entrypoint`` (export + verification) with a randomized
 ``RealStateModelEncoder``; ``TestONNXExportWarnings`` pins that
 ``save_in_onnx`` emits no warnings from torch.onnx, PyG conv, or this repo
-(#617 regression guard); ``TestForwardOnCUDA`` pins the CPU/CUDA forward
+(#617 regression guard; the export is version-aware per #646 — legacy
+``dynamic_axes`` below torch 2.13, dynamo ``dynamic_shapes`` from 2.13 — so
+the guard covers whichever exporter the locked torch uses); ``TestForwardOnCUDA`` pins the CPU/CUDA forward
 equivalence with and without v-v edges (#617 regression guard, skipped
 without CUDA); ``TestModelGamePreparatorKwargs`` pins the preparator's
 explicit-kwarg forwarding to ``onyx.entrypoint`` (including the
