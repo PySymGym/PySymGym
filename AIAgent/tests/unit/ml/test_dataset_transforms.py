@@ -71,6 +71,14 @@ def test_get_hetero_data_keeps_the_converted_graph(gamestate_factory):
     assert torch.equal(data[TORCH.state_vertex].x, expected[TORCH.state_vertex].x)
 
 
+def test_get_hetero_data_rejects_multi_row_output(gamestate_factory):
+    # The single-row contract: the model has one output tensor, flattened to
+    # one row of per-state values. A multi-row input is a contract violation
+    # and must fail loudly, not silently drop rows.
+    with pytest.raises(ValueError, match="exactly one row"):
+        get_hetero_data(gamestate_factory(), [[0.25], [0.75]])
+
+
 def test_convert_input_to_tensor_rejects_duplicate_pc_vertex_id(gamestate_factory):
     gs = gamestate_factory()
     gs.PathConditionVertices[1].Id = 0
@@ -117,17 +125,14 @@ def test_convert_input_to_tensor_deduplicates_state_nodes_but_not_child_edges(
         ), edge_type
 
 
-def test_convert_input_to_tensor_returns_none_on_missing_child_state(
-    gamestate_factory, capsys
-):
+def test_convert_input_to_tensor_raises_on_missing_child_state(gamestate_factory):
+    # The (None, None) + printed-error pin is retired: a missing child Id is
+    # a malformed game state and must fail loudly, keyed by the missing Id.
     gs = gamestate_factory()
     gs.States[0].Children = [99]  # no state with Id 99
 
-    graph, state_map = convert_input_to_tensor(gs)
-
-    assert graph is None
-    assert state_map is None
-    assert "[ERROR]: KeyError" in capsys.readouterr().out
+    with pytest.raises(KeyError, match="99"):
+        convert_input_to_tensor(gs)
 
 
 def _step(y_true: torch.Tensor, state_rows: int = 2, game_rows: int = 3) -> HeteroData:
