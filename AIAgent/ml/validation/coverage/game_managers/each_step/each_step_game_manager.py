@@ -70,7 +70,12 @@ class EachStepGameManager(BaseGameManager):
         steps_count = 0
         game_state = None
         actual_coverage = None
-        steps = with_connector.map.StepsToPlay + game_map2svm.GameMap.StepsToStart
+        # The model's step budget. The first StepsToStart steps of the trace
+        # are played by the default searcher before the agent takes over, so
+        # the agent plays at most StepsToPlay steps; the reported steps_count
+        # is the model-played count (total trace steps minus StepsToStart),
+        # identical to the send-model mode's metric.
+        steps_to_play = with_connector.map.StepsToPlay
         start_time = perf_counter()
 
         map_steps = []
@@ -109,23 +114,25 @@ class EachStepGameManager(BaseGameManager):
                     f"<{self._with_predictor.name()}>: immediate GameOver on {with_connector.map.MapName}"
                 )
                 return (
-                    GameResult(steps, 0, 0, 0),
+                    GameResult(steps_to_play, 0, 0, 0),
                     perf_counter() - start_time,
                 )
             if gameover.actual_coverage is not None:
                 actual_coverage = gameover.actual_coverage
 
             tests_count = gameover.tests_count
-            steps_count = gameover.steps_count
+            # The server reports the total trace steps (start + play); the
+            # metric is the model-played count, so drop the startup steps.
+            steps_count = gameover.steps_count - game_map2svm.GameMap.StepsToStart
             errors_count = gameover.errors_count
 
         end_time = perf_counter()
-        if actual_coverage != 100 and steps_count != steps:
+        if actual_coverage != 100 and steps_count < steps_to_play:
             if self._fail_immediately:
                 failure = unexhausted_steps_failure(
                     map_name=with_connector.map.MapName,
                     steps_taken=steps_count,
-                    steps_expected=steps,
+                    steps_expected=steps_to_play,
                     coverage=actual_coverage,
                 )
                 logging.error(failure.reason)
@@ -134,7 +141,7 @@ class EachStepGameManager(BaseGameManager):
                 f"<{self._with_predictor.name()}>: not all steps exhausted on {with_connector.map.MapName} with non-100% coverage"
                 f"steps taken: {steps_count}, actual coverage: {actual_coverage:.2f}"
             )
-            steps_count = steps
+            steps_count = steps_to_play
 
         model_result = GameResult(
             steps_count=steps_count,
