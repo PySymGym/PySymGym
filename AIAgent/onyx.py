@@ -129,7 +129,7 @@ def save_in_onnx(
                         1: "num_gv_history_sv_edges"
                     },
                     # Axis 1 is the fixed per-edge attribute vector
-                    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset.py),
+                    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset/tensors.py),
                     # so only axis 0 is dynamic; torch.export rejects a
                     # user-specified dynamic dim that tracing infers as static.
                     ONNX.gamevertex_history_statevertex_attrs: {

@@ -48,6 +48,12 @@ def test_feature_widths_are_reexported_by_ml_dataset():
     assert NUM_CFG_VERTEX_FEATURES is schema.NUM_CFG_VERTEX_FEATURES
 
 
+def test_training_dataset_is_defined_in_the_processing_module():
+    # Package layout pin: the class lives in ml.dataset.processing and
+    # ml.dataset only re-exports it.
+    assert TrainingDataset.__module__ == "ml.dataset.processing"
+
+
 def _save_processed_map(
     processed_dir: Path,
     map_name: str,
