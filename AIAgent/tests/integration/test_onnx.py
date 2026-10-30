@@ -189,6 +189,7 @@ class TestMain:
             "model_def",
             "model_kwargs",
             "verification_gamestates",
+            "opset_version",
         }
         assert captured["sample_gamestate"] == _load_gamestate(sample)
         assert captured["pytorch_model_path"] == tmp_path / "model.pth"
@@ -198,6 +199,17 @@ class TestMain:
         assert captured["verification_gamestates"] == [
             _load_gamestate(path) for path in verify
         ]
+        assert captured["opset_version"] == onyx.ONNX_OPSET_VERSION
+
+    def test_main_forwards_opset_version(self, tmp_path, monkeypatch, config):
+        sample = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
+
+        captured = _run_main(
+            monkeypatch,
+            _main_argv(tmp_path, config, sample, [], opset_version=20),
+        )
+
+        assert captured["opset_version"] == 20
 
     def test_main_without_verify_on_defaults_to_empty(
         self, tmp_path, monkeypatch, config
@@ -338,8 +350,9 @@ def _run_main(monkeypatch, argv):
     return captured
 
 
-def _main_argv(tmp_path, config, sample, verify, omit=None):
-    """The full ``onyx`` CLI argv; ``omit`` drops one required flag (and its value)."""
+def _main_argv(tmp_path, config, sample, verify, omit=None, opset_version=None):
+    """The full ``onyx`` CLI argv; ``omit`` drops one required flag (and its
+    value); ``opset_version`` adds the optional ``--opset-version`` flag."""
     flags = {
         "--sample-gamestate": [str(sample)],
         "--pytorch-model": [str(tmp_path / "model.pth")],
@@ -349,6 +362,8 @@ def _main_argv(tmp_path, config, sample, verify, omit=None):
     }
     if verify:
         flags["--verify-on"] = [str(path) for path in verify]
+    if opset_version is not None:
+        flags["--opset-version"] = [str(opset_version)]
     argv = ["onyx"]
     for flag, values in flags.items():
         if flag != omit:
