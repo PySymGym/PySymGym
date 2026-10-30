@@ -153,11 +153,9 @@ def convert_input_to_tensor(
     # state and its childen edges: state -> state
     for s in game_states:
         for ch in s.Children:
-            try:
-                edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
-            except KeyError:
-                print("[ERROR]: KeyError")
-                return None, None
+            # A child Id absent from state_map is a malformed game state;
+            # the KeyError (keyed by the missing child Id) is the signal.
+            edges_index_s_s.append(np.array([state_map[s.Id], state_map[ch]]))
 
     # state position edges: vertex -> state and back
     for v in graphVertices:
@@ -236,6 +234,29 @@ def remove_extra_attrs(step: HeteroData):
 
 
 def get_hetero_data(game_state: GameState, nn_output: list[list[float]]) -> HeteroData:
+    """
+    Attach the model output to the converted graph as the ``y_true`` column.
+
+    Parameters
+    ----------
+    game_state : GameState
+        The game state to convert.
+    nn_output : list[list[float]]
+        The model's single output tensor flattened to one row of per-state
+        values (the shape the V# producer,
+        ``AISearcher.convertOutputToJson``, writes). Transposed to the
+        ``[S, 1]`` ``y_true`` column.
+
+    Raises
+    ------
+    ValueError
+        If ``nn_output`` does not have exactly one row.
+    """
+    if len(nn_output) != 1:
+        raise ValueError(
+            "nn_output must have exactly one row of per-state values, "
+            f"got {len(nn_output)}"
+        )
     hetero_input, _ = convert_input_to_tensor(game_state)
     nn_output = [[x] for x in nn_output[0]]
     hetero_input["y_true"] = torch.Tensor(nn_output)
