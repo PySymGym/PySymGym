@@ -1,9 +1,31 @@
+import warnings
+
 import pandas as pd
 
 
 STRAT1_PREFIX = "strat1_"
 STRAT2_PREFIX = "strat2_"
 MIN_POSTFIX, MAX_POSTFIX = "_min", "_max"
+_MAX_LISTED_METHODS = 10
+
+
+def _union_index(runs: list[pd.DataFrame]) -> pd.Index:
+    if not runs:
+        return pd.Index([])
+    union = runs[0].index
+    for run in runs[1:]:
+        union = union.union(run.index)
+    return union
+
+
+def _format_index(index: pd.Index) -> str:
+    # Sorted: Index.difference orders its result by hash, which is
+    # nondeterministic across runs.
+    names = sorted(str(name) for name in index)
+    shown = ", ".join(names[:_MAX_LISTED_METHODS])
+    if len(names) > _MAX_LISTED_METHODS:
+        shown += f", ... and {len(names) - _MAX_LISTED_METHODS} more"
+    return shown
 
 
 def preprocess(
@@ -19,6 +41,18 @@ def preprocess(
         join="inner",
         keys=strat1_keys + strat2_keys,
     )
+
+    # The inner join keeps only the methods present in every run of both
+    # strategies; make the silent truncation visible.
+    strat1_only = _union_index(strat1_runs).difference(_union_index(strat2_runs))
+    strat2_only = _union_index(strat2_runs).difference(_union_index(strat1_runs))
+    if len(strat1_only) or len(strat2_only):
+        warnings.warn(
+            "inner join drops methods present in only one strategy's runs: "
+            f"only in {STRAT1_PREFIX.rstrip('_')}: {_format_index(strat1_only)}; "
+            f"only in {STRAT2_PREFIX.rstrip('_')}: {_format_index(strat2_only)}",
+            stacklevel=2,
+        )
 
     strat1_df, strat2_df = pd.DataFrame(), pd.DataFrame()
     metrics = strat1_runs[0].keys()
