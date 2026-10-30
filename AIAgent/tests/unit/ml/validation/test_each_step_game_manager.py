@@ -409,11 +409,11 @@ def test_play_game_map_inner_timeout_is_reported_as_a_timeout(
     caplog: pytest.LogCaptureFixture,
     tmp_path,
 ) -> None:
-    # func_timeout's worker swallows a FunctionTimedOut raised from inside
-    # the wrapped function (it only raises one on a real wall-clock
-    # timeout) and returns None instead. play_with_timeout translates that
-    # None back into a FunctionTimedOut (#672), so the timeout branch — not
-    # the generic exception branch — handles it and saves the model.
+    # A FunctionTimedOut raised from inside the wrapped function propagates
+    # directly into the timeout branch (the worker re-raises it — unlike
+    # func_timeout's swallow-and-return-None behaviour, #672), so the timeout
+    # branch — not the generic exception branch — handles it and saves the
+    # model.
     game_map2svm = game_map2svm_factory(steps_to_play=1)
     fake = FakeConnector(
         game_map2svm.GameMap,
