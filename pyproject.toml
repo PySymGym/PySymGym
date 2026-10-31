@@ -45,7 +45,7 @@ onnxscript = "^0.7.2"
 pytest = "^9.0.3"
 
 [tool.poetry.group.formatter.dependencies]
-ruff = ">=0.15.10,<0.17.0"
+ruff = ">=0.15.10,<0.18.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = ">=7.2,<10"
