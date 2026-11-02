@@ -22,14 +22,12 @@ git submodule update --init --recursive
 Setup environment:
 
 ```bash
-pip install poetry==2.2.1
+pipx install poetry
 poetry install
 ```
 
-### GPU installation:
-
-To use GPU, the correct `torch` and `torch_geometric` version should be installed depending on your host device. You may first need to `pip uninstall` these packages, provided by requirements.
-Then follow installation instructions provided on [torch](https://pytorch.org/get-started/locally/) and [torch_geometric](https://pytorch-geometric.readthedocs.io/en/stable/install/installation.html#installation-from-wheels) websites.
+For toolchain prerequisites (Python 3.11–3.13, .NET SDK, JDK), GPU installation,
+and submodule repair, see the [setup guide](https://pysymgym.github.io/PySymGym/setup.html).
 
 ## Documentation
 

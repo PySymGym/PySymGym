@@ -28,5 +28,6 @@ Documentation map
    integration
    dataset
    results
+   setup
    developer
    reference/index

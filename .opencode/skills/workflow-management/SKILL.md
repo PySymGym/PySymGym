@@ -32,6 +32,17 @@ step.
 - Do tasks strictly **one at a time**. Each task gets its own feature branch
   (created from the integration branch), its own detailed plan, and its own
   integration step. Never combine multiple tasks in a single feature branch.
+- In a multi-task batch, each task is executed in a **separated subagent**:
+  a fresh agent session with its own context that loads this skill and runs
+  the working loop for exactly one task — steps 3–10, from feature branch to
+  integration, including the global plan update (step 9) and the Closes
+  verification (step 10). Subagents run strictly sequentially — one at a
+  time, never in parallel. The orchestrating session owns the batch-level
+  steps (0–2: setup, alignment, task selection), user merge confirmations
+  (direct mode), and finalization; it never executes task steps inline. In
+  direct mode the subagent pauses after opening the pull request until the
+  merge is confirmed, then completes steps 9–10. The subagent's launch prompt
+  must name the task issue number and the integration branch.
 - In direct mode a task is integrated into `main` through its own pull
   request. In stacked mode a task is rebased and fast-forward merged into the
   integration branch and **no pull request is opened**; a single pull request
@@ -127,9 +138,10 @@ step.
     `Closes #<hub>` once every sub-issue is resolved, closing the hub when the
     commit reaches `main`. See the Task Completeness Verification in the
     `subtask-loop` skill (the single source of truth for what "done" means).
-11. Return to step 2 for the next task. In stacked mode, keep accumulating
-    completed tasks on `$INTEGRATION`; open the request to `main` only via the
-    finalize step below, on the user's explicit request.
+11. Return to step 2 for the next task; in a multi-task batch, launch a new
+    separated subagent for it (see Core Rules). In stacked mode, keep
+    accumulating completed tasks on `$INTEGRATION`; open the request to `main`
+    only via the finalize step below, on the user's explicit request.
 
 ## Finalize to main (stacked mode, explicit request only)
 

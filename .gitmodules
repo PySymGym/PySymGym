@@ -1,24 +1,24 @@
 [submodule "GameServers/VSharp"]
 	path = GameServers/VSharp
-	url = https://github.com/gsvgit/VSharp.git
+	url = https://github.com/PySymGym/VSharp.git
 [submodule "maps/DotNet/Maps/LiteDB"]
 	path = maps/DotNet/Maps/LiteDB
-	url = https://github.com/mbdavid/LiteDB.git
+	url = https://github.com/PySymGym/LiteDB.git
 [submodule "maps/DotNet/Maps/StandaloneUnity"]
 	path = maps/DotNet/Maps/StandaloneUnity
-	url = https://github.com/mxprshn/StandaloneUnity.git
+	url = https://github.com/PySymGym/StandaloneUnity.git
 [submodule "maps/DotNet/Maps/BizHawk"]
 	path = maps/DotNet/Maps/BizHawk
-	url = https://github.com/TASEmulators/BizHawk.git
+	url = https://github.com/PySymGym/BizHawk.git
 [submodule "maps/DotNet/Maps/advanced-algorithms"]
 	path = maps/DotNet/Maps/advanced-algorithms
-	url = https://github.com/justcoding121/advanced-algorithms.git
+	url = https://github.com/PySymGym/advanced-algorithms.git
 [submodule "maps/DotNet/Maps/C-Sharp-Algorithms"]
 	path = maps/DotNet/Maps/C-Sharp-Algorithms
-	url = https://github.com/aalhour/C-Sharp-Algorithms.git
+	url = https://github.com/PySymGym/C-Sharp-Algorithms.git
 [submodule "maps/DotNet/Maps/rd"]
 	path = maps/DotNet/Maps/rd
-	url = https://github.com/JetBrains/rd.git
+	url = https://github.com/PySymGym/rd.git
 [submodule "maps/Java/Maps/LogicNG"]
 	path = maps/Java/Maps/LogicNG
 	url = https://github.com/logic-ng/LogicNG.git
@@ -30,7 +30,7 @@
 	url = https://github.com/gsvgit/usvm.git
 [submodule "maps/DotNet/Maps/stralgo"]
 	path = maps/DotNet/Maps/stralgo
-	url = https://github.com/SaeedGz98/stralgo.git
+	url = https://github.com/PySymGym/stralgo.git
 [submodule "maps/DotNet/Maps/TheAlgorithms-CSharp"]
 	path = maps/DotNet/Maps/TheAlgorithms-CSharp
-	url = https://github.com/cat923/C-Sharp.git
+	url = https://github.com/PySymGym/TheAlgorithms-CSharp.git
