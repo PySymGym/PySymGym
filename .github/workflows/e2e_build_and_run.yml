@@ -108,6 +108,16 @@ jobs:
       # on it) is identical between runs; part of the #583 reproducibility fix.
       PYTHONHASHSEED: "0"
     steps:
+      # The runner's shared workspace may still hold a checkout from a
+      # previous job of any branch or PR (e.g. main's tree, which lacks
+      # .github/actions/), and the runner reads a local composite action
+      # from the workspace before any step runs. Re-checkout this exact
+      # commit first so the action below is guaranteed to be loadable; the
+      # action's own checkout (with submodules) remains the authoritative
+      # one. See docs/developer.rst, "Self-hosted end-to-end workflows".
+      - name: Bootstrap workspace for local actions
+        uses: actions/checkout@v7
+
       # Checkout, Python setup, pinned Poetry, and the self-healing
       # dependency install live once in the shared composite action; the
       # .NET builds (V# game server + maps) in the other one. See
