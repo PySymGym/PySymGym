@@ -63,6 +63,14 @@ jobs:
     permissions:
       packages: read
     steps:
+      # Re-checkout this exact commit before the local composite action:
+      # the runner's shared workspace may still hold a previous job's
+      # checkout (any branch or PR) that lacks .github/actions/. See
+      # e2e_build_and_run.yml and docs/developer.rst, "Self-hosted
+      # end-to-end workflows".
+      - name: Bootstrap workspace for local actions
+        uses: actions/checkout@v7
+
       - name: Prepare the Python environment
         uses: ./.github/actions/checkout-poetry
 

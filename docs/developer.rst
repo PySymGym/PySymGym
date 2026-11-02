@@ -268,6 +268,17 @@ composite action ``.github/actions/checkout-poetry``, and the .NET builds
 (``runstrat_tool.yaml``) are thin configurations of those actions; the
 Poetry version they install is the one documented in ``README.md``.
 
+**Container jobs bootstrap the workspace before a local action.** The
+runner reads a local composite action (``uses: ./.github/actions/...``) from
+the job's workspace, and the self-hosted runner's workspace is shared across
+jobs of *any* branch or PR: a previous job may have left a checkout whose
+tree lacks ``.github/actions/`` (e.g. ``main``, which predates the actions),
+in which case the container job dies before its first step with
+"Can't find 'action.yml'". Every container job that uses a local action
+therefore starts with a plain ``actions/checkout`` step that re-checks-out
+the exact commit, guaranteeing the action is loadable; the composite
+action's own checkout (with submodules) remains the authoritative one.
+
 **Image publishing.** ``publish_image.yaml`` runs on pushes **and** pull
 requests that touch ``.github/docker/Dockerfile``. The pull-request trigger
 is load-bearing: a PR that changes the Dockerfile must publish the image for
