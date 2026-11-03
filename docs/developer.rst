@@ -272,7 +272,7 @@ such a thin caller with its own name and concurrency group — do not copy the
 pipeline.
 
 **Shared setup and build steps.** The pipeline's environment preparation
-(checkout with submodules, Python 3.11.8, pinned Poetry, the self-healing
+(checkout with submodules, Python 3.11.8, Poetry >=2.3.0, the self-healing
 dependency install, the cached-venv integrity check) lives once in the
 composite action ``.github/actions/checkout-poetry``, and the .NET builds
 (V# game server plus the caller-selected maps project) in
