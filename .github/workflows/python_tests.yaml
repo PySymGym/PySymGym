@@ -26,20 +26,6 @@ jobs:
         run: poetry check --lock
 
       - name: Install dependencies
-        env:
-          # Upstream packaging noise that current poetry emits while
-          # installing the lock file, unfixable from here on py3.11:
-          # numpy's cp311 wheels ship a stray
-          # numpy/distutils/__pycache__/*.pyc that poetry's wheel installer
-          # flags with a RuntimeWarning (upstream packaging bug — the latest
-          # numpy 2.4.4 still ships it; it goes away with a Python bump off
-          # 3.11 or an upstream numpy fix). The other warning this used to
-          # cover (func-timeout's sdist build emitting a license-classifier
-          # deprecation, re-emitted as BuildBackendWarning, a UserWarning
-          # subclass) is fixed at the root by [tool.poetry.build-constraints]
-          # in pyproject.toml, so the UserWarning clause is gone. Suppressed
-          # for the install step only (#617, #642).
-          PYTHONWARNINGS: "ignore::RuntimeWarning"
         run: |
           poetry install
 
