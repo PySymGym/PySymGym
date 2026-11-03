@@ -47,7 +47,7 @@ held 3.14 back is void — the #662 probe (``AIAgent/probe_gpu_torch.py``)
 degrades the e2e pipeline to CPU when the locked torch cannot run on the
 visible GPU (both GPUs are sm_61, unsupported by torch ≥2.9). Python 3.15 is
 out of scope for this hub. The migration (interpreter bump, torch bump to
-2.15, full re-lock, workflow pin changes) is tracked in #644; the full
+2.15, full re-lock, workflow pin changes) landed in #644; the full
 evaluation and rationale are recorded on #643.
 
 Python environment
