@@ -354,7 +354,11 @@ system metrics), the gpu-monitor logger silenced to ``ERROR``, the printed
 device, and the ``Config`` validator rejecting ``weights_uri`` without
 ``trial_uri``. The ``model_init`` checkpoint loading is pinned through that
 seam, including the ``map_location`` fix for CUDA-saved checkpoints on
-CPU-only machines (#667, regression test requires CUDA and skips otherwise).
+CPU-only machines (#667); the CUDA-saved regression test itself needs a
+real device to build the reference checkpoint, so it lives in the
+integration tier under the ``gpu`` marker
+(``AIAgent/tests/integration/test_run_training_cuda.py``) and exercises
+the shared ``ml.model_io.safe_torch_load`` helper.
 The companion entrypoint seam tests
 (``AIAgent/tests/unit/test_launch_servers.py``) pin ``launch_servers.py``
 the same way: ``wait_for_port`` with a scripted socket (the probe socket

@@ -56,11 +56,6 @@ from run_training import BEST_TRIAL_NUMBER_TAG
 
 pytestmark = pytest.mark.unit
 
-# Evaluated at collection time, before the autouse cpu_device fixture patches
-# torch.cuda.is_available: the real capability of the machine running the
-# suite (the CUDA regression test for #667 needs it).
-_REAL_CUDA_AVAILABLE = torch.cuda.is_available()
-
 MODEL_KWARGS = dict(
     hidden_channels=64,
     num_of_state_features=8,
@@ -441,32 +436,6 @@ class TestModelInit:
         assert set(loaded) == set(saved)
         for name in saved:
             assert torch.equal(loaded[name], saved[name])
-
-    @pytest.mark.skipif(not _REAL_CUDA_AVAILABLE, reason="requires CUDA")
-    def test_cuda_saved_checkpoint_loads_on_cpu_only_machine(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        # Regression for #667: a CUDA-saved checkpoint must load when the
-        # machine reports no CUDA. Without map_location this crashes with
-        # "Attempting to deserialize object on a CUDA device but
-        # torch.cuda.is_available() is False".
-        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
-        reference = StateModelEncoder(**MODEL_KWARGS).to("cuda:0")
-        path = tmp_path / "model.pth"
-        torch.save(reference.state_dict(), path)
-        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-
-        model_init, fakes = self._model_init(
-            monkeypatch, weights_uri="mlflow-artifacts:/1/run/artifacts/model.pth"
-        )
-        fakes.mlflow.download_artifacts_result = path
-
-        model = model_init(**MODEL_KWARGS)
-
-        saved = reference.state_dict()
-        for name, param in model.state_dict().items():
-            assert param.device.type == "cpu"
-            assert torch.equal(param, saved[name].cpu())
 
 
 def svm_validation_config(fail_immediately: bool = True) -> ValidationConfig:
