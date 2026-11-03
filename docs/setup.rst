@@ -60,13 +60,13 @@ touch the system interpreter), then point Poetry at it:
 
     pipx install "poetry>=2.3.0"
     pipx install uv
-    uv python install 3.11
-    poetry env use $(uv python find 3.11)
+    uv python install 3.14
+    poetry env use $(uv python find 3.14)
     poetry install
 
 If the distribution's default ``python3`` is outside the supported range (for
-example Ubuntu 26.04 ships 3.14), skipping ``poetry env use`` makes Poetry pick
-it and the install fails: the project supports 3.11.x only.
+example Ubuntu 24.04 ships 3.12), skipping ``poetry env use`` makes Poetry pick
+it and the install fails: the project supports 3.14.x only.
 
 Per-component build prerequisites
 ---------------------------------
