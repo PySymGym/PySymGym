@@ -31,8 +31,8 @@ Toolchain
      - any recent version
      - ``Makefile`` (``build_LogicNG``, ``build_jflex``; local development only — CI never builds the Java maps)
    * - Python
-     - 3.11.x
-     - ``pyproject.toml`` (``~3.11``); CI runs 3.11.8
+     - 3.14.x
+     - ``pyproject.toml`` (``~3.14``); CI runs 3.14.4
 
 Python version decision
 -----------------------
