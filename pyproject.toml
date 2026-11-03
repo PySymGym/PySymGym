@@ -51,6 +51,15 @@ ruff = ">=0.15.10,<0.18.0"
 sphinx = ">=7.2,<10"
 furo = ">=2024.1"
 
+# func-timeout 4.3.5 is sdist-only and its setup.py uses the deprecated
+# LGPLv2 license classifier; setuptools >=77 emits a
+# SetuptoolsDeprecationWarning in the build subprocess, which pyproject-hooks
+# re-emits as BuildBackendWarning. Pin the build environment to a clean
+# setuptools (<77; 76.1.0 is the last clean release). Requires poetry
+# >=2.3.0, which added build-constraints.
+[tool.poetry.build-constraints]
+func-timeout = { setuptools = "<77" }
+
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core==2.2.1"]
