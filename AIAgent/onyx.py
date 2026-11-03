@@ -19,7 +19,10 @@ from ml.inference import infer
 from ml.models.registry import get_model_class
 
 # Default ONNX opset version for the export; override with --opset-version.
-ONNX_OPSET_VERSION = 17
+# 18 is the dynamo exporter's (the torch >= 2.13 default) minimum opset: a
+# lower request is not honored — the exporter warns, attempts a version
+# conversion that fails, and exports at 18 anyway.
+ONNX_OPSET_VERSION = 18
 
 
 @dataclass(frozen=True)
