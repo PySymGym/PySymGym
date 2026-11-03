@@ -22,7 +22,7 @@ git submodule update --init --recursive
 Setup environment:
 
 ```bash
-pipx install poetry==2.2.1
+pipx install "poetry>=2.3.0"
 poetry install
 ```
 
