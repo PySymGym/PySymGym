@@ -363,7 +363,7 @@ Two properties make this a workflow-only change:
   (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
   Python dependencies are installed at runtime by ``poetry install`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
-  with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
+  with all ``nvidia-*-cu13`` dependencies (cuDNN, cuBLAS, NCCL, ...).
 - Device selection needs no code change: ``ml.device.get_device`` picks
   ``cuda:0`` when available and falls back to CPU, and the training step
   prints the selected device at startup — every CI run logs which path it
@@ -393,8 +393,10 @@ checkout-poetry action), so the probe cannot run earlier.
 exact torch the pipeline trains with. The verdict is the op, not the
 arch-list membership: a capability absent from
 ``torch.cuda.get_arch_list()`` can still work through driver JIT of bundled
-PTX (the locked torch 2.7.1 runs on the runner's sm_61 GPU this way), and
-an arch-list hit proves nothing if the op fails. On failure the probe logs
+PTX (the pre-#644 locked torch 2.7.1 ran on the runner's sm_61 GPU this
+way; the locked torch 2.15.0 does not — that is exactly why the probe
+degrades the current run), and an arch-list hit proves nothing if the op
+fails. On failure the probe logs
 the device, its compute capability, the torch version and arch list, and
 hides the device from torch for the rest of the run (an empty
 ``CUDA_VISIBLE_DEVICES`` via ``$GITHUB_ENV``), so ``ml.device.get_device``
