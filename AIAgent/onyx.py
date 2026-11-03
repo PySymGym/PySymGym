@@ -168,19 +168,25 @@ def _torch_uses_dynamo_exporter() -> bool:
     return major_minor >= _DYNAMO_EXPORTER_MIN_TORCH
 
 
-def _dynamic_shapes() -> dict[str, dict[int, t.Any]]:
-    """The dynamo exporter's ``dynamic_shapes`` mapping (derived from
+def _dynamic_shapes() -> list[dict[int, t.Any]]:
+    """The dynamo exporter's ``dynamic_shapes`` sequence (derived from
     ``MODEL_INPUTS``).
 
-    One ``torch.onnx.Dim`` instance per symbolic dimension name: axes
+    A sequence, not a dict: torch.export validates a dict's top-level
+    keys against the exported model's forward parameter names, which are
+    model-specific, while a sequence aligns positionally with ``args``
+    (``create_torch_input`` yields the inputs in ``MODEL_INPUTS`` order).
+    One ``torch.export.Dim`` instance per symbolic dimension name: axes
     that share a name (an edge index's axis 1 and the matching edge
     type's axis 0) receive the same Dim object, which the dynamo
     exporter treats as one symbolic dimension — the shared-dimension
     semantics of the legacy mapping without the "shares the same shape
     constraints" warning the from_dynamic_axes_to_dynamic_shapes compat
-    path emits (#646). Requires torch >= 2.13 (``torch.onnx.Dim``).
+    path emits (#646). The class lives in ``torch.export`` (the dynamo
+    exporter's own namespace); the ``torch.onnx.Dim`` alias was removed
+    in torch 2.15.
     """
-    from torch.onnx import Dim
+    from torch.export import Dim
 
     dims: dict[str, t.Any] = {}
 
@@ -189,12 +195,10 @@ def _dynamic_shapes() -> dict[str, dict[int, t.Any]]:
             dims[name] = Dim(name)
         return dims[name]
 
-    return {
-        model_input.name: {
-            axis: dim(dim_name) for axis, dim_name in model_input.dynamic_axes.items()
-        }
+    return [
+        {axis: dim(dim_name) for axis, dim_name in model_input.dynamic_axes.items()}
         for model_input in MODEL_INPUTS
-    }
+    ]
 
 
 def save_in_onnx(
@@ -234,6 +238,22 @@ def save_in_onnx(
             # unavoidable from here.
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"torch\.onnx\.utils"
+            )
+            # The dynamo exporter's rename pass warns once per shared
+            # symbolic dimension: an edge index's axis 1 and the matching
+            # edge type's axis 0 deliberately carry the same dim name (the
+            # wire contract), so the second occurrence "will not be used" —
+            # but both occurrences are the same name, so nothing is lost
+            # (the exported model keeps one dim_param for both axes, as the
+            # legacy exporter produced).
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"^# The axis name: .* will not be used, since it shares "
+                    r"the same shape constraints"
+                ),
+                category=UserWarning,
+                module=r"torch\.onnx\._internal\.exporter\._onnx_program",
             )
             export_kwargs: dict[str, t.Any] = dict(
                 model=model,

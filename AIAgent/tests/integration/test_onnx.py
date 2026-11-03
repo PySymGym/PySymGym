@@ -11,6 +11,7 @@ import torch
 import yaml
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
+from ml.device import cuda_is_usable
 from ml.inference import TORCH
 from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
@@ -95,10 +96,14 @@ class TestForwardOnCUDA:
 
     The ``gpu`` marker keeps the test out of the gated tier (machine-agnostic
     coverage ratchet); the ``skipif`` is the runtime guard for when the test
-    is selected explicitly on a CUDA-less machine (``make test-all``,
-    ``pytest -m integration``)."""
+    is selected explicitly on a machine without usable CUDA (``make
+    test-all``, ``pytest -m integration``). The guard is
+    ``cuda_is_usable``, not ``torch.cuda.is_available``: the latter is True
+    on a machine whose GPU the locked torch cannot run on (no kernels for
+    its compute capability), where the test would crash instead of skipping
+    (the op-based verdict, as in ``probe_gpu_torch.py``, #662)."""
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
+    @pytest.mark.skipif(not cuda_is_usable(), reason="requires usable CUDA")
     def test_forward_matches_cpu_with_and_without_v_v_edges(self, config):
         with open(config) as file:
             model_kwargs = yaml.safe_load(file)

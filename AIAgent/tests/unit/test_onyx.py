@@ -8,6 +8,7 @@ input-names change. Model selection goes through the registry (pinned in
 """
 
 import json
+import typing as t
 
 import numpy as np
 import onyx
@@ -172,10 +173,12 @@ class TestVerifyOutputs:
 class TestDynamicShapes:
     """The dynamo exporter's ``dynamic_shapes`` derivation (#646).
 
-    ``torch.onnx.Dim`` does not exist in the locked torch (2.7.1), so a
-    recording stand-in is monkeypatched in; the derivation logic — one
-    Dim instance per symbolic dimension name, shared across the axes
-    that carry the name — is what the tests pin.
+    A recording stand-in is monkeypatched over ``torch.export.Dim``
+    (the real one stores its name in the ``__name__`` dunder, not a
+    plain attribute); the derivation logic — one entry per model input
+    in ``create_torch_input`` order, one Dim instance per symbolic
+    dimension name, shared across the axes that carry the name — is
+    what the tests pin.
     """
 
     @staticmethod
@@ -184,19 +187,27 @@ class TestDynamicShapes:
             def __init__(self, name):
                 self.name = name
 
-        monkeypatch.setattr(torch.onnx, "Dim", FakeDim, raising=False)
+        monkeypatch.setattr(torch.export, "Dim", FakeDim)
+
+    def _shapes_by_name(self, monkeypatch) -> dict[str, dict[int, t.Any]]:
+        """The positional sequence re-keyed by the ONNX wire name
+        (``EXPECTED_INPUTS`` carries the names in the same order)."""
+        self._install_fake_dim(monkeypatch)
+        shapes = onyx._dynamic_shapes()
+        return {
+            name: spec
+            for (name, _key, _attr), spec in zip(EXPECTED_INPUTS, shapes, strict=True)
+        }
 
     def test_covers_every_input_in_model_order(self, monkeypatch):
         self._install_fake_dim(monkeypatch)
 
         shapes = onyx._dynamic_shapes()
 
-        assert list(shapes) == [name for name, _, _ in EXPECTED_INPUTS]
+        assert len(shapes) == len(EXPECTED_INPUTS)
 
     def test_shares_one_dim_instance_per_name(self, monkeypatch):
-        self._install_fake_dim(monkeypatch)
-
-        shapes = onyx._dynamic_shapes()
+        shapes = self._shapes_by_name(monkeypatch)
 
         gv_gv = shapes["gamevertex_to_gamevertex_index"][1]
         assert gv_gv is shapes["gamevertex_to_gamevertex_type"][0]
@@ -206,9 +217,7 @@ class TestDynamicShapes:
         assert history.name == "num_gv_history_sv_edges"
 
     def test_distinct_names_get_distinct_dims(self, monkeypatch):
-        self._install_fake_dim(monkeypatch)
-
-        shapes = onyx._dynamic_shapes()
+        shapes = self._shapes_by_name(monkeypatch)
 
         assert shapes["game_vertex"][0] is not shapes["state_vertex"][0]
         assert shapes["game_vertex"][0].name == "num_game_vertices"
@@ -223,6 +232,7 @@ class TestDynamoExporterVersionGuard:
             ("2.12.0", False),
             ("2.13.0", True),
             ("2.14.1", True),
+            ("2.15.0+cu132", True),
         ],
     )
     def test_parses_torch_versions(self, monkeypatch, version, expected):
