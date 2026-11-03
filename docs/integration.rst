@@ -225,7 +225,7 @@ To convert a PyTorch model to ONNX, run ``onyx.py``:
   ``sample-gamestate`` (any can be used) are under ``resources/onnx/``.
 - ``model-name`` is the registry name of the model to convert (see
   ``AIAgent/ml/models/registry.py``), for example ``NorthernPenguin``.
-- ``--opset-version`` is the ONNX opset version to export with (default: 17).
+- ``--opset-version`` is the ONNX opset version to export with (default: 18).
 
 See :ref:`guide-symbolic-execution` for how to run execution with the
 converted model.
