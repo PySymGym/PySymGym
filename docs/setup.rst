@@ -34,6 +34,22 @@ Toolchain
      - 3.11.x
      - ``pyproject.toml`` (``~3.11``); CI runs 3.11.8
 
+Python version decision
+-----------------------
+
+The evaluation of moving off Python 3.11 (issue #643, part of hub #641)
+adopted **Python 3.14** as the target and rejected 3.12/3.13: 3.14 removes
+the suppressed W11 warning (numpy's stray ``.pyc`` is cp311-specific) exactly
+as 3.12/3.13 would, and it is the newest stable interpreter in scope, so the
+modernization happens in a single re-lock rather than an intermediate
+3.12/3.13 re-lock with no unique benefit. The GPU blocker that originally
+held 3.14 back is void — the #662 probe (``AIAgent/probe_gpu_torch.py``)
+degrades the e2e pipeline to CPU when the locked torch cannot run on the
+visible GPU (both GPUs are sm_61, unsupported by torch ≥2.9). Python 3.15 is
+out of scope for this hub. The migration (interpreter bump, torch bump to
+2.15, full re-lock, workflow pin changes) is tracked in #644; the full
+evaluation and rationale are recorded on #643.
+
 Python environment
 ------------------
 
