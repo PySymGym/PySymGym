@@ -28,9 +28,9 @@ from common.dataset import Result, TrainingDatasetMode
 from common.game import GameState
 from ml.device import get_device
 from ml.inference import degenerate_counts
+from ml.model_io import safe_torch_load
 from torch.utils.data import random_split
 from torch_geometric.data import Dataset, HeteroData
-from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 
 from .maintenance import MaintenanceMixin
 from .tensors import (
@@ -123,10 +123,7 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         if self._load_to_cpu:
             step = self._flattened_loaded_steps[idx]
         else:
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                step = torch.load(self.processed_paths[idx], map_location=get_device())
+            step = safe_torch_load(self.processed_paths[idx], get_device())
         return step
 
     def switch_to(self, mode: TrainingDatasetMode) -> None:
@@ -328,10 +325,7 @@ class TrainingDataset(MaintenanceMixin, Dataset):
             colour=self._progress_bar_color,
         ):
             map_name = get_map_name_from_path(step_path)
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                steps[map_name].append(torch.load(step_path, map_location="cpu"))
+            steps[map_name].append(safe_torch_load(step_path, "cpu"))
         return steps
 
 

@@ -36,6 +36,7 @@ from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
 from ml.dataset import TrainingDataset
 from ml.device import get_device
+from ml.model_io import STORAGE_SAFE_GLOBALS, safe_torch_load
 from ml.models.registry import get_model_class
 from ml.training.early_stopping import EarlyStopping
 from ml.training.seeds import derive_trial_seed, seed_everything
@@ -54,7 +55,6 @@ from paths import (
     trial_dir,
 )
 from torch import nn
-from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 from torch_geometric.loader import DataLoader
 
 # The model this entrypoint trains, selected through the registry (the
@@ -272,14 +272,11 @@ def run_training(
             )
             # The checkpoint may have been saved on another device (a
             # CUDA-saved model loaded on a CPU-only machine crashes a bare
-            # torch.load, #667); map it to the device we train on, with the
-            # same storage-class allow-list ml/dataset/processing.py uses.
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                state_model_encoder.load_state_dict(
-                    torch.load(downloaded_artifact_path, map_location=get_device())
-                )
+            # torch.load, #667); safe_torch_load maps it to the device we
+            # train on.
+            state_model_encoder.load_state_dict(
+                safe_torch_load(downloaded_artifact_path, get_device())
+            )
             return state_model_encoder
 
     objective_config = ObjectiveConfig(
@@ -467,7 +464,7 @@ def main(config: str):
 
     mp.set_start_method("spawn", force=True)
     print(get_device())
-    torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage])
+    torch.serialization.add_safe_globals(STORAGE_SAFE_GLOBALS)
 
     mlflow_config = config.mlflow_config
     if mlflow_config.tracking_uri is not None:

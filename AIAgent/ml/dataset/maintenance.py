@@ -26,8 +26,8 @@ import torch
 from common.dataset import Result
 from ml.device import get_device
 from ml.inference import TORCH
+from ml.model_io import safe_torch_load
 from torch_geometric.data import HeteroData
-from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 
 
 class MaintenanceMixin:
@@ -122,10 +122,7 @@ class MaintenanceMixin:
             if not file_path.endswith("result")
         ]
         for path in all_steps_paths:
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                map_steps.append(torch.load(path, map_location=device))
+            map_steps.append(safe_torch_load(path, device))
         return map_steps
 
     def is_update_map_required(self, map_name: str, map_result: Result):
