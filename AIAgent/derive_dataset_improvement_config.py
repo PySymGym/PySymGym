@@ -86,6 +86,7 @@ def find_best_trial_run(client: MlflowClient, experiment_id: str):
             f"no finished run in experiment {experiment_id} carries the "
             f"{BEST_TRIAL_NUMBER_TAG!r} tag; did the tuning run complete?"
         )
+
     def end_time(run: Run) -> int:
         # Both candidate lists only hold runs with a non-None end_time.
         assert run.info.end_time is not None
