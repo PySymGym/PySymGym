@@ -16,23 +16,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install poetry
-        run: |
-          pipx install "poetry>=2.3.0"
-
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.14.4"
-          cache: "poetry"
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: true
 
       - name: Install docs dependencies
         run: |
-          poetry install --only docs
+          uv sync --locked --only-group docs
 
       - name: Build docs
+        # --no-sync: the env was just synced with --only-group docs; a bare
+        # `uv run` would re-sync the full env (adding the test/lint groups).
         run: |
-          poetry run sphinx-build -W --keep-going -b html docs docs/_build/html
+          uv run --no-sync sphinx-build -W --keep-going -b html docs docs/_build/html
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
