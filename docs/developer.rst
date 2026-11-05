@@ -177,7 +177,7 @@ command from the repository root:
 
 .. code-block:: console
 
-    poetry run pytest        # or: make test-unit
+    uv run pytest        # or: make test-unit
 
 CI (``.github/workflows/python_tests.yaml``) runs each component suite and then
 a repository-root coverage step that enforces the ratchet documented in
@@ -190,8 +190,8 @@ Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_:
 
 .. code-block:: console
 
-    poetry run ruff check
-    poetry run ruff format --check
+    uv run ruff check
+    uv run ruff format --check
 
 The ruff configuration (target version, enabled rule sets, included paths)
 lives in ``pyproject.toml``. CI runs the same two commands in
@@ -209,8 +209,8 @@ The Sphinx sources live in ``docs/``. Build them locally with:
 
 .. code-block:: console
 
-    poetry install --only docs
-    poetry run sphinx-build -W --keep-going -b html docs docs/_build/html
+    uv sync --only-group docs
+    uv run sphinx-build -W --keep-going -b html docs docs/_build/html
 
 The build runs under the no-warnings policy (``-W --keep-going``): any warning
 fails the build. CI runs the same command in ``.github/workflows/docs.yaml``.
@@ -272,13 +272,13 @@ such a thin caller with its own name and concurrency group — do not copy the
 pipeline.
 
 **Shared setup and build steps.** The pipeline's environment preparation
-(checkout with submodules, Python 3.14.4, Poetry >=2.3.0, the self-healing
-dependency install, the cached-venv integrity check) lives once in the
-composite action ``.github/actions/checkout-poetry``, and the .NET builds
+(checkout with submodules, Python (``.python-version``), uv 0.13.7, the
+self-healing dependency install, the cached-venv integrity check) lives once
+in the composite action ``.github/actions/checkout-uv``, and the .NET builds
 (V# game server plus the caller-selected maps project) in
 ``.github/actions/dotnet-build``. The e2e pipeline and the runstrat pipeline
-(``runstrat_tool.yaml``) are thin configurations of those actions; the
-Poetry version they install is the one documented in ``README.md``.
+(``runstrat_tool.yaml``) are thin configurations of those actions; the uv
+version they install is the one pinned in the action.
 
 **Container jobs bootstrap the workspace before a local action.** The
 runner reads a local composite action (``uses: ./.github/actions/...``) from
@@ -373,7 +373,7 @@ Two properties make this a workflow-only change:
 
 - The CI environment already ships a CUDA-enabled torch. The Docker image
   (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
-  Python dependencies are installed at runtime by ``poetry install`` from the
+  Python dependencies are installed at runtime by ``uv sync`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
   with all ``nvidia-*-cu13`` dependencies (cuDNN, cuBLAS, NCCL, ...).
 - Device selection needs no code change: ``ml.device.get_device`` picks
@@ -400,7 +400,7 @@ execution on the device"). The pipeline therefore verifies compatibility
 where torch is actually available — a step in the build-and-launch job,
 after the Python environment is prepared: the image itself ships no Python
 (the venv with the locked torch is created at runtime by the
-checkout-poetry action), so the probe cannot run earlier.
+checkout-uv action), so the probe cannot run earlier.
 ``AIAgent/probe_gpu_torch.py`` runs a small CUDA op on ``cuda:0`` with the
 exact torch the pipeline trains with. The verdict is the op, not the
 arch-list membership: a capability absent from

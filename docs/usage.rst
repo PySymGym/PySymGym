@@ -16,7 +16,7 @@ Hyper-parameters and training artifacts are logged with
 .. code-block:: console
 
     cd AIAgent
-    poetry run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts
+    uv run mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts
 
 The training process is a *main loop* that alternates two kinds of runs:
 *hyper-parameters tuning* and *dataset improvement with symbolic virtual
@@ -122,7 +122,7 @@ improving the dataset in the other kind of run.
    .. code-block:: console
 
        cd AIAgent
-       poetry run python3 run_training.py --config path/to/config.yml
+       uv run python3 run_training.py --config path/to/config.yml
 
    The entrypoints are CWD-independent: the artifacts always land under
    ``AIAgent/`` and the config's relative paths resolve against the config
@@ -151,7 +151,7 @@ from the previous step are used to obtain relatively good ones:
    .. code-block:: console
 
        cd AIAgent
-       poetry run python3 derive_dataset_improvement_config.py \
+       uv run python3 derive_dataset_improvement_config.py \
            --base-config path/to/config.yml --output-config path/to/derived.yml
 
    .. code-block:: yaml
@@ -171,8 +171,8 @@ from the previous step are used to obtain relatively good ones:
    .. code-block:: console
 
        cd AIAgent
-       poetry run python3 launch_servers.py --config path/to/derived.yml
-       poetry run python3 run_training.py --config path/to/derived.yml
+       uv run python3 launch_servers.py --config path/to/derived.yml
+       uv run python3 run_training.py --config path/to/derived.yml
 
    The improvement run replays the frozen trial through a fresh study,
    enqueuing its hyper-parameters once per replay. It persists

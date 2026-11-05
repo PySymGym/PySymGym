@@ -6,7 +6,7 @@ Testing
 
 PySymGym uses a local-first pytest setup. The fast **unit** tier — no network,
 GPU, ``.NET``, or built binary fixtures — runs across every component in one
-command (``make test-unit`` or ``poetry run pytest -m "not integration and
+command (``make test-unit`` or ``uv run pytest -m "not integration and
 not e2e"``). Slower tiers are selected explicitly and the full end-to-end
 pipeline stays in CI.
 
@@ -77,10 +77,10 @@ Commands
 
 .. code-block:: console
 
-    poetry run pytest -m "not integration and not e2e"   # fast unit tier
-    poetry run pytest -m integration
-    poetry run pytest -m e2e
-    poetry run pytest            # every tier (e2e needs the built toolchain)
+    uv run pytest -m "not integration and not e2e"   # fast unit tier
+    uv run pytest -m integration
+    uv run pytest -m e2e
+    uv run pytest            # every tier (e2e needs the built toolchain)
 
 The same tiers are wrapped in a root ``Makefile`` so nobody has to memorize the
 invocations:
@@ -100,8 +100,8 @@ filtered by tier — the named test runs whatever tier it carries):
 
 .. code-block:: console
 
-    poetry run pytest AIAgent/tests/unit/test_fixtures.py
-    poetry run pytest AIAgent/tests/integration/test_onnx.py::TestONNXConversion -sv
+    uv run pytest AIAgent/tests/unit/test_fixtures.py
+    uv run pytest AIAgent/tests/integration/test_onnx.py::TestONNXConversion -sv
 
 Local e2e runs
 --------------
@@ -744,7 +744,7 @@ coverage number is identical with or without either:
 
 .. code-block:: console
 
-    poetry run pytest -m "not e2e and not gpu and not network" --cov=AIAgent --cov=tools --cov-report=term-missing
+    uv run pytest -m "not e2e and not gpu and not network" --cov=AIAgent --cov=tools --cov-report=term-missing
     make test-cov     # same tier, plus XML and JSON reports
 
 The threshold is a ratchet: ``[tool.coverage.report] fail_under`` in
