@@ -977,6 +977,61 @@ class TestValidateClosures:
         assert result == 0.0
         assert metrics == {AVERAGE_COVERAGE: 0.0}
 
+    def test_svm_validate_worker_crash_is_a_hard_failure(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
+    ) -> None:
+        maps = [game_map2svm_factory("MapA")]
+        monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
+
+        def coverage_factory(
+            model,
+            dataset,
+            broker_config=None,
+            connector_config=None,
+            feature_config=None,
+            model_kwargs=None,
+            trial_dir=None,
+        ):
+            instance = FakeValidationCoverage(
+                model,
+                dataset,
+                broker_config=broker_config,
+                connector_config=connector_config,
+                feature_config=feature_config,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_dir,
+            )
+            # A worker crash surfaces as an exception object in the results
+            # list (catch_return_exception returns it instead of raising).
+            instance.result = [RuntimeError("worker exploded")]
+            return instance
+
+        monkeypatch.setattr(run_training_module, "ValidationCoverage", coverage_factory)
+        stats_calls: list[tuple] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "get_svms_statistics",
+            lambda *a: stats_calls.append(a) or {AVERAGE_COVERAGE: 0.0},
+        )
+
+        validate, fakes = self._validate(
+            monkeypatch, svm_validation_config(fail_immediately=False)
+        )
+        model = object()
+        dataset = fakes.datasets[0]
+        trial_dir = tmp_path / "trial"
+        trial_dir.mkdir()
+
+        # A crash is a hard failure even with fail_immediately=False:
+        # continuing would silently drop the crashed map from the statistics.
+        with pytest.raises(
+            RuntimeError, match="worker crashed: RuntimeError: worker exploded"
+        ):
+            validate(model, dataset, trial_dir, {})
+
+        # The crash is raised before the statistics are computed.
+        assert stats_calls == []
+
     def test_custom_validate_runs_pipeline_in_order(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
     ) -> None:

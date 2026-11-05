@@ -94,7 +94,7 @@ def main() -> int:
         torch_version=torch.__version__,
         arch_list=tuple(torch.cuda.get_arch_list()),
         device_name=torch.cuda.get_device_name(0),
-        capability=tuple(torch.cuda.get_device_capability(0)),
+        capability=torch.cuda.get_device_capability(0),
         op_error=op_error,
     )
     if evaluate(info):

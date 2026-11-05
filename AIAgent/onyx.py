@@ -9,7 +9,10 @@ import onnx
 import onnxruntime
 import torch
 import yaml
-from torch.jit import TracerWarning
+
+# torch.jit re-exports TracerWarning from torch.jit._trace; pyright wants
+# the defining module (it does not track the re-export).
+from torch.jit._trace import TracerWarning
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import mlflow
 import yaml
+from mlflow.entities import Run
 from common.config.config import Config
 from common.config.loader import anchor_paths
 from mlflow.tracking import MlflowClient
@@ -85,7 +86,12 @@ def find_best_trial_run(client: MlflowClient, experiment_id: str):
             f"no finished run in experiment {experiment_id} carries the "
             f"{BEST_TRIAL_NUMBER_TAG!r} tag; did the tuning run complete?"
         )
-    last = max(tagged, key=lambda run: run.info.end_time)
+    def end_time(run: Run) -> int:
+        # Both candidate lists only hold runs with a non-None end_time.
+        assert run.info.end_time is not None
+        return run.info.end_time
+
+    last = max(tagged, key=end_time)
     last_end_time = last.info.end_time
     if last_end_time is None:
         # Unreachable: `tagged` only holds runs with a non-None end_time.
@@ -105,7 +111,7 @@ def find_best_trial_run(client: MlflowClient, experiment_id: str):
         raise SystemExit(
             f"no run named {best_number!r} found in experiment {experiment_id}"
         )
-    return max(candidates, key=lambda run: run.info.end_time)
+    return max(candidates, key=end_time)
 
 
 def _artifact_paths(

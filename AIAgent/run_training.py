@@ -13,10 +13,11 @@ from typing import Any, Callable, Optional
 
 import joblib
 import mlflow
+import mlflow.artifacts
 import optuna
 import torch
 import yaml
-from common.classes import GameFailed
+from common.classes import GameFailed, Map2Result
 from common.config.broker_config import BrokerConfig
 from common.config.config import Config
 from common.config.connector_config import GameServerConnectorConfig
@@ -105,6 +106,15 @@ class TrialSettings:
     num_pc_layers: int
 
 
+# The ``validate`` closure contract: (model, dataset, trial directory,
+# model kwargs) -> (the metric value, the per-metric mapping logged to
+# MLflow).
+ValidateFunc = Callable[
+    [nn.Module, TrainingDataset, Path, dict[str, Any]],
+    tuple[int | float, dict[str, int | float]],
+]
+
+
 @dataclass
 class ObjectiveConfig:
     """The per-run dependencies of the ``objective`` training loop.
@@ -119,7 +129,7 @@ class ObjectiveConfig:
     model_init: Callable[..., nn.Module]
     criterion_init: Callable
     epochs: int
-    validate: Callable
+    validate: ValidateFunc
     direction: OptimizationDirection
     seed: int
     # trial number -> MLflow run id, registered by ``objective`` when it
@@ -140,18 +150,18 @@ def run_training(
     def criterion_init():
         return nn.BCEWithLogitsLoss(reduction="sum")
 
-    def get_validation(validation_mode: ValidationMode):
+    def get_validation(validation_mode: ValidationMode) -> ValidateFunc:
         if isinstance(validation_mode, CriterionValidation):
             # See the meaning here: https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf
             # In short, this setting allows to optimize memory usage.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-            def validate(
-                model,
+            def validate_criterion(
+                model: nn.Module,
                 dataset: TrainingDataset,
                 trial_directory: Path,
-                model_kwargs: dict,
-            ):
+                model_kwargs: dict[str, Any],
+            ) -> tuple[int | float, dict[str, int | float]]:
                 dataset.switch_to(validation_mode.dataset)
                 criterion = criterion_init()
                 result = validate_loss(
@@ -165,12 +175,12 @@ def run_training(
                     + validation_mode.dataset.value
                 )
 
-                metrics = {metric_name: result}
+                metrics: dict[str, int | float] = {metric_name: result}
                 return result, metrics
 
-            return validate
+            return validate_criterion
 
-        elif isinstance(validation_mode, SVMValidation):
+        if isinstance(validation_mode, SVMValidation):
             # See the meaning here: https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf
             # In short, this setting allows to optimize memory usage, but doesn't work with multiprocessing. So it's turned off here.
             os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:False"
@@ -180,12 +190,12 @@ def run_training(
                 [game_map2svm.GameMap.MapName for game_map2svm in maps]
             )
 
-            def validate(
-                model,
+            def validate_svm(
+                model: nn.Module,
                 dataset: TrainingDataset,
                 trial_directory: Path,
-                model_kwargs: dict,
-            ):
+                model_kwargs: dict[str, Any],
+            ) -> tuple[int | float, dict[str, int | float]]:
                 # Per-trial statistics table: each trial appends one row per
                 # epoch to its own file, so concurrent trials cannot interleave.
                 table_path = trial_directory / "svms_result_table.csv"
@@ -205,8 +215,27 @@ def run_training(
                     model_kwargs=model_kwargs,
                     trial_dir=trial_directory,
                 ).validate_coverage(maps, validation_mode)
+                # A worker crash surfaces as an exception object in the
+                # results list (catch_return_exception returns it instead of
+                # raising, and imap_unordered loses the map correlation). A
+                # crash is a hard failure regardless of fail_immediately:
+                # continuing would silently drop the crashed map from the
+                # statistics.
+                crashed_workers = [
+                    result
+                    for result in map2results
+                    if not isinstance(result, Map2Result)
+                ]
+                if crashed_workers:
+                    details = "; ".join(
+                        f"{type(error).__name__}: {error}" for error in crashed_workers
+                    )
+                    raise RuntimeError(f"Validation failed: worker crashed: {details}")
+                results = [
+                    result for result in map2results if isinstance(result, Map2Result)
+                ]
                 metrics = get_svms_statistics(
-                    map2results, validation_mode, dataset, table_path
+                    results, validation_mode, dataset, table_path
                 )
                 mlflow.log_artifact(str(table_path))
 
@@ -215,7 +244,7 @@ def run_training(
                 # steps, game error, ...).
                 failed_maps = [
                     (map2result.map.GameMap.MapName, map2result.game_result.reason)
-                    for map2result in map2results
+                    for map2result in results
                     if isinstance(map2result.game_result, GameFailed)
                 ]
                 if failed_maps and validation_mode.fail_immediately:
@@ -225,23 +254,31 @@ def run_training(
                     raise RuntimeError(f"Validation failed: {details}")
                 return metrics[AVERAGE_COVERAGE], metrics
 
-            return validate
+            return validate_svm
 
+        # The config schema admits only Criterion/SVM modes here: the
+        # top-level call excludes CustomValidation, and its val_sequence
+        # holds only Criterion/SVM entries.
+        raise TypeError(
+            f"unsupported validation mode: {type(validation_mode).__name__}"
+        )
+
+    validate: ValidateFunc
     if not isinstance(validation_config.validation_mode, CustomValidation):
         validate = get_validation(validation_config.validation_mode)
     else:
-        val_pipeline = list()
+        val_pipeline: list[ValidateFunc] = list()
         for val_mode in validation_config.validation_mode.val_sequence:
             val_pipeline.append(get_validation(val_mode))
 
-        def validate(
-            model,
+        def composite_validate(
+            model: nn.Module,
             dataset: TrainingDataset,
             trial_directory: Path,
-            model_kwargs: dict,
-        ):
-            metrics = dict()
-            results = list()
+            model_kwargs: dict[str, Any],
+        ) -> tuple[int | float, dict[str, int | float]]:
+            metrics: dict[str, int | float] = dict()
+            results: list[int | float] = list()
             for val_func in val_pipeline:
                 single_val_result, single_val_metrics = val_func(
                     model, dataset, trial_directory, model_kwargs
@@ -250,6 +287,8 @@ def run_training(
                 metrics.update(single_val_metrics)
                 torch.cuda.empty_cache()
             return results[0], metrics
+
+        validate = composite_validate
 
     # Study-level seed: the dataset split and any step sampling done at
     # construction must be identical between runs of the same config.
@@ -339,7 +378,7 @@ def run_training(
     )
 
 
-def objective(trial: optuna.Trial, config: ObjectiveConfig):
+def objective(trial: optuna.Trial, config: ObjectiveConfig) -> float:
     # Per-trial seed: weight init and every sampling site (step sampling,
     # similar-step dedup, validation map order) draw from these globals, so
     # seeding before any of them makes the trial reproducible.
@@ -387,6 +426,9 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
     # model and the trial's value must be the best ones, not the last ones.
     best_result: int | float | None = None
     best_state_dict: dict[str, Any] | None = None
+    # The loop's last epoch; the guard below raises before it is read if the
+    # loop never ran, so the initializer is never observed.
+    epoch = 0
 
     with mlflow.start_run(run_name=str(trial.number)) as run:
         # Register the run handle for the study-save callback: the callback
@@ -442,10 +484,12 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
         # epoch's artifact slot is re-written with the best weights, so the
         # highest-epoch artifact (the one
         # derive_dataset_improvement_config.py picks) is the best model.
-        if best_state_dict is None:
+        if best_state_dict is None or best_result is None:
             # Unreachable with a sane config: the first epoch always records
             # a best (best_result starts None). A zero-epoch config would
             # otherwise crash inside load_state_dict with a bare TypeError.
+            # (best_result and best_state_dict are set together, so the
+            # second disjunct is a type-narrowing aid, not a new case.)
             raise RuntimeError("training completed no epoch; no best checkpoint")
         model.load_state_dict(best_state_dict)
         torch.save(model.state_dict(), model_path)
@@ -453,11 +497,11 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
     return best_result
 
 
-def main(config: str):
+def main(config_path: str):
     # Load the config first: a broken config (a relative path that does not
     # exist, a missing file) must fail before any side effect — log file,
     # dataset folder, MLflow setup.
-    config: Config = load_config(config)
+    config: Config = load_config(config_path)
 
     logging.basicConfig(
         level=config.logger_level,
