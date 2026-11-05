@@ -67,7 +67,8 @@ def test_get_steps_from_svm_reads_the_serialized_file(
 ) -> None:
     steps = [ModelGameStep(GameState=gamestate_factory(), Output=[[0.1, 0.9]])]
     (tmp_path / "MapName_steps").write_text(
-        ModelGameStep.schema().dumps(steps, many=True)
+        # schema is added by @dataclass_json at runtime (invisible statically).
+        ModelGameStep.schema().dumps(steps, many=True)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     )
     proc = fake_proc()
 

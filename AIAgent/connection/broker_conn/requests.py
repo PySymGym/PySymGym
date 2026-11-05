@@ -19,7 +19,8 @@ def acquire_instance(
             f"{response.status} with {content=} on acquire_instance call for {svm_info}"
         )
         raise RuntimeError(f"Not ok response: {response}, {content}")
-    acquired_instance = ServerInstanceInfo.from_dict(
+    # from_dict is added by @dataclass_json at runtime (invisible statically).
+    acquired_instance = ServerInstanceInfo.from_dict(  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         json.loads(content.decode("utf-8"))
     )
     logging.info(f"acquired ws: {acquired_instance}")
@@ -32,7 +33,7 @@ def return_instance(instance: ServerInstanceInfo, broker_config: BrokerConfig):
     response, _ = httplib2.Http().request(
         broker_config.post_ws_url,
         method="POST",
-        body=instance.to_json(),
+        body=instance.to_json(),  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     )
 
     if response.status == 200:

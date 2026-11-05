@@ -346,7 +346,8 @@ def _twelve_state_gamestate() -> GameState:
         data = json.load(f)
     template = data["States"][0]
     data["States"].extend({**template, "Id": 100 + i, "Children": []} for i in range(8))
-    return GameState.from_dict(data)
+    # from_dict is added by @dataclass_json at runtime (invisible statically).
+    return GameState.from_dict(data)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def _run_main(monkeypatch, argv):
@@ -385,5 +386,5 @@ def _main_argv(tmp_path, config, sample, verify, omit=None, opset_version=None):
 
 def _load_gamestate(path) -> GameState:
     with open(path) as f:
-        game_state = GameState.from_dict(json.load(f))
+        game_state = GameState.from_dict(json.load(f))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         return game_state

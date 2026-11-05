@@ -24,10 +24,12 @@ def test_named_and_predictor_are_abstract():
     assert inspect.isabstract(Named)
     assert inspect.isabstract(Predictor)
 
+    # The TypeError is the assertion target: the test verifies the ABCs are
+    # abstract (instantiation must fail).
     with pytest.raises(TypeError):
-        Named()
+        Named()  # type: ignore[reportAbstractUsage, ty:call-non-callable]
     with pytest.raises(TypeError):
-        Predictor()
+        Predictor()  # type: ignore[reportAbstractUsage, ty:call-non-callable]
 
 
 def test_predictor_requires_name_predict_and_model():

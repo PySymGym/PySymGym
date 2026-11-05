@@ -110,8 +110,10 @@ class TrainingDataset(MaintenanceMixin, Dataset):
     def _split_dataset(self) -> Tuple[Subset, Subset]:
         full_dataset_len = len(self.processed_paths)
         train_dataset_len = round(full_dataset_len * self.train_percentage)
+        # torch's random_split only needs len() and integer indexing at
+        # runtime; the stub declares Dataset.
         train_dataset_indices, test_dataset_indices = random_split(
-            range(full_dataset_len),
+            range(full_dataset_len),  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             [train_dataset_len, full_dataset_len - train_dataset_len],
         )
         return train_dataset_indices, test_dataset_indices
@@ -296,7 +298,8 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         f = open(os.path.join(raw_map_path, raw_step_id + GAMESTATESUFFIX))
         data = json.load(f)
         f.close()
-        graph, state_map = convert_input_to_tensor(GameState.from_dict(data))
+        # from_dict is added by @dataclass_json at runtime (invisible statically).
+        graph, state_map = convert_input_to_tensor(GameState.from_dict(data))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         # Degenerate steps (#619) are skipped before get_states_distribution:
         # with an empty state_map the moved-state lookup would KeyError.
         # Zero-path-condition graphs are not degenerate and are saved as usual.

@@ -78,7 +78,8 @@ def get_maps(validation_with_svms_config: SVMValidation):
                 dataset_base_path = dataset_config.dataset_base_path
                 dataset_description = dataset_config.dataset_description
                 with open(dataset_description, "r") as maps_json:
-                    single_json_maps: list[GameMap] = GameMap.schema().load(
+                    # schema is added by @dataclass_json at runtime (invisible statically).
+                    single_json_maps: list[GameMap] = GameMap.schema().load(  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
                         json.loads(maps_json.read()), many=True
                     )
                 single_json_maps_with_svms: list[GameMap2SVM] = list()

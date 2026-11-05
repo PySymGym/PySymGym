@@ -205,7 +205,8 @@ class TestDequeueInstance:
         assert calls == [(svm_info(), feature_config)]
         # The response body is the single-encoded JSON of the issued info.
         assert response.text is not None
-        assert json.loads(response.text) == issued.to_dict()
+        # to_dict is added by @dataclass_json at runtime (invisible statically).
+        assert json.loads(response.text) == issued.to_dict()  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         assert queue.empty()
         # The issued instance is leased (pid → (info, monotonic issue time))
         # so the reaper can reap it if the worker is hard-killed.
@@ -297,7 +298,7 @@ class TestEnqueueInstance:
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
-                make_read_request(original.to_json().encode("utf-8"), feature_config)
+                make_read_request(original.to_json().encode("utf-8"), feature_config)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
             )
         )
 
@@ -335,7 +336,7 @@ class TestEnqueueInstance:
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
-                make_read_request(original.to_json().encode("utf-8"), feature_config)
+                make_read_request(original.to_json().encode("utf-8"), feature_config)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
             )
         )
 

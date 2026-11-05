@@ -120,7 +120,8 @@ MODEL_INPUTS: tuple[ModelInput, ...] = (
 
 
 def load_gamestate(f: t.TextIO) -> GameState:
-    return GameState.from_dict(json.load(f))
+    # from_dict is added by @dataclass_json at runtime (invisible statically).
+    return GameState.from_dict(json.load(f))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def create_model_input(

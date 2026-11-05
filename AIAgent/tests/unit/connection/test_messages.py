@@ -48,14 +48,15 @@ def test_client_message_sets_type_from_step_body() -> None:
 
 def test_client_message_json_contains_encoded_body() -> None:
     message = ClientMessage(StepMessageBody(StateId=3, PredictedStateUsefulness=1.5))
-    decoded = json.loads(message.to_json())
+    # to_json is added by @dataclass_json at runtime (invisible statically).
+    decoded = json.loads(message.to_json())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     assert decoded["MessageType"] == "step"
     assert "StateId" in decoded["MessageBody"]
 
 
 def test_start_message_body_json_round_trip() -> None:
     body = StartMessageBody.from_game_map(_game_map())
-    assert StartMessageBody.from_json(body.to_json()) == body
+    assert StartMessageBody.from_json(body.to_json()) == body  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def test_start_message_body_fields_mirror_game_map() -> None:
@@ -69,7 +70,7 @@ def test_start_message_body_fields_mirror_game_map() -> None:
 
 def test_start_message_body_wire_json_equals_game_map_json() -> None:
     game_map = _game_map()
-    assert StartMessageBody.from_game_map(game_map).to_json() == game_map.to_json()
+    assert StartMessageBody.from_game_map(game_map).to_json() == game_map.to_json()  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 @pytest.mark.parametrize("disabled", [True, False])
