@@ -155,6 +155,18 @@ directory; two anchors cover the two kinds of paths:
   base, so the base's relative values would anchor against the wrong
   directory there.
 
+Config models
+-------------
+
+Every pydantic config model shares one config
+(``common.config.base.CONFIG``): unknown keys are rejected (a typo or stray
+key in a YAML config fails fast at load time instead of being silently
+ignored), and fields may be populated by their Python name as well as their
+alias (the code constructs the models with snake_case kwargs, the YAML
+configs use the PascalCase aliases). A model that needs a different behaviour
+overrides the base dict (``{**CONFIG, ...}``) rather than redefining the
+contract.
+
 Test pipeline
 -------------
 

@@ -1,13 +1,12 @@
 from pathlib import Path
 
+from common.config.base import CONFIG
 from paths import REPORT_PATH
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class SaveIfFailOrTimeout:
     """The save-on-failure/timeout feature's settings (data only).
 
@@ -22,7 +21,7 @@ class SaveIfFailOrTimeout:
     save_path: Path = Field(default_factory=lambda: REPORT_PATH / "timed_out_agents")
 
 
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class OnGameServerRestartFeature:
     """The game-server restart feature's settings."""
 
@@ -31,7 +30,7 @@ class OnGameServerRestartFeature:
     wait_for_reset_time: float = Field(default=0.1)
 
 
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class FeatureConfig:
     """Production-behavior feature flags and their settings.
 
