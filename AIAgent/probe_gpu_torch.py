@@ -20,7 +20,7 @@ WARNING is the signal (the detect-gpu "degrade instead of failing"
 philosophy).
 
 Usage (from the repository root, inside the e2e container):
-    poetry run python AIAgent/probe_gpu_torch.py
+    uv run python AIAgent/probe_gpu_torch.py
 """
 
 import os
