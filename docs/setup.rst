@@ -32,7 +32,7 @@ Toolchain
      - ``Makefile`` (``build_LogicNG``, ``build_jflex``; local development only — CI never builds the Java maps)
    * - Python
      - 3.14.x
-     - ``pyproject.toml`` (``~3.14``); CI runs 3.14.4
+     - ``pyproject.toml`` (``>=3.14,<3.15``); CI runs 3.14.4
 
 Python version decision
 -----------------------
@@ -53,20 +53,23 @@ evaluation and rationale are recorded on #643.
 Python environment
 ------------------
 
-Install a Python in the supported range (uv is recommended because it does not
-touch the system interpreter), then point Poetry at it:
+Install uv (it manages both the Python interpreter and the project
+environment without touching the system interpreter), then sync the
+environment:
 
 .. code-block:: console
 
-    pipx install "poetry>=2.3.0"
     pipx install uv
     uv python install 3.14
-    poetry env use $(uv python find 3.14)
-    poetry install
+    uv sync
 
-If the distribution's default ``python3`` is outside the supported range (for
-example Ubuntu 24.04 ships 3.12), skipping ``poetry env use`` makes Poetry pick
-it and the install fails: the project supports 3.14.x only.
+The project pins the interpreter in ``.python-version`` (3.14.4);
+``uv sync`` creates ``.venv`` at the repository root and installs the
+locked dependencies from ``uv.lock`` (all dependency groups — test,
+lint, docs — by default). Unlike Poetry, uv never falls back to the
+distribution's default ``python3``: it uses the pinned interpreter,
+downloading it if absent, so the system Python version is irrelevant
+(the project supports 3.14.x only).
 
 Per-component build prerequisites
 ---------------------------------
