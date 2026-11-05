@@ -1,6 +1,6 @@
 """Root pytest configuration shared by every component suite.
 
-The repository is a single Poetry project with per-component test trees. This
+The repository is a single uv project with per-component test trees. This
 conftest makes their modules importable regardless of the current working
 directory by putting each component directory on ``sys.path``; the project's
 modules are imported by their top-level names (``common.*``, ``ml.*``,
