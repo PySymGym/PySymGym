@@ -282,7 +282,9 @@ def save_in_onnx(
         pyg_backend.use_segment_matmul = previous_use_segment_matmul
 
 
-def onnx_run(ort_session: onnxruntime.InferenceSession, data: HeteroData) -> ...:
+def onnx_run(
+    ort_session: onnxruntime.InferenceSession, data: HeteroData
+) -> t.Sequence[t.Any]:
     return ort_session.run(None, create_onnxruntime_input(data))
 
 
@@ -404,10 +406,10 @@ def main():
     with open(args.sample_gamestate_path, "r") as gamestate_file:
         sample_gamestate = load_gamestate(gamestate_file)
 
-    veification_gamestates: list[HeteroData] = []
+    verification_gamestates: list[GameState] = []
     for gamestate_path in args.verification_gamestates:
         with open(gamestate_path, "r") as gamestate_file:
-            veification_gamestates.append(load_gamestate(gamestate_file))
+            verification_gamestates.append(load_gamestate(gamestate_file))
 
     entrypoint(
         sample_gamestate=sample_gamestate,
@@ -415,7 +417,7 @@ def main():
         onnx_savepath=args.onnx_savepath,
         model_def=get_model_class(args.model_name),
         model_kwargs=model_kwargs,
-        verification_gamestates=veification_gamestates,
+        verification_gamestates=verification_gamestates,
         opset_version=args.opset_version,
     )
 
@@ -426,7 +428,7 @@ def entrypoint(
     onnx_savepath: pathlib.Path,
     model_def: t.Type[torch.nn.Module],
     model_kwargs: dict[str, t.Any],
-    verification_gamestates: list[GameState] = None,
+    verification_gamestates: list[GameState] | None = None,
     opset_version: int = ONNX_OPSET_VERSION,
 ):
     torch_model = model_def(**model_kwargs)

@@ -9,7 +9,7 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import joblib
 import mlflow
@@ -207,7 +207,7 @@ def run_training(
                 metrics = get_svms_statistics(
                     map2results, validation_mode, dataset, table_path
                 )
-                mlflow.log_artifact(table_path)
+                mlflow.log_artifact(str(table_path))
 
                 # "Validation failed" must never be the only clue (#616):
                 # name every failed map and its reason (timeout, unexhausted
@@ -268,7 +268,7 @@ def run_training(
             return state_model_encoder
         else:
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
-                artifact_uri=weights_uri, dst_path=REPORT_PATH
+                artifact_uri=weights_uri, dst_path=str(REPORT_PATH)
             )
             # The checkpoint may have been saved on another device (a
             # CUDA-saved model loaded on a CPU-only machine crashes a bare
@@ -309,8 +309,8 @@ def run_training(
         if run_id is None:
             return
         with mlflow.start_run(run_id):
-            mlflow.log_artifact(CURRENT_STUDY_PATH)
-            mlflow.log_artifact(CURRENT_TRIAL_PATH)
+            mlflow.log_artifact(str(CURRENT_STUDY_PATH))
+            mlflow.log_artifact(str(CURRENT_TRIAL_PATH))
             mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
 
     study = optuna.create_study(
@@ -385,7 +385,7 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
     # the loop with the last epoch's weights in the model, but the retained
     # model and the trial's value must be the best ones, not the last ones.
     best_result: int | float | None = None
-    best_state_dict: dict | None = None
+    best_state_dict: dict[str, Any] | None = None
 
     with mlflow.start_run(run_name=str(trial.number)) as run:
         # Register the run handle for the study-save callback: the callback
@@ -399,7 +399,7 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
         # side-effect file every epoch for the ONNX export to read back.
         with open(kwargs_path, "w") as outfile:
             yaml.dump(model_kwargs, outfile)
-        mlflow.log_artifact(kwargs_path)
+        mlflow.log_artifact(str(kwargs_path))
 
         for epoch in range(config.epochs):
             config.dataset.switch_to(TrainingDatasetMode.TRAINING)
@@ -415,7 +415,7 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
             )
             torch.cuda.empty_cache()
             torch.save(model.state_dict(), model_path)
-            mlflow.log_artifact(model_path, str(epoch))
+            mlflow.log_artifact(str(model_path), str(epoch))
 
             model.eval()
             config.dataset.switch_to(TrainingDatasetMode.VALIDATION)
@@ -441,9 +441,14 @@ def objective(trial: optuna.Trial, config: ObjectiveConfig):
         # epoch's artifact slot is re-written with the best weights, so the
         # highest-epoch artifact (the one
         # derive_dataset_improvement_config.py picks) is the best model.
+        if best_state_dict is None:
+            # Unreachable with a sane config: the first epoch always records
+            # a best (best_result starts None). A zero-epoch config would
+            # otherwise crash inside load_state_dict with a bare TypeError.
+            raise RuntimeError("training completed no epoch; no best checkpoint")
         model.load_state_dict(best_state_dict)
         torch.save(model.state_dict(), model_path)
-        mlflow.log_artifact(model_path, str(epoch))
+        mlflow.log_artifact(str(model_path), str(epoch))
     return best_result
 
 
@@ -464,7 +469,7 @@ def main(config: str):
 
     mp.set_start_method("spawn", force=True)
     print(get_device())
-    torch.serialization.add_safe_globals(STORAGE_SAFE_GLOBALS)
+    torch.serialization.add_safe_globals(list(STORAGE_SAFE_GLOBALS))
 
     mlflow_config = config.mlflow_config
     if mlflow_config.tracking_uri is not None:
