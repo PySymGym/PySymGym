@@ -1,65 +1,78 @@
-[tool.poetry]
-authors = [
-  "Semyon Grigorev rsdpisuy@gmail.com",
-  "Ekaterina Shemetova katyacyfra@gmail.com",
-  "Max Nigmatulin mvnigma@gmail.com",
-  "Anya Chistyakova chi.vinny0702@gmail.com",
-]
-description = "Python infrastructure to train paths selectors for symbolic execution engines."
-license = "LICENSE"
+[project]
 name = "pysymgym"
-package-mode = false
-readme = "README.md"
 version = "0.1.0"
+description = "Python infrastructure to train paths selectors for symbolic execution engines."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.14,<3.15"
+authors = [
+  { name = "Semyon Grigorev", email = "rsdpisuy@gmail.com" },
+  { name = "Ekaterina Shemetova", email = "katyacyfra@gmail.com" },
+  { name = "Max Nigmatulin", email = "mvnigma@gmail.com" },
+  { name = "Anya Chistyakova", email = "chi.vinny0702@gmail.com" },
+]
+dependencies = [
+  "aiohttp>=3.13.5,<4.0.0",
+  "attrs>=26.1.0,<27.0.0",
+  "cattrs>=26.1.0,<27.0.0",
+  "dataclasses-json>=0.6.7,<0.7.0",
+  "func-timeout>=4.3.5,<5.0.0",
+  "httplib2>=0.31.2,<0.33.0",
+  "joblib>=1.5.3,<2.0.0",
+  "matplotlib>=3.10.8,<4.0.0",
+  "mlflow>=3.11.1,<4.0.0",
+  # Successor of the deprecated `pynvml` package (same `pynvml` module); torch
+  # and mlflow's GPU monitor import it. The old package emits a deprecation
+  # FutureWarning on every CUDA init.
+  "nvidia-ml-py>=13.0.1,<14.0.0",
+  "onnx>=1.21.0,<2.0.0",
+  "onnxruntime>=1.24.4,<2.0.0",
+  "onnxscript>=0.7.2,<0.8.0",
+  "optuna>=4.8,<6.0",
+  "pandas>=2.3.3,<4.0.0",
+  "psutil>=7.2.2,<8.0.0",
+  "pydantic>=2.13.0,<3.0.0",
+  "torch>=2.15.0,<3.0.0",
+  "torch-geometric>=2.7.0,<3.0.0",
+  "tqdm>=4.67.3,<5.0.0",
+  "websocket-client>=1.9.0,<2.0.0",
+]
 
-[tool.poetry.dependencies]
-aiohttp = "^3.13.5"
-dataclasses-json = "^0.6.7"
-func-timeout = "^4.3.5"
-httplib2 = ">=0.31.2,<0.33.0"
-joblib = "^1.5.3"
-matplotlib = "^3.10.8"
-natsort = "^8.4.0"
-# Successor of the deprecated `pynvml` package (same `pynvml` module); torch
-# and mlflow's GPU monitor import it. The old package emits a deprecation
-# FutureWarning on every CUDA init.
-nvidia-ml-py = "^13.0.1"
-onnx = "^1.21.0"
-onnxruntime = "^1.24.4"
-optuna = ">=4.8,<6.0"
-pandas = ">=2.3.3,<4.0.0"
-psutil = "^7.2.2"
-pydantic = "^2.13.0"
-python = "^3.11"
-tabulate = "^0.10.0"
-torch = "^2.7.1"
-torch-geometric = "^2.7.0"
-tqdm = "^4.67.3"
-websocket-client = "^1.9.0"
-mlflow = "^3.11.1"
-cattrs = "^26.1.0"
-attrs = "^26.1.0"
-onnxscript = "^0.7.2"
+[dependency-groups]
+test = [
+  "pytest>=9.0.3,<10.0.0",
+  "pytest-cov>=7.1.0,<8.0.0",
+  "pytest-timeout>=2.4.0,<3.0.0",
+]
+lint = [
+  "pyright>=1.1.414,<2.0.0",
+  "ruff>=0.15.10,<0.18.0",
+  "ty>=0.0.96,<0.0.97",
+]
+docs = [
+  "furo>=2024.1",
+  "sphinx>=7.2,<10",
+]
 
-[tool.poetry.group.test.dependencies]
-pytest = "^9.0.3"
-
-[tool.poetry.group.formatter.dependencies]
-ruff = ">=0.15.10,<0.18.0"
-
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=7.2,<10"
-furo = ">=2024.1"
-
-[build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core==2.2.1"]
+[tool.uv]
+package = false
+# func-timeout 4.3.5 is sdist-only and its setup.py uses the deprecated
+# LGPLv2 license classifier; setuptools >=77 emits a
+# SetuptoolsDeprecationWarning in the build subprocess, which pyproject-hooks
+# re-emits as BuildBackendWarning. Pin the build environment to a clean
+# setuptools (<77; 76.1.0 is the last clean release).
+build-constraint-dependencies = ["setuptools<77"]
+# Poetry installed every group by default; keep that semantics so a bare
+# `uv sync` / `uv run` yields the full development environment. Without it
+# only the main dependencies are installed and `uv run pytest` silently falls
+# back to a system interpreter. Light CI jobs opt down with `--only-group`.
+default-groups = "all"
 
 [tool.ruff]
-include = ["pyproject.toml", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py", "docs/**/*.py"]
+include = ["pyproject.toml", "conftest.py", "tests/**/*.py", "AIAgent/**/*.py", "*.ipynb", "tools/**/*.py", "docs/**/*.py"]
 # Third-party submodule trees (checked out locally for builds, absent in CI)
 extend-exclude = ["GameServers/", "maps/"]
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["F", "E", "W", "B"]
@@ -70,3 +83,94 @@ explicit-preview-rules = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+# Type checking: ty (fast feedback) and pyright (full check, CI). This table
+# is the single source of truth for both checkers — no standalone
+# ty.toml/pyrightconfig.json. Scope: the project's Python surface (the same
+# trees ruff checks, minus notebooks); the tracked submodule trees are not
+# gitignored, so they are excluded explicitly (the same trees ruff excludes).
+#
+# extra-paths / extraPaths mirror conftest.py's COMPONENT_DIRS — the runtime
+# sys.path trick that makes the component modules importable by their
+# top-level names (common.*, ml.*, runstrat.*, ...). Keep the two lists in
+# sync with COMPONENT_DIRS.
+
+[tool.ty.environment]
+python-version = "3.14"
+extra-paths = [
+  "AIAgent",
+  "tools/compstrat",
+  "tools/runstrat",
+  "tools/dataset_tools",
+  "tools/util",
+]
+
+[tool.ty.src]
+include = [
+  "AIAgent",
+  "tools",
+  "tests",
+  "conftest.py",
+  "docs/conf.py",
+  "docs/_ext/navmap.py",
+]
+exclude = ["GameServers", "maps"]
+
+[tool.pyright]
+include = [
+  "AIAgent",
+  "tools",
+  "tests",
+  "conftest.py",
+  "docs/conf.py",
+  "docs/_ext/navmap.py",
+]
+exclude = ["GameServers", "maps"]
+pythonVersion = "3.14"
+extraPaths = [
+  "AIAgent",
+  "tools/compstrat",
+  "tools/runstrat",
+  "tools/dataset_tools",
+  "tools/util",
+]
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "AIAgent/tests",
+    "tools/compstrat/tests",
+    "tools/runstrat/tests",
+    "tools/dataset_tools/tests",
+    "tools/util/tests",
+]
+# No tier selection here: a global -m filter in addopts would also apply to
+# node-ID invocations (pytest path::test) and deselect the named test (exit 5).
+# Tiers are selected explicitly at the invocation — the Makefile targets and
+# the CI steps pass -m (see docs/testing.rst, "Commands").
+addopts = "--import-mode=importlib"
+timeout = 300
+markers = [
+    "unit: pure, deterministic tests with no network, GPU, subprocess, or binary fixtures",
+    "integration: in-process tests using fakes and golden fixtures",
+    "e2e: full pipeline tests that need built servers, maps, or the .NET toolchain",
+    "gpu: requires a CUDA device",
+    "network: requires network access",
+    "slow: takes noticeably long to run",
+    "serial: must not run in parallel with other tests",
+]
+
+[tool.coverage.run]
+source = ["AIAgent", "tools"]
+omit = [
+    "*/tests/*",
+    "*/conftest.py",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+]
+fail_under = 99

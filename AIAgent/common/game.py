@@ -101,11 +101,6 @@ class MoveReward:
     ForCoverage: int
     ForVisitedInstructions: int
 
-    def printable(self, verbose=False) -> str:
-        if verbose:
-            return f"ForVisitedInstructions: {self.ForVisitedInstructions}"
-        return f"#vi={self.ForVisitedInstructions}"
-
 
 @dataclass_json
 @dataclass(slots=True)

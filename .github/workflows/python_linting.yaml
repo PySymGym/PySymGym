@@ -6,16 +6,56 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: "Run ruff: check"
-        uses: astral-sh/ruff-action@v4.1.0
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
-          args: "check"
-  format:
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: true
+
+      - name: Install the lint group
+        # --only-group converges the env to exactly the lint group (ruff,
+        # ty, pyright): the light job needs no torch or the main deps.
+        # The --no-sync on the run steps below: the env was just synced,
+        # uv run must not re-sync the full env.
+        run: uv sync --locked --only-group lint
+
+      - name: "Run ruff: check"
+        run: uv run --no-sync ruff check
+
+      - name: "Run ruff: format"
+        run: uv run --no-sync ruff format --check
+
+  typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: "Run ruff: format"
-        uses: astral-sh/ruff-action@v4.1.0
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
-          args: "format --check"
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: true
+
+      - name: Install dependencies
+        # Full env: ty's import resolution needs the main deps (e.g. torch).
+        run: uv sync --locked
+
+      - name: Run ty
+        run: uv run --no-sync ty check
+
+      - name: Run pyright
+        run: uv run --no-sync pyright

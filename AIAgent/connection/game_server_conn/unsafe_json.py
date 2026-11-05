@@ -1,16 +1,45 @@
-from dataclasses import asdict as dataclasses_asdict
-from dataclasses import is_dataclass
-from typing import ClassVar, Protocol
+"""Tolerant decoding of the game-server wire protocol's JSON.
+
+The unchecked decode path (``FeatureConfig.disable_message_checks``) turns a
+parsed JSON document into plain objects whose fields are read as attributes
+(``message.MessageType``). JSON objects become :class:`BareObject` instances
+(their ``__dict__`` is the decoded mapping); JSON arrays and scalars pass
+through unchanged, so a nested document keeps its shape.
+"""
+
+from typing import Any, overload
 
 
-class Dataclass(Protocol):
-    __dataclass_fields__: ClassVar[dict]
+class BareObject:
+    """An attribute bag for one decoded JSON object.
+
+    ``obj_from_dict`` fills the instance's ``__dict__`` with the decoded
+    mapping, so the object's fields are read as attributes. A missing field
+    raises ``AttributeError`` — the default lookup outcome — via
+    ``__getattr__``; declaring it lets the type checkers see that attribute
+    access on a :class:`BareObject` is well-defined.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        raise AttributeError(name)
 
 
-BareObject = type("BareObject", (), {})
+#: The shape of a decoded JSON document: objects become :class:`BareObject`,
+#: arrays and scalars keep their Python shape.
+type JsonValue = BareObject | list[JsonValue] | str | int | float | bool | None
 
 
-def obj_from_dict(data: dict | list | str | float) -> BareObject:
+@overload
+def obj_from_dict(data: dict) -> BareObject: ...
+@overload
+def obj_from_dict(
+    data: list | str | int | float | bool | None,
+) -> list[JsonValue] | str | int | float | bool | None: ...
+
+
+def obj_from_dict(
+    data: dict | list | str | int | float | bool | None,
+) -> JsonValue:
     if isinstance(data, list):
         return [obj_from_dict(item) for item in data]
     if isinstance(data, dict):
@@ -22,21 +51,3 @@ def obj_from_dict(data: dict | list | str | float) -> BareObject:
         bare_obj.__dict__ = inner_dict
         return bare_obj
     return data
-
-
-def asdict(
-    data: BareObject | Dataclass | list | dict | str | float,
-) -> dict | list | str | float:
-    if isinstance(data, BareObject):
-        return {asdict(k): asdict(v) for k, v in data.__dict__.items()}
-    elif is_dataclass(data):
-        try:
-            return data.to_json()
-        except TypeError:
-            return asdict(dataclasses_asdict(data))
-    elif isinstance(data, list):
-        return [asdict(item) for item in data]
-    elif isinstance(data, dict):
-        return {asdict(k): asdict(v) for k, v in data.items()}
-    else:
-        return data

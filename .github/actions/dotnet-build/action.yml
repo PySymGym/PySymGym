@@ -1,0 +1,26 @@
+name: Build the .NET game server and maps
+description: >-
+  Builds the V# game server and the caller-selected .NET maps project.
+  Shared by the self-hosted build workflows; see docs/developer.rst,
+  "Self-hosted end-to-end workflows".
+inputs:
+  maps-working-directory:
+    description: Directory containing the maps project to build.
+    required: true
+  maps-project:
+    description: Maps project to build (``dotnet build <project> -c Release``).
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Build V# game server
+      shell: bash
+      working-directory: ./GameServers/VSharp/
+      run: |
+        dotnet build VSharp.ML.GameServer.Runner -c Release
+
+    - name: Build .NET maps
+      shell: bash
+      working-directory: ${{ inputs.maps-working-directory }}
+      run: |
+        dotnet build ${{ inputs.maps-project }} -c Release

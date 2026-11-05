@@ -51,7 +51,7 @@
   metric: count
   scale: symlog
 
-# comparison by total time on methods where both strats succeeded and 
+# comparison by total time on methods where both strats succeeded and
 - by_column: total_time_sec
   datasource: INNER_JOIN_COVERAGE_EQ_DF
   divider_line: true

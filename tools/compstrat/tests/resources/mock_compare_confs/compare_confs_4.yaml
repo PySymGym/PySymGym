@@ -1,0 +1,10 @@
+
+# comparison by coverage on methods where both strats succeeded,
+# keeping failed runs (drop_failed disabled)
+- by_column: coverage
+  datasource: INNER_JOIN_DF
+  divider_line: true
+  exp_name: coverage
+  less_is_winning: false
+  metric: '%'
+  drop_failed: false

@@ -4,8 +4,7 @@ from pathlib import Path
 from collections import defaultdict
 import argparse
 
-sys.path.append(os.path.join("..", "..", "AIAgent"))
-
+from atomic_io import atomic_write_text
 from common.game import GameMap
 
 
@@ -48,8 +47,9 @@ def create_episode(base_episode, method, step, strategy):
 
 
 def generate_episodes(dataset_path):
+    # schema is added by @dataclass_json at runtime (invisible statically).
     with open(dataset_path, "r") as f:
-        dataset = GameMap.schema().loads(f.read(), many=True)
+        dataset = GameMap.schema().loads(f.read(), many=True)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
     methods_dict = defaultdict(list)
     for episode in dataset:
@@ -80,8 +80,10 @@ def generate_episodes(dataset_path):
         key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher)
     )
 
-    with open(dataset_path, "w") as f:
-        f.write(GameMap.schema().dumps(dataset, many=True, indent=4))
+    atomic_write_text(
+        dataset_path,
+        GameMap.schema().dumps(dataset, many=True, indent=4),  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
+    )
 
 
 def main():

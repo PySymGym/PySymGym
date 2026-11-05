@@ -39,29 +39,29 @@ Create a `methods.csv` file listing the methods to test:
 dll,method
 Library.dll,namespace.class.method
 ```
-Run the verification with runstrat:
+Run the verification with runstrat (from `tools/runstrat/`):
 ```bash
-python3 runstrat.py \
+python3 -m runstrat \
     -s ExecutionTreeContributedCoverage \   # search strategy
     -t 120 \                                 # timeout (seconds)
     -ps ../../ \                              # path to PySymGym root
     -as ../../maps/DotNet/Maps/Root/bin/Release/net8.0 \  # path to assemblies
-    methods.csv                               # file with methods
+    ../../maps/DotNet/Maps/methods.csv       # file with methods
 ```
 ## Submodules
- 
+
 - https://github.com/JetBrains/rd.git
-  
+
 - https://github.com/aalhour/C-Sharp-Algorithms.git
 
 - https://github.com/justcoding121/advanced-algorithms.git
-  
+
 - https://github.com/TASEmulators/BizHawk.git
-  
+
 - https://github.com/mxprshn/StandaloneUnity.git
-  
+
 - https://github.com/mbdavid/LiteDB.git
-  
+
 - https://github.com/SaeedGz98/stralgo.git
-  
+
 - https://github.com/cat923/C-Sharp.git
