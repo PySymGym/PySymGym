@@ -103,8 +103,8 @@ move_init_data:
 
 # Test system (see docs/testing.rst)
 
-POETRY ?= poetry
-PYTEST ?= $(POETRY) run pytest
+UV ?= uv
+PYTEST ?= $(UV) run pytest
 COV_ARGS = --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=xml --cov-report=json
 
 .PHONY: test-unit test-integration test-all test-cov
