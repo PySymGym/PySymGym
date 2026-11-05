@@ -1,6 +1,6 @@
 ---
 name: run-tests
-description: Use when running the PySymGym test suite. Thin pointer to docs/testing.rst, the single source of truth for the taxonomy, commands, and fixtures; plus the machine-specific pitfalls (Poetry environment, root runner).
+description: Use when running the PySymGym test suite. Thin pointer to docs/testing.rst, the single source of truth for the taxonomy, commands, and fixtures.
 ---
 
 # Run tests
@@ -45,24 +45,21 @@ restore it before running anything:
 
 The e2e training pipeline (`.github/workflows/e2e_build_and_run.yml`) is
 reproduced locally as part of the quality gate; the workflow file is the
-source of truth for the steps. Machine-specific pitfalls:
+source of truth for the steps. The .NET runtime requirement — the game
+servers must run on the .NET 8 runtime the dataset was generated with, the
+broker's `DOTNET_ROLL_FORWARD=LatestPatch` pin, and `env -u
+DOTNET_ROLL_FORWARD` for the two non-broker invocations — is documented in
+the "Local e2e runs" section of `docs/testing.rst`. Pitfalls:
 
-- A stale `DOTNET_ROLL_FORWARD=Major` in the ambient environment rolls the
-  net8.0 game server forward to a newer runtime, which changes the
-  path-condition encoding and breaks e2e validation (the dataset is generated
-  with the .NET 8 runtime; CI runs .NET 8). The broker now pins the runtime
-  at launch (`DOTNET_ROLL_FORWARD=LatestPatch`, #580), so the broker-launched
-  servers are immune; the dataset-generation step is a plain `dotnet`
-  invocation, so run it under `env -u DOTNET_ROLL_FORWARD bash -lc '...'`
-  and sanity-check `which dotnet` → `/home/gsv/.dotnet/dotnet` (the install
-  with the .NET 8 runtime the dataset was generated with; `dotnet --version`
-  may report a newer SDK — the runtime list is what matters). The same
-  resolution applies to the whole Python phase, not just the generator: the
-  configs' `launch_command` is a bare `dotnet` that the broker's and the
-  svms_model validation's server children inherit via PATH, so put
-  `/home/gsv/.dotnet` first on PATH for the training/broker steps too —
-  otherwise the servers die at start with "framework 8.0.0 not found"
-  (the system dotnet at `/usr/lib/dotnet` has no .NET 8 runtime).
+- Make sure `dotnet` on PATH resolves to an install that includes the .NET 8
+  runtime — check `dotnet --list-runtimes`, not `dotnet --version` (which may
+  report a newer SDK). If the system dotnet lacks it, prepend that install's
+  bin directory to PATH for the whole Python phase, not just the
+  dataset-generation step: the configs' `launch_command` is a bare `dotnet`
+  that the broker's and the svms_model validation's server children inherit
+  via PATH, and a mismatched runtime either kills the servers at start with
+  "framework 8.0.0 not found" or silently changes the path-condition
+  encoding.
 - Start from a clean `AIAgent/report/` and `AIAgent/mlartifacts/` (CI runs
   from a fresh checkout): a stale `report/dataset_path_condition` confounds
   the tuning run. Also clean the generator's output directory
