@@ -23,11 +23,12 @@ class TrainingDatasetMode(Enum):
 
 @dataclass(frozen=True)
 class Result:
-    """A map's validation result, ordered so that better results sort first.
+    """A map's validation result, ordered so that a better result is greater.
 
-    Better means: higher coverage, then fewer tests, then fewer steps, then
-    fewer errors. The ordering lives solely in :attr:`sort_key` and
-    ``__lt__``; construction sites pass the plain (non-negated) counts.
+    ``a < b`` means ``b`` is better: higher coverage, then fewer tests, then
+    fewer steps, then more errors (the goal is to find as many errors as
+    possible). The ordering lives solely in :attr:`sort_key` and ``__lt__``;
+    construction sites pass the plain (non-negated) counts.
 
     The on-disk representation (:meth:`to_tuple`/:meth:`from_tuple`) keeps
     the historical sign-flipped tuple format
@@ -47,7 +48,7 @@ class Result:
             self.coverage_percent,
             -self.tests_number,
             -self.steps_number,
-            -self.errors_number,
+            self.errors_number,
         )
 
     def __lt__(self, other: "Result") -> bool:
