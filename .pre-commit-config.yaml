@@ -1,0 +1,60 @@
+# Pre-commit hooks: the guard set that runs on every commit.
+#
+# The Python tools (ruff, ty) run through the locked project environment
+# (`uv run`), so their versions come from `uv.lock` — the same binaries CI
+# runs (`.github/workflows/python_linting.yaml`); there is no second version
+# source (no hook rev pinning ruff/ty) that could drift. `uv run` is
+# additive: it installs whatever the current environment is missing and never
+# uninstalls, so a partial environment (e.g. after `uv sync --only-group
+# docs`) self-heals on the next commit.
+#
+# Submodules are never seen by pre-commit (it only passes superproject-tracked
+# files), so no exclude patterns are needed for them; the first-party
+# `maps/` and `GameServers/` glue files are tracked and are in scope.
+
+repos:
+  # Keeps uv.lock in sync with pyproject.toml (the uv integration doc,
+  # https://docs.astral.sh/uv/guides/integration/pre-commit/). Runs only when
+  # uv.lock / pyproject.toml / uv.toml change. `uv lock` (no --locked)
+  # rewrites the lockfile in place: on drift the hook fails with "files were
+  # modified by this hook" and the updated uv.lock must be re-staged; in sync
+  # it is a no-op. The rev tracks the uv release (0.13.7 = the locked uv).
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.13.7
+    hooks:
+      - id: uv-lock
+
+  # Hygiene basics (user decision: "Add check-yaml, trailing-whitespace,
+  # other basics").
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-docstring-first
+
+  # The Python guards, through the locked environment (single version source).
+  # The ruff hooks use `--only-group lint`: ruff needs no import resolution,
+  # so the light lint group suffices (a no-op on the full env). The ty hook
+  # uses a bare `uv run`: ty resolves imports against the full environment
+  # (torch & co.), and bare `uv run` additively self-heals a partial env.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check --fix
+        entry: uv run --only-group lint ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --only-group lint ruff format
+        language: system
+        types: [python]
+      - id: ty-check
+        name: ty check
+        entry: uv run ty check
+        language: system
+        pass_filenames: false
