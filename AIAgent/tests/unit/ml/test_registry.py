@@ -6,6 +6,7 @@ time if a registered model's ``forward`` drifts from ``Model``.
 """
 
 import inspect
+from typing import Any
 
 import pytest
 import torch
@@ -22,7 +23,7 @@ from ml.protocols import Model
 
 pytestmark = pytest.mark.unit
 
-SMALL_MODEL_KWARGS = {
+SMALL_MODEL_KWARGS: dict[str, Any] = {
     "hidden_channels": 8,
     "num_of_state_features": 6,
     "num_hops_1": 1,

@@ -14,6 +14,7 @@ from common.config.loader import (
     load_config,
     validate_paths,
 )
+from common.config.validation_config import SVMValidation
 
 pytestmark = pytest.mark.unit
 
@@ -265,7 +266,9 @@ def test_load_config_returns_the_validated_config(tmp_path: Path):
     config = load_config(config_path)
 
     assert isinstance(config, Config)
-    platform = config.validation_config.validation_mode.platforms_config[0]
+    mode = config.validation_config.validation_mode
+    assert isinstance(mode, SVMValidation)
+    platform = mode.platforms_config[0]
     assert (
         platform.dataset_configs[0].dataset_base_path == (tmp_path / "maps").resolve()
     )

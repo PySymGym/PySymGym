@@ -10,6 +10,7 @@ is valid and the model handles it.
 """
 
 import logging
+from typing import Any
 
 import pytest
 import torch
@@ -23,7 +24,7 @@ from torch_geometric.loader import DataLoader
 
 pytestmark = pytest.mark.unit
 
-SMALL_MODEL_KWARGS = {
+SMALL_MODEL_KWARGS: dict[str, Any] = {
     "hidden_channels": 8,
     "num_of_state_features": 6,
     "num_hops_1": 1,

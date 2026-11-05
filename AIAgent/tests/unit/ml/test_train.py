@@ -9,6 +9,7 @@ zero-loss branch is driven with a fake criterion and a spy optimizer.
 """
 
 import os
+from typing import Any, Callable, overload
 
 import pytest
 import torch
@@ -19,7 +20,7 @@ from torch_geometric.loader import DataLoader
 
 pytestmark = pytest.mark.unit
 
-SMALL_MODEL_KWARGS = {
+SMALL_MODEL_KWARGS: dict[str, Any] = {
     "hidden_channels": 8,
     "num_of_state_features": 6,
     "num_hops_1": 1,
@@ -47,7 +48,13 @@ class SpyOptimizer(torch.optim.Optimizer):
         super().__init__(params, {"lr": 1e-3})
         self.step_calls = 0
 
-    def step(self, closure=None) -> None:
+    # Mirror the base overloads (the loop calls ``step()`` without a
+    # closure); a single merged signature is not a valid override.
+    @overload
+    def step(self, closure: None = None) -> None: ...
+    @overload
+    def step(self, closure: Callable[[], float]) -> float: ...
+    def step(self, closure: Callable[[], float] | None = None) -> float | None:
         self.step_calls += 1
 
 

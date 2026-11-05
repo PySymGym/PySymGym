@@ -250,7 +250,8 @@ class FakeWebSocket:
 
     def __init__(self) -> None:
         self.sent: list[str] = []
-        self.incoming: list[object] = []
+        # Frames are either wire strings or the exception ``recv`` must raise.
+        self.incoming: list[str | BaseException] = []
         self.connected = False
         self.will_connect = True
         self.connect_error: BaseException | None = None
@@ -275,9 +276,9 @@ class FakeWebSocket:
         if not self.incoming:
             raise AssertionError("no incoming websocket frame was queued")
         frame = self.incoming.pop(0)
-        if isinstance(frame, BaseException):
-            raise frame
-        return frame  # type: ignore[return-value]
+        if isinstance(frame, str):
+            return frame
+        raise frame
 
     def close(self) -> None:
         self.closed = True

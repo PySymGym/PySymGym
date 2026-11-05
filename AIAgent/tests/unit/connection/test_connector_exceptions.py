@@ -6,6 +6,7 @@ These exercise the pure parts of ``Connector`` without opening a websocket:
 
 import json
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -13,6 +14,13 @@ from connection.game_server_conn.connector import Connector
 from connection.game_server_conn.messages import PROTOCOL_VERSION
 
 pytestmark = pytest.mark.unit
+
+
+def _raise_if_gameover(fake_self: SimpleNamespace, payload: str) -> str | bytes:
+    # Exercises the unbound method with a duck-typed self: it only reads the
+    # attributes the fakes expose (game_is_over, _disable_message_checks,
+    # _gameover) and never touches the websocket.
+    return Connector._raise_if_gameover(cast(Connector, fake_self), payload)
 
 
 def test_game_over_exception_stores_counts() -> None:
@@ -41,7 +49,7 @@ def test_raise_if_gameover_parses_gameover_message() -> None:
     fake_self = SimpleNamespace(game_is_over=False, _disable_message_checks=True)
 
     with pytest.raises(Connector.GameOver) as exc_info:
-        Connector._raise_if_gameover(fake_self, payload)
+        _raise_if_gameover(fake_self, payload)
 
     assert fake_self.game_is_over is True
     assert exc_info.value.actual_coverage == 55
@@ -56,7 +64,7 @@ def test_raise_if_gameover_passes_through_other_messages() -> None:
     )
     fake_self = SimpleNamespace(game_is_over=False, _disable_message_checks=False)
 
-    assert Connector._raise_if_gameover(fake_self, payload) == payload
+    assert _raise_if_gameover(fake_self, payload) == payload
 
 
 def test_raise_if_gameover_already_over_raises_gameover() -> None:
@@ -66,7 +74,7 @@ def test_raise_if_gameover_already_over_raises_gameover() -> None:
     fake_self = SimpleNamespace(game_is_over=True, _gameover=stored)
 
     with pytest.raises(Connector.GameOver) as exc_info:
-        Connector._raise_if_gameover(fake_self, "{}")
+        _raise_if_gameover(fake_self, "{}")
 
     # The guard re-raises the stored exception with its original counts.
     assert exc_info.value is stored
@@ -92,7 +100,7 @@ def test_raise_if_gameover_strict_validation_reads_steps_count() -> None:
     fake_self = SimpleNamespace(game_is_over=False, _disable_message_checks=False)
 
     with pytest.raises(Connector.GameOver) as exc_info:
-        Connector._raise_if_gameover(fake_self, payload)
+        _raise_if_gameover(fake_self, payload)
 
     assert fake_self.game_is_over is True
     assert exc_info.value.actual_coverage == 55

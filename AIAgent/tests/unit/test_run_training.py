@@ -13,10 +13,12 @@ error messages.
 
 import logging
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
+import optuna
 import pytest
 import torch
 import yaml
@@ -40,6 +42,7 @@ from common.config.validation_config import (
 )
 from common.dataset import TrainingDatasetMode
 from common.validation_coverage.svm_info import SVMInfo
+from ml.dataset import TrainingDataset
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.models.registry import get_model_class
 from ml.training.seeds import derive_trial_seed
@@ -56,7 +59,7 @@ from run_training import BEST_TRIAL_NUMBER_TAG
 
 pytestmark = pytest.mark.unit
 
-MODEL_KWARGS = dict(
+MODEL_KWARGS: dict[str, Any] = dict(
     hidden_channels=64,
     num_of_state_features=8,
     num_hops_1=2,
@@ -140,7 +143,7 @@ class FakeMlflow:
     def artifacts(self):
         return SimpleNamespace(download_artifacts=self._download_artifacts)
 
-    def _download_artifacts(self, *args: Any, **kwargs: Any) -> Path:
+    def _download_artifacts(self, *args: Any, **kwargs: Any) -> Path | None:
         self.record("artifacts.download_artifacts", *args, **kwargs)
         return self.download_artifacts_result
 
@@ -202,16 +205,15 @@ class FakeOptuna:
         return self.study
 
 
-def make_objective_recorder():
+class ObjectiveRecorder:
     """A ``run_training.objective`` stand-in recording every call."""
-    calls: list[tuple[Any, dict]] = []
 
-    def objective(trial, **kwargs: Any) -> str:
-        calls.append((trial, kwargs))
+    def __init__(self) -> None:
+        self.calls: list[tuple[Any, dict]] = []
+
+    def __call__(self, trial: Any, **kwargs: Any) -> str:
+        self.calls.append((trial, kwargs))
         return "objective-result-sentinel"
-
-    objective.calls = calls
-    return objective
 
 
 def run_training_once(
@@ -259,7 +261,7 @@ def run_training_once(
     joblib = FakeJoblib()
     monkeypatch.setattr(run_training_module, "joblib", joblib)
 
-    objective = make_objective_recorder()
+    objective = ObjectiveRecorder()
     monkeypatch.setattr(run_training_module, "objective", objective)
 
     run_training_module.run_training(
@@ -331,10 +333,17 @@ class FakeEncoder(nn.Module):
     def __init__(self, **params: Any) -> None:
         super().__init__()
         self.params = params
-        self.loaded_state: dict | None = None
+        self.loaded_state: Mapping[str, Any] | None = None
 
-    def load_state_dict(self, state: dict) -> "FakeEncoder":
-        self.loaded_state = state
+    # Matches the ``nn.Module.load_state_dict`` signature (the production
+    # ``model_init`` calls it positionally and ignores the result).
+    def load_state_dict(
+        self,
+        state_dict: Mapping[str, Any],
+        strict: bool = True,
+        assign: bool = False,
+    ) -> "FakeEncoder":
+        self.loaded_state = state_dict
         return self
 
 
@@ -442,7 +451,10 @@ def svm_validation_config(fail_immediately: bool = True) -> ValidationConfig:
     platform = Platform(
         name="dotnet",
         DatasetConfigs=[
-            DatasetConfig(dataset_base_path="/dummy", dataset_description="/dummy.json")
+            DatasetConfig(
+                dataset_base_path=Path("/dummy"),
+                dataset_description=Path("/dummy.json"),
+            )
         ],
         SVMSInfo=[
             SVMInfo(
@@ -969,10 +981,11 @@ class TestValidateClosures:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
     ) -> None:
         criterion_mode = CriterionValidation(val_type="loss", batch_size=8)
-        svm_config = svm_validation_config()
+        svm_mode = svm_validation_config().validation_mode
+        assert isinstance(svm_mode, SVMValidationSendEachStep)
         custom = CustomValidation(
             val_type="custom",
-            val_sequence=[criterion_mode, svm_config.validation_mode],
+            val_sequence=[criterion_mode, svm_mode],
             process_count=1,
         )
         maps = [game_map2svm_factory("MapA")]
@@ -1195,7 +1208,8 @@ class TestObjective:
 
         run_ids: dict[int, str] = {}
         config = run_training_module.ObjectiveConfig(
-            dataset=dataset,
+            # Duck-typed stand-ins for the production dependencies.
+            dataset=cast(TrainingDataset, dataset),
             dynamic_dataset=dynamic_dataset,
             model_init=model_init,
             criterion_init=criterion_init,
@@ -1205,7 +1219,7 @@ class TestObjective:
             seed=seed,
             run_ids=run_ids,
         )
-        result = run_training_module.objective(trial, config=config)
+        result = run_training_module.objective(cast(optuna.Trial, trial), config=config)
 
         return SimpleNamespace(
             result=result,

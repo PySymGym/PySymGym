@@ -14,4 +14,6 @@ def test_server_instance_info_is_frozen_and_hashable() -> None:
     assert hash(info)
 
     with pytest.raises(FrozenInstanceError):
-        info.port = 3  # type: ignore[misc]
+        # The assignment is the point of the test: it must raise
+        # FrozenInstanceError on the frozen dataclass.
+        info.port = 3  # type: ignore[misc, ty:invalid-assignment]

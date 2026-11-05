@@ -164,6 +164,8 @@ def test_look_for_free_port_locked_uses_the_given_address(
     )
 
     assert port == 5
+    # The probe socket is created first; the held server socket is second.
+    assert server_socket is factory.created[1]
     assert factory.created[0].bound_address == ("127.0.0.1", 5)
     assert server_socket.bound_address == ("127.0.0.1", 5)
 

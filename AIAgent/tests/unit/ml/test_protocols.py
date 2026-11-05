@@ -5,8 +5,10 @@
 """
 
 import inspect
+from typing import cast
 
 import pytest
+from common.game import GameState
 from common.protocols import Named
 from ml.protocols import Model, Predictor, Named as MlNamed
 
@@ -35,12 +37,14 @@ def test_predictor_requires_name_predict_and_model():
 def test_abstract_bodies_raise_not_implemented_error():
     # The abstract bodies are unreachable through instances (instantiation
     # is impossible by design); invoking them unbound on a sentinel is the
-    # only executable path to those lines.
-    sentinel = object()
+    # only executable path to those lines. The bodies raise before touching
+    # self or their arguments, so the sentinel (a Predictor, which is also
+    # a Named) and the None input are opaque placeholders.
+    sentinel = cast(Predictor, object())
     with pytest.raises(NotImplementedError):
         Named.name(sentinel)
     with pytest.raises(NotImplementedError):
-        Predictor.predict(sentinel, input=None)
+        Predictor.predict(sentinel, input=cast(GameState, None))
     with pytest.raises(NotImplementedError):
         Predictor.model(sentinel)
 

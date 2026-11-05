@@ -6,7 +6,9 @@ loop is exercised in-process.
 """
 
 import threading
+from multiprocessing.managers import SyncManager
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 import torch
@@ -83,6 +85,12 @@ class FakeSyncManager:
 
     def Value(self, typecode, value):
         return SimpleNamespace(value=value)
+
+
+def _sync_manager() -> SyncManager:
+    # Duck-typed stand-in for multiprocessing's SyncManager: only the
+    # Namespace/Lock/Value factories are used.
+    return cast(SyncManager, FakeSyncManager())
 
 
 def _sub_configs() -> dict:
@@ -215,7 +223,7 @@ def test_get_game_manager_returns_each_step_manager() -> None:
         val_type="svms_each_step", PlatformsConfig=[], process_count=1
     )
 
-    manager = coverage._get_game_manager(config, FakeSyncManager())
+    manager = coverage._get_game_manager(config, _sync_manager())
 
     assert isinstance(manager, EachStepGameManager)
     # The sub-configs are handed to the manager (pickled to the workers).
@@ -231,7 +239,7 @@ def test_get_game_manager_returns_model_manager() -> None:
         val_type="svms_model", PlatformsConfig=[], process_count=1
     )
 
-    manager = coverage._get_game_manager(config, FakeSyncManager())
+    manager = coverage._get_game_manager(config, _sync_manager())
 
     assert isinstance(manager, ModelGameManager)
     assert manager._feature_config is sub_configs["feature_config"]
@@ -242,7 +250,11 @@ def test_get_game_manager_raises_for_other_modes() -> None:
     config = CriterionValidation(val_type="loss", batch_size=1)
 
     with pytest.raises(RuntimeError, match="no game manager suitable"):
-        coverage._get_game_manager(config, FakeSyncManager())
+        coverage._get_game_manager(
+            # Deliberately a non-SVM mode: the lookup must reject it.
+            config,  # type: ignore[reportArgumentType, ty:invalid-argument-type]
+            _sync_manager(),
+        )
 
 
 class FakePool:
@@ -277,7 +289,9 @@ def test_validate_coverage_collects_all_results(
         for game_map in maps
     }
     manager = FakeGameManager(result=None)
-    manager.play_game_map = lambda game_map2svm: results[id(game_map2svm)]
+    # Shadows the method with a plain function (no self): the test drives
+    # play_game_map directly, bypassing _play_game_map.
+    manager.play_game_map = lambda game_map2svm: results[id(game_map2svm)]  # ty: ignore[invalid-assignment]
     coverage = ValidationCoverage(torch.nn.Linear(1, 1), None, **_sub_configs())
     config = SVMValidationSendEachStep(
         val_type="svms_each_step", PlatformsConfig=[], process_count=2
