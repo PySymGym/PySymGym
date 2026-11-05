@@ -9,25 +9,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install poetry
-        run: |
-          pipx install "poetry>=2.3.0"
-
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.14.4"
-          cache: "poetry"
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: true
 
       - name: Check the lockfile
         # The lockfile must be in sync with pyproject.toml: a stale lock
         # fails here, before the expensive install, instead of surfacing at
         # install time per job.
-        run: poetry check --lock
+        run: uv lock --check
 
       - name: Install dependencies
         run: |
-          poetry install
+          uv sync --locked
 
       # The single runner for every suite: the root testpaths cover all six
       # test roots (root tests/, AIAgent, compstrat, runstrat, dataset_tools,
@@ -40,7 +41,7 @@ jobs:
         # are excluded so the tier (and its coverage number) is identical
         # with or without a GPU or network access (docs/testing.rst).
         run: |
-          poetry run pytest -m "not e2e and not gpu and not network" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
+          uv run pytest -m "not e2e and not gpu and not network" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
 
   # Every submodule pointer must be reachable from a stable ref (a tag, or
   # the default branch) of its remote — see docs/developer.rst, "Submodules".
