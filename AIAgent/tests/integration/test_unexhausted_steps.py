@@ -27,9 +27,10 @@ from common.config.validation_config import (
     SVMValidationSendModel,
     ValidationConfig,
 )
-from common.game import GameMap, GameMap2SVM
+from common.game import GameMap, GameMap2SVM, GameState, MoveReward, Reward
 from common.validation_coverage.svm_info import SVMInfo
 from connection.game_server_conn.connector import Connector
+from websocket import WebSocket
 from ml.protocols import Predictor
 from ml.validation.coverage.game_managers.each_step import each_step_game_manager
 from ml.validation.coverage.game_managers.model import process_game_manager
@@ -78,7 +79,7 @@ class TestConfigFlag:
             ("svms_each_step", SVMValidationSendEachStep),
         ],
     )
-    def test_default_is_false(self, val_type, expected_cls):
+    def test_default_is_false(self, val_type: str, expected_cls: type[SVMValidation]):
         mode = ValidationConfig(
             validation_mode=svms_validation_mode(val_type)  # type: ignore[reportArgumentType, ty:invalid-argument-type]
         ).validation_mode
@@ -228,10 +229,13 @@ def make_fake_connector(coverage, steps):
             self._steps = steps
             self._state_sent = False
 
-        def recv_state_or_throw_gameover(self):
+        def recv_state_or_throw_gameover(self) -> GameState:
             if not self._state_sent:
                 self._state_sent = True
-                return SimpleNamespace(States=[SimpleNamespace(Id=0)])
+                # The manager never inspects the state (predict and
+                # convert_input_to_tensor are faked); the namespace stands in
+                # for the wire shape.
+                return cast(GameState, SimpleNamespace(States=[SimpleNamespace(Id=0)]))
             raise Connector.GameOver(
                 actual_coverage=self._coverage,
                 tests_count=1,
@@ -242,8 +246,13 @@ def make_fake_connector(coverage, steps):
         def send_step(self, next_state_id, predicted_usefullness):
             pass
 
-        def recv_reward_or_throw_gameover(self):
-            return None
+        def recv_reward_or_throw_gameover(self) -> Reward:
+            # The manager discards the reward (`_ = ...`); a minimal real
+            # instance keeps the override's return type honest.
+            return Reward(
+                ForMove=MoveReward(ForCoverage=0, ForVisitedInstructions=0),
+                MaxPossibleReward=0,
+            )
 
     return FakeConnector
 
@@ -269,7 +278,10 @@ class TestEachStepGameManagerUnexhaustedSteps:
     def play(self, monkeypatch, flag, coverage, steps):
         manager = make_each_step_manager(monkeypatch, flag, coverage, steps)
         game_map2svm = GameMap2SVM(make_game_map(), make_svm_info())
-        result, _ = manager._play_game_map_with_svm(game_map2svm, ws=None)
+        # The fake connector ignores ws, so None is safe at runtime.
+        result, _ = manager._play_game_map_with_svm(
+            game_map2svm, ws=cast(WebSocket, None)
+        )
         return result
 
     def test_flag_off_keeps_fudged_result(self, monkeypatch):

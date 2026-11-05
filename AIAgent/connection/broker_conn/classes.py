@@ -5,7 +5,6 @@ from common.typealias import SVMName
 from dataclasses_json import dataclass_json
 
 WSUrl: TypeAlias = str
-Undefined: TypeAlias = None
 
 
 @dataclass_json
@@ -14,4 +13,4 @@ class ServerInstanceInfo:
     svm_name: SVMName
     port: int
     ws_url: WSUrl
-    pid: int | Undefined
+    pid: int | None

@@ -8,6 +8,7 @@ import inspect
 from typing import cast
 
 import pytest
+import torch
 from common.game import GameState
 from common.protocols import Named
 from ml.protocols import Model, Predictor, Named as MlNamed
@@ -41,14 +42,19 @@ def test_abstract_bodies_raise_not_implemented_error():
     # is impossible by design); invoking them unbound on a sentinel is the
     # only executable path to those lines. The bodies raise before touching
     # self or their arguments, so the sentinel (a Predictor, which is also
-    # a Named) and the None input are opaque placeholders.
+    # a Named) and the None input are opaque placeholders. Pyright's
+    # reportAbstractUsage models the calls as unimplemented-abstract use;
+    # the base bodies themselves are the assertion target (they raise
+    # NotImplementedError), so each call is suppressed individually.
     sentinel = cast(Predictor, object())
     with pytest.raises(NotImplementedError):
-        Named.name(sentinel)
+        Named.name(sentinel)  # type: ignore[reportAbstractUsage]
     with pytest.raises(NotImplementedError):
-        Predictor.predict(sentinel, input=cast(GameState, None))
+        Predictor.predict(  # type: ignore[reportAbstractUsage]
+            sentinel, input=cast(GameState, None)
+        )
     with pytest.raises(NotImplementedError):
-        Predictor.model(sentinel)
+        Predictor.model(sentinel)  # type: ignore[reportAbstractUsage]
 
 
 def test_concrete_predictor_satisfies_the_interface():
@@ -56,11 +62,15 @@ def test_concrete_predictor_satisfies_the_interface():
         def name(self) -> str:
             return "dummy"
 
-        def predict(self, input):
+        # The echo accepts None (the test below passes it); the base's
+        # parameter is GameState, so the override widens.
+        def predict(self, input: GameState | None) -> GameState | None:
             return input
 
-        def model(self):
-            return None
+        # The test pins the None return; the cast satisfies the base's
+        # torch.nn.Module return type.
+        def model(self) -> torch.nn.Module:
+            return cast(torch.nn.Module, None)
 
     predictor = DummyPredictor()
     assert not inspect.isabstract(DummyPredictor)

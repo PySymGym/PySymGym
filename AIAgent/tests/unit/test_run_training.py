@@ -336,15 +336,17 @@ class FakeEncoder(nn.Module):
         self.loaded_state: Mapping[str, Any] | None = None
 
     # Matches the ``nn.Module.load_state_dict`` signature (the production
-    # ``model_init`` calls it positionally and ignores the result).
+    # ``model_init`` calls it positionally and ignores the result). The
+    # return is ``Any``: torch's real one is the private
+    # ``_IncompatibleKeys`` namedtuple, which callers never inspect.
     def load_state_dict(
         self,
         state_dict: Mapping[str, Any],
         strict: bool = True,
         assign: bool = False,
-    ) -> "FakeEncoder":
+    ) -> Any:
         self.loaded_state = state_dict
-        return self
+        return None
 
 
 class TestModelSelection:

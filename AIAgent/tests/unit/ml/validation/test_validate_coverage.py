@@ -23,7 +23,10 @@ from common.config.validation_config import (
 )
 from common.dataset import Result
 from ml.validation.coverage import validate_coverage as vc
-from ml.validation.coverage.game_managers.base_game_manager import BaseGameManager
+from ml.validation.coverage.game_managers.base_game_manager import (
+    BaseGameManager,
+    BaseGamePreparator,
+)
 from ml.validation.coverage.game_managers.each_step.each_step_game_manager import (
     EachStepGameManager,
 )
@@ -43,8 +46,10 @@ class FakeGameManager(BaseGameManager):
         self.notified: list[tuple] = []
         self.deleted: list = []
 
-    def _create_preparator(self):
-        return None
+    def _create_preparator(self) -> BaseGamePreparator:
+        # Never called: the fake's __init__ skips BaseGameManager.__init__,
+        # the only caller of this hook.
+        return cast(BaseGamePreparator, object())
 
     def _play_game_map(self, game_map2svm):
         if self._error is not None:
@@ -309,7 +314,13 @@ def test_validate_coverage_collects_all_results(
     assert {id(result) for result in collected} == {
         id(result) for result in results.values()
     }
-    assert {result.map.GameMap.MapName for result in collected} == {
+    # Narrow to Map2Result: validate_coverage may also yield Exceptions
+    # (worker crashes); any would shrink the set and fail the assertion.
+    assert {
+        result.map.GameMap.MapName
+        for result in collected
+        if isinstance(result, Map2Result)
+    } == {
         "Method_0",
         "Method_1",
     }

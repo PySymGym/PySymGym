@@ -6,7 +6,7 @@ import pytest
 import yaml
 from common.classes import GameFailed, GameResult, Map2Result
 from common.config.loader import anchor_paths
-from common.config.validation_config import ValidationConfig
+from common.config.validation_config import SVMValidation, ValidationConfig
 from common.dataset import Result
 from ml.validation.statistics import (
     AVERAGE_COVERAGE,
@@ -56,6 +56,9 @@ class TestSVMsStatistics:
     @pytest.fixture
     def get_args(self, request):
         val_config = _load_validation_mode(Path(request.param))
+        # The fixture configs (svms_validation_configs) are SVM modes; the
+        # assert documents the contract and narrows the loaded union.
+        assert isinstance(val_config, SVMValidation)
 
         dataset = TrainingDatasetMock(
             mock_maps_results={

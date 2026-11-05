@@ -67,7 +67,7 @@ class InstanceIssuanceError(RuntimeError):
     """
 
 
-async def wait_for_port(port, timeout=10):
+async def wait_for_port(port, timeout: float = 10):
     start_time = time.time()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
