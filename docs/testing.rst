@@ -146,8 +146,8 @@ the static guards: besides the marker taxonomy (``test_pytest_infra.py``),
 no module under ``AIAgent/common`` may import ``ml.*`` or the top-level
 ``config`` module — and ``test_config_base_guard.py`` pins the shared
 pydantic config — every ``@pydantic_dataclass`` under ``AIAgent/common``
-takes its config from ``common.config.base.CONFIG`` (an AST walk, in the
-same pattern, that never imports the guarded code).
+takes its config from ``common.config.base.CONFIG``. Both guards are AST
+walks that never import the guarded code.
 
 The marker is the source of truth, not the directory: CI selects markers
 explicitly (``-m "not e2e and not gpu and not network"`` for the gated-tier
