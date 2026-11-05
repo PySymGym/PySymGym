@@ -28,7 +28,7 @@ from aiohttp.web import Application, Request, Response
 import launch_servers as launch_servers_module
 from common.config.feature_config import FeatureConfig, OnGameServerRestartFeature
 from common.validation_coverage.svm_info import SVMInfo
-from connection.broker_conn.classes import ServerInstanceInfo, Undefined
+from connection.broker_conn.classes import ServerInstanceInfo
 
 pytestmark = pytest.mark.unit
 
@@ -171,7 +171,7 @@ class TestDequeueInstance:
 
     def test_success_issues_a_real_instance(self, monkeypatch: pytest.MonkeyPatch):
         queue = Queue()
-        queue.put(ServerInstanceInfo("VSharp", 0, "None", pid=Undefined))
+        queue.put(ServerInstanceInfo("VSharp", 0, "None", pid=None))
         self._setup(monkeypatch, queue)
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(launch_servers_module, "ISSUED", {}, raising=False)
@@ -251,7 +251,7 @@ class TestDequeueInstance:
 
     def test_failure_requeues_the_placeholder(self, monkeypatch: pytest.MonkeyPatch):
         queue = Queue()
-        placeholder = ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
+        placeholder = ServerInstanceInfo("VSharp", 0, "None", pid=None)
         queue.put(placeholder)
         self._setup(monkeypatch, queue)
         feature_config = FeatureConfig()
@@ -304,7 +304,7 @@ class TestEnqueueInstance:
 
         assert kill_calls == [(original, feature_config)]
         assert queue.get_nowait() == ServerInstanceInfo(
-            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid=Undefined
+            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid=None
         )
         assert response.status == 200
         # The lease is ended on return: the reaper must not reap it.
@@ -356,7 +356,7 @@ class TestRunServerInstance:
             launch_servers_module.run_server_instance(svm_info(), feature_config)
         )
 
-        assert result == ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
+        assert result == ServerInstanceInfo("VSharp", 0, "None", pid=None)
 
     def test_starts_the_server(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -621,7 +621,7 @@ class TestRunServers:
         result = asyncio.run(launch_servers_module.run_servers(3))
 
         assert result == [
-            ServerInstanceInfo("_", 0, "None", pid=Undefined) for _ in range(3)
+            ServerInstanceInfo("_", 0, "None", pid=None) for _ in range(3)
         ]
 
 
@@ -857,9 +857,7 @@ class TestReapExpiredLeases:
         # (a fresh server starts on the next /get_ws).
         assert kill_calls == [(info, feature_config)]
         assert issued == {}
-        assert queue.get_nowait() == ServerInstanceInfo(
-            "VSharp", 0, "None", pid=Undefined
-        )
+        assert queue.get_nowait() == ServerInstanceInfo("VSharp", 0, "None", pid=None)
         assert queue.empty()
 
     def test_fresh_entry_is_left_alone(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -925,9 +923,7 @@ class TestReapExpiredLeases:
         # no KeyError on the stale snapshot entry).
         assert kill_calls == [first]
         assert issued == {}
-        assert queue.get_nowait() == ServerInstanceInfo(
-            "VSharp", 0, "None", pid=Undefined
-        )
+        assert queue.get_nowait() == ServerInstanceInfo("VSharp", 0, "None", pid=None)
         assert queue.empty()
 
     def test_kill_failure_does_not_stop_the_reaper(
@@ -966,7 +962,7 @@ class TestReapExpiredLeases:
         assert issued == {}
         placeholders = [queue.get_nowait() for _ in range(2)]
         assert placeholders == [
-            ServerInstanceInfo("VSharp", 0, "None", pid=Undefined) for _ in range(2)
+            ServerInstanceInfo("VSharp", 0, "None", pid=None) for _ in range(2)
         ]
         assert queue.empty()
         assert "failed to reap expired lease" in caplog.text
@@ -988,7 +984,7 @@ class TestServerManager:
         with launch_servers_module.server_manager(queue, 2):
             queued = [queue.get_nowait() for _ in range(2)]
             assert queued == [
-                ServerInstanceInfo("_", 0, "None", pid=Undefined) for _ in range(2)
+                ServerInstanceInfo("_", 0, "None", pid=None) for _ in range(2)
             ]
 
         assert killed == [111, 222]

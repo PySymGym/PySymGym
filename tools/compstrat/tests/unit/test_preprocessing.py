@@ -1,6 +1,7 @@
 """Unit tests for the compstrat preprocessing of strategy runs."""
 
 import warnings
+from typing import cast
 
 import pandas as pd
 import pytest
@@ -127,10 +128,11 @@ def test_preprocess_metrics_are_union_of_both_strategies() -> None:
         "extra_max",
     ]
     assert list(strat2_df.columns) == list(strat1_df.columns)
-    # The strat1 runs lack the column: NaN on the missing side.
-    assert strat1_df["extra"].isna().all()
-    assert strat1_df["extra_min"].isna().all()
-    assert strat1_df["extra_max"].isna().all()
+    # The strat1 runs lack the column: NaN on the missing side. The casts
+    # narrow DataFrame.__getitem__'s Series | DataFrame union to the column.
+    assert cast(pd.Series, strat1_df["extra"]).isna().all()
+    assert cast(pd.Series, strat1_df["extra_min"]).isna().all()
+    assert cast(pd.Series, strat1_df["extra_max"]).isna().all()
     assert list(strat2_df["extra"]) == [7.0, 8.0]
     assert list(strat2_df["extra_min"]) == [7.0, 8.0]
     assert list(strat2_df["extra_max"]) == [7.0, 8.0]
@@ -149,7 +151,7 @@ def test_preprocess_metric_present_in_only_some_runs() -> None:
     assert list(strat1_df["extra"]) == [7.0, 8.0]
     assert list(strat1_df["extra_min"]) == [7.0, 8.0]
     assert list(strat1_df["extra_max"]) == [7.0, 8.0]
-    # The other strategy never has the metric: all-NaN.
-    assert strat2_df["extra"].isna().all()
-    assert strat2_df["extra_min"].isna().all()
-    assert strat2_df["extra_max"].isna().all()
+    # The other strategy never has the metric: all-NaN (casts as above).
+    assert cast(pd.Series, strat2_df["extra"]).isna().all()
+    assert cast(pd.Series, strat2_df["extra_min"]).isna().all()
+    assert cast(pd.Series, strat2_df["extra_max"]).isna().all()
