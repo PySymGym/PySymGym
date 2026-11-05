@@ -59,7 +59,11 @@ def log_tuning_structure(
                 values=[value],
             )
         )
-        with mlflow.start_run(mlflow.last_active_run().info.run_id):
+        # last_active_run() falls back to the just-ended run (the with
+        # block above), so it is non-None here.
+        last_run = mlflow.last_active_run()
+        assert last_run is not None
+        with mlflow.start_run(last_run.info.run_id):
             trial_pkl = tmp_path / "trial.pkl"
             joblib.dump(trial, trial_pkl)
             mlflow.log_artifact(str(trial_pkl))

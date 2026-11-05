@@ -17,6 +17,7 @@ The load side exercises ``ml.model_io.safe_torch_load`` — the same helper
 """
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import torch
@@ -29,7 +30,7 @@ pytestmark = pytest.mark.integration
 
 # The same model shape the unit suite's TestModelInit uses, so the
 # checkpoint this test saves has the production model's parameter layout.
-MODEL_KWARGS = dict(
+MODEL_KWARGS: dict[str, Any] = dict(
     hidden_channels=64,
     num_of_state_features=8,
     num_hops_1=2,

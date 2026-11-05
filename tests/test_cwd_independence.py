@@ -16,6 +16,7 @@ import yaml
 
 import paths as paths_module
 from common.config.loader import load_config
+from common.config.validation_config import SVMValidation
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET_TOOLS = ["clean", "generate_episodes"]
@@ -105,7 +106,9 @@ def test_load_config_anchors_relative_paths_to_the_config_file(
     monkeypatch.chdir(tmp_path)  # a CWD unrelated to the config
     loaded = load_config(config_path)
 
-    platform = loaded.validation_config.validation_mode.platforms_config[0]
+    mode = loaded.validation_config.validation_mode
+    assert isinstance(mode, SVMValidation)
+    platform = mode.platforms_config[0]
     assert platform.dataset_configs[0].dataset_base_path == (cfg_dir / "maps").resolve()
     assert (
         platform.dataset_configs[0].dataset_description

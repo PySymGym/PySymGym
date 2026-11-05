@@ -22,7 +22,7 @@ class FakeProc:
         self.returncode = returncode
         self.waited = False
 
-    def communicate(self, timeout=None):
+    def communicate(self, timeout: float | None = None):
         return self.communicate_result
 
     def wait(self):
@@ -32,8 +32,12 @@ class FakeProc:
 class TimingOutProc(FakeProc):
     """A proc whose communicate() times out."""
 
-    def communicate(self, timeout=None):
-        raise subprocess.TimeoutExpired(cmd="dotnet", timeout=timeout)
+    def communicate(self, timeout: float | None = None):
+        # The real Popen.communicate only raises TimeoutExpired when a
+        # timeout was given; 0.0 stands in for the absent value.
+        raise subprocess.TimeoutExpired(
+            cmd="dotnet", timeout=timeout if timeout is not None else 0.0
+        )
 
 
 @pytest.fixture

@@ -2,6 +2,7 @@ import copy
 import json
 import sys
 import warnings
+from multiprocessing.managers import Namespace
 from types import SimpleNamespace
 
 import onyx
@@ -158,7 +159,7 @@ class TestModelGamePreparatorKwargs:
         )
         model_path = tmp_path / "model.pth"
         onnx_path = tmp_path / "model.onnx"
-        namespace = SimpleNamespace(
+        namespace = Namespace(
             shared_lock=None, is_prepared=SimpleNamespace(value=False)
         )
         preparator = process_game_manager.ModelGamePreparator(
