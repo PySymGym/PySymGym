@@ -22,8 +22,8 @@ git submodule update --init --recursive
 Setup environment:
 
 ```bash
-pipx install "poetry>=2.3.0"
-poetry install
+pipx install uv
+uv sync
 ```
 
 For toolchain prerequisites (Python 3.14, .NET SDK, JDK), GPU installation,
