@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from common.config.base import CONFIG
 from common.config.broker_config import BrokerConfig
 from common.config.connector_config import GameServerConnectorConfig
 from common.config.feature_config import FeatureConfig
@@ -11,10 +12,8 @@ from common.config.validation_config import ValidationConfig
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class Config:
     optuna_config: OptunaConfig = Field(alias="OptunaConfig")
     training_config: TrainingConfig = Field(alias="TrainingConfig")

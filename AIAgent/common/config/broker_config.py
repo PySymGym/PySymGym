@@ -1,10 +1,9 @@
+from common.config.base import CONFIG
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class BrokerConfig:
     """The websocket broker's listen port, the client-facing URLs, and the
     instance lease.

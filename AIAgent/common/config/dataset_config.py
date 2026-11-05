@@ -1,13 +1,12 @@
 from pathlib import Path
 
+from common.config.base import CONFIG
 from common.utils import require_absolute_path
 from pydantic import field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class DatasetConfig:
     dataset_base_path: Path  # path to dir with explored dlls
     dataset_description: Path  # full paths to JSON-file with dataset description

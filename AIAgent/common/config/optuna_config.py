@@ -1,9 +1,9 @@
+from enum import Enum
 from typing import Optional
+
+from common.config.base import CONFIG
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
-from enum import Enum
-
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
 
 class OptimizationDirection(Enum):
@@ -11,7 +11,7 @@ class OptimizationDirection(Enum):
     MINIMIZE = "minimize"
 
 
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class OptunaConfig:
     n_startup_trials: int
     n_trials: int

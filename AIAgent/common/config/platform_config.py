@@ -1,3 +1,4 @@
+from common.config.base import CONFIG
 from common.config.dataset_config import DatasetConfig
 from common.typealias import PlatformName
 from common.validation_coverage.svm_info import SVMInfo
@@ -6,10 +7,8 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
 
-
-@pydantic_dataclass(config=_CONFIG)
+@pydantic_dataclass(config=CONFIG)
 class Platform:
     name: PlatformName
     dataset_configs: list[DatasetConfig] = Field(alias="DatasetConfigs")
