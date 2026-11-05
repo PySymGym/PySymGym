@@ -1,6 +1,7 @@
 import os
 import signal
 import subprocess
+from pathlib import Path
 
 import func_timeout
 
@@ -21,10 +22,10 @@ def _kill_process_group(proc: subprocess.Popen) -> None:
 
 
 def call_test_runner(
-    path_to_runner: str,
+    path_to_runner: str | Path,
     launch_info: LaunchInfo,
     strategy: BasePSStrategy,
-    wdir: str,
+    wdir: str | Path,
     timeout: int,
 ):
     call = [

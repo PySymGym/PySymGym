@@ -156,9 +156,12 @@ class EachStepGameManager(BaseGameManager):
                 )
                 logging.error(failure.reason)
                 return failure, end_time - start_time
+            coverage_str = (
+                "unknown" if actual_coverage is None else f"{actual_coverage:.2f}"
+            )
             logging.warning(
                 f"<{self._with_predictor.name()}>: not all steps exhausted on {with_connector.map.MapName} with non-100% coverage"
-                f"steps taken: {steps_count}, actual coverage: {actual_coverage:.2f}"
+                f"steps taken: {steps_count}, actual coverage: {coverage_str}"
             )
             steps_count = steps_to_play
 

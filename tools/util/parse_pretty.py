@@ -23,13 +23,22 @@ class PrettyRunResult:
     coverage: float
 
 
+def _search_groupdict(pattern: str, text: str) -> dict[str, str]:
+    """``re.search`` + ``groupdict``; a missing match is a parse failure.
+
+    Raises the ``AttributeError`` the caller surfaces as a bad-table error.
+    """
+    match = re.search(pattern, text)
+    if match is None:
+        raise AttributeError(pattern)
+    return match.groupdict()
+
+
 def parse_stats(stats: str) -> tuple[int, int, int, float]:
-    steps = re.search(r"steps: (?P<count>\d+),", stats).groupdict()["count"]
-    coverage = re.search(r"actual %: (?P<number>\d+\.\d+),", stats).groupdict()[
-        "number"
-    ]
-    tests = re.search(r"test count: (?P<count>\d+) ", stats).groupdict()["count"]
-    errors = re.search(r"error count: (?P<count>\d+)", stats).groupdict()["count"]
+    steps = _search_groupdict(r"steps: (?P<count>\d+),", stats)["count"]
+    coverage = _search_groupdict(r"actual %: (?P<number>\d+\.\d+),", stats)["number"]
+    tests = _search_groupdict(r"test count: (?P<count>\d+) ", stats)["count"]
+    errors = _search_groupdict(r"error count: (?P<count>\d+)", stats)["count"]
 
     return (int(steps), int(tests), int(errors), float(coverage))
 

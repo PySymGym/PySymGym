@@ -4,7 +4,7 @@ from typing import Any, Callable, TypeVar
 
 from common.classes import GameFailed
 from common.config.feature_config import FeatureConfig
-from func_timeout import FunctionTimedOut  # type: ignore
+from func_timeout import FunctionTimedOut
 
 T = TypeVar("T")
 
@@ -94,19 +94,21 @@ def play_with_timeout(
 
 
 def unexhausted_steps_failure(
-    map_name: str, steps_taken: int, steps_expected: int, coverage: float
+    map_name: str, steps_taken: int, steps_expected: int, coverage: float | None
 ) -> GameFailed:
     """Build the failure for a game that ended before all steps were exhausted.
 
     The symbolic engine stopped exploring without reaching 100% coverage and
     without playing all planned steps, which indicates an engine defect rather
     than a model quality issue. The reason names the map and the observed
-    numbers so a failed run points straight at the offending map.
+    numbers so a failed run points straight at the offending map. A ``None``
+    coverage (the server did not report one) is rendered as "unknown".
     """
+    coverage_str = "unknown" if coverage is None else f"{coverage:.2f}"
     return GameFailed(
         reason=(
             f"Not all steps exhausted on {map_name}: "
             f"{steps_taken} of {steps_expected} steps taken, "
-            f"actual coverage {coverage:.2f}% != 100%"
+            f"actual coverage {coverage_str}% != 100%"
         )
     )
