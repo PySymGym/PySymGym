@@ -71,6 +71,15 @@ distribution's default ``python3``: it uses the pinned interpreter,
 downloading it if absent, so the system Python version is irrelevant
 (the project supports 3.14.x only).
 
+Install the pre-commit hooks (they run the guard set — ruff, ty, the
+``uv-lock`` sync, and the hygiene basics — on every ``git commit``; see
+:doc:`developer`, "Quality checks"):
+
+.. code-block:: console
+
+    uv tool install pre-commit
+    pre-commit install
+
 Per-component build prerequisites
 ---------------------------------
 

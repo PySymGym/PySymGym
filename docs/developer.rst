@@ -215,6 +215,19 @@ Their configuration (scope, exclusions, the extra import paths) lives in
 ``pyproject.toml`` (``[tool.ty]`` and ``[tool.pyright]``). CI runs them in
 the ``typecheck`` job of ``.github/workflows/python_linting.yaml``.
 
+The pre-commit hooks run the same guard set on every commit (ruff check
+and format, ``ty check``, the ``uv-lock`` hook that keeps ``uv.lock`` in
+sync with ``pyproject.toml``, and the hygiene basics); install them per
+:doc:`setup` and run them manually over the whole tree with:
+
+.. code-block:: console
+
+    pre-commit run --all-files
+
+The configuration is ``.pre-commit-config.yaml``; the Python hooks run
+through the locked environment (``uv run``), so the hook versions are the
+``uv.lock`` versions — the same binaries CI runs.
+
 Docs build
 ----------
 
