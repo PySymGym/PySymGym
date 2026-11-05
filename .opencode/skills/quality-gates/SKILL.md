@@ -1,6 +1,6 @@
 ---
 name: quality-gates
-description: Use before integrating a task. Defines the hard gate that must pass (tests + style + coverage + docs build + full local CI reproduction) and how to interpret its result. References the CI workflows for the exact commands.
+description: Use before integrating a task. Defines the hard gate that must pass (tests + style + type check + coverage + docs build + full local CI reproduction) and how to interpret its result. References the CI workflows for the exact commands.
 ---
 
 # Quality Gates
@@ -13,12 +13,15 @@ immediately before the final pull request to `main`.
 ## What the gate is
 
 The gate is the combination of the test suite, the style/lint checks, the
-coverage ratchet, the docs build, and a full local reproduction of CI:
+type check, the coverage ratchet, the docs build, and a full local
+reproduction of CI:
 
 - **Tests** — see `.github/workflows/python_tests.yaml` for the exact command
   and working directories (see the `run-tests` skill). 0 failures, 0 skipped.
 - **Style/lint** — see `.github/workflows/python_linting.yaml` for the exact
   commands (`ruff check`, `ruff format --check`; see the `code-style` skill).
+- **Type check** — see `.github/workflows/python_linting.yaml` for the exact
+  commands (`ty check`, `pyright`); both must report 0 diagnostics.
 - **Coverage** — the `not e2e` tier under `--cov=AIAgent --cov=tools` must meet
   `[tool.coverage.report] fail_under` in `pyproject.toml`; the policy lives in
   `docs/testing.rst`.
@@ -34,7 +37,7 @@ coverage ratchet, the docs build, and a full local reproduction of CI:
   device-dependent code paths (CUDA) are invisible to the unit suite.
 
 The CI workflows are the source of truth for the commands they run; this skill
-only defines the gate semantics. There is no type-check step.
+only defines the gate semantics.
 
 ## Procedure
 
@@ -44,11 +47,13 @@ only defines the gate semantics. There is no type-check step.
    above `[tool.coverage.report] fail_under`.
 2. Run `ruff check` and `ruff format --check` (see
    `.github/workflows/python_linting.yaml`). No errors.
-3. Build the docs (see `.github/workflows/docs.yaml`). It must exit 0
+3. Run `ty check` and `pyright` (see
+   `.github/workflows/python_linting.yaml`). Both must report 0 diagnostics.
+4. Build the docs (see `.github/workflows/docs.yaml`). It must exit 0
    (no-warnings policy).
-4. Run all CI steps locally (see "Full CI reproduction" above), including the
+5. Run all CI steps locally (see "Full CI reproduction" above), including the
    e2e training pipeline on a GPU when one is available.
-5. Interpret the result:
+6. Interpret the result:
     - All clean → **PASS**. Proceed to merge (see `git-workflow`).
     - Any failure → **BLOCKED**.
     - A CI step that cannot be run locally (missing toolchain, no GPU) is not

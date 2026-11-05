@@ -194,13 +194,26 @@ Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_:
     uv run ruff format --check
 
 The ruff configuration (target version, enabled rule sets, included paths)
-lives in ``pyproject.toml``. CI runs the same two commands in
-``.github/workflows/python_linting.yaml``.
+lives in ``pyproject.toml``. CI runs the same two commands in the ``lint``
+job of ``.github/workflows/python_linting.yaml``.
 
 The `ruff editor integrations <https://docs.astral.sh/ruff/integrations/>`_
 (for example the `VSCode
 <https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff>`__
 extension) run the same checks on save.
+
+Type checking uses `ty <https://github.com/astral-sh/ty>`_ (fast feedback)
+and `pyright <https://github.com/microsoft/pyright>`_ (full check); both
+must report zero diagnostics:
+
+.. code-block:: console
+
+    uv run ty check
+    uv run pyright
+
+Their configuration (scope, exclusions, the extra import paths) lives in
+``pyproject.toml`` (``[tool.ty]`` and ``[tool.pyright]``). CI runs them in
+the ``typecheck`` job of ``.github/workflows/python_linting.yaml``.
 
 Docs build
 ----------
