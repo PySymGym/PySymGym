@@ -130,7 +130,7 @@ usage: generate_episodes.py [-h] [-d DATASET]
 options:
   -h, --help            show this help message and exit
   -d DATASET, --dataset DATASET
-                        Path to the dataset JSON file 
+                        Path to the dataset JSON file
 ```
 Run:
 ```bash
@@ -152,7 +152,7 @@ options:
   -h, --help            show this help message and exit
   -d DATASET, --dataset DATASET
                         Path to the dataset JSON file
-  -l LOG, --log LOG 
+  -l LOG, --log LOG
                 Path to the log file
 Use default paths (../../maps/DotNet/Maps/dataset.json and ../../AIAgent/ml_app.log):
 PYTHONPATH=../../AIAgent python3 clean.py

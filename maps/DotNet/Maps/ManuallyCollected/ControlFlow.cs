@@ -306,7 +306,7 @@ public class ControlFlow
 
 
     public List<string> Switches6(List<int> x, int i, List<string> res)
-    {        
+    {
             if (i < x.Count - 1)
             {
             switch (x[i])
@@ -436,10 +436,10 @@ public class ControlFlow
                     Switches6(x, i + 1, res);
                     break;
             }
-            
+
         }
         return res;
-     
+
     }
 
     public List<string> Switches4_1(List<int> x)
@@ -457,7 +457,7 @@ public class ControlFlow
                     break;
                 default:
                     result.Add("-1");
-                    break;                
+                    break;
             }
         }
 
@@ -485,7 +485,7 @@ public class ControlFlow
                     break;
                 default:
                     result.Add("-1");
-                    break;                
+                    break;
             }
         }
 
@@ -520,7 +520,7 @@ public class ControlFlow
 
                 default:
                     result.Add("-1");
-                    break;                
+                    break;
             }
         }
 

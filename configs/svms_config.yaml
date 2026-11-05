@@ -30,8 +30,8 @@ ValidationConfig:
               min_port: 35100
               max_port: 35150
               server_working_dir: ../GameServers/VSharp/VSharp.ML.GameServer.Runner/bin/Release/net8.0
-      process_count: 16 
-       
+      process_count: 16
+
 MLFlowConfig:
   tracking_uri: http://127.0.0.1:8080
   experiment_name: <YOUR_EXPERIMENT_NAME>
