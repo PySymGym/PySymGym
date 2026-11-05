@@ -226,7 +226,9 @@ def _validate_readme_links(app: Sphinx) -> None:
 def on_env_updated(app: Sphinx, env: BuildEnvironment) -> None:
     if getattr(app, "_navmap_validated", False):
         return
-    app._navmap_validated = True  # type: ignore[attr-defined]
+    # Sphinx declares no such attribute; the getattr/setattr pair is the
+    # type-checkable way to memoize on the app instance.
+    setattr(app, "_navmap_validated", True)  # noqa: B010
     _validate_metadata(app)
     _validate_readme_links(app)
 

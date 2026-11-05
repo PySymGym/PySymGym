@@ -9,8 +9,11 @@ swallowed by a warning.
 
 import contextlib
 import multiprocessing as mp
+import subprocess
+from multiprocessing.managers import Namespace
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 import torch
@@ -19,6 +22,7 @@ from common.config.broker_config import BrokerConfig
 from common.config.connector_config import GameServerConnectorConfig
 from common.config.feature_config import FeatureConfig
 from common.config.validation_config import (
+    SVMValidation,
     SVMValidationSendEachStep,
     SVMValidationSendModel,
     ValidationConfig,
@@ -26,6 +30,7 @@ from common.config.validation_config import (
 from common.game import GameMap, GameMap2SVM
 from common.validation_coverage.svm_info import SVMInfo
 from connection.game_server_conn.connector import Connector
+from ml.protocols import Predictor
 from ml.validation.coverage.game_managers.each_step import each_step_game_manager
 from ml.validation.coverage.game_managers.model import process_game_manager
 from ml.validation.coverage.game_managers.utils import unexhausted_steps_failure
@@ -35,6 +40,9 @@ pytestmark = pytest.mark.integration
 
 
 def svms_validation_mode(val_type: str, **extra) -> dict:
+    # A raw dict on purpose: the tests exercise ValidationConfig's pydantic
+    # coercion of the wire-format dict, so each call site passes the result
+    # to validation_mode= with a scoped dual suppression.
     return {
         "val_type": val_type,
         "process_count": 1,
@@ -72,7 +80,7 @@ class TestConfigFlag:
     )
     def test_default_is_false(self, val_type, expected_cls):
         mode = ValidationConfig(
-            validation_mode=svms_validation_mode(val_type)
+            validation_mode=svms_validation_mode(val_type)  # type: ignore[reportArgumentType, ty:invalid-argument-type]
         ).validation_mode
         assert isinstance(mode, expected_cls)
         assert mode.fail_immediately is False
@@ -80,8 +88,9 @@ class TestConfigFlag:
     @pytest.mark.parametrize("val_type", ["svms_model", "svms_each_step"])
     def test_explicit_true(self, val_type):
         mode = ValidationConfig(
-            validation_mode=svms_validation_mode(val_type, fail_immediately=True)
+            validation_mode=svms_validation_mode(val_type, fail_immediately=True)  # type: ignore[reportArgumentType, ty:invalid-argument-type]
         ).validation_mode
+        assert isinstance(mode, SVMValidation)
         assert mode.fail_immediately is True
 
 
@@ -119,9 +128,15 @@ def make_svm_info() -> SVMInfo:
     )
 
 
-class FakeNamespace:
-    shared_lock = None
-    is_prepared = SimpleNamespace(value=False)
+def make_namespace() -> Namespace:
+    """A real manager namespace with the attributes the game managers read.
+
+    ``shared_lock`` stays ``None`` (the tested paths never acquire it) and
+    ``is_prepared`` mirrors the ``sync_manager.Value("b", False)`` proxy.
+    """
+    namespace = Namespace(shared_lock=None)
+    namespace.is_prepared = SimpleNamespace(value=False)
+    return namespace
 
 
 def make_model_manager(
@@ -129,7 +144,10 @@ def make_model_manager(
 ) -> process_game_manager.ModelGameManager:
     monkeypatch.setattr(process_game_manager, "SVMS_OUTPUT_PATH", tmp_path)
     return process_game_manager.ModelGameManager(
-        FakeNamespace(), None, feature_config=FeatureConfig(), fail_immediately=flag
+        make_namespace(),
+        cast(torch.nn.Module, object()),
+        feature_config=FeatureConfig(),
+        fail_immediately=flag,
     )
 
 
@@ -157,7 +175,7 @@ class TestModelGameManagerUnexhaustedSteps:
         game_map2svm = GameMap2SVM(
             make_game_map(steps_to_play, steps_to_start), make_svm_info()
         )
-        proc = SimpleNamespace(poll=lambda: 0)
+        proc = cast(subprocess.Popen, SimpleNamespace(poll=lambda: 0))
         return manager._get_result(game_map2svm, proc)
 
     def test_flag_off_keeps_warning_behavior(self, tmp_path, monkeypatch):
@@ -238,8 +256,8 @@ def make_each_step_manager(monkeypatch, flag, coverage, steps):
         each_step_game_manager, "convert_input_to_tensor", lambda state: (dict(), {})
     )
     return each_step_game_manager.EachStepGameManager(
-        FakePredictor(),
-        FakeNamespace(),
+        cast(Predictor, FakePredictor()),
+        make_namespace(),
         feature_config=FeatureConfig(),
         connector_config=GameServerConnectorConfig(),
         broker_config=BrokerConfig(),
@@ -308,40 +326,46 @@ def _sub_configs() -> dict:
 class TestGameManagerWiring:
     def test_sendmodel_manager_receives_flag(self):
         config = ValidationConfig(
-            validation_mode=svms_validation_mode("svms_model", fail_immediately=True)
+            validation_mode=svms_validation_mode("svms_model", fail_immediately=True)  # type: ignore[reportArgumentType, ty:invalid-argument-type]
         ).validation_mode
+        assert isinstance(config, SVMValidation)
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(
-                None, None, **_sub_configs()
+                cast(torch.nn.Module, object()), None, **_sub_configs()
             )._get_game_manager(config, sync_manager)
+        assert isinstance(manager, process_game_manager.ModelGameManager)
         assert manager._fail_immediately is True
 
     def test_each_step_manager_receives_flag(self):
         config = ValidationConfig(
-            validation_mode=svms_validation_mode(
+            validation_mode=svms_validation_mode(  # type: ignore[reportArgumentType, ty:invalid-argument-type]
                 "svms_each_step", fail_immediately=True
             )
         ).validation_mode
+        assert isinstance(config, SVMValidation)
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(
-                None, None, **_sub_configs()
+                cast(torch.nn.Module, object()), None, **_sub_configs()
             )._get_game_manager(config, sync_manager)
+        assert isinstance(manager, each_step_game_manager.EachStepGameManager)
         assert manager._fail_immediately is True
 
     def test_sendmodel_manager_receives_kwargs_and_trial_dir(self):
         config = ValidationConfig(
-            validation_mode=svms_validation_mode("svms_model")
+            validation_mode=svms_validation_mode("svms_model")  # type: ignore[reportArgumentType, ty:invalid-argument-type]
         ).validation_mode
+        assert isinstance(config, SVMValidation)
         model_kwargs = {"hidden_channels": 64}
         trial_directory = Path("/tmp/trials/7")
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(
-                None,
+                cast(torch.nn.Module, object()),
                 None,
                 model_kwargs=model_kwargs,
                 trial_dir=trial_directory,
                 **_sub_configs(),
             )._get_game_manager(config, sync_manager)
+        assert isinstance(manager, process_game_manager.ModelGameManager)
         assert manager._model_kwargs == model_kwargs
         assert manager._trial_dir == trial_directory
         assert manager._path_to_model == trial_directory / "model.pth"
@@ -349,11 +373,13 @@ class TestGameManagerWiring:
 
     def test_sendmodel_manager_falls_back_to_report_root(self):
         config = ValidationConfig(
-            validation_mode=svms_validation_mode("svms_model")
+            validation_mode=svms_validation_mode("svms_model")  # type: ignore[reportArgumentType, ty:invalid-argument-type]
         ).validation_mode
+        assert isinstance(config, SVMValidation)
         with mp.Manager() as sync_manager:
             manager = ValidationCoverage(
-                None, None, **_sub_configs()
+                cast(torch.nn.Module, object()), None, **_sub_configs()
             )._get_game_manager(config, sync_manager)
+        assert isinstance(manager, process_game_manager.ModelGameManager)
         assert manager._path_to_model.name == "model.pth"
         assert manager._onnx_path.name == "model.onnx"
