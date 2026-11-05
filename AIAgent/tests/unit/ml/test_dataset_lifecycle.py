@@ -97,8 +97,12 @@ def test_load_to_cpu_constructor_loads_the_steps(tmp_path, step_factory):
     ds.switch_to(TrainingDatasetMode.TRAINING)
 
     assert ds.len() == 2
-    assert torch.equal(ds[0]["y_true"], torch.tensor([[1.0], [0.0]]))
-    assert torch.equal(ds[1]["y_true"], torch.tensor([[0.0], [1.0]]))
+    step0 = ds[0]
+    assert isinstance(step0, HeteroData)
+    assert torch.equal(step0["y_true"], torch.tensor([[1.0], [0.0]]))
+    step1 = ds[1]
+    assert isinstance(step1, HeteroData)
+    assert torch.equal(step1["y_true"], torch.tensor([[0.0], [1.0]]))
 
 
 def test_get_loads_from_disk_without_load_to_cpu(tmp_path, step_factory):
@@ -107,7 +111,9 @@ def test_get_loads_from_disk_without_load_to_cpu(tmp_path, step_factory):
     ds = _make_dataset(tmp_path, processed)
     ds.switch_to(TrainingDatasetMode.TRAINING)
 
-    assert torch.equal(ds[0]["y_true"], torch.tensor([[1.0], [0.0]]))
+    step = ds[0]
+    assert isinstance(step, HeteroData)
+    assert torch.equal(step["y_true"], torch.tensor([[1.0], [0.0]]))
 
 
 def test_switch_to_partitions_the_indices(tmp_path, step_factory):
@@ -177,7 +183,9 @@ def test_load_to_cpu_dataset_is_usable_after_auto_processing(
     ds.switch_to(TrainingDatasetMode.TRAINING)
 
     assert ds.len() == 1
-    assert torch.equal(ds[0]["y_true"], torch.tensor([[1.0], [0.0]]))
+    step = ds[0]
+    assert isinstance(step, HeteroData)
+    assert torch.equal(step["y_true"], torch.tensor([[1.0], [0.0]]))
 
 
 def test_len_is_stale_until_the_first_switch(tmp_path, gamestate_factory, serial_pool):

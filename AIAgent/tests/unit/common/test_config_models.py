@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -97,15 +98,22 @@ def test_config_requires_both_or_neither_uri(
             _config(weights_uri, trial_uri)
 
 
+# The tests below pass raw dicts where the models declare parsed types:
+# pydantic's validation API accepts the dict and coerces it into the
+# declared type (the ignores are scoped to the argument).
+
+
 def test_validation_config_parses_criterion_mode() -> None:
-    config = ValidationConfig(validation_mode={"val_type": "loss", "batch_size": 8})
+    config = ValidationConfig(
+        validation_mode={"val_type": "loss", "batch_size": 8}  # type: ignore[reportArgumentType, ty:invalid-argument-type]
+    )
     assert isinstance(config.validation_mode, CriterionValidation)
     assert config.validation_mode.dataset is TrainingDatasetMode.VALIDATION
 
 
 def test_validation_config_parses_svms_each_step_mode() -> None:
     config = ValidationConfig(
-        validation_mode={
+        validation_mode={  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             "val_type": "svms_each_step",
             "PlatformsConfig": [],
             "process_count": 2,
@@ -117,7 +125,7 @@ def test_validation_config_parses_svms_each_step_mode() -> None:
 
 def test_validation_config_parses_svms_model_mode() -> None:
     config = ValidationConfig(
-        validation_mode={
+        validation_mode={  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             "val_type": "svms_model",
             "PlatformsConfig": [],
             "process_count": 4,
@@ -130,7 +138,7 @@ def test_validation_config_parses_svms_model_mode() -> None:
 
 def test_validation_config_parses_custom_mode() -> None:
     config = ValidationConfig(
-        validation_mode={
+        validation_mode={  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             "val_type": "custom",
             "val_sequence": [{"val_type": "loss", "batch_size": 4}],
             "process_count": 1,
@@ -142,7 +150,9 @@ def test_validation_config_parses_custom_mode() -> None:
 
 def test_validation_config_rejects_unknown_mode() -> None:
     with pytest.raises(ValidationError):
-        ValidationConfig(validation_mode={"val_type": "unknown"})
+        ValidationConfig(
+            validation_mode={"val_type": "unknown"}  # type: ignore[reportArgumentType, ty:invalid-argument-type]
+        )
 
 
 def test_dataset_config_rejects_relative_paths() -> None:
@@ -151,15 +161,15 @@ def test_dataset_config_rejects_relative_paths() -> None:
     # them, so the model itself refuses them.
     with pytest.raises(ValidationError, match="not an absolute path"):
         DatasetConfig(
-            dataset_base_path="relative/base",
-            dataset_description="relative/description.json",
+            dataset_base_path=Path("relative/base"),
+            dataset_description=Path("relative/description.json"),
         )
 
 
 def test_dataset_config_keeps_absolute_paths() -> None:
     config = DatasetConfig(
-        dataset_base_path="/abs/base",
-        dataset_description="/abs/description.json",
+        dataset_base_path=Path("/abs/base"),
+        dataset_description=Path("/abs/description.json"),
     )
     assert config.dataset_base_path == Path("/abs/base")
     assert config.dataset_description == Path("/abs/description.json")
@@ -185,10 +195,10 @@ def test_svm_info_to_dict_exposes_all_fields() -> None:
 def test_platform_parses_dataset_and_svm_lists() -> None:
     platform = Platform(
         name="platform",
-        DatasetConfigs=[
+        DatasetConfigs=[  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             {"dataset_base_path": "/base", "dataset_description": "/desc.json"}
         ],
-        SVMSInfo=[
+        SVMSInfo=[  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             {
                 "name": "svm",
                 "launch_command": "run",
@@ -388,20 +398,28 @@ def test_models_reject_unknown_keys(model: type, kwargs: dict) -> None:
 
 def test_populate_by_name_accepts_field_names_as_well_as_aliases() -> None:
     # The _config() helper pins the PascalCase alias side of the same fields.
-    config = Config(
-        optuna_config=_optuna(),
-        training_config=_training(),
-        validation_config=_validation(),
-        mlflow_config=_mlflow(),
-    )
+    # The field names are only accepted at runtime via populate_by_name, so
+    # they are carried in a kwargs dict (as _config_kwargs() does for the
+    # aliases) instead of named arguments.
+    config_kwargs: dict[str, Any] = {
+        "optuna_config": _optuna(),
+        "training_config": _training(),
+        "validation_config": _validation(),
+        "mlflow_config": _mlflow(),
+    }
+    config = Config(**config_kwargs)
     assert config.optuna_config.n_trials == 2
 
-    platform = Platform(name="p", dataset_configs=[], svms_info=[])
+    platform_kwargs: dict[str, Any] = {"dataset_configs": [], "svms_info": []}
+    platform = Platform(name="p", **platform_kwargs)
     assert platform.dataset_configs == []
 
-    mode = SVMValidationSendEachStep(
-        val_type="svms_each_step", platforms_config=[], process_count=1
-    )
+    mode_kwargs: dict[str, Any] = {
+        "val_type": "svms_each_step",
+        "platforms_config": [],
+        "process_count": 1,
+    }
+    mode = SVMValidationSendEachStep(**mode_kwargs)
     assert mode.process_count == 1
 
 

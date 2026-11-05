@@ -7,6 +7,7 @@ built with the shared ``fake_namespace``/``fake_proc`` fixtures and a
 
 import logging
 import socket
+from typing import cast
 
 import pytest
 import torch
@@ -379,7 +380,8 @@ def test_play_game_map_returns_the_game_result(
     manager = _manager(fake_namespace, tmp_path)
     game_map2svm = game_map2svm_factory()
     proc = fake_proc()
-    server_socket = object()
+    # Opaque placeholder: only its identity is compared, never its API.
+    server_socket = cast(socket.socket, object())
     monkeypatch.setattr(
         manager, "_run_game_process", lambda g2s: (proc, 4000, server_socket)
     )

@@ -27,6 +27,8 @@ from ml.validation.coverage.game_managers.each_step.each_step_game_manager impor
     EachStepGamePreparator,
     EachStepGameManager,
 )
+from torch_geometric.data import HeteroData
+from websocket import WebSocket
 
 pytestmark = [pytest.mark.unit, pytest.mark.serial]
 
@@ -174,7 +176,7 @@ def test_play_game_map_with_svm_returns_result_and_steps(
     _patch_connector(monkeypatch, fake)
     manager = _manager(fake_namespace, FakePredictor())
 
-    result, duration = manager._play_game_map_with_svm(game_map2svm, object())
+    result, duration = manager._play_game_map_with_svm(game_map2svm, WebSocket())
 
     assert isinstance(result, GameResult)
     assert result == GameResult(
@@ -221,7 +223,7 @@ def test_play_game_map_with_svm_reports_model_played_steps(
     _patch_connector(monkeypatch, fake)
     manager = _manager(fake_namespace, FakePredictor())
 
-    result, _ = manager._play_game_map_with_svm(game_map2svm, object())
+    result, _ = manager._play_game_map_with_svm(game_map2svm, WebSocket())
 
     assert isinstance(result, GameResult)
     assert result.steps_count == 2
@@ -259,7 +261,7 @@ def test_play_game_map_logs_progress_at_the_interval(
     manager = _manager(fake_namespace, FakePredictor())
 
     with caplog.at_level(logging.INFO):
-        manager._play_game_map_with_svm(game_map2svm, object())
+        manager._play_game_map_with_svm(game_map2svm, WebSocket())
 
     assert "Method_0: step 1/2" in caplog.text
     assert "Method_0: step 2/2" in caplog.text
@@ -278,7 +280,7 @@ def test_play_game_map_with_svm_immediate_gameover(
     _patch_connector(monkeypatch, fake)
     manager = _manager(fake_namespace, FakePredictor())
 
-    result, _ = manager._play_game_map_with_svm(game_map2svm, object())
+    result, _ = manager._play_game_map_with_svm(game_map2svm, WebSocket())
 
     assert result == GameResult(
         steps_count=5,
@@ -492,7 +494,7 @@ def test_delete_game_artifacts_drops_the_stored_steps(
 ) -> None:
     manager = _manager(fake_namespace, FakePredictor())
     game_map = game_map_factory("M")
-    manager._game_states[str(game_map)] = ["step"]
+    manager._game_states[str(game_map)] = [HeteroData()]
 
     manager.delete_game_artifacts(game_map)
 

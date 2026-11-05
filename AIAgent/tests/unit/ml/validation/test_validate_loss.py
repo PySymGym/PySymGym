@@ -77,7 +77,7 @@ def _steps(step_factory) -> list[HeteroData]:
 
 def _patch_seams(
     monkeypatch: pytest.MonkeyPatch,
-) -> tuple[dict, list[float], list[dict]]:
+) -> tuple[dict, list[dict]]:
     """Patch ``DataLoader`` and ``tqdm`` with recorders; return the records."""
     loaders: dict = {}
 

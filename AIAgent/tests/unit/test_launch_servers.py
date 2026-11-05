@@ -19,9 +19,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from queue import Empty, Queue
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 import yaml
+from aiohttp.web import Application, Request, Response
 
 import launch_servers as launch_servers_module
 from common.config.feature_config import FeatureConfig, OnGameServerRestartFeature
@@ -61,15 +63,28 @@ def make_app(feature_config: FeatureConfig) -> dict:
 
 def make_read_request(
     payload: bytes, feature_config: FeatureConfig | None = None
-) -> SimpleNamespace:
-    """A fake aiohttp request whose ``read()`` returns ``payload``."""
+) -> Request:
+    """A fake aiohttp request whose ``read()`` returns ``payload``.
+
+    The ``@routes.post`` decorator types the handler's argument as
+    ``Request``, so the stand-in is cast (it only serves ``read``/``app``).
+    """
 
     async def read() -> bytes:
         return payload
 
     if feature_config is None:
         feature_config = FeatureConfig()
-    return SimpleNamespace(read=read, app=make_app(feature_config))
+    return cast(Request, SimpleNamespace(read=read, app=make_app(feature_config)))
+
+
+def make_get_request(query: dict, feature_config: FeatureConfig) -> Request:
+    """A fake aiohttp GET request carrying ``query`` (as aiohttp delivers).
+
+    The ``@routes.get`` decorator types the handler's argument as
+    ``Request``, so the stand-in is cast (it only serves ``query``/``app``).
+    """
+    return cast(Request, SimpleNamespace(query=query, app=make_app(feature_config)))
 
 
 class FakeSocket:
@@ -174,16 +189,22 @@ class TestDequeueInstance:
             launch_servers_module, "run_server_instance", fake_run_server_instance
         )
 
-        response = asyncio.run(
-            launch_servers_module.dequeue_instance(
-                SimpleNamespace(query=svm_query(), app=make_app(feature_config))
-            )
+        # The handler returns ``web.json_response`` (a ``Response``); the
+        # ``@routes.get`` decorator only types it as ``StreamResponse``.
+        response = cast(
+            Response,
+            asyncio.run(
+                launch_servers_module.dequeue_instance(
+                    make_get_request(svm_query(), feature_config)
+                )
+            ),
         )
 
         # The query is parsed into an SVMInfo (pydantic coerces the strings),
         # and the app-context feature config reaches run_server_instance.
         assert calls == [(svm_info(), feature_config)]
         # The response body is the single-encoded JSON of the issued info.
+        assert response.text is not None
         assert json.loads(response.text) == issued.to_dict()
         assert queue.empty()
         # The issued instance is leased (pid → (info, monotonic issue time))
@@ -199,7 +220,7 @@ class TestDequeueInstance:
         with pytest.raises(Empty):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query(), app=make_app(FeatureConfig()))
+                    make_get_request(svm_query(), FeatureConfig())
                 )
             )
 
@@ -221,7 +242,7 @@ class TestDequeueInstance:
         ):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query(), app=make_app(FeatureConfig()))
+                    make_get_request(svm_query(), FeatureConfig())
                 )
             )
         # The live instance is re-queued for the next request.
@@ -244,7 +265,7 @@ class TestDequeueInstance:
         with pytest.raises(RuntimeError, match="boom"):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query(), app=make_app(feature_config))
+                    make_get_request(svm_query(), feature_config)
                 )
             )
         assert queue.get_nowait() is placeholder
@@ -1013,12 +1034,17 @@ class TestReaperLifecycle:
             launch_servers_module, "SERVER_INSTANCES", queue, raising=False
         )
         feature_config = FeatureConfig()
-        app = {
-            launch_servers_module.CONFIG_KEY: SimpleNamespace(
-                feature_config=feature_config,
-                broker_config=SimpleNamespace(lease_ttl_sec=3600.0),
-            )
-        }
+        # ``_on_startup``/``_on_cleanup`` take ``web.Application``; the dict
+        # stand-in serves the same ``__getitem__``/``__setitem__`` surface.
+        app = cast(
+            Application,
+            {
+                launch_servers_module.CONFIG_KEY: SimpleNamespace(
+                    feature_config=feature_config,
+                    broker_config=SimpleNamespace(lease_ttl_sec=3600.0),
+                )
+            },
+        )
         reap_args: list[tuple] = []
 
         async def fake_reaper(*args):

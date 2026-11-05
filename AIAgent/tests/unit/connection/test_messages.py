@@ -9,6 +9,7 @@ import pytest
 from common.game import GameMap
 from connection.errors_connection import ProtocolVersionMismatchError
 from connection.game_server_conn import messages
+from connection.game_server_conn.unsafe_json import BareObject
 from connection.game_server_conn.messages import (
     PROTOCOL_VERSION,
     ClientMessage,
@@ -174,6 +175,8 @@ def test_from_json_handle_decodes_a_v2_envelope(disabled: bool) -> None:
     )
 
     if disabled:
+        # The unchecked path decodes to a bare attribute bag, not a message.
+        assert isinstance(result, BareObject)
         assert result.Version == PROTOCOL_VERSION
         assert result.MessageType == "GameOver"
     else:

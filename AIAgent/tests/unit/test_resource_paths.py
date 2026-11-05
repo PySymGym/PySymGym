@@ -7,9 +7,12 @@ seams can be redirected through the constructors.
 """
 
 import threading
+from multiprocessing.managers import Namespace
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
+import torch
 
 import paths
 from common.config.feature_config import FeatureConfig
@@ -19,8 +22,8 @@ from ml.validation.coverage.game_managers.model import process_game_manager as p
 pytestmark = pytest.mark.unit
 
 
-def _namespace() -> SimpleNamespace:
-    return SimpleNamespace(
+def _namespace() -> Namespace:
+    return Namespace(
         shared_lock=threading.Lock(),
         is_prepared=SimpleNamespace(value=False),
     )
@@ -49,9 +52,12 @@ def test_preparator_and_manager_paths_are_injectable(tmp_path) -> None:
     svms_output = tmp_path / "svms"
     namespace = _namespace()
 
+    # The model is never touched by these path tests: an opaque sentinel
+    # stands in for the required ``torch.nn.Module``.
+    model = cast(torch.nn.Module, object())
     preparator = pgm.ModelGamePreparator(
         namespace,
-        model=None,
+        model=model,
         gamestate_example_path=gamestate,
         svms_output_path=svms_output,
     )
@@ -60,11 +66,14 @@ def test_preparator_and_manager_paths_are_injectable(tmp_path) -> None:
 
     manager = pgm.ModelGameManager(
         namespace,
-        model=None,
+        model=model,
         feature_config=FeatureConfig(),
         svms_output_path=svms_output,
     )
-    assert manager._preparator._svms_output_path == svms_output
+    # ``_create_preparator`` returns the concrete preparator; the base
+    # class only types it as ``BaseGamePreparator``.
+    manager_preparator = cast(pgm.ModelGamePreparator, manager._preparator)
+    assert manager_preparator._svms_output_path == svms_output
     game_map = GameMap(
         StepsToPlay=1,
         StepsToStart=0,
