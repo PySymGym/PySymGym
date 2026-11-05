@@ -74,7 +74,7 @@ namespace CodeExMachina
         }
 
         // Adds the given node to the list, returning true if it was added
-        // and false if it was discarded.           
+        // and false if it was discarded.
         internal bool FreeNode(Node<T> n)
         {
             bool success = false;
@@ -100,7 +100,7 @@ namespace CodeExMachina
     /// <param name="i"></param>
     public delegate bool ItemIterator<T>(T i) where T : class;
 
-    // Stores items in a node.    
+    // Stores items in a node.
     internal class Items<T> : IEnumerable<T> where T : class
     {
         private readonly List<T> _items = new List<T>();
@@ -115,14 +115,14 @@ namespace CodeExMachina
         }
 
         // Inserts a value into the given index, pushing all subsequent values
-        // forward.        
+        // forward.
         public void InsertAt(int index, T item)
         {
             _items.Insert(index, item);
         }
 
         // Removes a value at a given index, pulling all subsequent values
-        // back.       
+        // back.
         public T RemoveAt(int index)
         {
             T item = _items[index];
@@ -130,7 +130,7 @@ namespace CodeExMachina
             return item;
         }
 
-        // Removes and returns the last element in the list.                
+        // Removes and returns the last element in the list.
         public T Pop()
         {
             int index = _items.Count - 1;
@@ -141,7 +141,7 @@ namespace CodeExMachina
         }
 
         // Truncates this instance at index so that it contains only the
-        // first index items. index must be less than or equal to length.        
+        // first index items. index must be less than or equal to length.
         public void Truncate(int index)
         {
             int count = _items.Count - index;
@@ -153,7 +153,7 @@ namespace CodeExMachina
 
         // Returns the index where the given item should be inserted into this
         // list.  'found' is true if the item already exists in the list at the given
-        // index.        
+        // index.
         public (int, bool) Find(T item)
         {
             int index = _items.BinarySearch(0, _items.Count, item, _comparer);
@@ -210,7 +210,7 @@ namespace CodeExMachina
         }
     }
 
-    // Stores child nodes in a node.    
+    // Stores child nodes in a node.
     internal class Children<T> : IEnumerable<Node<T>> where T : class
     {
         private readonly List<Node<T>> _children = new List<Node<T>>();
@@ -219,14 +219,14 @@ namespace CodeExMachina
         public int Capacity => _children.Capacity;
 
         // Inserts a value into the given index, pushing all subsequent values
-        // forward.        
+        // forward.
         public void InsertAt(int index, Node<T> item)
         {
             _children.Insert(index, item);
         }
 
         // Removes a value at a given index, pulling all subsequent values
-        // back.        
+        // back.
         public Node<T> RemoveAt(int index)
         {
             Node<T> n = _children[index];
@@ -234,7 +234,7 @@ namespace CodeExMachina
             return n;
         }
 
-        // Removes and returns the last element in the list.        
+        // Removes and returns the last element in the list.
         public Node<T> Pop()
         {
             int index = _children.Count - 1;
@@ -245,7 +245,7 @@ namespace CodeExMachina
         }
 
         // Truncates this instance at index so that it contains only the
-        // first index children. index must be less than or equal to length.        
+        // first index children. index must be less than or equal to length.
         public void Truncate(int index)
         {
             int count = _children.Count - index;
@@ -287,16 +287,16 @@ namespace CodeExMachina
         }
     }
 
-    // Details what item to remove in a node.remove call.    
+    // Details what item to remove in a node.remove call.
     public enum ToRemove
     {
-        // removes the given item        
+        // removes the given item
         RemoveItem,
 
-        // removes smallest item in the subtree        
+        // removes smallest item in the subtree
         RemoveMin,
 
-        // removes largest item in the subtree        
+        // removes largest item in the subtree
         RemoveMax
     }
 
@@ -307,10 +307,10 @@ namespace CodeExMachina
     }
 
     // node is an internal node in a tree.
-    // 
+    //
     // It must at all times maintain the invariant that either
     // * len(children) == 0, len(items) unconstrained
-    // * len(children) == len(items) + 1    
+    // * len(children) == len(items) + 1
     public class Node<T> where T : class
     {
         internal Items<T> Items { get; set; }
@@ -349,7 +349,7 @@ namespace CodeExMachina
 
         // Splits the given node at the given index.  The current node shrinks,
         // and this function returns the item that existed at that index and a new node
-        // containing all items/children after it.        
+        // containing all items/children after it.
         public (T item, Node<T> node) Split(int i)
         {
             T item = Items[i];
@@ -366,7 +366,7 @@ namespace CodeExMachina
         }
 
         // Checks if a child should be split, and if so splits it.
-        // Returns whether or not a split occurred.        
+        // Returns whether or not a split occurred.
         public bool MaybeSplitChild(int i, int maxItems)
         {
             if (Children[i].Items.Length < maxItems)
@@ -383,7 +383,7 @@ namespace CodeExMachina
 
         // Inserts an item into the subtree rooted at this node, making sure
         // no nodes in the subtree exceed maxItems items.  Should an equivalent item be
-        // be found/replaced by insert, it will be returned.        
+        // be found/replaced by insert, it will be returned.
         public T Insert(T item, int maxItems)
         {
             (int i, bool found) = Items.Find(item);
@@ -422,7 +422,7 @@ namespace CodeExMachina
             return MutableChild(i).Insert(item, maxItems);
         }
 
-        // Finds the given key in the subtree and returns it.        
+        // Finds the given key in the subtree and returns it.
         public T Get(T key)
         {
             (int i, bool found) = Items.Find(key);
@@ -438,7 +438,7 @@ namespace CodeExMachina
             return null;
         }
 
-        // Returns the first item in the subtree.        
+        // Returns the first item in the subtree.
         public static T Min(Node<T> n)
         {
             if (n == null)
@@ -454,7 +454,7 @@ namespace CodeExMachina
             return n.Items.Length == 0 ? null : n.Items[0];
         }
 
-        // Returns the last item in the subtree.        
+        // Returns the last item in the subtree.
         public static T Max(Node<T> n)
         {
             if (n == null)
@@ -470,7 +470,7 @@ namespace CodeExMachina
             return n.Items.Length == 0 ? null : n.Items[n.Items.Length - 1];
         }
 
-        // Removes an item from the subtree rooted at this node.        
+        // Removes an item from the subtree rooted at this node.
         public T Remove(T item, int minItems, ToRemove typ)
         {
             int i = 0;
@@ -540,7 +540,7 @@ namespace CodeExMachina
         // Grows child 'i' to make sure it's possible to remove an
         // item from it while keeping it at minItems, then calls remove to actually
         // remove it
-        // 
+        //
         // Most documentation says we have to do two sets of special casing:
         //    1) item is in this node
         //    2) item is in child
@@ -555,7 +555,7 @@ namespace CodeExMachina
         // If a node doesn't have enough items, we make sure it does (using a,b,c).
         // We then simply redo our remove call, and the second time (regardless of
         // whether we're in case 1 or 2), we'll have enough items and can guarantee
-        // that we hit case A.        
+        // that we hit case A.
         public T GrowChildAndRemove(int i, T item, int minItems, ToRemove typ)
         {
             if (i > 0 && Children[i - 1].Items.Length > minItems)
@@ -605,12 +605,12 @@ namespace CodeExMachina
         }
 
         // Iterate provides a simple method for iterating over elements in the tree.
-        // 
+        //
         // When ascending, the 'start' should be less than 'stop' and when descending,
         // the 'start' should be greater than 'stop'. Setting 'includeStart' to true
         // will force the iterator to include the first item when it equals 'start',
         // thus creating a "greaterOrEqual" or "lessThanEqual" rather than just a
-        // "greaterThan" or "lessThan" queries.        
+        // "greaterThan" or "lessThan" queries.
         public (bool, bool) Iterate(Direction dir, T start, T stop, bool includeStart, bool hit, ItemIterator<T> iter)
         {
             bool ok, found;
@@ -728,7 +728,7 @@ namespace CodeExMachina
 
         // Reset returns a subtree to the freelist.  It breaks out immediately if the
         // freelist is full, since the only benefit of iterating is to fill that
-        // freelist up.  Returns true if parent reset call should continue.        
+        // freelist up.  Returns true if parent reset call should continue.
         public bool Reset(CopyOnWriteContext<T> c)
         {
             foreach (Node<T> child in Children)
@@ -742,7 +742,7 @@ namespace CodeExMachina
             return c.FreeNode(this) != FreeType.ftFreeListFull;
         }
 
-        // Used for testing/debugging purposes.        
+        // Used for testing/debugging purposes.
         public void Print(System.IO.TextWriter w, int level)
         {
             string repeat = new string(' ', level);
@@ -761,10 +761,10 @@ namespace CodeExMachina
 
     /// <summary>
     /// BTree is an implementation of a B-Tree.
-    /// 
+    ///
     /// BTree stores Item instances in an ordered structure, allowing easy insertion,
     /// removal, and iteration.
-    /// 
+    ///
     /// Write operations are not safe for concurrent mutation by multiple
     /// tasks, but Read operations are.
     /// </summary>
@@ -787,7 +787,7 @@ namespace CodeExMachina
 
         /// <summary>
         /// Creates a new B-Tree with the given degree.
-        /// 
+        ///
         /// BTree(2), for example, will create a 2-3-4 tree (each node contains 1-3 items
         /// and 2-4 children).
         /// </summary>
@@ -818,7 +818,7 @@ namespace CodeExMachina
         /// Clone clones the btree, lazily.  Clone should not be called concurrently,
         /// but the original tree (t) and the new tree (t2) can be used concurrently
         /// once the Clone call completes.
-        /// 
+        ///
         /// The internal tree structure of b is marked read-only and shared between t and
         /// t2.  Writes to both t and t2 use copy-on-write logic, creating new nodes
         /// whenever one of b's original nodes would have been modified.  Read operations
@@ -826,7 +826,7 @@ namespace CodeExMachina
         /// will initially experience minor slow-downs caused by additional allocs and
         /// copies due to the aforementioned copy-on-write logic, but should converge to
         /// the original performance characteristics of the original tree.
-        /// </summary>        
+        /// </summary>
         public BTree<T> Clone()
         {
             // Create two entirely new copy-on-write contexts.
@@ -850,7 +850,7 @@ namespace CodeExMachina
 
         /// <summary>
         /// Returns the max number of items to allow per node.
-        /// </summary>        
+        /// </summary>
         private int MaxItems()
         {
             return (Degree * 2) - 1;
@@ -859,7 +859,7 @@ namespace CodeExMachina
         /// <summary>
         /// Returns the min number of items to allow per node (ignored for the
         /// root node).
-        /// </summary>        
+        /// </summary>
         private int MinItems()
         {
             return Degree - 1;
@@ -869,7 +869,7 @@ namespace CodeExMachina
         /// Adds the given item to the tree.  If an item in the tree
         /// already equals the given one, it is removed from the tree and returned.
         /// Otherwise, nil is returned.
-        /// 
+        ///
         /// nil cannot be added to the tree (will panic).
         /// </summary>
         /// <param name="item"></param>
@@ -923,7 +923,7 @@ namespace CodeExMachina
         /// <summary>
         /// Removes the smallest item in the tree and returns it.
         /// If no such item exists, returns nil.
-        /// </summary>        
+        /// </summary>
         public T DeleteMin()
         {
             return DeleteItem(null, ToRemove.RemoveMin);
@@ -932,7 +932,7 @@ namespace CodeExMachina
         /// <summary>
         /// Removes the largest item in the tree and returns it.
         /// If no such item exists, returns nil.
-        /// </summary>        
+        /// </summary>
         public T DeleteMax()
         {
             return DeleteItem(null, ToRemove.RemoveMax);
@@ -1102,7 +1102,7 @@ namespace CodeExMachina
 
         /// <summary>
         /// Returns the smallest item in the tree, or nil if the tree is empty.
-        /// </summary>        
+        /// </summary>
         public T Min()
         {
             return Node<T>.Min(Root);
@@ -1110,7 +1110,7 @@ namespace CodeExMachina
 
         /// <summary>
         /// Returns the largest item in the tree, or nil if the tree is empty.
-        /// </summary>        
+        /// </summary>
         public T Max()
         {
             return Node<T>.Max(Root);
@@ -1119,7 +1119,7 @@ namespace CodeExMachina
         /// <summary>
         /// Returns true if the given key is in the tree.
         /// </summary>
-        /// <param name="key"></param>       
+        /// <param name="key"></param>
         public bool Has(T key)
         {
             return Get(key) != null;
@@ -1130,14 +1130,14 @@ namespace CodeExMachina
         /// t's nodes are added to its freelist as part of this call, until the freelist
         /// is full.  Otherwise, the root node is simply dereferenced and the subtree
         /// left to Go's normal GC processes.
-        /// 
+        ///
         /// This can be much faster
         /// than calling Delete on all elements, because that requires finding/removing
         /// each element in the tree and updating the tree accordingly.  It also is
         /// somewhat faster than creating a new tree to replace the old one, because
         /// nodes from the old tree are reclaimed into the freelist for use by the new
         /// one, instead of being lost to the garbage collector.
-        /// 
+        ///
         /// This call takes:
         ///     O(1): when addNodesToFreelist is false, this is a single operation.
         ///     O(1): when the freelist is already full, it breaks out immediately
@@ -1162,13 +1162,13 @@ namespace CodeExMachina
 
     public enum FreeType
     {
-        // node was freed (available for GC, not stored in freelist)        
+        // node was freed (available for GC, not stored in freelist)
         ftFreeListFull,
 
-        // node was stored in the freelist for later use        
+        // node was stored in the freelist for later use
         ftStored,
 
-        // node was ignored by COW, since it's owned by another one        
+        // node was ignored by COW, since it's owned by another one
         ftNotOwned
     }
 
@@ -1185,7 +1185,7 @@ namespace CodeExMachina
     // Since the node we're currently visiting on any write has the requesting
     // tree's context, that node is modifiable in place.  Children of that node may
     // not share context, but before we descend into them, we'll make a mutable
-    // copy.    
+    // copy.
     public class CopyOnWriteContext<T> where T : class
     {
         public FreeList<T> FreeList { get; internal set; }
@@ -1199,7 +1199,7 @@ namespace CodeExMachina
 
         // Frees a node within a given COW context, if it's owned by that
         // context.  It returns what happened to the node (see freeType const
-        // documentation).        
+        // documentation).
         public FreeType FreeNode(Node<T> n)
         {
             if (ReferenceEquals(n.Cow, this))

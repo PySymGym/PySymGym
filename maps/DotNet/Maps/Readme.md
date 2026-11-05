@@ -49,19 +49,19 @@ python3 -m runstrat \
     ../../maps/DotNet/Maps/methods.csv       # file with methods
 ```
 ## Submodules
- 
+
 - https://github.com/JetBrains/rd.git
-  
+
 - https://github.com/aalhour/C-Sharp-Algorithms.git
 
 - https://github.com/justcoding121/advanced-algorithms.git
-  
+
 - https://github.com/TASEmulators/BizHawk.git
-  
+
 - https://github.com/mxprshn/StandaloneUnity.git
-  
+
 - https://github.com/mbdavid/LiteDB.git
-  
+
 - https://github.com/SaeedGz98/stralgo.git
-  
+
 - https://github.com/cat923/C-Sharp.git
