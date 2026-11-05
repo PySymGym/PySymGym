@@ -148,14 +148,14 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         else:
             raise ValueError("mode must be either 'TRAINING' or 'VALIDATION'")
 
+    # PyG's Dataset declares raw_dir and processed_dir -> str; these
+    # overrides return Path (process()'s `self.processed_dir / map_name`
+    # needs the `/` operator, and os.path accepts Path). Both checkers
+    # model the base declaration literally.
     @property
-    def raw_dir(self):
+    def raw_dir(self):  # type: ignore[reportIncompatibleMethodOverride]
         return self._raw_dir
 
-    # PyG's Dataset declares processed_dir -> str; this override returns
-    # Path (process()'s `self.processed_dir / map_name` needs the `/`
-    # operator, and os.path accepts Path). Both checkers model the base
-    # declaration literally.
     @property
     def processed_dir(self) -> Path:  # type: ignore[reportIncompatibleVariableOverride, reportIncompatibleMethodOverride, ty:invalid-property-type-override]
         return self._processed_dir
@@ -324,7 +324,8 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         return True
 
     def _load_steps(self):
-        def get_map_name_from_path(path: Path):
+        # processed_paths holds strs (PyG's Dataset contract).
+        def get_map_name_from_path(path: str):
             return osp.split(osp.split(path)[0])[1]
 
         steps = defaultdict(list)

@@ -1,4 +1,5 @@
 import warnings
+from typing import cast
 
 import pandas as pd
 
@@ -32,7 +33,15 @@ def _single_metric(
     all_runs: pd.DataFrame, keys: list[str], metric: str
 ) -> pd.DataFrame:
     """The per-run values of one metric, skipping runs that lack it."""
-    parts = [all_runs[key][metric] for key in keys if metric in all_runs[key].columns]
+    # all_runs has MultiIndex columns (the keyed concat in preprocess), so
+    # all_runs[key] is the per-run frame and [metric] a Series;
+    # DataFrame.__getitem__'s overloads widen that to a union concat's
+    # stubs reject.
+    parts = [
+        cast(pd.Series, all_runs[key][metric])
+        for key in keys
+        if metric in all_runs[key].columns
+    ]
     if not parts:
         return pd.DataFrame(index=all_runs.index)
     return pd.concat(parts, axis=1, keys=list(range(len(parts))))
