@@ -33,12 +33,13 @@ def _map(
     )
 
 
+# schema is added by @dataclass_json at runtime (invisible statically).
 def _write_dataset(path: Path, episodes: list[GameMap]) -> None:
-    path.write_text(GameMap.schema().dumps(episodes, many=True, indent=4))
+    path.write_text(GameMap.schema().dumps(episodes, many=True, indent=4))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def _read_dataset(path: Path) -> list[GameMap]:
-    return GameMap.schema().loads(path.read_text(), many=True)
+    return GameMap.schema().loads(path.read_text(), many=True)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 @pytest.fixture

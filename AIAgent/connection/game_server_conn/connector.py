@@ -48,7 +48,8 @@ class Connector:
 
         start_message = ClientMessage(StartMessageBody.from_game_map(map))
         logging.debug(f"--> StartMessage  : {start_message}")
-        self.send(start_message.to_json())
+        # to_json is added by @dataclass_json at runtime (invisible statically).
+        self.send(start_message.to_json())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         self._current_step = 0
         self.game_is_over = False
         self._gameover: Connector.GameOver | None = None
@@ -121,7 +122,7 @@ class Connector:
             )
         )
         logging.debug(f"--> ClientMessage : {do_step_message}")
-        self.send(do_step_message.to_json())
+        self.send(do_step_message.to_json())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         self._sent_state_id = next_state_id
 
     def recv_reward_or_throw_gameover(self) -> Reward | IncorrectPredictedStateIdBody:

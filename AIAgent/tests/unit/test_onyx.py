@@ -245,7 +245,8 @@ class TestLoadGamestate:
     def test_loads_a_reference_gamestate(self):
         path = sorted(REFERENCE_GAMESTATES_DIR.glob("*.json"))[0]
         with open(path) as f:
-            expected = GameState.from_dict(json.load(f))
+            # from_dict is added by @dataclass_json at runtime (invisible statically).
+            expected = GameState.from_dict(json.load(f))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
         with open(path) as f:
             actual = load_gamestate(f)

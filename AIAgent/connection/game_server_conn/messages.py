@@ -158,7 +158,9 @@ class ServerMessage:
             return obj_from_dict(envelope)
 
         try:
-            return expected.from_dict(envelope)
+            # from_dict is added by @dataclass_json at runtime (invisible
+            # statically); every registered message body carries it.
+            return expected.from_dict(envelope)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         except Exception as e:
             err_to_display = f"{type(e)} - {e}: tried to decode {expected}, got unmatched structure, registered to app.log under [ERROR] tag"
             error = f"{type(e)} - {e}: tried to decode {expected}, got raw data: {json.dumps(envelope, indent=2)}"

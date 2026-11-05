@@ -108,7 +108,8 @@ async def dequeue_instance(request):
         # leased: the broker does not own that server.
         if server_info.pid is not Undefined:
             ISSUED[server_info.pid] = (server_info, time.monotonic())
-        return web.json_response(server_info.to_dict())
+        # to_dict is added by @dataclass_json at runtime (invisible statically).
+        return web.json_response(server_info.to_dict())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     except Empty:
         logging.error("Couldn't dequeue instance, the queue is not replenishing")
         raise
@@ -121,7 +122,8 @@ async def dequeue_instance(request):
 @routes.post("/post_ws")
 async def enqueue_instance(request):
     returned_instance_info_raw = await request.read()
-    returned_instance_info = ServerInstanceInfo.from_json(
+    # from_json is added by @dataclass_json at runtime (invisible statically).
+    returned_instance_info = ServerInstanceInfo.from_json(  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         returned_instance_info_raw.decode("utf-8")
     )
     logging.info(f"got {returned_instance_info} from client")
@@ -403,7 +405,11 @@ async def _on_cleanup(app: web.Application) -> None:
 
 
 def main(config: str):
-    global SERVER_INSTANCES, PROCS, ISSUED
+    # Python allows `global X` + first assignment to create the module
+    # attribute; the names are created here (the broker entrypoint) and
+    # mutated in place elsewhere. ty wants them pre-declared at module
+    # scope, which this design deliberately avoids (no import-time state).
+    global SERVER_INSTANCES, PROCS, ISSUED  # ty: ignore[unresolved-global]
 
     # Load the config first: a broken config must fail before the broker
     # sets up its state and starts serving.

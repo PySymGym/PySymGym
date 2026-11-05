@@ -37,7 +37,10 @@ class FixedOutputModel(torch.nn.Module):
         super().__init__()
         self.weight = torch.nn.Parameter(torch.zeros(1))
 
-    def forward(self, **kwargs) -> torch.Tensor:
+    # torch declares Module.forward as a class attribute (Callable[..., Any]
+    # = _forward_unimplemented); defining it as a method is the documented
+    # torch pattern.
+    def forward(self, **kwargs) -> torch.Tensor:  # ty: ignore[invalid-mutable-override]
         return torch.zeros(2, 1)
 
 

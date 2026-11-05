@@ -37,7 +37,10 @@ class FixedOutputModel(torch.nn.Module):
         super().__init__()
         self.output = output
 
-    def forward(self, **kwargs) -> torch.Tensor:
+    # torch declares Module.forward as a class attribute (Callable[..., Any]
+    # = _forward_unimplemented); defining it as a method is the documented
+    # torch pattern.
+    def forward(self, **kwargs) -> torch.Tensor:  # ty: ignore[invalid-mutable-override]
         return self.output
 
 
