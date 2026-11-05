@@ -11,13 +11,19 @@ jobs:
 
       - name: Install poetry
         run: |
-          pipx install poetry
+          pipx install poetry==2.2.1
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.11.8"
           cache: "poetry"
+
+      - name: Check the lockfile
+        # The lockfile must be in sync with pyproject.toml: a stale lock
+        # fails here, before the expensive install, instead of surfacing at
+        # install time per job.
+        run: poetry check --lock
 
       - name: Install dependencies
         env:
@@ -38,12 +44,27 @@ jobs:
         run: |
           poetry install
 
-      - name: Run main repo tests
-        working-directory: ./AIAgent
+      # The single runner for every suite: the root testpaths cover all six
+      # test roots (root tests/, AIAgent, compstrat, runstrat, dataset_tools,
+      # util), so per-component steps would only run the AIAgent and compstrat
+      # suites a second time — a failing test would produce two failure
+      # reports, and the per-component steps add no coverage (they ran
+      # without --cov).
+      - name: Enforce the coverage ratchet
+        # The gated tier must run on any machine: gpu/network-marked tests
+        # are excluded so the tier (and its coverage number) is identical
+        # with or without a GPU or network access (docs/testing.rst).
         run: |
-          poetry run pytest tests -sv
-      
-      - name: Run compstrat tool tests
-        working-directory: ./tools/compstrat
-        run: |
-          poetry run pytest tests -sv
+          poetry run pytest -m "not e2e and not gpu and not network" -sv --cov=AIAgent --cov=tools --cov-report=term-missing --cov-report=json
+
+  # Every submodule pointer must be reachable from a stable ref (a tag, or
+  # the default branch) of its remote — see docs/developer.rst, "Submodules".
+  # Git-only check: no Python or toolchain needed.
+  submodule-pins:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Check submodule pin stability
+        run: make check_submodule_pins

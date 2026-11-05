@@ -4,8 +4,6 @@ on: [push, pull_request]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages-${{ github.ref }}
@@ -20,7 +18,7 @@ jobs:
 
       - name: Install poetry
         run: |
-          pipx install poetry
+          pipx install poetry==2.2.1
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -48,6 +46,11 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Deploy permissions live on the deploy job only: the build job runs on
+    # every push/PR and must not carry pages:write + id-token:write.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

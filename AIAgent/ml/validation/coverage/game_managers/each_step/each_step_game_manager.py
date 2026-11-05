@@ -6,30 +6,36 @@ from typing import Optional, TypeAlias
 
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
 from common.game import GameMap, GameMap2SVM
-from config import FeatureConfig
 from connection.broker_conn.socket_manager import game_server_socket_manager
 from connection.errors_connection import GameInterruptedError
 from connection.game_server_conn.connector import Connector
 from func_timeout import FunctionTimedOut
 from ml.dataset import convert_input_to_tensor
+from ml.model_io import save_state_dict
 from ml.protocols import Predictor
 from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
 )
-from ml.validation.coverage.game_managers.each_step.game_states_utils import (
+from ml.validation.coverage.game_managers.game_states_utils import (
     get_states,
     update_game_state,
 )
 from ml.validation.coverage.game_managers.utils import (
-    set_timeout_if_needed,
+    play_with_timeout,
     unexhausted_steps_failure,
 )
 from torch_geometric.data.hetero_data import HeteroData
 from websocket import WebSocket
 
 TimeDuration: TypeAlias = float
+# How often the play loop logs a progress heartbeat (#616): a stuck/slow map
+# must be diagnosable from the log alone.
+PROGRESS_LOG_EVERY_N_STEPS = 50
 # TODO: docs
 
 
@@ -39,26 +45,45 @@ class EachStepGamePreparator(BaseGamePreparator):
 
 
 class EachStepGameManager(BaseGameManager):
+    mode = "each-step"
+
     def __init__(
         self,
         with_predictor: Predictor,
         namespace: Namespace,
+        *,
+        feature_config: FeatureConfig,
+        connector_config: GameServerConnectorConfig,
+        broker_config: BrokerConfig,
         fail_immediately: bool = False,
     ):
         self._game_states: dict[str, list[HeteroData]] = {}
         self._with_predictor = with_predictor
+        # The sub-configs are pickled to the spawn-based mp.Pool workers
+        # together with the manager, so every value the game loop reads
+        # arrives as an instance attribute, never a process global.
+        self._connector_config = connector_config
+        self._broker_config = broker_config
         self._fail_immediately = fail_immediately
-        super().__init__(namespace)
+        # Last step the loop observed; read by the timeout handler for the
+        # structured message. Safe as a single attribute: a pool worker plays
+        # one map at a time.
+        self._last_step = 0
+        super().__init__(namespace, feature_config=feature_config)
 
-    @set_timeout_if_needed
     def _play_game_map_with_svm(
         self, game_map2svm: GameMap2SVM, ws: WebSocket
     ) -> tuple[GameResult | GameFailed, TimeDuration]:
-        with_connector = Connector(ws, game_map2svm.GameMap)
+        with_connector = Connector(ws, game_map2svm.GameMap, self._feature_config)
         steps_count = 0
         game_state = None
         actual_coverage = None
-        steps = with_connector.map.StepsToPlay + game_map2svm.GameMap.StepsToStart
+        # The model's step budget. The first StepsToStart steps of the trace
+        # are played by the default searcher before the agent takes over, so
+        # the agent plays at most StepsToPlay steps; the reported steps_count
+        # is the model-played count (total trace steps minus StepsToStart),
+        # identical to the send-model mode's metric.
+        steps_to_play = with_connector.map.StepsToPlay
         start_time = perf_counter()
 
         map_steps = []
@@ -86,34 +111,47 @@ class EachStepGameManager(BaseGameManager):
 
                 with_connector.send_step(
                     next_state_id=predicted_state_id,
-                    predicted_usefullness=42.0,  # left it a constant for now
+                    # The model's predicted value for the chosen (argmax)
+                    # state (#671): the output is (num_states, 1) and the
+                    # chosen state is the argmax, so its value is the max
+                    # element.
+                    predicted_usefullness=float(nn_output.max()),
                 )
 
                 _ = with_connector.recv_reward_or_throw_gameover()
                 steps_count += 1
+                self._last_step = steps_count
+                if steps_count % PROGRESS_LOG_EVERY_N_STEPS == 0:
+                    logging.info(
+                        f"<{self._with_predictor.name()}> {with_connector.map.MapName}: "
+                        f"step {steps_count}/{steps_to_play}, "
+                        f"{perf_counter() - start_time:.1f}s elapsed"
+                    )
         except Connector.GameOver as gameover:
             if game_state is None:
                 logging.warning(
                     f"<{self._with_predictor.name()}>: immediate GameOver on {with_connector.map.MapName}"
                 )
                 return (
-                    GameResult(steps, 0, 0, 0),
+                    GameResult(steps_to_play, 0, 0, 0),
                     perf_counter() - start_time,
                 )
             if gameover.actual_coverage is not None:
                 actual_coverage = gameover.actual_coverage
 
             tests_count = gameover.tests_count
-            steps_count = gameover.steps_count
+            # The server reports the total trace steps (start + play); the
+            # metric is the model-played count, so drop the startup steps.
+            steps_count = gameover.steps_count - game_map2svm.GameMap.StepsToStart
             errors_count = gameover.errors_count
 
         end_time = perf_counter()
-        if actual_coverage != 100 and steps_count != steps:
+        if actual_coverage != 100 and steps_count < steps_to_play:
             if self._fail_immediately:
                 failure = unexhausted_steps_failure(
                     map_name=with_connector.map.MapName,
                     steps_taken=steps_count,
-                    steps_expected=steps,
+                    steps_expected=steps_to_play,
                     coverage=actual_coverage,
                 )
                 logging.error(failure.reason)
@@ -122,7 +160,7 @@ class EachStepGameManager(BaseGameManager):
                 f"<{self._with_predictor.name()}>: not all steps exhausted on {with_connector.map.MapName} with non-100% coverage"
                 f"steps taken: {steps_count}, actual coverage: {actual_coverage:.2f}"
             )
-            steps_count = steps
+            steps_count = steps_to_play
 
         model_result = GameResult(
             steps_count=steps_count,
@@ -138,40 +176,51 @@ class EachStepGameManager(BaseGameManager):
         self,
         game_map2svm: GameMap2SVM,
     ) -> Map2Result:
-        logging.info(
-            f"<{self._with_predictor.name()}> is playing {game_map2svm.GameMap.MapName}"
-        )
+        map_name = game_map2svm.GameMap.MapName
+        logging.info(f"<{self._with_predictor.name()}> is playing {map_name}")
         need_to_save = False
+        start_time = perf_counter()
+        self._last_step = 0
         try:
-            with game_server_socket_manager(game_map2svm.SVMInfo) as ws:
-                game_result, time = self._play_game_map_with_svm(game_map2svm, ws)
+            with game_server_socket_manager(
+                game_map2svm.SVMInfo, self._connector_config, self._broker_config
+            ) as ws:
+                # Called under the run's per-map timeout (from this run's
+                # feature config); a wall-clock timeout raises FunctionTimedOut
+                # into the except below, and a FunctionTimedOut raised inside
+                # the loop propagates directly into it.
+                game_result, time = play_with_timeout(
+                    self._feature_config, self._play_game_map_with_svm, game_map2svm, ws
+                )
             if isinstance(game_result, GameResult):
                 logging.info(
-                    f"<{self._with_predictor.name()}> finished map {game_map2svm.GameMap.MapName} "
+                    f"<{self._with_predictor.name()}> finished map {map_name} "
                     f"in {game_result.steps_count} steps, {time} seconds, "
                     f"actual coverage: {game_result.actual_coverage_percent:.2f}"
                 )
             else:
                 logging.warning(
-                    f"<{self._with_predictor.name()}> failed map {game_map2svm.GameMap.MapName} "
+                    f"<{self._with_predictor.name()}> failed map {map_name} "
                     f"after {time} seconds: {game_result.reason}"
                 )
-        except FunctionTimedOut as error:
+        except FunctionTimedOut:
             need_to_save = True
-            logging.warning(
-                f"<{self._with_predictor.name()}> timeouted on map {game_map2svm.GameMap.MapName} with {error.timedOutAfter}s"
+            game_result = self._timeout_failure(
+                map_name=map_name,
+                steps_budget=game_map2svm.GameMap.StepsToPlay,
+                elapsed=perf_counter() - start_time,
+                last_step=self._last_step,
             )
-            game_result = GameFailed(reason=type(error))
         except GameInterruptedError as error:
             logging.warning(
-                f"<{self._with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName} with {error.__class__.__name__}: {error.desc}"
+                f"<{self._with_predictor.name()}> failed on map {map_name} with {error.__class__.__name__}: {error.desc}"
             )
-            game_result = GameFailed(reason=type(error))
+            game_result = GameFailed(reason=self._failure_reason(error))
         except Exception as error:
             need_to_save = True
             logging.warning(
                 (
-                    f"<{self._with_predictor.name()}> failed on map {game_map2svm.GameMap.MapName}:\n"
+                    f"<{self._with_predictor.name()}> failed on map {map_name}:\n"
                     + "\n".join(
                         traceback.format_exception(
                             type(error), value=error, tb=error.__traceback__
@@ -179,11 +228,15 @@ class EachStepGameManager(BaseGameManager):
                     )
                 )
             )
-            game_result = GameFailed(reason=type(error))
+            game_result = GameFailed(reason=self._failure_reason(error))
 
         if need_to_save:
-            FeatureConfig.SAVE_IF_FAIL_OR_TIMEOUT.save_model(
-                self._with_predictor.model(), with_name=self._with_predictor.name()
+            # The save-on-failure/timeout behavior, driven by the run's
+            # feature config (the data-only SaveIfFailOrTimeout model).
+            save_state_dict(
+                self._with_predictor.model(),
+                self._feature_config.save_if_fail_or_timeout.save_path,
+                with_name=self._with_predictor.name(),
             )
         return Map2Result(game_map2svm, game_result)
 

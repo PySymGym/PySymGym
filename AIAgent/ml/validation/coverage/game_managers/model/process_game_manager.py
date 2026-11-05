@@ -8,10 +8,12 @@ from typing import Any, Callable, Optional
 
 import torch
 from common.classes import GameFailed, GameResult, Map2Result
+from common.config.feature_config import FeatureConfig
 from common.file_system_utils import delete_dir
 from common.game import GameMap, GameMap2SVM
 from common.network_utils import look_for_free_port_locked
 from func_timeout import FunctionTimedOut
+from ml.models.registry import get_model_class, get_model_name
 from ml.validation.coverage.game_managers.base_game_manager import (
     BaseGameManager,
     BaseGamePreparator,
@@ -27,7 +29,7 @@ from ml.validation.coverage.game_managers.model.game_utils import (
     get_steps_from_svm,
 )
 from ml.validation.coverage.game_managers.utils import (
-    set_timeout_if_needed,
+    play_with_timeout,
     unexhausted_steps_failure,
 )
 from onyx import (
@@ -35,9 +37,8 @@ from onyx import (
 )
 from onyx import (
     load_gamestate,
-    resolve_import_model,
 )
-from paths import MODEL_FILE_NAME, REPORT_PATH
+from paths import MODEL_FILE_NAME, REPORT_PATH, RESOURCES_PATH
 from torch_geometric.data.hetero_data import HeteroData
 
 # svm substituation variables
@@ -52,7 +53,9 @@ OUTPUT_DIR = "OutputDir"
 PORT = "Port"
 
 ONNX_MODEL_FILE_NAME = "model.onnx"
-GAMESTATE_EXAMPLE_PATH = "../resources/onnx/reference_gamestates/4781_gameState.json"
+GAMESTATE_EXAMPLE_PATH = (
+    RESOURCES_PATH / "onnx" / "reference_gamestates" / "4781_gameState.json"
+)
 SVMS_OUTPUT_PATH = REPORT_PATH / "svms_output"
 
 FULL_COVERAGE_PERCENT = 100
@@ -69,33 +72,40 @@ class ModelGamePreparator(BaseGamePreparator):
         self,
         namespace: Namespace,
         model: torch.nn.Module,
-        path_to_model: Path,
-        onnx_path: Path,
-        model_kwargs: dict[str, Any],
+        path_to_model: Optional[Path] = None,
+        onnx_path: Optional[Path] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        gamestate_example_path: Optional[Path] = None,
+        svms_output_path: Optional[Path] = None,
     ):
         self._model = model
         self._path_to_model = path_to_model
         self._onnx_path = onnx_path
         self._model_kwargs = model_kwargs
+        self._gamestate_example_path = (
+            gamestate_example_path
+            if gamestate_example_path is not None
+            else GAMESTATE_EXAMPLE_PATH
+        )
+        self._svms_output_path = (
+            svms_output_path if svms_output_path is not None else SVMS_OUTPUT_PATH
+        )
         super().__init__(namespace)
 
     def _create_onnx_model(self):
-        import_model_fqn = (
-            f"{self._model.__class__.__module__}.{self._model.__class__.__name__}"
-        )
-        with open(GAMESTATE_EXAMPLE_PATH) as gamestate_file:
+        with open(self._gamestate_example_path) as gamestate_file:
             save_torch_model_to_onnx_file(
                 sample_gamestate=load_gamestate(gamestate_file),
                 pytorch_model_path=self._path_to_model,
                 onnx_savepath=self._onnx_path,
-                model_def=resolve_import_model(import_model_fqn),
+                model_def=get_model_class(get_model_name(self._model)),
                 model_kwargs=self._model_kwargs,
             )
 
     def _clean_output_folder(self):
-        svms_output_path = Path(SVMS_OUTPUT_PATH)
+        svms_output_path = Path(self._svms_output_path)
         if svms_output_path.exists():
-            return delete_dir(SVMS_OUTPUT_PATH)
+            return delete_dir(self._svms_output_path)
 
     def _prepare(self):
         self._clean_output_folder()
@@ -103,15 +113,19 @@ class ModelGamePreparator(BaseGamePreparator):
 
 
 class ModelGameManager(BaseGameManager):
+    mode = "send-model"
+
     def __init__(
         self,
         namespace: Namespace,
         model: torch.nn.Module,
+        *,
+        feature_config: FeatureConfig,
         trial_dir: Optional[Path] = None,
         model_kwargs: Optional[dict[str, Any]] = None,
         fail_immediately: bool = False,
+        svms_output_path: Optional[Path] = None,
     ):
-        self._namespace = namespace
         self._shared_lock = namespace.shared_lock
         self._model = model
         # Per-trial artifacts (model weights and the exported ONNX) live in the
@@ -120,8 +134,11 @@ class ModelGameManager(BaseGameManager):
         self._trial_dir = trial_dir
         self._model_kwargs = model_kwargs
         self._fail_immediately = fail_immediately
+        self._svms_output_path = (
+            svms_output_path if svms_output_path is not None else SVMS_OUTPUT_PATH
+        )
         self._games_info: dict[str, ModelGameMapInfo] = dict()
-        super().__init__(self._namespace)
+        super().__init__(namespace, feature_config=feature_config)
 
     @property
     def _path_to_model(self) -> Path:
@@ -157,10 +174,17 @@ class ModelGameManager(BaseGameManager):
                 GameFailed(reason=f"Failed to instantiate process for {map_name}"),
             )
 
+        start_time = time.perf_counter()
         try:
             game_info.proc = proc
             svm_connection_info = SVMConnectionInfo(occupied_port=port, socket=socket)
-            game_success_or_failure = self._get_result(game_map2svm, proc)
+            # Called under the run's per-map timeout (from this run's feature
+            # config); a wall-clock timeout raises FunctionTimedOut into the
+            # except below, and a FunctionTimedOut raised inside _get_result
+            # propagates directly into it.
+            game_success_or_failure = play_with_timeout(
+                self._feature_config, self._get_result, game_map2svm, proc
+            )
             # TODO: There is confusion here because of the ambiguous name of the 'GameResult'. Renaming is needed.
             if isinstance(game_success_or_failure, GameResult):
                 game_result = GameResultDetails(
@@ -169,16 +193,21 @@ class ModelGameManager(BaseGameManager):
                 )
             else:
                 game_result = GameFailedDetails(game_failed=game_success_or_failure)
-        except FunctionTimedOut as error:
-            logging.warning(
-                f"Timeouted on map {map_name} with {error.timedOutAfter}s after {len(game_info.total_steps)} steps"
-            )
+        except FunctionTimedOut:
             kill_proc(proc, logging.warning)
-            game_result = GameFailedDetails(game_failed=GameFailed(reason=type(error)))
+            game_result = GameFailedDetails(
+                game_failed=self._timeout_failure(
+                    map_name=map_name,
+                    steps_budget=game_map.StepsToPlay,
+                    elapsed=time.perf_counter() - start_time,
+                )
+            )
         except Exception as error:
             logging.error(error, exc_info=True)
             kill_proc(proc, logging.error)
-            game_result = GameFailedDetails(game_failed=GameFailed(reason=type(error)))
+            game_result = GameFailedDetails(
+                game_failed=GameFailed(reason=self._failure_reason(error))
+            )
         finally:
             torch.cuda.empty_cache()
         game_info.game_result = game_result
@@ -190,7 +219,7 @@ class ModelGameManager(BaseGameManager):
         return Map2Result(game_map2svm, game_result)
 
     def _get_output_dir(self, game_map: GameMap) -> Path:
-        return SVMS_OUTPUT_PATH / f"{game_map.MapName}"
+        return self._svms_output_path / f"{game_map.MapName}"
 
     def _run_game_process(self, game_map2svm: GameMap2SVM):
         game_map, svm_info = game_map2svm.GameMap, game_map2svm.SVMInfo
@@ -226,16 +255,23 @@ class ModelGameManager(BaseGameManager):
         _ = self._get_and_log_proc_output(proc, logger)
         logging.warning(f"Process {proc.pid} was intentionally killed")
 
-    @set_timeout_if_needed
     def _get_result(
         self, game_map2svm: GameMap2SVM, proc: subprocess.Popen
     ) -> GameResult | GameFailed:
         game_map = game_map2svm.GameMap
         map_name = game_map.MapName
         output_dir = self._get_output_dir(game_map)
-        result_file = (
-            output_dir / f"{map_name}result"
-        )  # TODO: the path to result must be documented
+        # The result file contract is documented in docs/integration.rst
+        # ("Result and steps files"): four space-separated integers
+        # actual_coverage_percent tests_count steps_count errors_count,
+        # where steps_count is the TOTAL trace steps (the startup steps are
+        # subtracted below).
+        result_file = output_dir / f"{map_name}result"
+        # Bound the poll by the per-map timeout so a misbehaving SVM cannot
+        # hang the worker even with SAVE_IF_FAIL_OR_TIMEOUT disabled (the
+        # timeout wrapper around this call is optional).
+        timeout_sec = self._feature_config.save_if_fail_or_timeout.timeout_sec
+        deadline = time.monotonic() + timeout_sec
         while True:
             try:
                 with open(result_file, "r") as f:
@@ -286,6 +322,16 @@ class ModelGameManager(BaseGameManager):
             except (FileNotFoundError, ValueError) as e:
                 ret_code = proc.poll()
                 if ret_code is None:
+                    if time.monotonic() >= deadline:
+                        # A fresh timeout condition, not a consequence of the
+                        # caught file error.
+                        raise FunctionTimedOut(
+                            msg=(
+                                f"the result of {map_name} did not appear "
+                                f"within {timeout_sec}s"
+                            ),
+                            timedOutAfter=timeout_sec,
+                        ) from None
                     time.sleep(3)
                     continue
                 if isinstance(e, ValueError):
@@ -326,11 +372,23 @@ class ModelGameManager(BaseGameManager):
             self._get_and_log_proc_output(game_map_info.proc, logging.error)
             return
 
-        def get_conn():
+        def get_conn() -> Optional[socket.socket]:
             svm_connection_info = game_result.svm_connection_info
             port = svm_connection_info.occupied_port
             logging.debug(f"Server listening on port {port}")
-            conn, addr = svm_connection_info.socket.accept()
+            # Bounded accept: a server that never connects must not block the
+            # worker indefinitely. On timeout the steps are simply not saved
+            # (soft failure).
+            timeout_sec = self._feature_config.save_if_fail_or_timeout.timeout_sec
+            svm_connection_info.socket.settimeout(timeout_sec)
+            try:
+                conn, addr = svm_connection_info.socket.accept()
+            except socket.timeout:
+                logging.warning(
+                    f"The server of {map_name} did not connect to save the "
+                    f"steps within {timeout_sec}s; the steps will not be saved."
+                )
+                return None
             logging.debug(f"Connection from {addr}")
             return conn
 
@@ -339,6 +397,8 @@ class ModelGameManager(BaseGameManager):
             conn.shutdown(socket.SHUT_WR)
 
         conn = get_conn()
+        if conn is None:
+            return
         alert_svm_about_step_saving(conn, required)
 
         self._get_and_log_proc_output(
@@ -350,7 +410,7 @@ class ModelGameManager(BaseGameManager):
 
     def delete_game_artifacts(self, game_map: GameMap):
         map_name = game_map.MapName
-        dir = Path(SVMS_OUTPUT_PATH) / map_name
+        dir = self._svms_output_path / map_name
         _ = delete_dir(dir)
 
         if map_name in self._games_info:
@@ -383,4 +443,5 @@ class ModelGameManager(BaseGameManager):
             self._path_to_model,
             self._onnx_path,
             self._model_kwargs,
+            svms_output_path=self._svms_output_path,
         )

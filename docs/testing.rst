@@ -1,0 +1,749 @@
+:description: The local-first test system: taxonomy, commands, fixtures, and coverage.
+:group: Development
+
+Testing
+=======
+
+PySymGym uses a local-first pytest setup. The fast **unit** tier — no network,
+GPU, ``.NET``, or built binary fixtures — runs across every component in one
+command (``make test-unit`` or ``poetry run pytest -m "not integration and
+not e2e"``). Slower tiers are selected explicitly and the full end-to-end
+pipeline stays in CI.
+
+This page is the single source of truth for the testing system; the developer
+guide and the agent skills point here.
+
+Test pyramid
+------------
+
+The suite is layered so most checks run fast and locally:
+
+- **Unit** (the base): pure, deterministic tests of isolated logic. No network,
+  GPU, subprocess, or binary fixtures. This is the default tier and must run in
+  seconds.
+- **Integration** (the middle): in-process tests that wire real components
+  together with fakes and golden fixtures (for example the ONNX export, the
+  pc-remover graph transform, and the compstrat pipeline).
+- **E2E** (the top): the full pipelines that need built servers, maps and the
+  ``.NET`` toolchain; they run in the existing self-hosted CI workflows.
+
+A change should add the lowest tier that can catch its regression; the higher
+tiers stay in CI where the required infrastructure is available.
+
+Test taxonomy
+-------------
+
+Tests are classified with pytest markers:
+
+``unit``
+    Pure, deterministic tests with no network, GPU, subprocess, or binary
+    fixtures.
+
+``integration``
+    In-process tests that use fakes and golden fixtures.
+
+``e2e``
+    Full pipeline tests that need built servers, maps, or the ``.NET``
+    toolchain.
+
+``gpu``
+    Requires a CUDA device. Excluded from the gated tier (see "Coverage"), so
+    the tier runs identically with or without a GPU; keep a runtime guard (for
+    example ``@pytest.mark.skipif(not torch.cuda.is_available())``) for when
+    the test is selected explicitly on a CUDA-less machine (``make test-all``,
+    ``pytest -m integration``). ``TestForwardOnCUDA`` is the example.
+
+``network``
+    Requires network access. Excluded from the gated tier (see "Coverage").
+
+``slow``
+    Takes noticeably long to run.
+
+``serial``
+    Must not run in parallel with other tests. The suite runs serially in a
+    single process (pytest-xdist is deliberately not a dependency), so the
+    marker is a documented convention, not a runtime lock: it names the
+    modules that must not be parallelized (they spawn processes, bind ports,
+    or mutate global state) and constrains any future parallelization. The
+    guard test in ``tests/test_pytest_infra.py`` fails if xdist is ever
+    enabled, forcing a scheduling decision for the serial modules first.
+
+Tier selection is explicit at the invocation: the Makefile targets and the CI
+steps pass ``-m``, and ``addopts`` carries only ``--import-mode=importlib`` —
+so a node-ID invocation (``pytest path::test``) is never filtered by tier.
+
+Commands
+--------
+
+.. code-block:: console
+
+    poetry run pytest -m "not integration and not e2e"   # fast unit tier
+    poetry run pytest -m integration
+    poetry run pytest -m e2e
+    poetry run pytest            # every tier (e2e needs the built toolchain)
+
+The same tiers are wrapped in a root ``Makefile`` so nobody has to memorize the
+invocations:
+
+.. code-block:: console
+
+    make test-unit           # fast unit tier
+    make test-integration    # -m integration
+    make test-all            # everything (e2e needs the built toolchain)
+    make test-cov            # gated tier (unit + integration) with the coverage ratchet
+
+The configuration lives in ``[tool.pytest.ini_options]`` in the root
+``pyproject.toml``.
+
+To run a single component or a single test (a node-ID invocation is not
+filtered by tier — the named test runs whatever tier it carries):
+
+.. code-block:: console
+
+    poetry run pytest AIAgent/tests/unit/test_fixtures.py
+    poetry run pytest AIAgent/tests/integration/test_onnx.py::TestONNXConversion -sv
+
+Local e2e runs
+--------------
+
+The e2e tier is reproduced locally as part of the quality gate. The game
+servers must run on the same ``.NET`` runtime the dataset was generated
+with: the runtime version changes the game server's path-condition
+encoding (the model's input), so a model validated against a different
+runtime fails. The prerequisite is a ``.NET`` 8 runtime on the machine
+with ``dotnet`` on the ``PATH`` resolving to it.
+
+The broker pins the runtime at launch: it sets
+``DOTNET_ROLL_FORWARD=LatestPatch`` in the game server's environment, so
+the server runs on the major.minor its ``runtimeconfig.json`` declares
+(the highest installed patch of it) or fails to start at all — never on a
+newer major version. A mismatched ambient runtime therefore fails loudly
+at server start — the port never opens and the broker refuses to issue
+the instance — instead of silently changing the encoding. The pin
+covers only the broker-launched servers. Two ``.NET`` invocations in the
+local e2e flow are not broker-launched and still run under the ambient
+environment: the dataset-generation step (a plain ``dotnet`` invocation in
+the shell) and the model-validation pipeline's game server (``svms_model``
+launches it directly from the training process, not through the broker).
+Run both under ``env -u DOTNET_ROLL_FORWARD``.
+
+Layout
+------
+
+Each component keeps its own test tree, split by tier into a directory named
+after the marker its tests carry:
+
+- ``unit/`` — the fast, isolated tests (``AIAgent/tests/unit/``,
+  ``tools/*/tests/unit/``).
+- ``integration/`` — the in-process tests that need golden fixtures
+  (``AIAgent/tests/integration/``, ``tools/compstrat/tests/integration/``).
+- ``e2e/`` — the full pipelines (``tools/runstrat/tests/e2e/``).
+
+A component only creates the tier directories it needs. The ``tests/`` tree at
+the repository root holds the cross-component infrastructure tests, including
+the static guards: besides the marker taxonomy (``test_pytest_infra.py``),
+``test_import_boundaries.py`` pins the import boundary of the shared layer —
+no module under ``AIAgent/common`` may import ``ml.*`` or the top-level
+``config`` module (an AST walk, in the same pattern, that never imports the
+guarded code).
+
+The marker is the source of truth, not the directory: CI selects markers
+explicitly (``-m "not e2e and not gpu and not network"`` for the gated-tier
+ratchet step, ``-m e2e`` for the runstrat job). A module may declare its tier
+once at module level (``pytestmark = pytest.mark.unit``) or per function;
+every ``test_*`` function must resolve to exactly one tier, which
+``tests/test_pytest_infra.py`` enforces statically together with the tier
+directory (``unit/``, ``integration/`` or ``e2e/``) it lives in.
+
+Fixtures
+--------
+
+Shared fixtures live in a ``conftest.py`` next to the component they serve: the
+``AIAgent/conftest.py`` fixtures are visible to every test under ``AIAgent/``,
+and similarly for ``tools/compstrat/`` and ``tools/runstrat/``.
+
+``AIAgent/conftest.py``
+    ``cpu_device`` (autouse) forces ``ml.device.get_device()`` to CPU,
+    ``seeded_rng`` (autouse) seeds ``random``/``numpy``/``torch``,
+    ``gamestate_factory`` builds a synthetic ``GameState``,
+    ``hetero_factory`` converts it through the production
+    ``convert_input_to_tensor`` (with feature-width overrides),
+    ``step_factory`` builds a processed step (the
+    ``hetero_factory`` graph with a given ``y_true``), ``serial_pool``
+    replaces ``multiprocessing.Pool`` with an in-process serial stand-in
+    (forked workers are invisible to pytest-cov), ``tmp_dataset`` yields an
+    empty ``TrainingDataset`` in a temporary directory, ``fake_websocket``
+    returns a recording, no-socket websocket for the connection tests, and
+    ``fake_namespace``/``fake_proc`` provide the game managers'
+    multiprocessing namespace and a ``subprocess.Popen`` stand-in.
+
+``tools/compstrat/conftest.py``
+    Resource-directory and mock-run DataFrame fixtures.
+
+``tools/runstrat/conftest.py``
+    Temporary artifacts directory and the built ``ForTests`` map paths.
+
+``AIAgent/tests/integration/conftest.py``
+    ``resources_dir`` exposes the absolute ``integration/resources/`` directory,
+    and its ``pytest_generate_tests`` hook parametrizes the config-driven tests
+    (the ONNX model configs and the SVMs validation configs) from that
+    directory, so no test computes a resource path itself.
+
+``tools/dataset_tools`` and ``tools/util`` now have ``tests/unit/`` roots as
+well. They need no conftest of their own: the root ``conftest.py`` puts every
+tool directory on ``sys.path``, so ``clean``, ``generate_episodes`` and
+``parse_pretty`` import as top-level modules.
+
+``AIAgent/tests/unit/ml/`` is the unit root for the ML layer (dataset
+transforms, training and experiment helpers, model-forward smoke tests) and
+``AIAgent/tests/unit/ml/validation/`` its orchestration subtree (game managers
+and the coverage-validation flow). They reuse the ``AIAgent/conftest.py``
+fixtures and build every graph input through
+``ml.dataset.convert_input_to_tensor`` so the tests cannot drift from the
+production tensor schema. The dataset's domain types (``Result``,
+``TrainingDatasetMode``) live in ``common.dataset`` and the graph tensor
+feature widths in ``ml.schema``; ``ml.dataset`` re-exports both, and the
+lifecycle tests pin that the re-exports are the same objects. The dataset
+code itself is the ``ml/dataset/`` package (``processing``: the
+``TrainingDataset`` class; ``tensors``: domain→tensor conversion;
+``maintenance``: the online-maintenance mixin), and the lifecycle tests pin
+that ``TrainingDataset`` is defined in ``ml.dataset.processing``. The
+transforms tests (``test_dataset_transforms.py``) pin the malformed-input
+branches of ``convert_input_to_tensor`` by mutating a ``gamestate_factory``
+copy (exact error type and message) rather than hand-rolled gamestates: a
+missing state child raises the ``KeyError`` keyed by the missing child Id.
+The ``get_hetero_data`` single-row contract (the model's one output tensor
+flattened to one row of per-state values) is pinned both ways: the one-row
+input becomes the ``[S, 1]`` ``y_true`` column and a multi-row input raises
+``ValueError``. ``filter_map_steps`` enforces the same ``[S, 1]`` shape on
+the steps it receives (one logit per state, which is what makes the global
+argmax the winning row): a wide ``y_true`` raises ``ValueError``, while
+single-row and all-NaN steps are dropped and the remaining steps are
+one-hot-encoded. The ``TrainingDataset`` lifecycle tests
+(``test_dataset_lifecycle.py``) cover the in-memory (``load_to_cpu``) and
+on-disk loading paths, the train/validation index switching, and the
+metadata refresh; they pin the stale ``len()`` before the first
+``switch_to`` and drive the auto-processing run at the end of
+``__init__`` through the ``serial_pool`` fixture. The processing and
+maintenance tests (``test_dataset_maintenance.py``) build the raw dataset
+layout (per map a ``result`` file plus ``<id>_gameState`` /
+``<id>_movedState`` step files) and drive ``process()`` through the
+``serial_pool`` fixture as well; a double-``process()`` pin verifies that a
+re-run over an already-processed map is idempotent (the ``result`` file and
+the saved step are unchanged). The degenerate-step filter (#619) is pinned
+there too: a step whose converted graph has zero states or zero game
+vertices is skipped (reusing ``ml.inference.degenerate_counts``) with a
+warning naming the map and step, while a zero-path-condition step is saved
+as usual. They also walk the ``update_map`` branch
+matrix (new map, below-threshold result-only save, merge, reproduced,
+replace, and the two no-op cases) with ``step_factory`` steps, pinning the
+exact ``logging.info`` messages via caplog (including the trailing space of
+the merge/reproduce messages) and the ``load_to_cpu`` cache bookkeeping.
+They also exercise ``_get_map_steps`` (sorted ``.pt`` load, ``result``
+excluded, default device) and ``_merge_steps`` directly (graph-match merge
+math, unique-step append order, new vertex-count groups). The
+``merge_distributions`` device-mismatch branch (3 statements) is not
+coverable on a CPU-only machine — meta tensors cannot be copied out — so
+``ml/dataset/maintenance.py`` misses exactly those 3 statements. The
+protocol tests
+(``test_protocols.py``) pin the ``ml.protocols`` abstract interfaces:
+abstractness, the abstract-method set, a concrete subclass satisfying the
+interface, the abstract bodies raising ``NotImplementedError`` when invoked
+unbound, and the ``Model`` forward contract (the exact 11-parameter
+``forward`` signature ``infer`` calls). The registry tests
+(``test_registry.py``) pin ``ml.models.registry``: name lookup, the
+unknown-name ``ValueError`` listing the known models, reverse lookup by
+instance and class, and the forward-contract pin (every registered model's
+``forward`` signature equals ``Model``'s). The training-loop tests
+(``test_train.py``) pin
+``ml.training.train`` with a real small model, optimizer and criterion: the
+``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch, the ``y_true``
+clamping to ``{0, 1}`` before the criterion sees it, the per-batch optimizer
+step, and the skip of backward/step when the criterion returns zero. The
+degenerate-graph regression tests (``test_degenerate_graphs.py``, #619)
+mutate a ``gamestate_factory`` copy into zero-path-condition, zero-states
+and zero-vertices variants and pin: ``convert_input_to_tensor`` emitting
+2-D ``(0, F)`` node tensors for the empty node types, ``degenerate_counts``
+reporting both counts for a degenerate graph and accepting a zero-PC graph
+(a state with no path condition is valid), ``infer`` returning ``(0, 1)``
+or the neutral zeros without calling the model and logging a warning with
+both counts, the zero-PC graph forwarding through the real small model to
+a finite output (the exact #619 crash input), and ``train`` skipping a
+degenerate step as a no-op (bit-identical weights) while still training a
+normal step in a mixed dataloader. The inference
+tests (``test_predict_wrapper.py``) pin ``ml.predict.predict_state_with_dict``
+with a fixed-output fake model (the exact max-row-sum selection, the
+state-map remapping, the ``no_grad`` output) plus one real-model run, and
+``ml.training.wrapper.TrainingModelWrapper`` (the name/model accessors, the
+initial ``model_copy`` alias, the ``make_copy`` deep copy and rename, the
+``predict`` delegation to ``predict_state_with_dict`` with the production
+converted graph and state map, and a real-model ``predict`` run). The
+loss-validation tests
+(``AIAgent/tests/unit/ml/validation/test_validate_loss.py``) pin
+``ml.validation.loss.validate_loss`` with a real ``TrainingDataset`` (steps
+written through ``step_factory``) and a fixed-output fake model: the exact
+averaged ``MSELoss`` over the ``{0, 1}``-thresholded ``y_true`` (the same run
+would average 0.135 without the thresholding), the per-batch loss sequence,
+and the ``DataLoader`` (``batch_size``, ``shuffle=False``) and ``tqdm``
+(``desc``/``ncols``/``colour``) kwargs. The ``ModelGameManager`` play-flow
+tests (``test_process_game_manager.py``) pin ``_play_game_map`` with
+instance-level fakes for ``_run_game_process`` / ``_get_result`` and the
+``fake_proc`` fixture: the ``GameResult`` / ``GameFailed`` wrapping into
+``GameResultDetails`` / ``GameFailedDetails`` (with the
+``SVMConnectionInfo``), the exact
+``"Failed to instantiate process for <map>"`` message, the timeout and
+exception branches killing the process and storing the exception CLASS as
+the ``GameFailed`` reason, and the no-process warning; the preparator is
+pinned (clean-then-export order, the existing-dir delete, the
+no-op-when-missing) and the full-coverage-without-oracle warning of
+``_get_result`` is pinned via caplog. The shared game-manager utilities
+(``test_game_managers_utils.py``) pin ``play_with_timeout`` against the
+real worker-thread wrapper: the result pass-through, the direct
+propagation of an inner ``FunctionTimedOut`` (``timedOutAfter`` intact —
+the ``func_timeout`` swallow quirk, #672, is gone), the
+``None``-return-as-timeout-signal translation, the plain-exception
+pass-through, the disabled pass-through, and the wall-clock timeout
+(raised ``FunctionTimedOut`` plus the worker thread registered in the
+tracker, pruned once it finishes). The ``EachStepGameManager`` tests
+(``test_each_step_game_manager.py``) pin the remaining branches: the
+``FunctionTimedOut`` branch (the model is saved, the reason is the
+structured timeout message, the exact warning) driven by a
+``play_with_timeout`` that raises on a simulated wall-clock timeout, the
+inner-timeout case (a ``FunctionTimedOut`` raised from inside the game
+loop propagates directly through the real ``play_with_timeout`` into the
+same branch, #672), the
+``GameInterruptedError`` branch (no save, the exact
+``"<name> failed on map <map> with <class>: <desc>"`` message), the
+hardcoded ``42.0`` predicted usefulness, ``delete_game_artifacts``
+(drop and no-op), the ``notify_steps_requirement`` no-op, and the
+preparator's ``prepare``.
+
+The entrypoint seam tests (``AIAgent/tests/unit/test_run_training.py``) pin
+``run_training.py`` without end-to-end runs: ``run_training()`` is driven once
+with recording fakes for ``TrainingDataset``, ``optuna``, ``mlflow``,
+``joblib`` and ``objective``, and the ``objective`` partial it wires up is
+inspected to extract the ``model_init`` / ``validate`` / ``criterion_init``
+closures, which are then driven directly. The study branch pins the
+study-level seed, the dataset construction from the module path constants,
+the TPE sampler and study creation, and the per-trial callback (joblib dumps
+of the study and trial, re-entering the active run, logging both artifacts,
+tagging the best trial number); the trial-replay branch (``trial_uri`` set)
+pins the artifact download to ``REPORT_PATH``, the joblib load, and the
+replay of the loaded trial ``n_trials`` times without creating a fresh
+study. The ``validate`` closures are pinned per mode: the criterion mode
+switches the dataset to the configured split, drives ``validate_loss`` with
+a fresh ``BCEWithLogitsLoss(reduction="sum")``, and names the metric
+``BCEWithLogitsLoss__<DATASET MODE>``; the SVM mode writes the per-trial
+``svms_result_table.csv`` (sorted map-name header, written once), drives
+``ValidationCoverage`` and ``get_svms_statistics``, logs the table, and
+raises ``RuntimeError("Validation failed: ...")`` naming each failed map
+and its reason when ``fail_immediately`` is set; the custom mode runs the
+sequence in order,
+merges the metrics, and returns the first stage's result. Each mode also
+pins its ``PYTORCH_CUDA_ALLOC_CONF`` expandable-segments switch. The
+per-trial ``objective`` loop is pinned with a scripted trial and a recording
+model: the per-trial seed derivation, the exact optuna search space, the
+``EarlyStopping`` construction, the ``model_init`` kwargs drawn from the
+trial settings, the trial artifact layout (``model_kwargs.yaml``, per-epoch
+checkpoints, mlflow params/metrics), the per-epoch train/validate sequence,
+the early-stop break (with its print), and the ``dynamic_dataset`` metadata
+refresh. ``main()`` is pinned with a production-shaped config YAML (alias
+keys): the parsed config forwarded to ``run_training``, the spawn start
+method, the MLflow setup (tracking uri only when set, experiment, tags,
+system metrics), the gpu-monitor logger silenced to ``ERROR``, the printed
+device, and the ``Config`` validator rejecting ``weights_uri`` without
+``trial_uri``. The ``model_init`` checkpoint loading is pinned through that
+seam, including the ``map_location`` fix for CUDA-saved checkpoints on
+CPU-only machines (#667, regression test requires CUDA and skips otherwise).
+The companion entrypoint seam tests
+(``AIAgent/tests/unit/test_launch_servers.py``) pin ``launch_servers.py``
+the same way: ``wait_for_port`` with a scripted socket (the probe socket
+is closed on success and timeout alike), the four broker handlers with
+fake requests and queues (the dequeue success / empty / failure-requeue
+paths — the success also pins the lease recording in ``ISSUED`` —, the
+live-instance ``InstanceIssuanceError`` with the re-queue, the enqueue
+kill-and-rewrap versus keep-pid paths — the return also pins the lease
+ending —, the results append / recv), ``reap_expired_leases`` with a
+faked clock and a faked loop sleep (the expired entry is reaped — the
+game server is killed and a placeholder re-queued —, the fresh entry is
+left alone, and an entry returned between the snapshot and the kill is
+skipped, no double-kill; a kill failure is logged without stopping the
+reaper, the slot re-queued anyway), ``run_server_instance`` with a fake ``Popen`` (the
+DEVNULL stdout, the pinned ``DOTNET_ROLL_FORWARD`` environment, the
+pid-keyed handle registration in ``PROCS``, the fail-fast group kill
++ reap with ``InstanceIssuanceError`` when the port never opens, and
+the collision retry — a port that is open while the server is dead
+reaps the corpse and retries the next port, bounded by
+``MAX_PORT_ATTEMPTS`` with an ``InstanceIssuanceError`` on
+exhaustion), a pinned port and a fresh port lock, the
+``run_servers`` placeholders,
+``kill_server`` / ``kill_process`` with fake ``os.killpg`` /
+``os.getpgid`` and the ``fake_proc`` stand-in (the untracked-pid warning,
+the process-group kill with the ``proc.wait()`` reap, the vanished-group
+suppression, the never-dies ``RuntimeError``), ``server_manager`` (queue
+on enter, kill-all on exit that survives a per-pid failure), the reaper
+lifecycle hooks (``_on_startup`` creates the reaper task with the live
+globals and the configured TTL, ``_on_cleanup`` cancels and awaits it),
+and
+``main()`` (the parsed ``process_count`` handed to ``server_manager``
+with a fresh queue, the four declared broker routes on the application,
+the broker port, the reaper hooks registered on the application, and the
+module-global reset). The
+``derive_dataset_improvement_config.py`` pins are split by tier: the unit tests
+(``AIAgent/tests/unit/test_derive_dataset_improvement_config.py``) pin the
+``main()`` CLI seam (the parsed ``--base-config`` / ``--output-config``
+Paths forwarded to ``derive_config``) and the missing-``experiment_name``
+``SystemExit`` (which fails before an ``MlflowClient`` is created, so no
+MLflow store is needed); the integration tests
+(``AIAgent/tests/integration/test_derive_dataset_improvement_config.py``)
+drive the real sqlite-backed MLflow store with the ``log_tuning_structure``
+helper and pin the best-trial lookup (best trial not last finished, single
+trial, no tagged runs, unended tag, a tag pointing at a missing run), the
+last-model-epoch lookup (highest epoch, no model artifacts), the missing
+experiment, and ``derive_config`` (the derived URIs, the preserved base
+config with its path values anchored against the base config's directory,
+and the missing-experiment / missing-``OptunaConfig``
+``SystemExit`` paths that write nothing).
+
+Model smoke tests (``test_models_forward.py``) are registry-driven: every
+model in ``ml.models.registry`` is instantiated with its small init kwargs
+from a test-local table (a coverage assertion pins the table against
+``model_names()``, so a registered model without a test entry — or a stale
+entry — fails) and forwards a synthetic ``hetero_factory`` graph through
+the production ``infer`` entrypoint, asserting output dtype ``float32``,
+shape ``(num_states, 1)`` and finiteness — the smoke test is the forward
+contract's enforcement. ``modelop.filemanager.save_model`` is exercised
+with ``tmp_path`` and a patched ``datetime``.
+
+The ONNX export tests pin ``onyx.py``. The unit tests
+(``AIAgent/tests/unit/test_onyx.py``) pin the pure helpers: the tensor-input
+builders (the exact 11 ONNX wire names
+as literals — the V# contract and the drift net for #597's single-source input
+names — each mapped to its ``hetero_factory`` tensor, the modifier
+application, the ``.numpy()`` conversion, and the ``input_names`` order),
+the ``input_names()``/``dynamic_axes()`` derivations from the single-source
+``MODEL_INPUTS`` (the literal wire names and the legacy dim names as the V#
+contract), the dynamo exporter's ``dynamic_shapes`` derivation (one ``Dim``
+instance per symbolic dimension name, shared across the axes that carry the
+name — #646; a monkeypatched ``torch.onnx.Dim`` stand-in, since the locked
+torch predates it) and the torch-version guard that selects the exporter
+API, and ``load_gamestate`` (a reference gamestate JSON into the exact
+``GameState``); model selection goes through the registry (pinned in
+``test_registry.py``). The integration
+tests (``AIAgent/tests/integration/test_onnx.py``) are config-driven from
+``integration/resources/model_configurations/`` and read the reference
+gamestates through ``AIAgent/paths.py``: ``TestONNXConversion`` runs the full
+``entrypoint`` (export + verification) with a randomized
+``RealStateModelEncoder``; ``TestONNXExportWarnings`` pins that
+``save_in_onnx`` emits no warnings from torch.onnx, PyG conv, or this repo
+(#617 regression guard; the export is version-aware per #646 — legacy
+``dynamic_axes`` below torch 2.13, dynamo ``dynamic_shapes`` from 2.13 — so
+the guard covers whichever exporter the locked torch uses); ``TestForwardOnCUDA`` pins the CPU/CUDA forward
+equivalence with and without v-v edges (#617 regression guard, skipped
+without CUDA); ``TestModelGamePreparatorKwargs`` pins the preparator's
+explicit-kwarg forwarding to ``onyx.entrypoint`` (including the
+registry-resolved model class). The ``TestMain`` CLI seam tests drive
+``main()`` with a patched ``sys.argv`` and a recording ``onyx.entrypoint``
+fake (no export run): the exact dispatch kwargs (the loaded sample
+``GameState``, the verification ``GameState``s in argv order, the
+registry-resolved model class, the ``yaml.safe_load``ed model kwargs, the
+forwarded paths), the empty ``--verify-on`` default, the argparse
+``SystemExit`` for each missing required flag, and the opset version
+(the default and ``--opset-version`` forwarded). The ``TestONNXVerification``
+tests pin the verification failure path with real exports and a
+monkeypatched ``onyx.onnx_run``: the verification compares the full torch
+and ONNX Runtime outputs element-wise with an explicit tolerance and raises
+``ValueError`` on divergence (#597) — a numerically divergent conversion
+must raise that proper (non-``AssertionError``) error, and a divergence
+beyond the first 10 elements (a synthesized 12-state verification
+gamestate) must be rejected.
+
+The runstrat CLI tests (``tools/runstrat/tests/unit/``) pin the benchmarking
+tool without end-to-end strategy runs. The parsing tests (``test_parsing.py``)
+pin ``parse_runner_output`` (the exact ``(total_time_sec, tests, errors,
+coverage)`` tuple from a runner transcript, the single-digit and three-digit
+time fields, the integer and decimal coverage, and the ``AttributeError`` with
+its ``__notes__`` on a malformed transcript), ``parse_prebuilt`` (class-qualified
+versus top-level method expansion), and the file-reading seams ``load_config``
+(a ``dll,method`` CSV into ``LaunchInfo`` rows, the ``Path``-typed ``dll``
+field) and ``load_prebuilt_config`` (a JSON config structured into
+``PrebuiltConfig`` and expanded). The ``subprocess_calls`` tests
+(``test_subprocess_calls.py``) pin the exact dotnet argv (the base flags, the
+``--model`` suffix for the AI strategy, the ``cwd``), the
+``start_new_session`` group-leader launch, the exception-propagation branches
+(``CalledProcessError`` with its output/cmd, ``FunctionTimedOut`` with its
+``timedOutKwargs``), and the timeout child cleanup (the process group is
+killed with ``SIGKILL`` and reaped; an already-dead group is tolerated).
+The ``main()`` seam tests (``test_runstrat_main.py``) drive ``main()`` with
+a patched ``sys.argv`` and a
+recording ``entrypoint`` fake: the parsed ``Args`` (strategy dispatch through
+``BasePSStrategy.parse``, the ``assembly_infos`` list-of-pairs shape, the
+timestamp default savedir), the argparse exits for missing
+``-s``/``-t``/``-ps``/``-as``, the unknown-strategy ``ValueError``, the
+AI-without-model-path ``AssertionError``, and the nonzero exit for
+``AllMethodsFailedError``. The ``entrypoint()`` seam tests
+(``test_runstrat_entrypoint.py``) drive ``entrypoint()`` with a method-keyed
+``call_test_runner`` fake and a recording ``logging.basicConfig``: the
+per-method loop, the ``RunResult`` → ``asdict`` → CSV column order
+(``method,tests,errors,coverage,total_time_sec``), the
+``{strategy.name}.csv`` / ``{strategy.name}.log`` artifact names, the
+empty-maps empty-CSV case, the per-method incremental CSV persistence (a
+mid-run crash keeps the completed rows), the ``AllMethodsFailedError`` when
+every method fails, and the ``setup_logging`` ``basicConfig`` call. The
+error-handling tests pin the BENCHMARKS skip-versus-DEBUG re-raise for
+``CalledProcessError`` / ``FunctionTimedOut`` / ``AttributeError`` /
+``ValueError`` and the up-front ``FileNotFoundError`` for a missing V# runner.
+
+The compstrat CLI tests (``tools/compstrat/tests/unit/test_compstrat_main.py``)
+pin ``main()`` with a patched ``sys.argv`` and a recording ``entrypoint`` fake
+(no matplotlib run); ``read_configs`` runs for real against the
+``mock_compare_confs`` fixture. They pin the parsed ``Args`` value (the
+``-r1``/``-r2`` ``action="extend"`` + ``nargs="+"`` accumulation across
+repeated flags, the ``--savedir`` default of ``report``) and the argparse
+``SystemExit`` for each missing required flag. The ``entrypoint()`` pipeline
+itself is pinned by the integration-tier ``test_pipeline.py``.
+
+The dataset_tools tests (``tools/dataset_tools/tests/unit/``) drive the
+dataset maintenance CLIs over temporary datasets decoded through
+``GameMap.schema()``. The ``clean`` tests (``test_clean.py``) pin
+``get_bad_episodes`` (the ``immediate GameOver on <name>`` extraction with
+deduplication, the empty result for a missing log, the named log-format
+constants ``GAME_OVER_MARKER``/``GAME_OVER_MAP_DELIMITER`` that are the
+single explicit coupling to the free-form log phrasing) and ``clean`` (bad
+episodes removed, the ``(method, step, searcher)`` sort order, the atomic
+rewrite); the ``main()`` seam tests pin the CLI wiring end-to-end (argv
+``Path``-typed arguments into the real ``clean``) and the exact ``sys.exit``
+messages for a missing dataset (checked before the log) and a missing log.
+The ``generate_episodes`` tests (``test_generate_episodes.py``) pin the
+helpers (``generate_steps`` bucket sizes, the ``create_episode`` map-name
+rules, ``is_duplicate``) and their composition in ``generate_episodes()``:
+the per-method grouping, the grid from each method's FIRST episode's
+``StepsToPlay`` crossed with ``BFS``/``DFS`` plus the step-0 ``BFS``
+episode, the deduplication that matches on ``(method, step, searcher)`` and
+ignores the ``MapName``, and the exact sorted ``MapName`` list read back
+from the rewritten file (including the empty-dataset case); the ``main()``
+seam tests pin the CLI wiring and the missing-dataset behaviour (the error
+printed to stdout, then ``sys.exit(1)``). The ``atomic_io`` tests
+(``test_atomic_io.py``) pin the shared atomic rewrite: the content
+round-trip, the temp file living in the target's directory, and the
+crash-safety property (the original intact and the temp removed on a
+write-phase failure, a replace-phase failure, a concurrent temp cleanup,
+and a ``KeyboardInterrupt``).
+
+The util tests (``tools/util/tests/unit/test_parse_pretty.py``) pin the
+``parse_pretty`` results-table parser: ``parse_stats`` (the exact
+``(steps, tests, errors, coverage)`` tuple from a stats cell, the
+``AttributeError`` on a malformed cell, the ``\d+`` regexes rejecting a
+non-digit count), the single-model transpose (one row per method, the
+``_Method_0`` map-name suffix stripped), the multi-model transpose (one row
+per (model, method) pair, model-major, with a leading ``model`` column —
+the former #592 strict ``xfail`` for the transpose crash, flipped to a
+passing test by #592), the ``ValueError`` on a model row whose stats-cell
+count mismatches the header, the empty and header-only tables (an empty
+frame with the standard columns), the configurable ``map_name_suffix`` (the
+``--map-name-suffix`` CLI flag), the ``Epoch#`` and ``+|-`` separator line
+skips, and ``main()`` (the parsed CSV written to ``-o``, the ``./parsed.csv``
+default in the current working directory, the stderr message and exit code
+1 for a missing input, an unparseable table, and an unwritable output).
+
+Adding a fixture
+    Put it in the ``conftest.py`` of the component it serves, resolve resources
+    relative to ``__file__`` (never the current working directory), and prefer
+    building real project objects through production code over hand-rolled
+    copies.
+
+Integration fixtures live under ``<component>/tests/integration/resources/`` and
+reach the tests only through the component conftest (an absolute path resolved
+from ``conftest.py``), never through a path relative to the current working
+directory. Production inputs a test also consumes — such as the ONNX reference
+gamestates under ``resources/onnx/`` — are read through ``AIAgent/paths.py``
+instead of being copied into the test tree.
+
+Fakes and sockets
+-----------------
+
+Orchestration seams are tested with fakes, never real I/O:
+
+- **Sockets.** Replace ``socket.socket``, ``httplib2.Http``, ``psutil`` and
+  ``websocket.WebSocket`` with recording fakes and drive the real client code.
+  The ``fake_websocket`` fixture records outgoing frames in ``sent`` and
+  replays queued ``incoming`` frames on ``recv`` (a queued exception is raised
+  instead of returned), so ``Connector``'s start/step/reward loop can be
+  asserted without a server. ``game_server_socket_manager`` must call
+  ``return_instance`` on **both** the success and failure paths — assert it
+  explicitly rather than trusting the ``finally`` — and a
+  ``return_instance`` failure must not mask the game body's exception (the
+  body error propagates and the return failure is logged only, #599).
+  ``process_running`` is
+  pinned for a live pid (yields), a dead pid (``ProcessStoppedError``) and
+  a ``None`` pid (the restart-disabled placeholder: the check is skipped
+  instead of letting ``psutil.pid_exists(None)`` raise ``TypeError``).
+  The free-port helpers (``next_free_port``, ``look_for_free_port_locked``)
+  are driven by a fake socket factory whose sockets fail ``bind`` for a
+  chosen set of occupied ports: the selection loop, the range bounds, the
+  lock usage, the retry/exhaustion behaviour, the probe-socket close on the
+  success and error paths alike, and the probe address — ``next_free_port``
+  probes the caller's ``address`` (the interface the real bind will use),
+  and ``look_for_free_port_locked`` is pinned to probe and bind the same
+  address.
+- **Connection layer.** The message deserialization helper in
+  ``unsafe_json`` is pinned as a pure unit test: ``obj_from_dict`` builds
+  the nested attribute objects (``BareObject``s) that the unchecked
+  ``from_json_handle`` returns when its ``disable_message_checks``
+  parameter is set (the flag is threaded from the run's
+  ``FeatureConfig``, not a process global). The
+  ``errors_connection`` hierarchy is
+  pinned as pure unit tests: ``GameInterruptedError`` is abstract with an
+  abstract ``desc`` property (its no-op stub getter is pinned by calling
+  ``fget`` directly — the body is unreachable in production), and the
+  concrete subclasses (``ProcessStoppedError``, ``ConnectionLostError``,
+  ``ProtocolVersionMismatchError``) expose their exact ``desc`` strings. The broker HTTP
+  calls are pinned with the ``httplib2.Http`` recording fake:
+  ``acquire_instance`` issues a ``GET`` to the broker's ``get_ws_url``
+  (``BrokerConfig.get_ws_url``) with the urlencoded
+  ``SVMInfo`` fields and raises ``RuntimeError`` on a non-200 (the request is
+  issued before the decode, so the shape is pinned without touching the
+  decode); the single-encoded 200 body returns the parsed
+  ``ServerInstanceInfo``.
+  ``return_instance`` posts the instance's ``to_json`` to
+  ``post_ws_url`` and
+  raises ``RuntimeError`` on a non-200. The merged values are pinned on the
+  pydantic models (``test_config_models.py``) as the drift net for #585
+  (merge the constant classes into the pydantic YAML system), which carries
+  the current values over as the pydantic defaults: the ``BrokerConfig``
+  port and url properties (replacing ``WebsocketSourceLinks``), the
+  ``FeatureConfig`` defaults and the ``GameServerConnectorConfig`` values —
+  the CWD-relative ``save_path`` value is pinned (the #584 target is the
+  CWD-dependence, not the value) and the ``GameServerConnectorConfig``
+  budgets are pinned as the sane defaults (#599): the connect-retry budget
+  (``wait_for_socket_reconnection_max_retries`` 60 → 2 min, not the old ~20
+  min) and the ``response_timeout_sec`` value 60, an explicit field smaller
+  than the per-map timeout (without the old cross-feature derivation, the
+  #585 target). The save-on-failure behavior is pinned as a pure unit
+  test: ``ml.model_io.save_state_dict`` creates the save directory and writes
+  the model's ``state_dict`` to a ``{with_name}_{timestamp}.pt`` file (the
+  ``str(datetime)`` pattern, not the exact wall-clock time). Strict validation
+  is the default: the ``FeatureConfig`` pin above asserts
+  ``disable_message_checks is False`` (the flag is kept for compatibility;
+  the tests that pin the unchecked ``BareObject`` path set it explicitly,
+  #579). The connection-loss translation is
+  pinned with real exception types from the pinned websocket-client: the
+  ``WebSocketException`` family (``WebSocketConnectionClosedException`` and
+  ``WebSocketTimeoutException``) and ``OSError`` (the synthetic
+  ``ConnectionResetError`` pin) all translate to ``ConnectionLostError``,
+  chained as the cause (#579). The protocol-version check
+  (``check_protocol_version``, #582) is pinned as a pure unit test: the
+  current ``PROTOCOL_VERSION`` is accepted, a foreign version raises
+  ``ProtocolVersionMismatchError`` (named in the message), and a legacy
+  versionless envelope returns ``None`` with a loud warning logged **once
+  per process** (the module-level throttle flag is reset per test via
+  ``monkeypatch``; non-dict envelopes are ignored by the check and leave no
+  warning). ``from_json_handle`` runs the check under **both**
+  ``disable_message_checks`` settings (a foreign ``Version`` raises before
+  the flag branch) and wraps ``json.JSONDecodeError`` in
+  ``DeserializationException`` under both settings (#582). The reward
+  channel's strict-mode decoding is pinned for **both** wire message types
+  it carries: ``MoveReward`` (a ``Reward`` body) and
+  ``IncorrectPredictedStateId`` (a ``StateId`` body, decoded through the
+  union body type of ``RewardServerMessage``) — the latter used to raise
+  ``DeserializationException`` under strict validation, a defect discovered
+  during #582 (untracked; recorded on the issue). The start body's
+  explicit mapping of ``GameMap`` (#582 replaced the multiple inheritance
+  that fused the wire body with the domain model) is pinned by a field
+  identity sync test (names and types, in order) and a wire-JSON
+  equivalence test (``from_game_map(m).to_json() == m.to_json()``), so a
+  domain-model change cannot silently change the wire format. The
+  wire-format pins evolved to the v2 envelope (#582): the server→client
+  test payloads carry ``"Version": PROTOCOL_VERSION`` (derived from the
+  constant, not a literal), and a dedicated legacy test queues a
+  versionless payload to pin the v1 tolerance; the client→server pins are
+  unchanged — the client does not emit ``Version`` yet (the coordinated
+  server rollout).
+- **Subprocesses and files.** For the model game manager, patch
+  ``subprocess.Popen`` (use the ``fake_proc`` fixture), the port helper
+  (``common.network_utils.look_for_free_port_locked``), ``delete_dir`` and the
+  module path constants; point ``svms_output_path`` at ``tmp_path`` and write
+  the ``{MapName}result`` file directly. The manager is built with
+  ``fake_namespace`` (a real lock, no ``multiprocessing.Manager``).
+- **Multiprocessing.** The each-step manager and ``ValidationCoverage`` are
+  tested by patching ``Connector`` (the fake must expose ``GameOver``) and
+  ``game_server_socket_manager``; for the public ``validate_coverage`` loop,
+  patch ``multiprocessing.Manager``/``Pool`` and ``tqdm`` and mark the test
+  ``serial``. A fake ``BaseGameManager`` subclass plus a fake dataset cover the
+  manager-unset, GameFailed, missing-steps and exception branches without
+  spawning a worker.
+- **Cleanup invariants.** When a function acquires a resource (a socket, an
+  instance, a process), test the success path and an exception in the body, and
+  assert the release call in each.
+
+Writing a test
+--------------
+
+- Prefer the cheapest tier that can catch the regression: cover pure logic with
+  plain unit tests (no I/O beyond ``tmp_path``) before reaching for a fixture or
+  an integration test.
+- Put the test under the component it exercises (``AIAgent/tests``,
+  ``tools/*/tests``) and in the directory named after its tier (``unit/``,
+  ``integration/`` or ``e2e/``).
+- Mark it with exactly one of ``unit``/``integration``/``e2e`` (plus any
+  orthogonal ``gpu``/``network``/``slow``/``serial`` marker — but never
+  ``gpu``/``network`` on a unit test; the guard test rejects the combination).
+  The directory must match the tier marker; an unmarked test still runs in the
+  fast tier, so an omitted marker silently changes the tier it appears in.
+- Depend on the fixtures from your component's ``conftest.py`` and build project
+  objects through the production code paths so they cannot drift from the real
+  schema.
+- For graph/dataset transforms, build the input through
+  ``ml.dataset.convert_input_to_tensor`` (via ``gamestate_factory`` /
+  ``hetero_factory``) and assert exact tensor contents; the ``tmp_dataset``
+  fixture yields an empty ``TrainingDataset`` for the filtering helpers.
+- Never open sockets in a unit test: drive the pure parsing helpers directly
+  (the ``disable_message_checks`` flag is a plain parameter of
+  ``from_json_handle``, threaded from the run's ``FeatureConfig``) and patch
+  process-global switches with ``monkeypatch``.
+- Write anything that touches disk under the ``tmp_path`` fixture.
+- Keep it deterministic: the autouse ``seeded_rng`` and ``cpu_device`` fixtures
+  make the ``AIAgent`` suite reproducible, but a test must still not rely on
+  wall-clock time or on iteration order.
+
+Testability rules
+-----------------
+
+- **No filesystem side effects at import.** Importing a module must never
+  create, move or delete files. Logging configuration, directory creation and
+  similar work belongs in ``main()`` (or the ``if __name__ == "__main__"``
+  guard). This keeps imports safe for tests, tooling and documentation builds;
+  ``AIAgent/tests/unit/test_import_side_effects.py`` enforces it for the
+  runnable AIAgent scripts.
+- **Device selection is lazy.** The torch device comes from
+  ``ml.device.get_device()`` at call time, never from a module-level constant, so
+  importing AIAgent code never probes CUDA and tests can force CPU by patching
+  ``torch.cuda.is_available``.
+- **Never depend on the current working directory.** Resolve resource paths
+  from ``__file__`` (or ``AIAgent/paths.py``), and make filesystem seams
+  injectable so tests can redirect them.
+
+Coverage
+--------
+
+Coverage is measured over the production packages (``--cov=AIAgent
+--cov=tools``) with ``pytest-cov``. The ``tests/`` trees, ``conftest.py``
+files and ``__main__.py`` entrypoints are excluded from the measurement
+(``[tool.coverage.run] omit`` in ``pyproject.toml`` is the source of truth),
+so the number reflects the code under test rather than the tests themselves.
+
+The gated tier is unit + integration, minus the ``gpu``/``network``-marked
+tests, so it runs on any machine (no GPU, no network guarantees) and its
+coverage number is identical with or without either:
+
+.. code-block:: console
+
+    poetry run pytest -m "not e2e and not gpu and not network" --cov=AIAgent --cov=tools --cov-report=term-missing
+    make test-cov     # same tier, plus XML and JSON reports
+
+The threshold is a ratchet: ``[tool.coverage.report] fail_under`` in
+``pyproject.toml`` is set to the measured baseline, floored to a whole percent.
+A pull request that drops coverage below it fails CI
+(``.github/workflows/python_tests.yaml``). Raise the value in the same pull
+request that improves coverage; never lower it without a deliberate decision
+recorded in the pull request.

@@ -1,0 +1,285 @@
+"""Unit tests for the broker socket manager, with psutil/websocket patched.
+
+The websocket is the shared ``fake_websocket`` fake; ``psutil.pid_exists`` is
+patched so no real process is inspected. The tests assert the retry loop and,
+crucially, that ``return_instance`` runs on every exit path.
+"""
+
+import logging
+
+import pytest
+from common.config.broker_config import BrokerConfig
+from common.config.connector_config import GameServerConnectorConfig
+from common.validation_coverage.svm_info import SVMInfo
+from connection.broker_conn import socket_manager
+from connection.broker_conn.classes import ServerInstanceInfo
+from connection.errors_connection import ProcessStoppedError
+
+pytestmark = [pytest.mark.unit, pytest.mark.serial]
+
+
+def _svm_info() -> SVMInfo:
+    return SVMInfo(
+        name="svm",
+        launch_command="run",
+        server_working_dir="/tmp",
+        min_port=1,
+        max_port=2,
+    )
+
+
+def _server_instance() -> ServerInstanceInfo:
+    return ServerInstanceInfo(svm_name="svm", port=4000, ws_url="ws://host", pid=7)
+
+
+def _connector_config() -> GameServerConnectorConfig:
+    return GameServerConnectorConfig()
+
+
+def _broker_config() -> BrokerConfig:
+    return BrokerConfig()
+
+
+def test_process_running_yields_for_live_pid(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: True)
+
+    with socket_manager.process_running(123):
+        pass
+
+
+def test_process_running_raises_for_dead_pid(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: False)
+
+    with pytest.raises(ProcessStoppedError):
+        with socket_manager.process_running(123):
+            pass
+
+
+def test_process_running_skips_the_check_for_none_pid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A None pid means no process to monitor (the restart-disabled
+    # placeholder): the check is skipped instead of letting
+    # psutil.pid_exists(None) raise TypeError.
+    pid_exists_calls: list = []
+    monkeypatch.setattr(
+        socket_manager.psutil,
+        "pid_exists",
+        lambda pid: pid_exists_calls.append(pid) or True,
+    )
+
+    with socket_manager.process_running(None):
+        pass
+
+    assert pid_exists_calls == []
+
+
+def test_wait_for_connection_returns_the_connected_socket(
+    monkeypatch: pytest.MonkeyPatch, fake_websocket
+) -> None:
+    ws = fake_websocket
+    monkeypatch.setattr(socket_manager.websocket, "WebSocket", lambda: ws)
+    monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: True)
+
+    instance = _server_instance()
+    result = socket_manager.wait_for_connection(instance, _connector_config())
+
+    assert result is ws
+    assert ws.url == instance.ws_url
+    assert ws.timeout == _connector_config().create_connection_timeout_sec
+
+
+def test_wait_for_connection_raises_after_retries(
+    monkeypatch: pytest.MonkeyPatch, fake_websocket
+) -> None:
+    ws = fake_websocket
+    ws.will_connect = False
+    monkeypatch.setattr(socket_manager.websocket, "WebSocket", lambda: ws)
+    monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: True)
+    monkeypatch.setattr(socket_manager.time, "sleep", lambda seconds: None)
+
+    # The exhaustion message reports the total budget (2 attempts), not the
+    # always-zero remaining count.
+    with pytest.raises(RuntimeError, match="Retries exhausted.*after 2 attempts"):
+        socket_manager.wait_for_connection(
+            _server_instance(),
+            GameServerConnectorConfig(wait_for_socket_reconnection_max_retries=2),
+        )
+
+
+def test_wait_for_connection_propagates_process_stopped(
+    monkeypatch: pytest.MonkeyPatch, fake_websocket
+) -> None:
+    ws = fake_websocket
+    ws.connect_error = ConnectionRefusedError()
+    monkeypatch.setattr(socket_manager.websocket, "WebSocket", lambda: ws)
+    monkeypatch.setattr(socket_manager.psutil, "pid_exists", lambda pid: False)
+
+    with pytest.raises(ProcessStoppedError):
+        socket_manager.wait_for_connection(_server_instance(), _connector_config())
+
+
+def test_game_server_socket_manager_returns_instance_on_success(
+    monkeypatch: pytest.MonkeyPatch, fake_websocket
+) -> None:
+    ws = fake_websocket
+    instance = _server_instance()
+    returned: list[ServerInstanceInfo] = []
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "return_instance",
+        lambda instance, broker_config: returned.append(instance),
+    )
+
+    with socket_manager.game_server_socket_manager(
+        _svm_info(), _connector_config(), _broker_config()
+    ) as sock:
+        assert sock is ws
+
+    assert ws.timeout == _connector_config().response_timeout_sec
+    assert ws.closed is True
+    assert returned == [instance]
+
+
+def test_game_server_socket_manager_returns_instance_on_body_failure(
+    monkeypatch: pytest.MonkeyPatch, fake_websocket
+) -> None:
+    ws = fake_websocket
+    instance = _server_instance()
+    returned: list[ServerInstanceInfo] = []
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "return_instance",
+        lambda instance, broker_config: returned.append(instance),
+    )
+
+    with pytest.raises(ValueError):
+        with socket_manager.game_server_socket_manager(
+            _svm_info(), _connector_config(), _broker_config()
+        ):
+            raise ValueError("body failed")
+
+    assert ws.closed is True
+    assert returned == [instance]
+
+
+def test_game_server_socket_manager_return_failure_does_not_mask_body_error(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_websocket,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A return_instance failure (non-200 → RuntimeError) must not mask the
+    # game body's original exception: the body error propagates, the return
+    # failure is logged only.
+    ws = fake_websocket
+    instance = _server_instance()
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+
+    def failing_return(instance_arg, broker_config):
+        raise RuntimeError("broker down")
+
+    monkeypatch.setattr(socket_manager, "return_instance", failing_return)
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(ValueError, match="body failed"):
+            with socket_manager.game_server_socket_manager(
+                _svm_info(), _connector_config(), _broker_config()
+            ):
+                raise ValueError("body failed")
+
+    assert "failed to return" in caplog.text
+    assert ws.closed is True
+
+
+def test_game_server_socket_manager_return_failure_logged_when_body_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_websocket,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # When the body succeeds, a return_instance failure is logged but does not
+    # turn a successful game into a failure.
+    ws = fake_websocket
+    instance = _server_instance()
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+    monkeypatch.setattr(
+        socket_manager,
+        "wait_for_connection",
+        lambda server_instance, connector_config: ws,
+    )
+
+    def failing_return(instance_arg, broker_config):
+        raise RuntimeError("broker down")
+
+    monkeypatch.setattr(socket_manager, "return_instance", failing_return)
+
+    with caplog.at_level(logging.ERROR):
+        with socket_manager.game_server_socket_manager(
+            _svm_info(), _connector_config(), _broker_config()
+        ) as sock:
+            assert sock is ws
+
+    assert "failed to return" in caplog.text
+    assert ws.closed is True
+
+
+def test_game_server_socket_manager_returns_instance_when_connect_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _server_instance()
+    returned: list[ServerInstanceInfo] = []
+    monkeypatch.setattr(
+        socket_manager,
+        "acquire_instance",
+        lambda svm_info, broker_config: instance,
+    )
+
+    def no_connection(server_instance: ServerInstanceInfo, connector_config):
+        raise RuntimeError("no connection")
+
+    monkeypatch.setattr(socket_manager, "wait_for_connection", no_connection)
+    monkeypatch.setattr(
+        socket_manager,
+        "return_instance",
+        lambda instance, broker_config: returned.append(instance),
+    )
+
+    with pytest.raises(RuntimeError, match="no connection"):
+        with socket_manager.game_server_socket_manager(
+            _svm_info(), _connector_config(), _broker_config()
+        ):
+            pass
+
+    assert returned == [instance]

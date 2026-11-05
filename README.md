@@ -22,11 +22,11 @@ git submodule update --init --recursive
 Setup environment:
 
 ```bash
-pipx install poetry
+pipx install poetry==2.2.1
 poetry install
 ```
 
-For toolchain prerequisites (Python 3.11–3.13, .NET SDK, JDK), GPU installation,
+For toolchain prerequisites (Python 3.11, .NET SDK, JDK), GPU installation,
 and submodule repair, see the [setup guide](https://pysymgym.github.io/PySymGym/setup.html).
 
 ## Documentation
@@ -40,4 +40,5 @@ The documentation is the map for navigating the project. Start at the
 - [Dataset](https://pysymgym.github.io/PySymGym/dataset.html)
 - [Results](https://pysymgym.github.io/PySymGym/results.html)
 - [Developer guide](https://pysymgym.github.io/PySymGym/developer.html)
+- [Testing](https://pysymgym.github.io/PySymGym/testing.html)
 - [API reference](https://pysymgym.github.io/PySymGym/reference/)

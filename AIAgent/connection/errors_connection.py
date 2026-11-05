@@ -20,3 +20,9 @@ class ConnectionLostError(GameInterruptedError):
     """Connection to SVM was lost"""
 
     desc = "Connection to SVM was lost"
+
+
+class ProtocolVersionMismatchError(GameInterruptedError):
+    """The game server speaks a protocol version the client does not"""
+
+    desc = "the game server speaks an incompatible protocol version"

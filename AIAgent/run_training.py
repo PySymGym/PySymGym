@@ -1,4 +1,5 @@
 import argparse
+import copy
 import csv
 import inspect
 import json
@@ -8,7 +9,7 @@ import os
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import joblib
 import mlflow
@@ -16,7 +17,11 @@ import optuna
 import torch
 import yaml
 from common.classes import GameFailed
+from common.config.broker_config import BrokerConfig
 from common.config.config import Config
+from common.config.connector_config import GameServerConnectorConfig
+from common.config.feature_config import FeatureConfig
+from common.config.loader import load_config
 from common.config.optuna_config import OptimizationDirection, OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import (
@@ -26,11 +31,12 @@ from common.config.validation_config import (
     ValidationConfig,
     ValidationMode,
 )
+from common.dataset import TrainingDatasetMode
 from common.file_system_utils import create_file, create_folders_if_necessary
 from common.game import GameMap, GameMap2SVM
-from config import GeneralConfig
-from ml.dataset import TrainingDataset, TrainingDatasetMode
-from ml.models.NorthernPenguin.model import StateModelEncoder
+from ml.dataset import TrainingDataset
+from ml.device import get_device
+from ml.models.registry import get_model_class
 from ml.training.early_stopping import EarlyStopping
 from ml.training.seeds import derive_trial_seed, seed_everything
 from ml.training.train import train
@@ -48,19 +54,15 @@ from paths import (
     trial_dir,
 )
 from torch import nn
-from torch_geometric.data import Dataset
 from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 from torch_geometric.loader import DataLoader
 
-logging.basicConfig(
-    level=GeneralConfig.LOGGER_LEVEL,
-    filename=LOG_PATH,
-    filemode="a",
-    format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
-)
-
-
-create_folders_if_necessary([PROCESSED_DATASET_PATH])
+# The model this entrypoint trains, selected through the registry (the
+# single model-selection path, #581). The module-level name is preserved:
+# the seam tests monkeypatch it and ``objective`` introspects its
+# ``__init__`` for the trial kwargs.
+MODEL_NAME = "NorthernPenguin"
+StateModelEncoder = get_model_class(MODEL_NAME)
 
 # Tag the tuning run's MLflow runs carry: the number of the best trial among
 # those completed so far. Readers of the tuning artifacts (see
@@ -102,11 +104,37 @@ class TrialSettings:
     num_pc_layers: int
 
 
+@dataclass
+class ObjectiveConfig:
+    """The per-run dependencies of the ``objective`` training loop.
+
+    Bundled into one object (instead of eight partial-bound arguments) so
+    the objective's signature stays ``objective(trial, config)`` and the
+    study-save callback can share the ``run_ids`` registry with it.
+    """
+
+    dataset: TrainingDataset
+    dynamic_dataset: bool
+    model_init: Callable[..., nn.Module]
+    criterion_init: Callable
+    epochs: int
+    validate: Callable
+    direction: OptimizationDirection
+    seed: int
+    # trial number -> MLflow run id, registered by ``objective`` when it
+    # starts the trial's run and consumed by the study-save callback.
+    run_ids: dict[int, str]
+
+
 def run_training(
     optuna_config: OptunaConfig,
     training_config: TrainingConfig,
     validation_config: ValidationConfig,
     weights_uri: Optional[str],
+    *,
+    broker_config: BrokerConfig,
+    connector_config: GameServerConnectorConfig,
+    feature_config: FeatureConfig,
 ):
     def criterion_init():
         return nn.BCEWithLogitsLoss(reduction="sum")
@@ -170,6 +198,9 @@ def run_training(
                 map2results = ValidationCoverage(
                     model,
                     dataset,
+                    broker_config=broker_config,
+                    connector_config=connector_config,
+                    feature_config=feature_config,
                     model_kwargs=model_kwargs,
                     trial_dir=trial_directory,
                 ).validate_coverage(maps, validation_mode)
@@ -178,12 +209,19 @@ def run_training(
                 )
                 mlflow.log_artifact(table_path)
 
-                for map2result in map2results:
-                    if (
-                        isinstance(map2result.game_result, GameFailed)
-                        and validation_mode.fail_immediately
-                    ):
-                        raise RuntimeError("Validation failed")
+                # "Validation failed" must never be the only clue (#616):
+                # name every failed map and its reason (timeout, unexhausted
+                # steps, game error, ...).
+                failed_maps = [
+                    (map2result.map.GameMap.MapName, map2result.game_result.reason)
+                    for map2result in map2results
+                    if isinstance(map2result.game_result, GameFailed)
+                ]
+                if failed_maps and validation_mode.fail_immediately:
+                    details = "; ".join(
+                        f"{name}: {reason}" for name, reason in failed_maps
+                    )
+                    raise RuntimeError(f"Validation failed: {details}")
                 return metrics[AVERAGE_COVERAGE], metrics
 
             return validate
@@ -232,11 +270,19 @@ def run_training(
             downloaded_artifact_path = mlflow.artifacts.download_artifacts(
                 artifact_uri=weights_uri, dst_path=REPORT_PATH
             )
-            state_model_encoder.load_state_dict(torch.load(downloaded_artifact_path))
+            # The checkpoint may have been saved on another device (a
+            # CUDA-saved model loaded on a CPU-only machine crashes a bare
+            # torch.load, #667); map it to the device we train on, with the
+            # same storage-class allow-list ml/dataset/processing.py uses.
+            with torch.serialization.safe_globals(
+                [BaseStorage, NodeStorage, EdgeStorage]
+            ):
+                state_model_encoder.load_state_dict(
+                    torch.load(downloaded_artifact_path, map_location=get_device())
+                )
             return state_model_encoder
 
-    objective_partial = partial(
-        objective,
+    objective_config = ObjectiveConfig(
         dataset=dataset,
         dynamic_dataset=training_config.dynamic_dataset,
         model_init=model_init,
@@ -245,58 +291,62 @@ def run_training(
         validate=validate,
         direction=optuna_config.study_direction,
         seed=training_config.seed,
+        run_ids={},
     )
+    objective_partial = partial(objective, config=objective_config)
     sampler = optuna.samplers.TPESampler(
         n_startup_trials=optuna_config.n_startup_trials,
         seed=training_config.seed,
     )
-    if optuna_config.trial_uri is None and weights_uri is None:
 
-        def save_study_and_trial(study, trial):
-            joblib.dump(study, CURRENT_STUDY_PATH)
-            joblib.dump(trial, CURRENT_TRIAL_PATH)
-            with mlflow.start_run(mlflow.last_active_run().info.run_id):
-                mlflow.log_artifact(CURRENT_STUDY_PATH)
-                mlflow.log_artifact(CURRENT_TRIAL_PATH)
-                mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
+    def save_study_and_trial(study, trial):
+        # Per-trial persistence, shared by the tuning and the replay
+        # branches. The pickles are always dumped locally; the MLflow part
+        # needs the trial's run handle, which objective registers in
+        # run_ids when it starts the run. A trial that failed before
+        # starting its run has no handle: the pickles are persisted locally
+        # only.
+        joblib.dump(study, CURRENT_STUDY_PATH)
+        joblib.dump(trial, CURRENT_TRIAL_PATH)
+        run_id = objective_config.run_ids.get(trial.number)
+        if run_id is None:
+            return
+        with mlflow.start_run(run_id):
+            mlflow.log_artifact(CURRENT_STUDY_PATH)
+            mlflow.log_artifact(CURRENT_TRIAL_PATH)
+            mlflow.set_tag(BEST_TRIAL_NUMBER_TAG, study.best_trial.number)
 
-        study = optuna.create_study(
-            sampler=sampler, direction=optuna_config.study_direction.value
-        )
-        study.optimize(
-            objective_partial,
-            n_trials=optuna_config.n_trials,
-            gc_after_trial=True,
-            n_jobs=optuna_config.n_jobs,
-            callbacks=[save_study_and_trial],
-        )
-    else:
+    study = optuna.create_study(
+        sampler=sampler, direction=optuna_config.study_direction.value
+    )
+    if optuna_config.trial_uri is not None or weights_uri is not None:
+        # Replay branch: re-run the frozen trial n_trials times through a
+        # fresh study, so the improvement run persists study.pkl/trial.pkl
+        # and the per-trial MLflow artifacts exactly like a tuning run. The
+        # enqueued params make the sampler suggest the frozen values; the
+        # trials get fresh numbers 0..n-1, so run names, trial dirs and
+        # per-trial seeds follow the fresh numbers.
         downloaded_artifact_path = mlflow.artifacts.download_artifacts(
             optuna_config.trial_uri, dst_path=str(REPORT_PATH)
         )
         trial: optuna.trial.FrozenTrial = joblib.load(downloaded_artifact_path)
         for _ in range(optuna_config.n_trials):
-            objective_partial(trial)
+            study.enqueue_trial(params=dict(trial.params))
+    study.optimize(
+        objective_partial,
+        n_trials=optuna_config.n_trials,
+        gc_after_trial=True,
+        n_jobs=optuna_config.n_jobs,
+        callbacks=[save_study_and_trial],
+    )
 
 
-def objective(
-    trial: optuna.Trial,
-    dataset: TrainingDataset,
-    dynamic_dataset: bool,
-    model_init: Callable[[Any], nn.Module],
-    criterion_init: Callable,
-    epochs: int,
-    validate: Callable[
-        [nn.Module, Dataset], tuple[int | float, dict[str, int | float]]
-    ],
-    direction: OptimizationDirection,
-    seed: int,
-):
+def objective(trial: optuna.Trial, config: ObjectiveConfig):
     # Per-trial seed: weight init and every sampling site (step sampling,
     # similar-step dedup, validation map order) draw from these globals, so
     # seeding before any of them makes the trial reproducible.
-    seed_everything(derive_trial_seed(seed, trial.number))
-    config = TrialSettings(
+    seed_everything(derive_trial_seed(config.seed, trial.number))
+    settings = TrialSettings(
         lr=trial.suggest_float("lr", 1e-7, 1e-3),
         batch_size=trial.suggest_int("batch_size", 8, 32),
         num_of_state_features=trial.suggest_int("num_of_state_features", 8, 64),
@@ -309,30 +359,44 @@ def objective(
         tolerance=0.0001,
     )
     early_stopping = EarlyStopping(
-        state_len=config.early_stopping_state_len,
-        tolerance=config.tolerance,
-        direction=direction,
+        state_len=settings.early_stopping_state_len,
+        tolerance=settings.tolerance,
+        direction=config.direction,
     )
     model_kwargs_names = list(
         inspect.signature(StateModelEncoder.__init__).parameters.keys()
     )
     model_kwargs_names.remove("self")
     model_kwargs = dict(
-        [(kwarg_name, getattr(config, kwarg_name)) for kwarg_name in model_kwargs_names]
+        [
+            (kwarg_name, getattr(settings, kwarg_name))
+            for kwarg_name in model_kwargs_names
+        ]
     )
-    model: nn.Module = model_init(**model_kwargs)
-    model.to(GeneralConfig.DEVICE)
+    model: nn.Module = config.model_init(**model_kwargs)
+    model.to(get_device())
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    criterion = criterion_init()
+    optimizer = torch.optim.Adam(model.parameters(), lr=settings.lr)
+    criterion = config.criterion_init()
 
     trial_directory = trial_dir(trial.number)
     trial_directory.mkdir(parents=True, exist_ok=True)
     model_path = trial_directory / MODEL_FILE_NAME
     kwargs_path = trial_directory / "model_kwargs.yaml"
 
-    with mlflow.start_run(run_name=str(trial.number)):
-        mlflow.log_params(asdict(config))
+    # The best checkpoint so far: early stopping (or the final epoch) ends
+    # the loop with the last epoch's weights in the model, but the retained
+    # model and the trial's value must be the best ones, not the last ones.
+    best_result: int | float | None = None
+    best_state_dict: dict | None = None
+
+    with mlflow.start_run(run_name=str(trial.number)) as run:
+        # Register the run handle for the study-save callback: the callback
+        # fires after this run has ended, so it cannot rely on
+        # mlflow.last_active_run() (the wrong run under n_jobs > 1, an
+        # AttributeError when the trial failed before starting a run).
+        config.run_ids[trial.number] = run.info.run_id
+        mlflow.log_params(asdict(settings))
         # The kwargs are constant within a trial: persist them once to the
         # trial dir and log them as an artifact, instead of rewriting a shared
         # side-effect file every epoch for the ONNX export to read back.
@@ -340,10 +404,10 @@ def objective(
             yaml.dump(model_kwargs, outfile)
         mlflow.log_artifact(kwargs_path)
 
-        for epoch in range(epochs):
-            dataset.switch_to(TrainingDatasetMode.TRAINING)
+        for epoch in range(config.epochs):
+            config.dataset.switch_to(TrainingDatasetMode.TRAINING)
             train_dataloader = DataLoader(
-                dataset, config.batch_size, shuffle=False
+                config.dataset, settings.batch_size, shuffle=False
             )  # Shuffle leads to problems with GPU memory.
             model.train()
             train(
@@ -357,25 +421,52 @@ def objective(
             mlflow.log_artifact(model_path, str(epoch))
 
             model.eval()
-            dataset.switch_to(TrainingDatasetMode.VALIDATION)
-            result, metrics = validate(model, dataset, trial_directory, model_kwargs)
+            config.dataset.switch_to(TrainingDatasetMode.VALIDATION)
+            result, metrics = config.validate(
+                model, config.dataset, trial_directory, model_kwargs
+            )
             mlflow.log_metrics(metrics, step=epoch)
-            if dynamic_dataset:
-                dataset.update_meta_data()
+            if config.dynamic_dataset:
+                config.dataset.update_meta_data()
+            if best_result is None or (
+                result < best_result
+                if config.direction is OptimizationDirection.MINIMIZE
+                else result > best_result
+            ):
+                best_result = result
+                best_state_dict = copy.deepcopy(model.state_dict())
             if not early_stopping.is_continue(result):
                 print(f"Training was stopped on {epoch} epoch.")
                 break
             torch.cuda.empty_cache()
-    return result
+
+        # Restore the best checkpoint before the final export: the last
+        # epoch's artifact slot is re-written with the best weights, so the
+        # highest-epoch artifact (the one
+        # derive_dataset_improvement_config.py picks) is the best model.
+        model.load_state_dict(best_state_dict)
+        torch.save(model.state_dict(), model_path)
+        mlflow.log_artifact(model_path, str(epoch))
+    return best_result
 
 
 def main(config: str):
-    with open(config, "r") as file:
-        config: Config = Config(**yaml.safe_load(file))
+    # Load the config first: a broken config (a relative path that does not
+    # exist, a missing file) must fail before any side effect — log file,
+    # dataset folder, MLflow setup.
+    config: Config = load_config(config)
+
+    logging.basicConfig(
+        level=config.logger_level,
+        filename=LOG_PATH,
+        filemode="a",
+        format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
+    )
+    create_folders_if_necessary([PROCESSED_DATASET_PATH])
     create_file(LOG_PATH)
 
     mp.set_start_method("spawn", force=True)
-    print(GeneralConfig.DEVICE)
+    print(get_device())
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage])
 
     mlflow_config = config.mlflow_config
@@ -398,6 +489,9 @@ def main(config: str):
         training_config=config.training_config,
         validation_config=config.validation_config,
         weights_uri=weights_uri,
+        broker_config=config.broker_config,
+        connector_config=config.game_server_connector_config,
+        feature_config=config.feature_config,
     )
 
 

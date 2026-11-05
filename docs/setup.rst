@@ -24,12 +24,15 @@ Toolchain
    * - JDK
      - 11–21; set ``JAVA_HOME`` when several JDKs are installed
      - ``GameServers/usvm/gradle/wrapper/gradle-wrapper.properties`` (Gradle 8.6 runs on Java ≤21), ``.github/workflows/build_and_test_usvm.yaml`` (pins 11)
-   * - Maven, cmake, clang
+   * - cmake, clang
      - any recent version
      - ``.github/docker/Dockerfile``
+   * - Maven
+     - any recent version
+     - ``Makefile`` (``build_LogicNG``, ``build_jflex``; local development only — CI never builds the Java maps)
    * - Python
-     - 3.11–3.13
-     - ``pyproject.toml`` (``^3.11``); the lockfile pins torch 2.7.1, which has no cp314 wheel; CI runs 3.11.8
+     - 3.11.x
+     - ``pyproject.toml`` (``~3.11``); CI runs 3.11.8
 
 Python environment
 ------------------
@@ -39,15 +42,15 @@ touch the system interpreter), then point Poetry at it:
 
 .. code-block:: console
 
-    pipx install poetry
+    pipx install poetry==2.2.1
     pipx install uv
-    uv python install 3.13
-    poetry env use $(uv python find 3.13)
+    uv python install 3.11
+    poetry env use $(uv python find 3.11)
     poetry install
 
 If the distribution's default ``python3`` is outside the supported range (for
 example Ubuntu 26.04 ships 3.14), skipping ``poetry env use`` makes Poetry pick
-it and the install fails on missing binary wheels.
+it and the install fails: the project supports 3.11.x only.
 
 Per-component build prerequisites
 ---------------------------------
@@ -104,8 +107,3 @@ these packages, provided by requirements. Then follow installation instructions
 provided on the `torch <https://pytorch.org/get-started/locally/>`_ and
 `torch_geometric <https://pytorch-geometric.readthedocs.io/en/stable/install/installation.html#installation-from-wheels>`_
 websites.
-
-The GPU must also be supported by the installed torch build (its compute
-capability must be among the build's compiled archs); otherwise the run
-degrades to CPU automatically — see the "Self-hosted end-to-end workflows"
-section of the :doc:`developer` guide.

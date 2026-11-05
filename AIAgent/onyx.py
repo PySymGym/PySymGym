@@ -1,10 +1,9 @@
 import argparse
-import importlib
 import json
 import pathlib
 import typing as t
 import warnings
-from textwrap import dedent
+from dataclasses import dataclass
 
 import onnx
 import onnxruntime
@@ -17,9 +16,104 @@ from ml.inference import ONNX, TORCH
 from torch_geometric import backend as pyg_backend
 from torch_geometric.data import HeteroData
 from ml.inference import infer
+from ml.models.registry import get_model_class
 
-# working version
+# Default ONNX opset version for the export; override with --opset-version.
 ONNX_OPSET_VERSION = 17
+
+
+@dataclass(frozen=True)
+class ModelInput:
+    """One input of the ONNX model.
+
+    The single source of the model's input contract (#597): the tensor
+    builders, the legacy exporter's ``dynamic_axes`` mapping, the dynamo
+    exporter's ``dynamic_shapes`` mapping, and the ``input_names`` list are
+    all derived from ``MODEL_INPUTS``, so the 11 inputs can no longer drift
+    apart.
+    """
+
+    #: ONNX wire name (the V# contract; see ``ml.inference.ONNX``)
+    name: str
+    #: HeteroData key: a node-type str or an edge-type (src, rel, dst) tuple
+    torch_key: t.Union[str, t.Tuple[str, str, str]]
+    #: Attribute of the HeteroData entry holding the tensor
+    attr: str
+    #: Dynamic axes: axis index -> symbolic dimension name; absent axes are
+    #: static. Axis names are required: torch.onnx.utils._validate_dynamic_axes
+    #: warns once per input whose value is an axis list ("No names were found
+    #: for specified dynamic axes") and auto-generates the dim params
+    #: instead. Names must be unique per distinct size — ONNX treats equal
+    #: dim_param strings as the same symbolic dimension — except that an edge
+    #: index's axis 1 and the matching edge type's (or per-edge attributes')
+    #: axis 0 always hold the same number of edges, so they share a name.
+    dynamic_axes: t.Mapping[int, str]
+
+
+#: The 11 ONNX model inputs in the exact ``input_names`` order (the V# wire
+#: contract).
+MODEL_INPUTS: tuple[ModelInput, ...] = (
+    ModelInput(ONNX.game_vertex, TORCH.game_vertex, "x", {0: "num_game_vertices"}),
+    ModelInput(ONNX.state_vertex, TORCH.state_vertex, "x", {0: "num_state_vertices"}),
+    ModelInput(
+        ONNX.path_condition_vertex,
+        TORCH.path_condition_vertex,
+        "x",
+        {0: "num_pc_vertices"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_to_gamevertex_index,
+        TORCH.gamevertex_to_gamevertex,
+        "edge_index",
+        {1: "num_gv_gv_edges"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_to_gamevertex_type,
+        TORCH.gamevertex_to_gamevertex,
+        "edge_type",
+        {0: "num_gv_gv_edges"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_history_statevertex_index,
+        TORCH.gamevertex_history_statevertex,
+        "edge_index",
+        {1: "num_gv_history_sv_edges"},
+    ),
+    # Axis 1 is the fixed per-edge attribute vector
+    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset/tensors.py),
+    # so only axis 0 is dynamic; torch.export rejects a
+    # user-specified dynamic dim that tracing infers as static.
+    ModelInput(
+        ONNX.gamevertex_history_statevertex_attrs,
+        TORCH.gamevertex_history_statevertex,
+        "edge_attr",
+        {0: "num_gv_history_sv_edges"},
+    ),
+    ModelInput(
+        ONNX.gamevertex_in_statevertex,
+        TORCH.gamevertex_in_statevertex,
+        "edge_index",
+        {1: "num_gv_in_sv_edges"},
+    ),
+    ModelInput(
+        ONNX.statevertex_parentof_statevertex,
+        TORCH.statevertex_parentof_statevertex,
+        "edge_index",
+        {1: "num_sv_parentof_sv_edges"},
+    ),
+    ModelInput(
+        ONNX.pathcondvertex_to_pathcondvertex,
+        TORCH.pathcondvertex_to_pathcondvertex,
+        "edge_index",
+        {1: "num_pc_pc_edges"},
+    ),
+    ModelInput(
+        ONNX.pathcondvertex_to_statevertex,
+        TORCH.pathcondvertex_to_statevertex,
+        "edge_index",
+        {1: "num_pc_sv_edges"},
+    ),
+)
 
 
 def load_gamestate(f: t.TextIO) -> GameState:
@@ -30,35 +124,10 @@ def create_model_input(
     hetero_data: HeteroData, modifier: t.Callable[[t.Any], t.Any] = lambda x: x
 ):
     return {
-        ONNX.game_vertex: modifier(hetero_data[TORCH.game_vertex].x),
-        ONNX.state_vertex: modifier(hetero_data[TORCH.state_vertex].x),
-        ONNX.path_condition_vertex: modifier(
-            hetero_data[TORCH.path_condition_vertex].x
-        ),
-        ONNX.gamevertex_to_gamevertex_index: modifier(
-            hetero_data[TORCH.gamevertex_to_gamevertex].edge_index
-        ),
-        ONNX.gamevertex_to_gamevertex_type: modifier(
-            hetero_data[TORCH.gamevertex_to_gamevertex].edge_type
-        ),
-        ONNX.gamevertex_history_statevertex_index: modifier(
-            hetero_data[TORCH.gamevertex_history_statevertex].edge_index
-        ),
-        ONNX.gamevertex_history_statevertex_attrs: modifier(
-            hetero_data[TORCH.gamevertex_history_statevertex].edge_attr
-        ),
-        ONNX.gamevertex_in_statevertex: modifier(
-            hetero_data[TORCH.gamevertex_in_statevertex].edge_index
-        ),
-        ONNX.statevertex_parentof_statevertex: modifier(
-            hetero_data[TORCH.statevertex_parentof_statevertex].edge_index
-        ),
-        ONNX.pathcondvertex_to_pathcondvertex: modifier(
-            hetero_data[TORCH.pathcondvertex_to_pathcondvertex].edge_index
-        ),
-        ONNX.pathcondvertex_to_statevertex: modifier(
-            hetero_data[TORCH.pathcondvertex_to_statevertex].edge_index
-        ),
+        model_input.name: modifier(
+            getattr(hetero_data[model_input.torch_key], model_input.attr)
+        )
+        for model_input in MODEL_INPUTS
     }
 
 
@@ -70,11 +139,70 @@ def create_torch_input(hetero_data: HeteroData):
     return tuple(create_model_input(hetero_data).values())
 
 
+def input_names() -> list[str]:
+    """The ONNX input names in model order (derived from ``MODEL_INPUTS``)."""
+    return [model_input.name for model_input in MODEL_INPUTS]
+
+
+def dynamic_axes() -> dict[str, dict[int, str]]:
+    """The legacy exporter's ``dynamic_axes`` mapping (derived from
+    ``MODEL_INPUTS``)."""
+    return {
+        model_input.name: dict(model_input.dynamic_axes) for model_input in MODEL_INPUTS
+    }
+
+
+# torch 2.13 switched torch.onnx.export's default to the dynamo-based
+# exporter, which does not accept dynamic_axes without routing them
+# through the deprecated from_dynamic_axes_to_dynamic_shapes compat path
+# (four warnings the #617 guard forbids, #646). Below this version the
+# legacy exporter is the default and dynamic_shapes is a dynamo-only
+# option it ignores.
+_DYNAMO_EXPORTER_MIN_TORCH = (2, 13)
+
+
+def _torch_uses_dynamo_exporter() -> bool:
+    """Whether the installed torch.onnx.export defaults to the dynamo
+    exporter (torch >= 2.13)."""
+    major_minor = tuple(int(part) for part in torch.__version__.split(".")[:2])
+    return major_minor >= _DYNAMO_EXPORTER_MIN_TORCH
+
+
+def _dynamic_shapes() -> dict[str, dict[int, t.Any]]:
+    """The dynamo exporter's ``dynamic_shapes`` mapping (derived from
+    ``MODEL_INPUTS``).
+
+    One ``torch.onnx.Dim`` instance per symbolic dimension name: axes
+    that share a name (an edge index's axis 1 and the matching edge
+    type's axis 0) receive the same Dim object, which the dynamo
+    exporter treats as one symbolic dimension — the shared-dimension
+    semantics of the legacy mapping without the "shares the same shape
+    constraints" warning the from_dynamic_axes_to_dynamic_shapes compat
+    path emits (#646). Requires torch >= 2.13 (``torch.onnx.Dim``).
+    """
+    from torch.onnx import Dim
+
+    dims: dict[str, t.Any] = {}
+
+    def dim(name: str) -> t.Any:
+        if name not in dims:
+            dims[name] = Dim(name)
+        return dims[name]
+
+    return {
+        model_input.name: {
+            axis: dim(dim_name) for axis, dim_name in model_input.dynamic_axes.items()
+        }
+        for model_input in MODEL_INPUTS
+    }
+
+
 def save_in_onnx(
     model: torch.nn.Module,
     sample_input: HeteroData,
     save_path: pathlib.Path,
     verbose: bool = False,
+    opset_version: int = ONNX_OPSET_VERSION,
 ):
     # With use_segment_matmul unset (None), PyG's RGCNConv selects a kernel
     # via a data-dependent heuristic on the input sizes, which torch.export
@@ -107,58 +235,26 @@ def save_in_onnx(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"torch\.onnx\.utils"
             )
-            torch.onnx.export(
+            export_kwargs: dict[str, t.Any] = dict(
                 model=model,
                 args=create_torch_input(sample_input),
                 f=save_path,
                 verbose=verbose,
-                # Axis names are required: torch.onnx.utils._validate_dynamic_axes
-                # warns once per input whose value is an axis list ("No names were
-                # found for specified dynamic axes") and auto-generates the dim
-                # params instead. Names must be unique per distinct size — ONNX
-                # treats equal dim_param strings as the same symbolic dimension —
-                # except that an edge type's index (axis 1) and its per-edge
-                # attributes (axis 0) always hold the same number of edges, so
-                # they share a name.
-                dynamic_axes={
-                    ONNX.game_vertex: {0: "num_game_vertices"},
-                    ONNX.state_vertex: {0: "num_state_vertices"},
-                    ONNX.path_condition_vertex: {0: "num_pc_vertices"},
-                    ONNX.gamevertex_to_gamevertex_index: {1: "num_gv_gv_edges"},
-                    ONNX.gamevertex_to_gamevertex_type: {0: "num_gv_gv_edges"},
-                    ONNX.gamevertex_history_statevertex_index: {
-                        1: "num_gv_history_sv_edges"
-                    },
-                    # Axis 1 is the fixed per-edge attribute vector
-                    # [NumOfVisits, StepWhenVisitedLastTime] (see ml/dataset.py),
-                    # so only axis 0 is dynamic; torch.export rejects a
-                    # user-specified dynamic dim that tracing infers as static.
-                    ONNX.gamevertex_history_statevertex_attrs: {
-                        0: "num_gv_history_sv_edges"
-                    },
-                    ONNX.gamevertex_in_statevertex: {1: "num_gv_in_sv_edges"},
-                    ONNX.statevertex_parentof_statevertex: {
-                        1: "num_sv_parentof_sv_edges"
-                    },
-                    ONNX.pathcondvertex_to_pathcondvertex: {1: "num_pc_pc_edges"},
-                    ONNX.pathcondvertex_to_statevertex: {1: "num_pc_sv_edges"},
-                },
-                input_names=[
-                    ONNX.game_vertex,
-                    ONNX.state_vertex,
-                    ONNX.path_condition_vertex,
-                    ONNX.gamevertex_to_gamevertex_index,
-                    ONNX.gamevertex_to_gamevertex_type,
-                    ONNX.gamevertex_history_statevertex_index,
-                    ONNX.gamevertex_history_statevertex_attrs,
-                    ONNX.gamevertex_in_statevertex,
-                    ONNX.statevertex_parentof_statevertex,
-                    ONNX.pathcondvertex_to_pathcondvertex,
-                    ONNX.pathcondvertex_to_statevertex,
-                ],
+                input_names=input_names(),
                 output_names=["out"],
-                opset_version=ONNX_OPSET_VERSION,
+                opset_version=opset_version,
             )
+            if _torch_uses_dynamo_exporter():
+                # The dynamo exporter (the torch >= 2.13 default) takes
+                # dynamic_shapes; passing dynamic_axes would route through
+                # the deprecated compat path and warn (#646).
+                export_kwargs["dynamic_shapes"] = _dynamic_shapes()
+            else:
+                # The legacy exporter (the torch < 2.13 default) takes
+                # dynamic_axes; dynamic_shapes is a dynamo-only option it
+                # ignores.
+                export_kwargs["dynamic_axes"] = dynamic_axes()
+            torch.onnx.export(**export_kwargs)
     finally:
         pyg_backend.use_segment_matmul = previous_use_segment_matmul
 
@@ -167,11 +263,55 @@ def onnx_run(ort_session: onnxruntime.InferenceSession, data: HeteroData) -> ...
     return ort_session.run(None, create_onnxruntime_input(data))
 
 
-def shorten_output(torch_out, round_to: int = 3):
-    shortened = list(map(lambda x: round(x, round_to), torch_out.flatten().tolist()))
-    if len(shortened) > 10:
-        shortened = shortened[:10] + ["..."]
-    return shortened
+# The maximum absolute element-wise difference between the torch and the
+# ONNX Runtime outputs that verification tolerates. The two runtimes use
+# different float32 kernels (matmul orderings, fused ops), so a small
+# nonzero difference is legitimate; 1e-4 is tight enough to catch a
+# numerically broken conversion while staying above that kernel noise
+# (the pre-#597 check effectively allowed 5e-4 by rounding to 3 decimals).
+VERIFICATION_ATOL = 1e-4
+
+
+def verify_outputs(torch_out: torch.Tensor, onnx_out: t.Any) -> None:
+    """Verify the ONNX Runtime output against the torch output.
+
+    Compares the full tensors element-wise with an explicit absolute
+    tolerance (no rounding, no truncation) and raises ``ValueError`` on
+    any divergence beyond it, so a numerically broken conversion cannot
+    pass silently (#597).
+
+    Parameters
+    ----------
+    torch_out:
+        The torch model's output for the verification gamestate.
+    onnx_out:
+        The ONNX Runtime's output (the first element of ``onnx_run``'s
+        result).
+
+    Raises
+    ------
+    ValueError
+        If the shapes differ or any element diverges beyond
+        ``VERIFICATION_ATOL``.
+    """
+    onnx_tensor = torch.as_tensor(onnx_out)
+    if torch_out.shape != onnx_tensor.shape:
+        raise ValueError(
+            "ONNX verification failed: shape mismatch "
+            f"{tuple(torch_out.shape)} != {tuple(onnx_tensor.shape)}"
+        )
+    if torch_out.numel() == 0:
+        # Both outputs are empty (a degenerate gamestate with no states):
+        # there is nothing to diverge.
+        return
+    diff = (torch_out - onnx_tensor).abs()
+    max_diff = diff.max().item()
+    if max_diff > VERIFICATION_ATOL:
+        raise ValueError(
+            "ONNX verification failed: max absolute difference "
+            f"{max_diff:.3e} exceeds the tolerance {VERIFICATION_ATOL:.1e} "
+            f"(max difference at flattened index {int(diff.argmax())})"
+        )
 
 
 def main():
@@ -199,15 +339,13 @@ def main():
         help="Path to which ONNX model will be saved",
     )
     parser.add_argument(
-        "--import-model-fqn",
-        dest="import_model_fqn",
+        "--model-name",
+        dest="model_name",
         type=str,
         required=True,
-        help=dedent(
-            """\n
-            model import fully qualified name from AIAgent/ root,
-            for example: 'ml.models.TAGSageSimple.model.StateModelEncoder'
-            """
+        help=(
+            "registry name of the model to convert "
+            "(see ml/models/registry.py), for example: 'NorthernPenguin'"
         ),
     )
     parser.add_argument(
@@ -225,6 +363,14 @@ def main():
         required=False,
         default=[],
         help="Paths to game states to verify against",
+    )
+    parser.add_argument(
+        "--opset-version",
+        dest="opset_version",
+        type=int,
+        required=False,
+        default=ONNX_OPSET_VERSION,
+        help=(f"ONNX opset version to export with (default: {ONNX_OPSET_VERSION})"),
     )
 
     args = parser.parse_args()
@@ -244,22 +390,11 @@ def main():
         sample_gamestate=sample_gamestate,
         pytorch_model_path=args.pytorch_model_path,
         onnx_savepath=args.onnx_savepath,
-        model_def=resolve_import_model(args.import_model_fqn),
+        model_def=get_model_class(args.model_name),
         model_kwargs=model_kwargs,
         verification_gamestates=veification_gamestates,
+        opset_version=args.opset_version,
     )
-
-
-def resolve_import_model(import_model_fqn: str) -> t.Type[torch.nn.Module]:
-    module, clazz = (
-        import_model_fqn[: import_model_fqn.rfind(".")],
-        import_model_fqn[import_model_fqn.rfind(".") + 1 :],
-    )
-
-    module_def = importlib.import_module(module)
-    model_def = getattr(module_def, clazz)
-
-    return model_def
 
 
 def entrypoint(
@@ -269,34 +404,38 @@ def entrypoint(
     model_def: t.Type[torch.nn.Module],
     model_kwargs: dict[str, t.Any],
     verification_gamestates: list[GameState] = None,
+    opset_version: int = ONNX_OPSET_VERSION,
 ):
     torch_model = model_def(**model_kwargs)
     hetero_sample_gamestate, _ = convert_input_to_tensor(sample_gamestate)
     torch_model.eval()
-    infer(torch_model, hetero_sample_gamestate)
+    # Warm-up forward with the freshly initialized (random) weights: it
+    # triggers the model's lazy initialization before the weights are
+    # loaded and the graph is traced.
+    with torch.no_grad():
+        infer(torch_model, hetero_sample_gamestate)
     state_dict: t.OrderedDict = torch.load(pytorch_model_path, map_location="cpu")
     torch_model.load_state_dict(state_dict)
 
-    save_in_onnx(torch_model, hetero_sample_gamestate, onnx_savepath)
+    save_in_onnx(
+        torch_model,
+        hetero_sample_gamestate,
+        onnx_savepath,
+        opset_version=opset_version,
+    )
     model_onnx = onnx.load(onnx_savepath)
     onnx.checker.check_model(model_onnx)
 
     if verification_gamestates:
         ort_session = onnxruntime.InferenceSession(onnx_savepath)
-        for idx, verification_gamestate in enumerate(verification_gamestates, start=1):
+        for verification_gamestate in verification_gamestates:
             hetero_verification_gamestate, _ = convert_input_to_tensor(
                 verification_gamestate
             )
-            torch_out = infer(torch_model, hetero_verification_gamestate)
+            with torch.no_grad():
+                torch_out = infer(torch_model, hetero_verification_gamestate)
             onnx_out = onnx_run(ort_session, hetero_verification_gamestate)
-
-            print(len(verification_gamestate.States))
-            print(f"{shorten_output(torch_out)=}")
-            print(f"{shorten_output(onnx_out[0])=}")
-            print(f"{idx}/{len(verification_gamestates)}")
-            assert shorten_output(torch_out) == shorten_output(onnx_out[0]), (
-                f"verification failed, {shorten_output(torch_out)} != {shorten_output(onnx_out[0])}"
-            )
+            verify_outputs(torch_out, onnx_out[0])
 
 
 if __name__ == "__main__":
