@@ -46,5 +46,8 @@ def safe_torch_load(path: str | Path, map_location: torch.device | str) -> Any:
     -------
     The object stored at ``path``.
     """
-    with torch.serialization.safe_globals(STORAGE_SAFE_GLOBALS):
+    # torch's parameter is an invariant list[Callable | tuple[Callable, str]];
+    # the tuple-to-list conversion at the call site satisfies the annotation
+    # without changing what the unpickler allows.
+    with torch.serialization.safe_globals(list(STORAGE_SAFE_GLOBALS)):
         return torch.load(path, map_location=map_location)

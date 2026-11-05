@@ -29,7 +29,7 @@ from common.game import GameState
 from ml.device import get_device
 from ml.inference import degenerate_counts
 from ml.model_io import safe_torch_load
-from torch.utils.data import random_split
+from torch.utils.data import Subset, random_split
 from torch_geometric.data import Dataset, HeteroData
 
 from .maintenance import MaintenanceMixin
@@ -101,10 +101,13 @@ class TrainingDataset(MaintenanceMixin, Dataset):
 
         self.train_percentage = train_percentage
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
-        self.__indices = self.train_dataset_indices
+        # Materialized (the split's dataset is a range, so the subset's values
+        # are its indices): a plain list satisfies the base class's
+        # indices() -> Sequence contract.
+        self.__indices = list(self.train_dataset_indices.indices)
         super().__init__()
 
-    def _split_dataset(self) -> Tuple[List, List]:
+    def _split_dataset(self) -> Tuple[Subset, Subset]:
         full_dataset_len = len(self.processed_paths)
         train_dataset_len = round(full_dataset_len * self.train_percentage)
         train_dataset_indices, test_dataset_indices = random_split(
@@ -137,9 +140,9 @@ class TrainingDataset(MaintenanceMixin, Dataset):
             'val' --- use validation part.
         """
         if mode is TrainingDatasetMode.TRAINING:
-            self.__indices = self.train_dataset_indices
+            self.__indices = list(self.train_dataset_indices.indices)
         elif mode is TrainingDatasetMode.VALIDATION:
-            self.__indices = self.test_dataset_indices
+            self.__indices = list(self.test_dataset_indices.indices)
         else:
             raise ValueError("mode must be either 'TRAINING' or 'VALIDATION'")
 
@@ -147,8 +150,12 @@ class TrainingDataset(MaintenanceMixin, Dataset):
     def raw_dir(self):
         return self._raw_dir
 
+    # PyG's Dataset declares processed_dir -> str; this override returns
+    # Path (process()'s `self.processed_dir / map_name` needs the `/`
+    # operator, and os.path accepts Path). Both checkers model the base
+    # declaration literally.
     @property
-    def processed_dir(self):
+    def processed_dir(self) -> Path:  # type: ignore[reportIncompatibleVariableOverride, reportIncompatibleMethodOverride, ty:invalid-property-type-override]
         return self._processed_dir
 
     def _get_processed_paths(self) -> List[str]:

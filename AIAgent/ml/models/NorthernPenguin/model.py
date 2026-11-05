@@ -7,12 +7,12 @@ from ml.schema import NUM_PC_FEATURES
 class StateModelEncoder(torch.nn.Module):
     def __init__(
         self,
-        hidden_channels,
-        num_of_state_features,
-        num_hops_1,
-        num_hops_2,
+        hidden_channels: int,
+        num_of_state_features: int,
+        num_hops_1: int,
+        num_hops_2: int,
         normalization: bool,
-        num_pc_layers,
+        num_pc_layers: int,
     ):
         super().__init__()
         self.conv1 = RGCNConv(hidden_channels, hidden_channels, 3)
@@ -47,17 +47,17 @@ class StateModelEncoder(torch.nn.Module):
 
     def forward(
         self,
-        game_x,
-        state_x,
-        pc_x,
-        edge_index_v_v,
-        edge_type_v_v,
-        edge_index_history_v_s,
-        edge_attr_history_v_s,
-        edge_index_in_v_s,
-        edge_index_s_s,
-        edge_index_pc_pc,
-        edge_index_pc_s,
+        game_x: torch.Tensor,
+        state_x: torch.Tensor,
+        pc_x: torch.Tensor,
+        edge_index_v_v: torch.Tensor,
+        edge_type_v_v: torch.Tensor,
+        edge_index_history_v_s: torch.Tensor,
+        edge_attr_history_v_s: torch.Tensor,
+        edge_index_in_v_s: torch.Tensor,
+        edge_index_s_s: torch.Tensor,
+        edge_index_pc_pc: torch.Tensor,
+        edge_index_pc_s: torch.Tensor,
     ):
         game_x = self.conv10(game_x, edge_index_v_v).relu()
 

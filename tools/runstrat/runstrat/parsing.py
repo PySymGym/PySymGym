@@ -8,28 +8,40 @@ import pandas as pd
 from runstrat.structs import LaunchInfo, PrebuiltConfig
 
 
+def _search_groupdict(pattern: str, text: str, *, flags: int = 0) -> dict[str, str]:
+    """``re.search`` + ``groupdict``; a missing match is a parse failure.
+
+    Raises the ``AttributeError`` the caller's ``except AttributeError``
+    handler annotates with the offending output.
+    """
+    match = re.search(pattern, text, flags)
+    if match is None:
+        raise AttributeError(pattern)
+    return match.groupdict()
+
+
 def parse_runner_output(runner_output: str):
     try:
-        total_time = re.search(
+        total_time = _search_groupdict(
             r"Total time: (?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\.*",
             runner_output,
-        ).groupdict()
+        )
         total_time = (
             int(total_time["hours"]) * 3600
             + int(total_time["minutes"]) * 60
             + int(total_time["seconds"])
         )
-        test_generated = re.search(
+        test_generated = _search_groupdict(
             r"Tests generated: (?P<count>\d+)", runner_output
-        ).groupdict()["count"]
-        errs_generated = re.search(
+        )["count"]
+        errs_generated = _search_groupdict(
             r"Errors generated: (?P<count>\d+)", runner_output
-        ).groupdict()["count"]
-        total_coverage = re.search(
+        )["count"]
+        total_coverage = _search_groupdict(
             r"Precise coverage: (?P<count>\d+(?:\.\d+)?)\s*$",
             runner_output,
-            re.MULTILINE,
-        ).groupdict()["count"]
+            flags=re.MULTILINE,
+        )["count"]
     except AttributeError as e:
         e.add_note(f"Parse failed on output:\n{runner_output}")
         raise

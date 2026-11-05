@@ -33,6 +33,16 @@ from torch_geometric.data import HeteroData
 class MaintenanceMixin:
     """The online-maintenance half of :class:`TrainingDataset`."""
 
+    # Host-provided state (set by ``TrainingDataset.__init__``); declared as
+    # bare annotations so the methods type-check without importing the host
+    # (bare annotations create no runtime attributes).
+    maps_results: dict[str, Result]
+    processed_dir: Path
+    threshold_coverage: int
+    similar_steps_save_prob: float
+    _load_to_cpu: bool
+    _loaded_to_cpu: dict[str, list[HeteroData]]
+
     def filter_map_steps(self, map_steps: list[HeteroData]) -> list[HeteroData]:
         """
         Binarize each step's ``y_true`` at its argmax, dropping unusable steps.

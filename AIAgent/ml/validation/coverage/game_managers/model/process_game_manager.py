@@ -93,6 +93,19 @@ class ModelGamePreparator(BaseGamePreparator):
         super().__init__(namespace)
 
     def _create_onnx_model(self):
+        # The manager always resolves the paths (its _path_to_model and
+        # _onnx_path properties) and run_training always supplies the kwargs;
+        # the Optional constructor defaults exist only for partial
+        # construction (tests).
+        if (
+            self._path_to_model is None
+            or self._onnx_path is None
+            or self._model_kwargs is None
+        ):
+            raise RuntimeError(
+                "ONNX export requires the model path, the ONNX path, and "
+                "the model kwargs"
+            )
         with open(self._gamestate_example_path) as gamestate_file:
             save_torch_model_to_onnx_file(
                 sample_gamestate=load_gamestate(gamestate_file),

@@ -10,9 +10,13 @@ StateVectorMapping = namedtuple("StateVectorMapping", ["state", "vector"])
 
 def predict_state_with_dict(
     model: torch.nn.Module, data: HeteroData, state_map: dict[int, int]
-) -> int:
+) -> tuple[int, torch.Tensor]:
     """Gets state id from model and heterogeneous graph
-    data.state_map - maps real state id to state index"""
+    data.state_map - maps real state id to state index
+
+    Returns the predicted state id and the model's raw output tensor
+    (the ``(num_states, 1)`` logits the caller records as ``y_true``).
+    """
 
     data.to(get_device())
     reversed_state_map = {v: k for k, v in state_map.items()}

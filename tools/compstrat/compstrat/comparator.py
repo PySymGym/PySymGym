@@ -1,7 +1,8 @@
 import enum
 import json
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Sequence
 import warnings
 
 import matplotlib.pyplot as plt
@@ -80,7 +81,7 @@ class Comparator:
         self,
         strat1: Strategy,
         strat2: Strategy,
-        savedir: str,
+        savedir: str | Path,
         eq_color: Color | None = None,
         eq_ecolor: Color | None = None,
     ) -> None:
@@ -223,7 +224,7 @@ class Comparator:
             plt.yscale(config.scale)
 
         if config.divider_line:
-            plt.axline([0, 0], [1, 1])
+            plt.axline((0, 0), (1, 1))
 
         # check if exp_name already exists in df:
         if config.exp_name in self.result_count_df.index:
@@ -315,7 +316,7 @@ class Comparator:
         )
         plt.clf()
 
-    def compare(self, configs: list[CompareConfig]):
+    def compare(self, configs: Sequence[CompareConfig]):
         for config in tqdm.tqdm(
             configs, desc=f"{self.strat1.name} vs {self.strat2.name}"
         ):

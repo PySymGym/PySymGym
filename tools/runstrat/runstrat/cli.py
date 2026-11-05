@@ -102,10 +102,21 @@ def entrypoint(args: Args) -> pd.DataFrame:
                 raise cpe
             continue
         except func_timeout.FunctionTimedOut as fto:
+            # call_test_runner records the command in timedOutKwargs; a
+            # FunctionTimedOut raised without kwargs has no command to show.
+            timed_out_kwargs: dict[str, object] | None = fto.timedOutKwargs
+            timed_out_call = (
+                timed_out_kwargs.get("call") if timed_out_kwargs is not None else None
+            )
+            cmd = (
+                " ".join(map(str, timed_out_call))
+                if isinstance(timed_out_call, list)
+                else "unknown"
+            )
             logging.error(
                 f"""
             runner timed out on {launch_info.method}, this method will be skipped
-            cmd: {" ".join(map(str, fto.timedOutKwargs["call"]))}
+            cmd: {cmd}
             """
             )
             if args.run_mode == RunMode.DEBUG:

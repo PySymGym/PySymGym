@@ -114,7 +114,7 @@ class Connector:
         logging.debug(f"<-- {data.MessageType}")
         return data.MessageBody
 
-    def send_step(self, next_state_id: int, predicted_usefullness: int):
+    def send_step(self, next_state_id: int, predicted_usefullness: float):
         do_step_message = ClientMessage(
             StepMessageBody(
                 StateId=next_state_id, PredictedStateUsefulness=predicted_usefullness
