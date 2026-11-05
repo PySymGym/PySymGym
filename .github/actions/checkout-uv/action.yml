@@ -1,0 +1,64 @@
+name: Checkout and prepare the Python environment
+description: >-
+  Checks out the repository with submodules, sets up Python (the
+  .python-version pin) and uv (0.13.7), and installs the project
+  dependencies into the self-hosted runner's cached .venv (self-healing).
+  Shared by the self-hosted build workflows; see docs/developer.rst,
+  "Self-hosted end-to-end workflows".
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+      with:
+        submodules: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version-file: .python-version
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.3.3
+      with:
+        version: "0.13.7"
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        # Self-hosted runners cache .venv across runs. uv sync is
+        # inherently a sync: it installs the locked packages and removes
+        # any that are no longer in the lockfile, so a package dropped by
+        # an older branch cannot leak into the env (the reason the old
+        # action needed a sync rather than a plain install).
+        #
+        # The old action also pointed TMPDIR at the venv's own filesystem:
+        # pip's uninstall renames the old files into a temp dir, which dies
+        # with "Invalid cross-device link" when /tmp is on a different
+        # device than the venv. uv removes files directly (no rename into a
+        # temp dir), so that workaround is gone.
+        #
+        # If the sync fails for any other reason, rebuild the venv from
+        # scratch — a fresh install never uninstalls.
+        if ! uv sync --locked; then
+            echo "uv sync failed — rebuilding cached venv from scratch"
+            rm -rf .venv
+            uv sync --locked
+        fi
+
+    - name: Verify cached venv integrity
+      shell: bash
+      run: |
+        # The cached venv can be file-broken even when uv considers it
+        # complete: a foreign CUDA stack (nvidia-*-cu13) that once lived
+        # here shares site-packages paths with our nvidia-*-cu12 packages
+        # (both own e.g. nvidia/cudnn/lib/libcudnn.so.9), and the sync's
+        # removal of the foreign stack deletes the shared libraries,
+        # breaking 'import torch'. If torch cannot import, rebuild the
+        # venv from scratch once; uv sync keeps it clean afterwards.
+        if ! uv run python -c "import torch" 2>/dev/null; then
+            echo "torch import failed — rebuilding cached venv from scratch"
+            rm -rf .venv
+            uv sync --locked
+            uv run python -c "import torch"
+        fi
