@@ -45,7 +45,9 @@ test = [
   "pytest-timeout>=2.4.0,<3.0.0",
 ]
 lint = [
+  "pyright>=1.1.414,<2.0.0",
   "ruff>=0.15.10,<0.18.0",
+  "ty>=0.0.96,<0.0.97",
 ]
 docs = [
   "furo>=2024.1",
@@ -81,6 +83,58 @@ explicit-preview-rules = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+# Type checking: ty (fast feedback) and pyright (full check, CI). This table
+# is the single source of truth for both checkers — no standalone
+# ty.toml/pyrightconfig.json. Scope: the project's Python surface (the same
+# trees ruff checks, minus notebooks); the tracked submodule trees are not
+# gitignored, so they are excluded explicitly (the same trees ruff excludes).
+#
+# extra-paths / extraPaths mirror conftest.py's COMPONENT_DIRS — the runtime
+# sys.path trick that makes the component modules importable by their
+# top-level names (common.*, ml.*, runstrat.*, ...). Keep the two lists in
+# sync with COMPONENT_DIRS.
+
+[tool.ty.environment]
+python-version = "3.14"
+extra-paths = [
+  "AIAgent",
+  "tools/compstrat",
+  "tools/runstrat",
+  "tools/dataset_tools",
+  "tools/util",
+]
+
+[tool.ty.src]
+include = [
+  "AIAgent",
+  "tools",
+  "tests",
+  "conftest.py",
+  "docs/conf.py",
+  "docs/_ext/navmap.py",
+]
+exclude = ["GameServers", "maps"]
+
+[tool.pyright]
+include = [
+  "AIAgent",
+  "tools",
+  "tests",
+  "conftest.py",
+  "docs/conf.py",
+  "docs/_ext/navmap.py",
+]
+exclude = ["GameServers", "maps"]
+pythonVersion = "3.14"
+extraPaths = [
+  "AIAgent",
+  "tools/compstrat",
+  "tools/runstrat",
+  "tools/dataset_tools",
+  "tools/util",
+]
+typeCheckingMode = "standard"
 
 [tool.pytest.ini_options]
 testpaths = [
