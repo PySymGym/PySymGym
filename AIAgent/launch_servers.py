@@ -16,6 +16,7 @@ from common.network_utils import next_free_port
 from common.config.config import Config
 from common.config.feature_config import FeatureConfig
 from common.config.loader import load_config
+from common.config.validation_config import CriterionValidation
 from common.validation_coverage.svm_info import SVMInfo
 from paths import BROKER_LOG_PATH
 from connection.broker_conn.classes import (
@@ -275,6 +276,9 @@ async def kill_server(
     server_instance: ServerInstanceInfo, feature_config: FeatureConfig
 ) -> None:
     pid = server_instance.pid
+    if pid is None:
+        # A placeholder instance (restart disabled) has no process to kill.
+        return
     proc = _tracked_handle(pid)
     if proc is None:
         return
@@ -417,7 +421,15 @@ def main(config: str):
     PROCS = {}
     ISSUED = {}
 
-    server_count = config.validation_config.validation_mode.process_count
+    validation_mode = config.validation_config.validation_mode
+    if isinstance(validation_mode, CriterionValidation):
+        # Criterion validation scores a loss on a local dataset: it runs no
+        # game servers, so the broker has nothing to launch for it.
+        raise SystemExit(
+            "the broker requires an SVM or custom validation mode "
+            f"(got {validation_mode.val_type!r}), which launches no game servers"
+        )
+    server_count = validation_mode.process_count
 
     with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()

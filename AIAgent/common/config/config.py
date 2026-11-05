@@ -8,10 +8,10 @@ from common.config.mlflow_config import MLFlowConfig
 from common.config.optuna_config import OptunaConfig
 from common.config.training_config import TrainingConfig
 from common.config.validation_config import ValidationConfig
-from pydantic import Field, ValidationInfo, field_validator
+from pydantic import ConfigDict, Field, ValidationInfo, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
+_CONFIG: ConfigDict = {"extra": "forbid", "populate_by_name": True}
 
 
 @pydantic_dataclass(config=_CONFIG)

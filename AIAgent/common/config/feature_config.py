@@ -1,10 +1,10 @@
 from pathlib import Path
 
 from paths import REPORT_PATH
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
+_CONFIG: ConfigDict = {"extra": "forbid", "populate_by_name": True}
 
 
 @pydantic_dataclass(config=_CONFIG)

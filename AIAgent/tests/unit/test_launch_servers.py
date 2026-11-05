@@ -657,6 +657,19 @@ class TestKillServer:
         assert getpgid_calls == []
         assert "the process doesn't exist" in caplog.text
 
+    def test_placeholder_pid_is_a_noop(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A placeholder instance (restart disabled) has no process: the kill
+        # is a silent no-op (no lookup, no signal).
+        killpg_calls, getpgid_calls, feature_config = self._setup(monkeypatch, {})
+        placeholder = ServerInstanceInfo(
+            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", None
+        )
+
+        asyncio.run(launch_servers_module.kill_server(placeholder, feature_config))
+
+        assert killpg_calls == []
+        assert getpgid_calls == []
+
     def test_kills_the_group_and_reaps(
         self, monkeypatch: pytest.MonkeyPatch, fake_proc
     ) -> None:
@@ -1166,3 +1179,25 @@ class TestMain:
         assert isinstance(launch_servers_module.SERVER_INSTANCES, Queue)
         assert launch_servers_module.PROCS == {}
         assert launch_servers_module.ISSUED == {}
+
+    def test_main_rejects_criterion_validation(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # Criterion validation scores a loss on a local dataset and runs no
+        # game servers: the broker refuses to start (a clear SystemExit)
+        # instead of crashing on the missing process_count.
+        monkeypatch.setattr(
+            launch_servers_module, "BROKER_LOG_PATH", tmp_path / "instance_manager.log"
+        )
+        config = launch_servers_main_config(tmp_path)
+        config["ValidationConfig"]["validation_mode"] = {
+            "val_type": "loss",
+            "batch_size": 8,
+        }
+        config_path = tmp_path / "config.yml"
+        config_path.write_text(yaml.safe_dump(config))
+
+        with pytest.raises(
+            SystemExit, match="requires an SVM or custom validation mode"
+        ):
+            launch_servers_module.main(str(config_path))

@@ -62,7 +62,10 @@ class ClientMessageType(str, Enum):
 @dataclass(slots=True)
 class ClientMessageBody:
     def type(self) -> ClientMessageType:
-        pass
+        # The base body is never instantiated directly (only the
+        # Start/Step subclasses, which override this); the concrete
+        # subclasses' ``type`` is what ``ClientMessage.__post_init__`` calls.
+        raise NotImplementedError
 
 
 @dataclass_json
@@ -140,7 +143,7 @@ class ServerMessage:
 
     @staticmethod
     def from_json_handle(
-        data: str, expected: type[_T], disable_message_checks: bool
+        data: str | bytes, expected: type[_T], disable_message_checks: bool
     ) -> _T | BareObject:
         try:
             envelope = json.loads(data)

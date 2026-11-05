@@ -406,7 +406,7 @@ class TestModelInit:
                 (),
                 {
                     "artifact_uri": "mlflow-artifacts:/1/run/artifacts/model.pth",
-                    "dst_path": REPORT_PATH,
+                    "dst_path": str(REPORT_PATH),
                 },
             )
         ]
@@ -573,8 +573,8 @@ class TestRunTrainingStudyBranch:
         # and tags the best trial number so far.
         assert fakes.mlflow.called("start_run") == [(("registered-run-id",), {})]
         assert fakes.mlflow.called("log_artifact") == [
-            ((CURRENT_STUDY_PATH,), {}),
-            ((CURRENT_TRIAL_PATH,), {}),
+            ((str(CURRENT_STUDY_PATH),), {}),
+            ((str(CURRENT_TRIAL_PATH),), {}),
         ]
         assert fakes.mlflow.called("set_tag") == [
             ((BEST_TRIAL_NUMBER_TAG, study.best_trial.number), {})
@@ -819,7 +819,7 @@ class TestValidateClosures:
         # The study-branch callback also logs the study/trial pickles; the
         # validate call logs the per-trial statistics table.
         log_artifact_calls = fakes.mlflow.called("log_artifact")
-        assert ((table_path,), {}) in log_artifact_calls
+        assert ((str(table_path),), {}) in log_artifact_calls
         assert result == metrics[AVERAGE_COVERAGE]
         assert returned_metrics is metrics
 
@@ -1287,13 +1287,13 @@ class TestObjective:
             )
         ]
         assert rec.mlflow.called("log_artifact") == [
-            ((kwargs_path,), {}),
-            ((model_path, "0"), {}),
-            ((model_path, "1"), {}),
+            ((str(kwargs_path),), {}),
+            ((str(model_path), "0"), {}),
+            ((str(model_path), "1"), {}),
             # The final export re-logs the best checkpoint under the last
             # epoch's slot (here the best is the last epoch, so the weights
             # are unchanged).
-            ((model_path, "1"), {}),
+            ((str(model_path), "1"), {}),
         ]
 
         # Per-epoch sequence.
@@ -1401,7 +1401,16 @@ class TestObjective:
         assert rec.result == best
         # The final export re-logs the best checkpoint under the last
         # epoch's slot.
-        assert rec.mlflow.called("log_artifact")[-1] == ((model_path, "2"), {})
+        assert rec.mlflow.called("log_artifact")[-1] == ((str(model_path), "2"), {})
+
+    def test_zero_epochs_raises_without_a_best_checkpoint(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # A zero-epoch config never records a best checkpoint: the final
+        # restore must fail loudly instead of crashing inside
+        # load_state_dict with a bare TypeError.
+        with pytest.raises(RuntimeError, match="no best checkpoint"):
+            self._run(monkeypatch, tmp_path, epochs=0)
 
     def test_static_dataset_never_updates_meta_data(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

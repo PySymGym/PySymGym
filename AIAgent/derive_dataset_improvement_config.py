@@ -86,13 +86,20 @@ def find_best_trial_run(client: MlflowClient, experiment_id: str):
             f"{BEST_TRIAL_NUMBER_TAG!r} tag; did the tuning run complete?"
         )
     last = max(tagged, key=lambda run: run.info.end_time)
+    last_end_time = last.info.end_time
+    if last_end_time is None:
+        # Unreachable: `tagged` only holds runs with a non-None end_time.
+        # Named explicitly so the comparison below stays type-correct.
+        raise SystemExit(
+            f"the best trial run in experiment {experiment_id} has no end_time"
+        )
     best_number = int(last.data.tags[BEST_TRIAL_NUMBER_TAG])
     candidates = [
         run
         for run in runs
         if run.info.run_name == str(best_number)
         and run.info.end_time is not None
-        and run.info.end_time <= last.info.end_time
+        and run.info.end_time <= last_end_time
     ]
     if not candidates:
         raise SystemExit(

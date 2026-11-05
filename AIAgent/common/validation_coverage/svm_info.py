@@ -2,10 +2,10 @@ from typing import Any
 
 from common.typealias import SVMName
 from common.utils import require_absolute_path
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-_CONFIG = {"extra": "forbid", "populate_by_name": True}
+_CONFIG: ConfigDict = {"extra": "forbid", "populate_by_name": True}
 
 
 @pydantic_dataclass(config=_CONFIG)
