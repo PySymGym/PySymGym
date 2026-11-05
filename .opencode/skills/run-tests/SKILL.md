@@ -1,6 +1,6 @@
 ---
 name: run-tests
-description: Use when running the PySymGym test suite. Thin pointer to docs/testing.rst, the single source of truth for the taxonomy, commands, and fixtures; plus the machine-specific pitfalls (Poetry environment, root runner).
+description: Use when running the PySymGym test suite. Thin pointer to docs/testing.rst, the single source of truth for the taxonomy, commands, and fixtures; plus the machine-specific pitfalls (uv environment, root runner).
 ---
 
 # Run tests
@@ -13,7 +13,7 @@ source of truth; do not restate it here.
 ## Quick reference
 
 - The fast unit tier runs across every component in one command:
-  ``make test-unit`` (``poetry run pytest -m "not integration and not e2e"``).
+  ``make test-unit`` (``uv run pytest -m "not integration and not e2e"``).
   The same tiers are wrapped as ``make test-unit`` / ``make test-integration``
   / ``make test-all`` / ``make test-cov``.
 - CI selects markers explicitly (``-m "not e2e"`` for the gated-tier ratchet
@@ -22,19 +22,13 @@ source of truth; do not restate it here.
 
 ## Do not run bare pytest
 
-Always run pytest through Poetry (``poetry run pytest`` or ``make ...``), never
+Always run pytest through uv (``uv run pytest`` or ``make ...``), never
 with the system interpreter. The system Python does not have the project's
 dependencies (``torch``, ``torch_geometric``, ``mlflow``, ...) installed; a bare
 ``pytest`` silently resolves to a different interpreter and produces import
-errors or stale results.
-
-## Re-sync the environment after `poetry add` / `poetry remove`
-
-``poetry add <package>`` / ``poetry remove <package>`` rewrite ``pyproject.toml``
-and ``poetry.lock`` but do not install the resulting environment. After either,
-restore it before running anything:
-
-    poetry install
+errors or stale results. (``uv run`` has the same hazard in reverse: a command
+missing from the project environment falls back to PATH, so keep the
+environment in sync with ``uv sync``.)
 
 ## Notes
 
