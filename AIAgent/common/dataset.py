@@ -26,8 +26,7 @@ class Result:
     """A map's validation result, ordered so that a better result is greater.
 
     ``a < b`` means ``b`` is better: higher coverage, then fewer tests, then
-    fewer steps, then more errors (the goal is to find as many errors as
-    possible). The ordering lives solely in :attr:`sort_key` and ``__lt__``;
+    fewer steps, then more errors. The ordering lives solely in :attr:`sort_key` and ``__lt__``;
     construction sites pass the plain (non-negated) counts.
 
     The on-disk representation (:meth:`to_tuple`/:meth:`from_tuple`) keeps
