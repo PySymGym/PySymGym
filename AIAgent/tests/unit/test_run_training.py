@@ -13,10 +13,12 @@ error messages.
 
 import logging
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
+import optuna
 import pytest
 import torch
 import yaml
@@ -40,6 +42,7 @@ from common.config.validation_config import (
 )
 from common.dataset import TrainingDatasetMode
 from common.validation_coverage.svm_info import SVMInfo
+from ml.dataset import TrainingDataset
 from ml.models.NorthernPenguin.model import StateModelEncoder
 from ml.models.registry import get_model_class
 from ml.training.seeds import derive_trial_seed
@@ -56,12 +59,7 @@ from run_training import BEST_TRIAL_NUMBER_TAG
 
 pytestmark = pytest.mark.unit
 
-# Evaluated at collection time, before the autouse cpu_device fixture patches
-# torch.cuda.is_available: the real capability of the machine running the
-# suite (the CUDA regression test for #667 needs it).
-_REAL_CUDA_AVAILABLE = torch.cuda.is_available()
-
-MODEL_KWARGS = dict(
+MODEL_KWARGS: dict[str, Any] = dict(
     hidden_channels=64,
     num_of_state_features=8,
     num_hops_1=2,
@@ -145,7 +143,7 @@ class FakeMlflow:
     def artifacts(self):
         return SimpleNamespace(download_artifacts=self._download_artifacts)
 
-    def _download_artifacts(self, *args: Any, **kwargs: Any) -> Path:
+    def _download_artifacts(self, *args: Any, **kwargs: Any) -> Path | None:
         self.record("artifacts.download_artifacts", *args, **kwargs)
         return self.download_artifacts_result
 
@@ -207,16 +205,15 @@ class FakeOptuna:
         return self.study
 
 
-def make_objective_recorder():
+class ObjectiveRecorder:
     """A ``run_training.objective`` stand-in recording every call."""
-    calls: list[tuple[Any, dict]] = []
 
-    def objective(trial, **kwargs: Any) -> str:
-        calls.append((trial, kwargs))
+    def __init__(self) -> None:
+        self.calls: list[tuple[Any, dict]] = []
+
+    def __call__(self, trial: Any, **kwargs: Any) -> str:
+        self.calls.append((trial, kwargs))
         return "objective-result-sentinel"
-
-    objective.calls = calls
-    return objective
 
 
 def run_training_once(
@@ -264,7 +261,7 @@ def run_training_once(
     joblib = FakeJoblib()
     monkeypatch.setattr(run_training_module, "joblib", joblib)
 
-    objective = make_objective_recorder()
+    objective = ObjectiveRecorder()
     monkeypatch.setattr(run_training_module, "objective", objective)
 
     run_training_module.run_training(
@@ -336,11 +333,20 @@ class FakeEncoder(nn.Module):
     def __init__(self, **params: Any) -> None:
         super().__init__()
         self.params = params
-        self.loaded_state: dict | None = None
+        self.loaded_state: Mapping[str, Any] | None = None
 
-    def load_state_dict(self, state: dict) -> "FakeEncoder":
-        self.loaded_state = state
-        return self
+    # Matches the ``nn.Module.load_state_dict`` signature (the production
+    # ``model_init`` calls it positionally and ignores the result). The
+    # return is ``Any``: torch's real one is the private
+    # ``_IncompatibleKeys`` namedtuple, which callers never inspect.
+    def load_state_dict(
+        self,
+        state_dict: Mapping[str, Any],
+        strict: bool = True,
+        assign: bool = False,
+    ) -> Any:
+        self.loaded_state = state_dict
+        return None
 
 
 class TestModelSelection:
@@ -411,7 +417,7 @@ class TestModelInit:
                 (),
                 {
                     "artifact_uri": "mlflow-artifacts:/1/run/artifacts/model.pth",
-                    "dst_path": REPORT_PATH,
+                    "dst_path": str(REPORT_PATH),
                 },
             )
         ]
@@ -442,38 +448,15 @@ class TestModelInit:
         for name in saved:
             assert torch.equal(loaded[name], saved[name])
 
-    @pytest.mark.skipif(not _REAL_CUDA_AVAILABLE, reason="requires CUDA")
-    def test_cuda_saved_checkpoint_loads_on_cpu_only_machine(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        # Regression for #667: a CUDA-saved checkpoint must load when the
-        # machine reports no CUDA. Without map_location this crashes with
-        # "Attempting to deserialize object on a CUDA device but
-        # torch.cuda.is_available() is False".
-        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
-        reference = StateModelEncoder(**MODEL_KWARGS).to("cuda:0")
-        path = tmp_path / "model.pth"
-        torch.save(reference.state_dict(), path)
-        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-
-        model_init, fakes = self._model_init(
-            monkeypatch, weights_uri="mlflow-artifacts:/1/run/artifacts/model.pth"
-        )
-        fakes.mlflow.download_artifacts_result = path
-
-        model = model_init(**MODEL_KWARGS)
-
-        saved = reference.state_dict()
-        for name, param in model.state_dict().items():
-            assert param.device.type == "cpu"
-            assert torch.equal(param, saved[name].cpu())
-
 
 def svm_validation_config(fail_immediately: bool = True) -> ValidationConfig:
     platform = Platform(
         name="dotnet",
         DatasetConfigs=[
-            DatasetConfig(dataset_base_path="/dummy", dataset_description="/dummy.json")
+            DatasetConfig(
+                dataset_base_path=Path("/dummy"),
+                dataset_description=Path("/dummy.json"),
+            )
         ],
         SVMSInfo=[
             SVMInfo(
@@ -604,8 +587,8 @@ class TestRunTrainingStudyBranch:
         # and tags the best trial number so far.
         assert fakes.mlflow.called("start_run") == [(("registered-run-id",), {})]
         assert fakes.mlflow.called("log_artifact") == [
-            ((CURRENT_STUDY_PATH,), {}),
-            ((CURRENT_TRIAL_PATH,), {}),
+            ((str(CURRENT_STUDY_PATH),), {}),
+            ((str(CURRENT_TRIAL_PATH),), {}),
         ]
         assert fakes.mlflow.called("set_tag") == [
             ((BEST_TRIAL_NUMBER_TAG, study.best_trial.number), {})
@@ -850,7 +833,7 @@ class TestValidateClosures:
         # The study-branch callback also logs the study/trial pickles; the
         # validate call logs the per-trial statistics table.
         log_artifact_calls = fakes.mlflow.called("log_artifact")
-        assert ((table_path,), {}) in log_artifact_calls
+        assert ((str(table_path),), {}) in log_artifact_calls
         assert result == metrics[AVERAGE_COVERAGE]
         assert returned_metrics is metrics
 
@@ -996,14 +979,70 @@ class TestValidateClosures:
         assert result == 0.0
         assert metrics == {AVERAGE_COVERAGE: 0.0}
 
+    def test_svm_validate_worker_crash_is_a_hard_failure(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
+    ) -> None:
+        maps = [game_map2svm_factory("MapA")]
+        monkeypatch.setattr(run_training_module, "get_maps", lambda config: maps)
+
+        def coverage_factory(
+            model,
+            dataset,
+            broker_config=None,
+            connector_config=None,
+            feature_config=None,
+            model_kwargs=None,
+            trial_dir=None,
+        ):
+            instance = FakeValidationCoverage(
+                model,
+                dataset,
+                broker_config=broker_config,
+                connector_config=connector_config,
+                feature_config=feature_config,
+                model_kwargs=model_kwargs,
+                trial_dir=trial_dir,
+            )
+            # A worker crash surfaces as an exception object in the results
+            # list (catch_return_exception returns it instead of raising).
+            instance.result = [RuntimeError("worker exploded")]
+            return instance
+
+        monkeypatch.setattr(run_training_module, "ValidationCoverage", coverage_factory)
+        stats_calls: list[tuple] = []
+        monkeypatch.setattr(
+            run_training_module,
+            "get_svms_statistics",
+            lambda *a: stats_calls.append(a) or {AVERAGE_COVERAGE: 0.0},
+        )
+
+        validate, fakes = self._validate(
+            monkeypatch, svm_validation_config(fail_immediately=False)
+        )
+        model = object()
+        dataset = fakes.datasets[0]
+        trial_dir = tmp_path / "trial"
+        trial_dir.mkdir()
+
+        # A crash is a hard failure even with fail_immediately=False:
+        # continuing would silently drop the crashed map from the statistics.
+        with pytest.raises(
+            RuntimeError, match="worker crashed: RuntimeError: worker exploded"
+        ):
+            validate(model, dataset, trial_dir, {})
+
+        # The crash is raised before the statistics are computed.
+        assert stats_calls == []
+
     def test_custom_validate_runs_pipeline_in_order(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, game_map2svm_factory
     ) -> None:
         criterion_mode = CriterionValidation(val_type="loss", batch_size=8)
-        svm_config = svm_validation_config()
+        svm_mode = svm_validation_config().validation_mode
+        assert isinstance(svm_mode, SVMValidationSendEachStep)
         custom = CustomValidation(
             val_type="custom",
-            val_sequence=[criterion_mode, svm_config.validation_mode],
+            val_sequence=[criterion_mode, svm_mode],
             process_count=1,
         )
         maps = [game_map2svm_factory("MapA")]
@@ -1226,7 +1265,8 @@ class TestObjective:
 
         run_ids: dict[int, str] = {}
         config = run_training_module.ObjectiveConfig(
-            dataset=dataset,
+            # Duck-typed stand-ins for the production dependencies.
+            dataset=cast(TrainingDataset, dataset),
             dynamic_dataset=dynamic_dataset,
             model_init=model_init,
             criterion_init=criterion_init,
@@ -1236,7 +1276,7 @@ class TestObjective:
             seed=seed,
             run_ids=run_ids,
         )
-        result = run_training_module.objective(trial, config=config)
+        result = run_training_module.objective(cast(optuna.Trial, trial), config=config)
 
         return SimpleNamespace(
             result=result,
@@ -1318,13 +1358,13 @@ class TestObjective:
             )
         ]
         assert rec.mlflow.called("log_artifact") == [
-            ((kwargs_path,), {}),
-            ((model_path, "0"), {}),
-            ((model_path, "1"), {}),
+            ((str(kwargs_path),), {}),
+            ((str(model_path), "0"), {}),
+            ((str(model_path), "1"), {}),
             # The final export re-logs the best checkpoint under the last
             # epoch's slot (here the best is the last epoch, so the weights
             # are unchanged).
-            ((model_path, "1"), {}),
+            ((str(model_path), "1"), {}),
         ]
 
         # Per-epoch sequence.
@@ -1432,7 +1472,16 @@ class TestObjective:
         assert rec.result == best
         # The final export re-logs the best checkpoint under the last
         # epoch's slot.
-        assert rec.mlflow.called("log_artifact")[-1] == ((model_path, "2"), {})
+        assert rec.mlflow.called("log_artifact")[-1] == ((str(model_path), "2"), {})
+
+    def test_zero_epochs_raises_without_a_best_checkpoint(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # A zero-epoch config never records a best checkpoint: the final
+        # restore must fail loudly instead of crashing inside
+        # load_state_dict with a bare TypeError.
+        with pytest.raises(RuntimeError, match="no best checkpoint"):
+            self._run(monkeypatch, tmp_path, epochs=0)
 
     def test_static_dataset_never_updates_meta_data(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

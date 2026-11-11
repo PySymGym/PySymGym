@@ -2,6 +2,7 @@ import copy
 import json
 import sys
 import warnings
+from multiprocessing.managers import Namespace
 from types import SimpleNamespace
 
 import onyx
@@ -11,6 +12,7 @@ import torch
 import yaml
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
+from ml.device import cuda_is_usable
 from ml.inference import TORCH
 from ml.models.NorthernPenguin.model import (
     StateModelEncoder as RealStateModelEncoder,
@@ -95,10 +97,14 @@ class TestForwardOnCUDA:
 
     The ``gpu`` marker keeps the test out of the gated tier (machine-agnostic
     coverage ratchet); the ``skipif`` is the runtime guard for when the test
-    is selected explicitly on a CUDA-less machine (``make test-all``,
-    ``pytest -m integration``)."""
+    is selected explicitly on a machine without usable CUDA (``make
+    test-all``, ``pytest -m integration``). The guard is
+    ``cuda_is_usable``, not ``torch.cuda.is_available``: the latter is True
+    on a machine whose GPU the locked torch cannot run on (no kernels for
+    its compute capability), where the test would crash instead of skipping
+    (the op-based verdict, as in ``probe_gpu_torch.py``, #662)."""
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
+    @pytest.mark.skipif(not cuda_is_usable(), reason="requires usable CUDA")
     def test_forward_matches_cpu_with_and_without_v_v_edges(self, config):
         with open(config) as file:
             model_kwargs = yaml.safe_load(file)
@@ -153,7 +159,7 @@ class TestModelGamePreparatorKwargs:
         )
         model_path = tmp_path / "model.pth"
         onnx_path = tmp_path / "model.onnx"
-        namespace = SimpleNamespace(
+        namespace = Namespace(
             shared_lock=None, is_prepared=SimpleNamespace(value=False)
         )
         preparator = process_game_manager.ModelGamePreparator(
@@ -340,7 +346,8 @@ def _twelve_state_gamestate() -> GameState:
         data = json.load(f)
     template = data["States"][0]
     data["States"].extend({**template, "Id": 100 + i, "Children": []} for i in range(8))
-    return GameState.from_dict(data)
+    # from_dict is added by @dataclass_json at runtime (invisible statically).
+    return GameState.from_dict(data)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def _run_main(monkeypatch, argv):
@@ -379,5 +386,5 @@ def _main_argv(tmp_path, config, sample, verify, omit=None, opset_version=None):
 
 def _load_gamestate(path) -> GameState:
     with open(path) as f:
-        game_state = GameState.from_dict(json.load(f))
+        game_state = GameState.from_dict(json.load(f))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         return game_state

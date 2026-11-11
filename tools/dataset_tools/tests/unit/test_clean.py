@@ -63,10 +63,11 @@ def test_get_bad_episodes_extracts_and_deduplicates_names(tmp_path: Path) -> Non
     assert get_bad_episodes(log) == ["MapA", "MapB"]
 
 
+# schema is added by @dataclass_json at runtime (invisible statically).
 def test_clean_removes_bad_episodes_and_sorts(tmp_path: Path) -> None:
     dataset_path = tmp_path / "dataset.json"
     dataset_path.write_text(
-        GameMap.schema().dumps(
+        GameMap.schema().dumps(  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
             [_map("MapA", 20), _map("MapB", 0), _map("MapC", 10)],
             many=True,
             indent=4,
@@ -77,14 +78,14 @@ def test_clean_removes_bad_episodes_and_sorts(tmp_path: Path) -> None:
 
     clean(log, dataset_path)
 
-    result = GameMap.schema().loads(dataset_path.read_text(), many=True)
+    result = GameMap.schema().loads(dataset_path.read_text(), many=True)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     assert [game_map.MapName for game_map in result] == ["MapC", "MapA"]
 
 
 def test_main_cleans_the_dataset(run_main, tmp_path: Path) -> None:
     dataset_path = tmp_path / "dataset.json"
     dataset_path.write_text(
-        GameMap.schema().dumps(
+        GameMap.schema().dumps(  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
             [_map("MapA", 20), _map("MapB", 0), _map("MapC", 10)],
             many=True,
             indent=4,
@@ -95,7 +96,7 @@ def test_main_cleans_the_dataset(run_main, tmp_path: Path) -> None:
 
     run_main(["-d", str(dataset_path), "-l", str(log)])
 
-    result = GameMap.schema().loads(dataset_path.read_text(), many=True)
+    result = GameMap.schema().loads(dataset_path.read_text(), many=True)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     assert [game_map.MapName for game_map in result] == ["MapC", "MapA"]
 
 
@@ -114,7 +115,7 @@ def test_main_missing_dataset_reports_dataset_error(run_main, tmp_path: Path) ->
 def test_main_missing_log_reports_log_error(run_main, tmp_path: Path) -> None:
     dataset_path = tmp_path / "dataset.json"
     dataset_path.write_text(
-        GameMap.schema().dumps([_map("MapA", 0)], many=True, indent=4)
+        GameMap.schema().dumps([_map("MapA", 0)], many=True, indent=4)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     )
     log = tmp_path / "missing.log"
 

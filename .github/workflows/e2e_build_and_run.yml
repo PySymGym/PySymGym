@@ -118,12 +118,12 @@ jobs:
       - name: Bootstrap workspace for local actions
         uses: actions/checkout@v7
 
-      # Checkout, Python setup, pinned Poetry, and the self-healing
+      # Checkout, Python setup, pinned uv, and the self-healing
       # dependency install live once in the shared composite action; the
       # .NET builds (V# game server + maps) in the other one. See
       # docs/developer.rst, "Self-hosted end-to-end workflows".
       - name: Prepare the Python environment
-        uses: ./.github/actions/checkout-poetry
+        uses: ./.github/actions/checkout-uv
 
       - name: Verify GPU compatibility with the locked torch
         # The container may have a GPU device passed through (detect-gpu)
@@ -135,7 +135,7 @@ jobs:
         # from torch for the rest of the run (CUDA_VISIBLE_DEVICES=) so the
         # pipeline degrades to the CPU flow instead of failing. #662
         run: |
-          poetry run python AIAgent/probe_gpu_torch.py
+          uv run python AIAgent/probe_gpu_torch.py
 
       - name: Build the .NET game server and maps
         uses: ./.github/actions/dotnet-build
@@ -170,7 +170,7 @@ jobs:
           # earlier step leaves the tuning step without a server. Readiness is
           # polled (stdlib only) instead of a fixed sleep, which races with the
           # variable startup time.
-          poetry --ansi run python -m mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts > mlflow.log 2>&1 &
+          uv run python -m mlflow server -h 127.0.0.1 -p 8080 --serve-artifacts > mlflow.log 2>&1 &
           MLFLOW_PID=$!
           BROKER_PID=""
           trap 'kill $MLFLOW_PID $BROKER_PID 2>/dev/null || true' EXIT
@@ -178,7 +178,7 @@ jobs:
           python3 wait_for_service.py http --url http://127.0.0.1:8080/health \
             --name "MLflow server"
 
-          poetry --ansi run python3 run_training.py --config ${{ inputs.training-config }}
+          uv run python3 run_training.py --config ${{ inputs.training-config }}
 
           # Dataset improvement (optional, selected by the caller via
           # improvement-base-config): the improvement run must continue from
@@ -188,17 +188,17 @@ jobs:
           # config stays the single source of truth; only the two URIs are
           # derived into a runtime file under report/.
           if [ -n "${{ inputs.improvement-base-config }}" ]; then
-              poetry --ansi run python3 derive_dataset_improvement_config.py \
+              uv run python3 derive_dataset_improvement_config.py \
                 --base-config ${{ inputs.improvement-base-config }} \
                 --output-config report/config_for_tests_improved.yml
 
-              poetry --ansi run python3 launch_servers.py --config report/config_for_tests_improved.yml > broker.log 2>&1 &
+              uv run python3 launch_servers.py --config report/config_for_tests_improved.yml > broker.log 2>&1 &
               BROKER_PID=$!
 
                python3 wait_for_service.py tcp --host 127.0.0.1 --port 35000 \
                  --name "game-server broker"
 
-              poetry --ansi run python3 run_training.py --config report/config_for_tests_improved.yml
+              uv run python3 run_training.py --config report/config_for_tests_improved.yml
           fi
 
       - name: Upload mlartifacts

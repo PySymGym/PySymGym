@@ -28,9 +28,9 @@ from common.dataset import Result, TrainingDatasetMode
 from common.game import GameState
 from ml.device import get_device
 from ml.inference import degenerate_counts
-from torch.utils.data import random_split
+from ml.model_io import safe_torch_load
+from torch.utils.data import Subset, random_split
 from torch_geometric.data import Dataset, HeteroData
-from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 
 from .maintenance import MaintenanceMixin
 from .tensors import (
@@ -101,14 +101,19 @@ class TrainingDataset(MaintenanceMixin, Dataset):
 
         self.train_percentage = train_percentage
         self.train_dataset_indices, self.test_dataset_indices = self._split_dataset()
-        self.__indices = self.train_dataset_indices
+        # Materialized (the split's dataset is a range, so the subset's values
+        # are its indices): a plain list satisfies the base class's
+        # indices() -> Sequence contract.
+        self.__indices = list(self.train_dataset_indices.indices)
         super().__init__()
 
-    def _split_dataset(self) -> Tuple[List, List]:
+    def _split_dataset(self) -> Tuple[Subset, Subset]:
         full_dataset_len = len(self.processed_paths)
         train_dataset_len = round(full_dataset_len * self.train_percentage)
+        # torch's random_split only needs len() and integer indexing at
+        # runtime; the stub declares Dataset.
         train_dataset_indices, test_dataset_indices = random_split(
-            range(full_dataset_len),
+            range(full_dataset_len),  # type: ignore[reportArgumentType, ty:invalid-argument-type]
             [train_dataset_len, full_dataset_len - train_dataset_len],
         )
         return train_dataset_indices, test_dataset_indices
@@ -123,10 +128,7 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         if self._load_to_cpu:
             step = self._flattened_loaded_steps[idx]
         else:
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                step = torch.load(self.processed_paths[idx], map_location=get_device())
+            step = safe_torch_load(self.processed_paths[idx], get_device())
         return step
 
     def switch_to(self, mode: TrainingDatasetMode) -> None:
@@ -140,18 +142,22 @@ class TrainingDataset(MaintenanceMixin, Dataset):
             'val' --- use validation part.
         """
         if mode is TrainingDatasetMode.TRAINING:
-            self.__indices = self.train_dataset_indices
+            self.__indices = list(self.train_dataset_indices.indices)
         elif mode is TrainingDatasetMode.VALIDATION:
-            self.__indices = self.test_dataset_indices
+            self.__indices = list(self.test_dataset_indices.indices)
         else:
             raise ValueError("mode must be either 'TRAINING' or 'VALIDATION'")
 
+    # PyG's Dataset declares raw_dir and processed_dir -> str; these
+    # overrides return Path (process()'s `self.processed_dir / map_name`
+    # needs the `/` operator, and os.path accepts Path). Both checkers
+    # model the base declaration literally.
     @property
-    def raw_dir(self):
+    def raw_dir(self):  # type: ignore[reportIncompatibleMethodOverride]
         return self._raw_dir
 
     @property
-    def processed_dir(self):
+    def processed_dir(self) -> Path:  # type: ignore[reportIncompatibleVariableOverride, reportIncompatibleMethodOverride, ty:invalid-property-type-override]
         return self._processed_dir
 
     def _get_processed_paths(self) -> List[str]:
@@ -292,7 +298,8 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         f = open(os.path.join(raw_map_path, raw_step_id + GAMESTATESUFFIX))
         data = json.load(f)
         f.close()
-        graph, state_map = convert_input_to_tensor(GameState.from_dict(data))
+        # from_dict is added by @dataclass_json at runtime (invisible statically).
+        graph, state_map = convert_input_to_tensor(GameState.from_dict(data))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         # Degenerate steps (#619) are skipped before get_states_distribution:
         # with an empty state_map the moved-state lookup would KeyError.
         # Zero-path-condition graphs are not degenerate and are saved as usual.
@@ -317,7 +324,8 @@ class TrainingDataset(MaintenanceMixin, Dataset):
         return True
 
     def _load_steps(self):
-        def get_map_name_from_path(path: Path):
+        # processed_paths holds strs (PyG's Dataset contract).
+        def get_map_name_from_path(path: str):
             return osp.split(osp.split(path)[0])[1]
 
         steps = defaultdict(list)
@@ -328,10 +336,7 @@ class TrainingDataset(MaintenanceMixin, Dataset):
             colour=self._progress_bar_color,
         ):
             map_name = get_map_name_from_path(step_path)
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                steps[map_name].append(torch.load(step_path, map_location="cpu"))
+            steps[map_name].append(safe_torch_load(step_path, "cpu"))
         return steps
 
 

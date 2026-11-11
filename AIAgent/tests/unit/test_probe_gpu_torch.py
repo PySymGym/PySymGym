@@ -7,6 +7,8 @@ CUDA-touching seams (the module's ``torch`` global, ``_run_op``) are
 replaced with fakes.
 """
 
+from typing import Any
+
 import pytest
 
 import probe_gpu_torch
@@ -22,8 +24,8 @@ from probe_gpu_torch import (
 pytestmark = pytest.mark.unit
 
 
-def _info(op_error: str | None = None, **overrides: object) -> GpuInfo:
-    base = dict(
+def _info(op_error: str | None = None, **overrides: Any) -> GpuInfo:
+    base: dict[str, Any] = dict(
         torch_version="2.7.1+cu126",
         arch_list=("sm_50", "sm_60", "sm_70"),
         device_name="NVIDIA GeForce GTX 1030",

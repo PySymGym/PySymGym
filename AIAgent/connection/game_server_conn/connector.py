@@ -1,6 +1,6 @@
 import logging
 from functools import wraps
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import websocket
 from common.config.feature_config import FeatureConfig
@@ -48,15 +48,17 @@ class Connector:
 
         start_message = ClientMessage(StartMessageBody.from_game_map(map))
         logging.debug(f"--> StartMessage  : {start_message}")
-        self.send(start_message.to_json())
+        # to_json is added by @dataclass_json at runtime (invisible statically).
+        self.send(start_message.to_json())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         self._current_step = 0
         self.game_is_over = False
         self._gameover: Connector.GameOver | None = None
         self.map = map
 
-    def catch_losing_of_connection(func):
+    @staticmethod
+    def catch_losing_of_connection(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except (websocket.WebSocketException, OSError) as e:
@@ -65,15 +67,18 @@ class Connector:
         return wrapper
 
     @catch_losing_of_connection
-    def receive(self):
+    def receive(self) -> str | bytes:
         return self.ws.recv()
 
     @catch_losing_of_connection
-    def send(self, msg):
+    def send(self, msg: str | bytes) -> int:
         return self.ws.send(msg)
 
-    def _raise_if_gameover(self, msg) -> GameOverServerMessage | str:
-        if self.game_is_over:
+    def _raise_if_gameover(self, msg: str | bytes) -> str | bytes:
+        # game_is_over is only ever set together with _gameover (the GAMEOVER
+        # case below), so the second check never changes the outcome; it
+        # just makes the invariant explicit to the type checkers.
+        if self.game_is_over and self._gameover is not None:
             raise self._gameover
 
         matching_message_type = ServerMessage.from_json_handle(
@@ -110,14 +115,14 @@ class Connector:
         logging.debug(f"<-- {data.MessageType}")
         return data.MessageBody
 
-    def send_step(self, next_state_id: int, predicted_usefullness: int):
+    def send_step(self, next_state_id: int, predicted_usefullness: float):
         do_step_message = ClientMessage(
             StepMessageBody(
                 StateId=next_state_id, PredictedStateUsefulness=predicted_usefullness
             )
         )
         logging.debug(f"--> ClientMessage : {do_step_message}")
-        self.send(do_step_message.to_json())
+        self.send(do_step_message.to_json())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         self._sent_state_id = next_state_id
 
     def recv_reward_or_throw_gameover(self) -> Reward | IncorrectPredictedStateIdBody:

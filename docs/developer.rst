@@ -177,7 +177,7 @@ command from the repository root:
 
 .. code-block:: console
 
-    poetry run pytest        # or: make test-unit
+    uv run pytest        # or: make test-unit
 
 CI (``.github/workflows/python_tests.yaml``) runs each component suite and then
 a repository-root coverage step that enforces the ratchet documented in
@@ -190,17 +190,43 @@ Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_:
 
 .. code-block:: console
 
-    poetry run ruff check
-    poetry run ruff format --check
+    uv run ruff check
+    uv run ruff format --check
 
 The ruff configuration (target version, enabled rule sets, included paths)
-lives in ``pyproject.toml``. CI runs the same two commands in
-``.github/workflows/python_linting.yaml``.
+lives in ``pyproject.toml``. CI runs the same two commands in the ``lint``
+job of ``.github/workflows/python_linting.yaml``.
 
 The `ruff editor integrations <https://docs.astral.sh/ruff/integrations/>`_
 (for example the `VSCode
 <https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff>`__
 extension) run the same checks on save.
+
+Type checking uses `ty <https://github.com/astral-sh/ty>`_ (fast feedback)
+and `pyright <https://github.com/microsoft/pyright>`_ (full check); both
+must report zero diagnostics:
+
+.. code-block:: console
+
+    uv run ty check
+    uv run pyright
+
+Their configuration (scope, exclusions, the extra import paths) lives in
+``pyproject.toml`` (``[tool.ty]`` and ``[tool.pyright]``). CI runs them in
+the ``typecheck`` job of ``.github/workflows/python_linting.yaml``.
+
+The pre-commit hooks run the same guard set on every commit (ruff check
+and format, ``ty check``, the ``uv-lock`` hook that keeps ``uv.lock`` in
+sync with ``pyproject.toml``, and the hygiene basics); install them per
+:doc:`setup` and run them manually over the whole tree with:
+
+.. code-block:: console
+
+    pre-commit run --all-files
+
+The configuration is ``.pre-commit-config.yaml``; the Python hooks run
+through the locked environment (``uv run``), so the hook versions are the
+``uv.lock`` versions — the same binaries CI runs.
 
 Docs build
 ----------
@@ -209,8 +235,8 @@ The Sphinx sources live in ``docs/``. Build them locally with:
 
 .. code-block:: console
 
-    poetry install --only docs
-    poetry run sphinx-build -W --keep-going -b html docs docs/_build/html
+    uv sync --only-group docs
+    uv run sphinx-build -W --keep-going -b html docs docs/_build/html
 
 The build runs under the no-warnings policy (``-W --keep-going``): any warning
 fails the build. CI runs the same command in ``.github/workflows/docs.yaml``.
@@ -272,13 +298,13 @@ such a thin caller with its own name and concurrency group — do not copy the
 pipeline.
 
 **Shared setup and build steps.** The pipeline's environment preparation
-(checkout with submodules, Python 3.11.8, pinned Poetry, the self-healing
-dependency install, the cached-venv integrity check) lives once in the
-composite action ``.github/actions/checkout-poetry``, and the .NET builds
+(checkout with submodules, Python (``.python-version``), uv 0.13.7, the
+self-healing dependency install, the cached-venv integrity check) lives once
+in the composite action ``.github/actions/checkout-uv``, and the .NET builds
 (V# game server plus the caller-selected maps project) in
 ``.github/actions/dotnet-build``. The e2e pipeline and the runstrat pipeline
-(``runstrat_tool.yaml``) are thin configurations of those actions; the
-Poetry version they install is the one documented in ``README.md``.
+(``runstrat_tool.yaml``) are thin configurations of those actions; the uv
+version they install is the one pinned in the action.
 
 **Container jobs bootstrap the workspace before a local action.** The
 runner reads a local composite action (``uses: ./.github/actions/...``) from
@@ -373,9 +399,9 @@ Two properties make this a workflow-only change:
 
 - The CI environment already ships a CUDA-enabled torch. The Docker image
   (``.github/docker/Dockerfile``) provides only ubuntu and the dotnet SDKs;
-  Python dependencies are installed at runtime by ``poetry install`` from the
+  Python dependencies are installed at runtime by ``uv sync`` from the
   lock, and the locked torch resolves on Linux x86_64 to the manylinux wheel
-  with all ``nvidia-*-cu12`` dependencies (cuDNN, cuBLAS, NCCL, ...).
+  with all ``nvidia-*-cu13`` dependencies (cuDNN, cuBLAS, NCCL, ...).
 - Device selection needs no code change: ``ml.device.get_device`` picks
   ``cuda:0`` when available and falls back to CPU, and the training step
   prints the selected device at startup — every CI run logs which path it
@@ -400,13 +426,15 @@ execution on the device"). The pipeline therefore verifies compatibility
 where torch is actually available — a step in the build-and-launch job,
 after the Python environment is prepared: the image itself ships no Python
 (the venv with the locked torch is created at runtime by the
-checkout-poetry action), so the probe cannot run earlier.
+checkout-uv action), so the probe cannot run earlier.
 ``AIAgent/probe_gpu_torch.py`` runs a small CUDA op on ``cuda:0`` with the
 exact torch the pipeline trains with. The verdict is the op, not the
 arch-list membership: a capability absent from
 ``torch.cuda.get_arch_list()`` can still work through driver JIT of bundled
-PTX (the locked torch 2.7.1 runs on the runner's sm_61 GPU this way), and
-an arch-list hit proves nothing if the op fails. On failure the probe logs
+PTX (the pre-#644 locked torch 2.7.1 ran on the runner's sm_61 GPU this
+way; the locked torch 2.15.0 does not — that is exactly why the probe
+degrades the current run), and an arch-list hit proves nothing if the op
+fails. On failure the probe logs
 the device, its compute capability, the torch version and arch list, and
 hides the device from torch for the rest of the run (an empty
 ``CUDA_VISIBLE_DEVICES`` via ``$GITHUB_ENV``), so ``ml.device.get_device``

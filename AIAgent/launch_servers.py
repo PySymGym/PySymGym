@@ -9,6 +9,7 @@ import time
 from contextlib import contextmanager, suppress
 from pathlib import Path
 from queue import Empty, Queue
+from typing import cast
 
 import psutil
 from aiohttp import web
@@ -16,11 +17,11 @@ from common.network_utils import next_free_port
 from common.config.config import Config
 from common.config.feature_config import FeatureConfig
 from common.config.loader import load_config
+from common.config.validation_config import CriterionValidation
 from common.validation_coverage.svm_info import SVMInfo
 from paths import BROKER_LOG_PATH
 from connection.broker_conn.classes import (
     ServerInstanceInfo,
-    Undefined,
     WSUrl,
 )
 
@@ -66,7 +67,7 @@ class InstanceIssuanceError(RuntimeError):
     """
 
 
-async def wait_for_port(port, timeout=10):
+async def wait_for_port(port, timeout: float = 10):
     start_time = time.time()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -81,6 +82,9 @@ async def wait_for_port(port, timeout=10):
 
 @routes.get("/get_ws")
 async def dequeue_instance(request):
+    # Bound before the try: if get() itself fails (anything but Empty, which
+    # is re-raised below), there is no instance to re-queue in the handler.
+    server_info: ServerInstanceInfo | None = None
     try:
         server_info = SERVER_INSTANCES.get(block=False)
         # The queue must hold placeholders only: a live instance is
@@ -89,7 +93,7 @@ async def dequeue_instance(request):
         # A typed error (not an assert): it survives python -O and the
         # except-Exception path below re-queues the instance and returns
         # 500 instead of a silent ws_url="None".
-        if server_info.pid is not Undefined:
+        if server_info.pid is not None:
             raise InstanceIssuanceError(
                 f"cannot issue {server_info}: a live instance was requeued, "
                 "which only happens with ON_GAME_SERVER_RESTART disabled; "
@@ -103,24 +107,27 @@ async def dequeue_instance(request):
         # Lease the issued instance: a hard-killed worker never calls
         # /post_ws, so the reaper reaps it after the TTL (the slot is not
         # lost). Recorded last, so a failure above re-queues without leaking
-        # a lease. The restart-disabled placeholder (pid Undefined) is not
+        # a lease. The restart-disabled placeholder (pid=None) is not
         # leased: the broker does not own that server.
-        if server_info.pid is not Undefined:
+        if server_info.pid is not None:
             ISSUED[server_info.pid] = (server_info, time.monotonic())
-        return web.json_response(server_info.to_dict())
+        # to_dict is added by @dataclass_json at runtime (invisible statically).
+        return web.json_response(server_info.to_dict())  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     except Empty:
         logging.error("Couldn't dequeue instance, the queue is not replenishing")
         raise
     except Exception as e:
         logging.error(e, exc_info=True)
-        SERVER_INSTANCES.put(server_info)
+        if server_info is not None:
+            SERVER_INSTANCES.put(server_info)
         raise
 
 
 @routes.post("/post_ws")
 async def enqueue_instance(request):
     returned_instance_info_raw = await request.read()
-    returned_instance_info = ServerInstanceInfo.from_json(
+    # from_json is added by @dataclass_json at runtime (invisible statically).
+    returned_instance_info = ServerInstanceInfo.from_json(  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         returned_instance_info_raw.decode("utf-8")
     )
     logging.info(f"got {returned_instance_info} from client")
@@ -128,7 +135,7 @@ async def enqueue_instance(request):
     # End the lease before the (async) kill: the instance is being returned,
     # so the reaper must not reap it. A pid that was never leased (or already
     # reaped) is a no-op.
-    if returned_instance_info.pid is not Undefined:
+    if returned_instance_info.pid is not None:
         ISSUED.pop(returned_instance_info.pid, None)
 
     feature_config = request.app[CONFIG_KEY].feature_config
@@ -138,7 +145,7 @@ async def enqueue_instance(request):
             returned_instance_info.svm_name,
             returned_instance_info.port,
             returned_instance_info.ws_url,
-            pid=Undefined,
+            pid=None,
         )
 
     SERVER_INSTANCES.put(returned_instance_info)
@@ -163,7 +170,7 @@ async def run_server_instance(
     server_working_dir = svm_info.server_working_dir
 
     if not feature_config.on_game_server_restart.enabled:
-        return ServerInstanceInfo(svm_name, 0, "None", pid=Undefined)
+        return ServerInstanceInfo(svm_name, 0, "None", pid=None)
 
     def start_server() -> tuple[subprocess.Popen[bytes], int]:
         port = next_free_port(min_port, max_port, GAME_SERVER_BIND_ADDRESS)
@@ -237,7 +244,7 @@ async def run_servers(count: int) -> list[ServerInstanceInfo]:
     servers_start_tasks = []
 
     async def run():
-        server_info = ServerInstanceInfo("_", 0, "None", pid=Undefined)
+        server_info = ServerInstanceInfo("_", 0, "None", pid=None)
         servers_start_tasks.append(server_info)
 
     await asyncio.gather(*[run() for _ in range(count)])
@@ -275,6 +282,9 @@ async def kill_server(
     server_instance: ServerInstanceInfo, feature_config: FeatureConfig
 ) -> None:
     pid = server_instance.pid
+    if pid is None:
+        # A placeholder instance (restart disabled) has no process to kill.
+        return
     proc = _tracked_handle(pid)
     if proc is None:
         return
@@ -349,7 +359,7 @@ async def reap_expired_leases(
                 # it), and the slot is re-queued below so it is not lost.
                 logging.exception(f"failed to reap expired lease {server_info}")
             server_queue.put(
-                ServerInstanceInfo(server_info.svm_name, 0, "None", pid=Undefined)
+                ServerInstanceInfo(server_info.svm_name, 0, "None", pid=None)
             )
 
 
@@ -398,12 +408,16 @@ async def _on_cleanup(app: web.Application) -> None:
             await task
 
 
-def main(config: str):
-    global SERVER_INSTANCES, PROCS, ISSUED
+def main(config_path: str):
+    # Python allows `global X` + first assignment to create the module
+    # attribute; the names are created here (the broker entrypoint) and
+    # mutated in place elsewhere. ty wants them pre-declared at module
+    # scope, which this design deliberately avoids (no import-time state).
+    global SERVER_INSTANCES, PROCS, ISSUED  # ty: ignore[unresolved-global]
 
     # Load the config first: a broken config must fail before the broker
     # sets up its state and starts serving.
-    config: Config = load_config(config)
+    config: Config = load_config(config_path)
 
     logging.basicConfig(
         level=config.logger_level,
@@ -412,12 +426,21 @@ def main(config: str):
         format="%(asctime)s - p%(process)d: %(name)s - [%(levelname)s]: %(message)s",
     )
 
-    # Queue[ServerInstanceInfo]
-    SERVER_INSTANCES = Queue()
+    # The cast types the global for the checkers (an annotated assignment
+    # is illegal on a global); the queue holds ServerInstanceInfo.
+    SERVER_INSTANCES = cast(Queue[ServerInstanceInfo], Queue())
     PROCS = {}
     ISSUED = {}
 
-    server_count = config.validation_config.validation_mode.process_count
+    validation_mode = config.validation_config.validation_mode
+    if isinstance(validation_mode, CriterionValidation):
+        # Criterion validation scores a loss on a local dataset: it runs no
+        # game servers, so the broker has nothing to launch for it.
+        raise SystemExit(
+            "the broker requires an SVM or custom validation mode "
+            f"(got {validation_mode.val_type!r}), which launches no game servers"
+        )
+    server_count = validation_mode.process_count
 
     with server_manager(SERVER_INSTANCES, server_count):
         app = web.Application()

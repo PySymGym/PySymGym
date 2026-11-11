@@ -31,7 +31,10 @@ class FixedOutputModel(torch.nn.Module):
         super().__init__()
         self._value = value
 
-    def forward(self, state_x: torch.Tensor, **kwargs) -> torch.Tensor:
+    # torch declares Module.forward as a class attribute (Callable[..., Any]
+    # = _forward_unimplemented); defining it as a method is the documented
+    # torch pattern.
+    def forward(self, state_x: torch.Tensor, **kwargs) -> torch.Tensor:  # ty: ignore[invalid-mutable-override]
         return torch.full((state_x.size(0), 1), self._value)
 
 
@@ -77,7 +80,7 @@ def _steps(step_factory) -> list[HeteroData]:
 
 def _patch_seams(
     monkeypatch: pytest.MonkeyPatch,
-) -> tuple[dict, list[float], list[dict]]:
+) -> tuple[dict, list[dict]]:
     """Patch ``DataLoader`` and ``tqdm`` with recorders; return the records."""
     loaders: dict = {}
 

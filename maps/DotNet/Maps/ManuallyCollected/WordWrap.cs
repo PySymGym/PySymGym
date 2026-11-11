@@ -173,7 +173,7 @@ public class BaseConversion
         //move from least to most significant numbers
         for (var i = srcNumber.Length - 1; i >= 0; i--)
         {
-            //eg. 1 * 2^0 
+            //eg. 1 * 2^0
             base10Result += srcBaseChars.IndexOf(srcNumber[i])
                             * (long)Math.Pow(srcBase, j);
             j++;
@@ -211,7 +211,7 @@ public class BaseConversion
         //convert to base 10
         //move from most significant numbers to least
         for (var i = 0; i < srcNumber.Length; i++)
-            //eg. 1 * 1/(2^1) 
+            //eg. 1 * 1/(2^1)
             base10Result += srcBaseChars.IndexOf(srcNumber[i])
                             * (decimal)(1 / Math.Pow(srcBase, i + 1));
 

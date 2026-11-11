@@ -9,7 +9,10 @@ import onnx
 import onnxruntime
 import torch
 import yaml
-from torch.jit import TracerWarning
+
+# torch.jit re-exports TracerWarning from torch.jit._trace; pyright wants
+# the defining module (it does not track the re-export).
+from torch.jit._trace import TracerWarning
 from common.game import GameState
 from ml.dataset import convert_input_to_tensor
 from ml.inference import ONNX, TORCH
@@ -19,7 +22,10 @@ from ml.inference import infer
 from ml.models.registry import get_model_class
 
 # Default ONNX opset version for the export; override with --opset-version.
-ONNX_OPSET_VERSION = 17
+# 18 is the dynamo exporter's (the torch >= 2.13 default) minimum opset: a
+# lower request is not honored — the exporter warns, attempts a version
+# conversion that fails, and exports at 18 anyway.
+ONNX_OPSET_VERSION = 18
 
 
 @dataclass(frozen=True)
@@ -117,7 +123,8 @@ MODEL_INPUTS: tuple[ModelInput, ...] = (
 
 
 def load_gamestate(f: t.TextIO) -> GameState:
-    return GameState.from_dict(json.load(f))
+    # from_dict is added by @dataclass_json at runtime (invisible statically).
+    return GameState.from_dict(json.load(f))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def create_model_input(
@@ -168,19 +175,25 @@ def _torch_uses_dynamo_exporter() -> bool:
     return major_minor >= _DYNAMO_EXPORTER_MIN_TORCH
 
 
-def _dynamic_shapes() -> dict[str, dict[int, t.Any]]:
-    """The dynamo exporter's ``dynamic_shapes`` mapping (derived from
+def _dynamic_shapes() -> list[dict[int, t.Any]]:
+    """The dynamo exporter's ``dynamic_shapes`` sequence (derived from
     ``MODEL_INPUTS``).
 
-    One ``torch.onnx.Dim`` instance per symbolic dimension name: axes
+    A sequence, not a dict: torch.export validates a dict's top-level
+    keys against the exported model's forward parameter names, which are
+    model-specific, while a sequence aligns positionally with ``args``
+    (``create_torch_input`` yields the inputs in ``MODEL_INPUTS`` order).
+    One ``torch.export.Dim`` instance per symbolic dimension name: axes
     that share a name (an edge index's axis 1 and the matching edge
     type's axis 0) receive the same Dim object, which the dynamo
     exporter treats as one symbolic dimension — the shared-dimension
     semantics of the legacy mapping without the "shares the same shape
     constraints" warning the from_dynamic_axes_to_dynamic_shapes compat
-    path emits (#646). Requires torch >= 2.13 (``torch.onnx.Dim``).
+    path emits (#646). The class lives in ``torch.export`` (the dynamo
+    exporter's own namespace); the ``torch.onnx.Dim`` alias was removed
+    in torch 2.15.
     """
-    from torch.onnx import Dim
+    from torch.export import Dim
 
     dims: dict[str, t.Any] = {}
 
@@ -189,12 +202,10 @@ def _dynamic_shapes() -> dict[str, dict[int, t.Any]]:
             dims[name] = Dim(name)
         return dims[name]
 
-    return {
-        model_input.name: {
-            axis: dim(dim_name) for axis, dim_name in model_input.dynamic_axes.items()
-        }
+    return [
+        {axis: dim(dim_name) for axis, dim_name in model_input.dynamic_axes.items()}
         for model_input in MODEL_INPUTS
-    }
+    ]
 
 
 def save_in_onnx(
@@ -235,6 +246,22 @@ def save_in_onnx(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"torch\.onnx\.utils"
             )
+            # The dynamo exporter's rename pass warns once per shared
+            # symbolic dimension: an edge index's axis 1 and the matching
+            # edge type's axis 0 deliberately carry the same dim name (the
+            # wire contract), so the second occurrence "will not be used" —
+            # but both occurrences are the same name, so nothing is lost
+            # (the exported model keeps one dim_param for both axes, as the
+            # legacy exporter produced).
+            warnings.filterwarnings(
+                "ignore",
+                message=(
+                    r"^# The axis name: .* will not be used, since it shares "
+                    r"the same shape constraints"
+                ),
+                category=UserWarning,
+                module=r"torch\.onnx\._internal\.exporter\._onnx_program",
+            )
             export_kwargs: dict[str, t.Any] = dict(
                 model=model,
                 args=create_torch_input(sample_input),
@@ -259,7 +286,9 @@ def save_in_onnx(
         pyg_backend.use_segment_matmul = previous_use_segment_matmul
 
 
-def onnx_run(ort_session: onnxruntime.InferenceSession, data: HeteroData) -> ...:
+def onnx_run(
+    ort_session: onnxruntime.InferenceSession, data: HeteroData
+) -> t.Sequence[t.Any]:
     return ort_session.run(None, create_onnxruntime_input(data))
 
 
@@ -381,10 +410,10 @@ def main():
     with open(args.sample_gamestate_path, "r") as gamestate_file:
         sample_gamestate = load_gamestate(gamestate_file)
 
-    veification_gamestates: list[HeteroData] = []
+    verification_gamestates: list[GameState] = []
     for gamestate_path in args.verification_gamestates:
         with open(gamestate_path, "r") as gamestate_file:
-            veification_gamestates.append(load_gamestate(gamestate_file))
+            verification_gamestates.append(load_gamestate(gamestate_file))
 
     entrypoint(
         sample_gamestate=sample_gamestate,
@@ -392,7 +421,7 @@ def main():
         onnx_savepath=args.onnx_savepath,
         model_def=get_model_class(args.model_name),
         model_kwargs=model_kwargs,
-        verification_gamestates=veification_gamestates,
+        verification_gamestates=verification_gamestates,
         opset_version=args.opset_version,
     )
 
@@ -403,7 +432,7 @@ def entrypoint(
     onnx_savepath: pathlib.Path,
     model_def: t.Type[torch.nn.Module],
     model_kwargs: dict[str, t.Any],
-    verification_gamestates: list[GameState] = None,
+    verification_gamestates: list[GameState] | None = None,
     opset_version: int = ONNX_OPSET_VERSION,
 ):
     torch_model = model_def(**model_kwargs)

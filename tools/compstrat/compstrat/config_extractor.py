@@ -1,4 +1,3 @@
-import enum
 import pathlib
 import typing as t
 
@@ -10,7 +9,7 @@ from compstrat.comparator import CompareConfig, DataSourceType
 
 def _structure_config(config: dict[str, str]) -> CompareConfig:
     def structure_enum_by_value(
-        enum_value: str, enum_type: enum.Enum
+        enum_value: str, enum_type: type[DataSourceType]
     ) -> DataSourceType:
         return enum_type(enum_value)
 

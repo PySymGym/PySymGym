@@ -2,9 +2,7 @@ from common.config.base import CONFIG
 from common.config.dataset_config import DatasetConfig
 from common.typealias import PlatformName
 from common.validation_coverage.svm_info import SVMInfo
-from pydantic import (
-    Field,
-)
+from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 

@@ -1,6 +1,7 @@
 """Unit tests for the compstrat color helper and failure filtering."""
 
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 import pytest
@@ -40,7 +41,8 @@ def test_color_keeps_default_alpha() -> None:
 def test_drop_failed_removes_coverage_minus_one() -> None:
     df = pd.DataFrame({"coverage": [1, -1, 2]}, index=["a", "b", "c"])
 
-    result = Comparator._drop_failed(object(), df)
+    # _drop_failed ignores self; the opaque sentinel stands in for it.
+    result = Comparator._drop_failed(cast(Comparator, object()), df)
 
     assert list(result.index) == ["a", "c"]
 

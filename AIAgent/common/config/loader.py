@@ -10,6 +10,7 @@ broken config fails fast at load time instead of deep inside training.
 """
 
 from pathlib import Path
+from typing import Any, overload
 
 import yaml
 
@@ -25,7 +26,7 @@ PATH_KEYS: dict[str, str] = {
 }
 
 
-def anchor_paths(data: object, anchor: Path) -> object:
+def anchor_paths(data: dict[str, Any], anchor: Path) -> dict[str, Any]:
     """Return a copy of ``data`` with relative path values resolved against ``anchor``.
 
     The walk is key-based: only values under a :data:`PATH_KEYS` name are
@@ -34,19 +35,27 @@ def anchor_paths(data: object, anchor: Path) -> object:
 
     Parameters
     ----------
-    data : object
-        The raw config structure (as loaded from YAML).
+    data : dict[str, Any]
+        The raw config document (the top-level mapping as loaded from YAML).
     anchor : Path
         The directory relative path values are resolved against (the config
         file's own directory).
 
     Returns
     -------
-    object
+    dict[str, Any]
         A new structure with the path values anchored; ``data`` is not
         mutated.
     """
     return _anchor(data, anchor)
+
+
+@overload
+def _anchor(value: dict[str, Any], anchor: Path) -> dict[str, Any]: ...
+@overload
+def _anchor(value: list[Any], anchor: Path) -> list[Any]: ...
+@overload
+def _anchor(value: object, anchor: Path) -> object: ...
 
 
 def _anchor(value: object, anchor: Path) -> object:

@@ -7,7 +7,7 @@ here, not in ``ml.dataset``.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterator, Sequence, Tuple
+from typing import Iterator, Tuple
 
 
 class TrainingDatasetMode(Enum):
@@ -75,7 +75,7 @@ class Result:
         )
 
     @classmethod
-    def from_tuple(cls, values: Sequence[float | int]) -> "Result":
+    def from_tuple(cls, values: Tuple[float, int, int, int]) -> "Result":
         """Build a :class:`Result` from its on-disk (sign-flipped) tuple."""
         coverage_percent, tests_number, steps_number, errors_number = values
         return cls(

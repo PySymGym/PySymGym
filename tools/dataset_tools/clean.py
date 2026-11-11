@@ -37,8 +37,9 @@ def get_bad_episodes(log_path):
 
 
 def clean(log_path, dataset_path):
+    # schema is added by @dataclass_json at runtime (invisible statically).
     with open(dataset_path, "r") as f:
-        dataset = GameMap.schema().loads(f.read(), many=True)
+        dataset = GameMap.schema().loads(f.read(), many=True)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
     bad_episodes = get_bad_episodes(log_path)
     result = []
@@ -51,7 +52,7 @@ def clean(log_path, dataset_path):
         key=lambda x: (x.NameOfObjectToCover, x.StepsToStart, x.DefaultSearcher)
     )
 
-    atomic_write_text(dataset_path, GameMap.schema().dumps(result, many=True, indent=4))
+    atomic_write_text(dataset_path, GameMap.schema().dumps(result, many=True, indent=4))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def main():

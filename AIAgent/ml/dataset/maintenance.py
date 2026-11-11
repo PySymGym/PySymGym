@@ -26,12 +26,22 @@ import torch
 from common.dataset import Result
 from ml.device import get_device
 from ml.inference import TORCH
+from ml.model_io import safe_torch_load
 from torch_geometric.data import HeteroData
-from torch_geometric.data.storage import BaseStorage, EdgeStorage, NodeStorage
 
 
 class MaintenanceMixin:
     """The online-maintenance half of :class:`TrainingDataset`."""
+
+    # Host-provided state (set by ``TrainingDataset.__init__``); declared as
+    # bare annotations so the methods type-check without importing the host
+    # (bare annotations create no runtime attributes).
+    maps_results: dict[str, Result]
+    processed_dir: Path
+    threshold_coverage: int
+    similar_steps_save_prob: float
+    _load_to_cpu: bool
+    _loaded_to_cpu: dict[str, list[HeteroData]]
 
     def filter_map_steps(self, map_steps: list[HeteroData]) -> list[HeteroData]:
         """
@@ -122,10 +132,7 @@ class MaintenanceMixin:
             if not file_path.endswith("result")
         ]
         for path in all_steps_paths:
-            with torch.serialization.safe_globals(
-                [BaseStorage, NodeStorage, EdgeStorage]
-            ):
-                map_steps.append(torch.load(path, map_location=device))
+            map_steps.append(safe_torch_load(path, device))
         return map_steps
 
     def is_update_map_required(self, map_name: str, map_result: Result):

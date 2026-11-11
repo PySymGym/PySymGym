@@ -19,14 +19,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from queue import Empty, Queue
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 import yaml
+from aiohttp.web import Application, Request, Response
 
 import launch_servers as launch_servers_module
 from common.config.feature_config import FeatureConfig, OnGameServerRestartFeature
 from common.validation_coverage.svm_info import SVMInfo
-from connection.broker_conn.classes import ServerInstanceInfo, Undefined
+from connection.broker_conn.classes import ServerInstanceInfo
 
 pytestmark = pytest.mark.unit
 
@@ -61,15 +63,28 @@ def make_app(feature_config: FeatureConfig) -> dict:
 
 def make_read_request(
     payload: bytes, feature_config: FeatureConfig | None = None
-) -> SimpleNamespace:
-    """A fake aiohttp request whose ``read()`` returns ``payload``."""
+) -> Request:
+    """A fake aiohttp request whose ``read()`` returns ``payload``.
+
+    The ``@routes.post`` decorator types the handler's argument as
+    ``Request``, so the stand-in is cast (it only serves ``read``/``app``).
+    """
 
     async def read() -> bytes:
         return payload
 
     if feature_config is None:
         feature_config = FeatureConfig()
-    return SimpleNamespace(read=read, app=make_app(feature_config))
+    return cast(Request, SimpleNamespace(read=read, app=make_app(feature_config)))
+
+
+def make_get_request(query: dict, feature_config: FeatureConfig) -> Request:
+    """A fake aiohttp GET request carrying ``query`` (as aiohttp delivers).
+
+    The ``@routes.get`` decorator types the handler's argument as
+    ``Request``, so the stand-in is cast (it only serves ``query``/``app``).
+    """
+    return cast(Request, SimpleNamespace(query=query, app=make_app(feature_config)))
 
 
 class FakeSocket:
@@ -156,7 +171,7 @@ class TestDequeueInstance:
 
     def test_success_issues_a_real_instance(self, monkeypatch: pytest.MonkeyPatch):
         queue = Queue()
-        queue.put(ServerInstanceInfo("VSharp", 0, "None", pid=Undefined))
+        queue.put(ServerInstanceInfo("VSharp", 0, "None", pid=None))
         self._setup(monkeypatch, queue)
         # The global is only created by main(); set it fresh for the test.
         monkeypatch.setattr(launch_servers_module, "ISSUED", {}, raising=False)
@@ -174,17 +189,24 @@ class TestDequeueInstance:
             launch_servers_module, "run_server_instance", fake_run_server_instance
         )
 
-        response = asyncio.run(
-            launch_servers_module.dequeue_instance(
-                SimpleNamespace(query=svm_query(), app=make_app(feature_config))
-            )
+        # The handler returns ``web.json_response`` (a ``Response``); the
+        # ``@routes.get`` decorator only types it as ``StreamResponse``.
+        response = cast(
+            Response,
+            asyncio.run(
+                launch_servers_module.dequeue_instance(
+                    make_get_request(svm_query(), feature_config)
+                )
+            ),
         )
 
         # The query is parsed into an SVMInfo (pydantic coerces the strings),
         # and the app-context feature config reaches run_server_instance.
         assert calls == [(svm_info(), feature_config)]
         # The response body is the single-encoded JSON of the issued info.
-        assert json.loads(response.text) == issued.to_dict()
+        assert response.text is not None
+        # to_dict is added by @dataclass_json at runtime (invisible statically).
+        assert json.loads(response.text) == issued.to_dict()  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
         assert queue.empty()
         # The issued instance is leased (pid → (info, monotonic issue time))
         # so the reaper can reap it if the worker is hard-killed.
@@ -199,7 +221,7 @@ class TestDequeueInstance:
         with pytest.raises(Empty):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query(), app=make_app(FeatureConfig()))
+                    make_get_request(svm_query(), FeatureConfig())
                 )
             )
 
@@ -221,7 +243,7 @@ class TestDequeueInstance:
         ):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query(), app=make_app(FeatureConfig()))
+                    make_get_request(svm_query(), FeatureConfig())
                 )
             )
         # The live instance is re-queued for the next request.
@@ -229,7 +251,7 @@ class TestDequeueInstance:
 
     def test_failure_requeues_the_placeholder(self, monkeypatch: pytest.MonkeyPatch):
         queue = Queue()
-        placeholder = ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
+        placeholder = ServerInstanceInfo("VSharp", 0, "None", pid=None)
         queue.put(placeholder)
         self._setup(monkeypatch, queue)
         feature_config = FeatureConfig()
@@ -244,7 +266,7 @@ class TestDequeueInstance:
         with pytest.raises(RuntimeError, match="boom"):
             asyncio.run(
                 launch_servers_module.dequeue_instance(
-                    SimpleNamespace(query=svm_query(), app=make_app(feature_config))
+                    make_get_request(svm_query(), feature_config)
                 )
             )
         assert queue.get_nowait() is placeholder
@@ -276,13 +298,13 @@ class TestEnqueueInstance:
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
-                make_read_request(original.to_json().encode("utf-8"), feature_config)
+                make_read_request(original.to_json().encode("utf-8"), feature_config)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
             )
         )
 
         assert kill_calls == [(original, feature_config)]
         assert queue.get_nowait() == ServerInstanceInfo(
-            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid=Undefined
+            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", pid=None
         )
         assert response.status == 200
         # The lease is ended on return: the reaper must not reap it.
@@ -314,7 +336,7 @@ class TestEnqueueInstance:
 
         response = asyncio.run(
             launch_servers_module.enqueue_instance(
-                make_read_request(original.to_json().encode("utf-8"), feature_config)
+                make_read_request(original.to_json().encode("utf-8"), feature_config)  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
             )
         )
 
@@ -334,7 +356,7 @@ class TestRunServerInstance:
             launch_servers_module.run_server_instance(svm_info(), feature_config)
         )
 
-        assert result == ServerInstanceInfo("VSharp", 0, "None", pid=Undefined)
+        assert result == ServerInstanceInfo("VSharp", 0, "None", pid=None)
 
     def test_starts_the_server(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -599,7 +621,7 @@ class TestRunServers:
         result = asyncio.run(launch_servers_module.run_servers(3))
 
         assert result == [
-            ServerInstanceInfo("_", 0, "None", pid=Undefined) for _ in range(3)
+            ServerInstanceInfo("_", 0, "None", pid=None) for _ in range(3)
         ]
 
 
@@ -656,6 +678,19 @@ class TestKillServer:
         assert killpg_calls == []
         assert getpgid_calls == []
         assert "the process doesn't exist" in caplog.text
+
+    def test_placeholder_pid_is_a_noop(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A placeholder instance (restart disabled) has no process: the kill
+        # is a silent no-op (no lookup, no signal).
+        killpg_calls, getpgid_calls, feature_config = self._setup(monkeypatch, {})
+        placeholder = ServerInstanceInfo(
+            "VSharp", 35012, "ws://0.0.0.0:35012/gameServer", None
+        )
+
+        asyncio.run(launch_servers_module.kill_server(placeholder, feature_config))
+
+        assert killpg_calls == []
+        assert getpgid_calls == []
 
     def test_kills_the_group_and_reaps(
         self, monkeypatch: pytest.MonkeyPatch, fake_proc
@@ -822,9 +857,7 @@ class TestReapExpiredLeases:
         # (a fresh server starts on the next /get_ws).
         assert kill_calls == [(info, feature_config)]
         assert issued == {}
-        assert queue.get_nowait() == ServerInstanceInfo(
-            "VSharp", 0, "None", pid=Undefined
-        )
+        assert queue.get_nowait() == ServerInstanceInfo("VSharp", 0, "None", pid=None)
         assert queue.empty()
 
     def test_fresh_entry_is_left_alone(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -890,9 +923,7 @@ class TestReapExpiredLeases:
         # no KeyError on the stale snapshot entry).
         assert kill_calls == [first]
         assert issued == {}
-        assert queue.get_nowait() == ServerInstanceInfo(
-            "VSharp", 0, "None", pid=Undefined
-        )
+        assert queue.get_nowait() == ServerInstanceInfo("VSharp", 0, "None", pid=None)
         assert queue.empty()
 
     def test_kill_failure_does_not_stop_the_reaper(
@@ -931,7 +962,7 @@ class TestReapExpiredLeases:
         assert issued == {}
         placeholders = [queue.get_nowait() for _ in range(2)]
         assert placeholders == [
-            ServerInstanceInfo("VSharp", 0, "None", pid=Undefined) for _ in range(2)
+            ServerInstanceInfo("VSharp", 0, "None", pid=None) for _ in range(2)
         ]
         assert queue.empty()
         assert "failed to reap expired lease" in caplog.text
@@ -953,7 +984,7 @@ class TestServerManager:
         with launch_servers_module.server_manager(queue, 2):
             queued = [queue.get_nowait() for _ in range(2)]
             assert queued == [
-                ServerInstanceInfo("_", 0, "None", pid=Undefined) for _ in range(2)
+                ServerInstanceInfo("_", 0, "None", pid=None) for _ in range(2)
             ]
 
         assert killed == [111, 222]
@@ -1000,12 +1031,17 @@ class TestReaperLifecycle:
             launch_servers_module, "SERVER_INSTANCES", queue, raising=False
         )
         feature_config = FeatureConfig()
-        app = {
-            launch_servers_module.CONFIG_KEY: SimpleNamespace(
-                feature_config=feature_config,
-                broker_config=SimpleNamespace(lease_ttl_sec=3600.0),
-            )
-        }
+        # ``_on_startup``/``_on_cleanup`` take ``web.Application``; the dict
+        # stand-in serves the same ``__getitem__``/``__setitem__`` surface.
+        app = cast(
+            Application,
+            {
+                launch_servers_module.CONFIG_KEY: SimpleNamespace(
+                    feature_config=feature_config,
+                    broker_config=SimpleNamespace(lease_ttl_sec=3600.0),
+                )
+            },
+        )
         reap_args: list[tuple] = []
 
         async def fake_reaper(*args):
@@ -1166,3 +1202,25 @@ class TestMain:
         assert isinstance(launch_servers_module.SERVER_INSTANCES, Queue)
         assert launch_servers_module.PROCS == {}
         assert launch_servers_module.ISSUED == {}
+
+    def test_main_rejects_criterion_validation(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # Criterion validation scores a loss on a local dataset and runs no
+        # game servers: the broker refuses to start (a clear SystemExit)
+        # instead of crashing on the missing process_count.
+        monkeypatch.setattr(
+            launch_servers_module, "BROKER_LOG_PATH", tmp_path / "instance_manager.log"
+        )
+        config = launch_servers_main_config(tmp_path)
+        config["ValidationConfig"]["validation_mode"] = {
+            "val_type": "loss",
+            "batch_size": 8,
+        }
+        config_path = tmp_path / "config.yml"
+        config_path.write_text(yaml.safe_dump(config))
+
+        with pytest.raises(
+            SystemExit, match="requires an SVM or custom validation mode"
+        ):
+            launch_servers_module.main(str(config_path))

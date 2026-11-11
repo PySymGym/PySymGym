@@ -31,26 +31,54 @@ Toolchain
      - any recent version
      - ``Makefile`` (``build_LogicNG``, ``build_jflex``; local development only — CI never builds the Java maps)
    * - Python
-     - 3.11.x
-     - ``pyproject.toml`` (``~3.11``); CI runs 3.11.8
+     - 3.14.x
+     - ``pyproject.toml`` (``>=3.14,<3.15``); CI runs 3.14.4
+
+Python version decision
+-----------------------
+
+The evaluation of moving off Python 3.11 (issue #643, part of hub #641)
+adopted **Python 3.14** as the target and rejected 3.12/3.13: 3.14 removes
+the suppressed W11 warning (numpy's stray ``.pyc`` is cp311-specific) exactly
+as 3.12/3.13 would, and it is the newest stable interpreter in scope, so the
+modernization happens in a single re-lock rather than an intermediate
+3.12/3.13 re-lock with no unique benefit. The GPU blocker that originally
+held 3.14 back is void — the #662 probe (``AIAgent/probe_gpu_torch.py``)
+degrades the e2e pipeline to CPU when the locked torch cannot run on the
+visible GPU (both GPUs are sm_61, unsupported by torch ≥2.9). Python 3.15 is
+out of scope for this hub. The migration (interpreter bump, torch bump to
+2.15, full re-lock, workflow pin changes) landed in #644; the full
+evaluation and rationale are recorded on #643.
 
 Python environment
 ------------------
 
-Install a Python in the supported range (uv is recommended because it does not
-touch the system interpreter), then point Poetry at it:
+Install uv (it manages both the Python interpreter and the project
+environment without touching the system interpreter), then sync the
+environment:
 
 .. code-block:: console
 
-    pipx install poetry==2.2.1
     pipx install uv
-    uv python install 3.11
-    poetry env use $(uv python find 3.11)
-    poetry install
+    uv python install 3.14
+    uv sync
 
-If the distribution's default ``python3`` is outside the supported range (for
-example Ubuntu 26.04 ships 3.14), skipping ``poetry env use`` makes Poetry pick
-it and the install fails: the project supports 3.11.x only.
+The project pins the interpreter in ``.python-version`` (3.14.4);
+``uv sync`` creates ``.venv`` at the repository root and installs the
+locked dependencies from ``uv.lock`` (all dependency groups — test,
+lint, docs — by default). Unlike Poetry, uv never falls back to the
+distribution's default ``python3``: it uses the pinned interpreter,
+downloading it if absent, so the system Python version is irrelevant
+(the project supports 3.14.x only).
+
+Install the pre-commit hooks (they run the guard set — ruff, ty, the
+``uv-lock`` sync, and the hygiene basics — on every ``git commit``; see
+:doc:`developer`, "Quality checks"):
+
+.. code-block:: console
+
+    uv tool install pre-commit
+    pre-commit install
 
 Per-component build prerequisites
 ---------------------------------

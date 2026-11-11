@@ -32,9 +32,11 @@ def test_states_with_equal_fields_collapse_in_a_set() -> None:
     assert len({_state(7), _state(7)}) == 1
 
 
+# from_json/to_json are added by @dataclass_json at runtime (invisible
+# statically).
 def test_state_json_round_trip() -> None:
     state = _state()
-    assert State.from_json(state.to_json()) == state
+    assert State.from_json(state.to_json()) == state  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def test_reward_json_round_trip() -> None:
@@ -42,4 +44,4 @@ def test_reward_json_round_trip() -> None:
         ForMove=MoveReward(ForCoverage=1, ForVisitedInstructions=5),
         MaxPossibleReward=9,
     )
-    assert Reward.from_json(reward.to_json()) == reward
+    assert Reward.from_json(reward.to_json()) == reward  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]

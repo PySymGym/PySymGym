@@ -9,7 +9,7 @@ class BasePSStrategy:
     name: str
 
     @staticmethod
-    def parse(name: str, model_path: Path = None) -> "BasePSStrategy":
+    def parse(name: str, model_path: Path | None = None) -> "BasePSStrategy":
         """
         Parse strategy from name and kwargs
         :param name: strategy name (AI, ExecutionTreeContributedCoverage)
@@ -27,7 +27,9 @@ class BasePSStrategy:
 
 @define
 class AIStrategy(BasePSStrategy):
-    model_path: str
+    # Path in production (argparse type=Path); str in the subprocess tests.
+    # subprocess accepts both.
+    model_path: str | Path
 
 
 @define

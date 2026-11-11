@@ -14,7 +14,11 @@ from common.config.feature_config import FeatureConfig
 from common.game import GameMap
 from connection.errors_connection import ConnectionLostError
 from connection.game_server_conn.connector import Connector
-from connection.game_server_conn.messages import PROTOCOL_VERSION
+from connection.game_server_conn.messages import (
+    PROTOCOL_VERSION,
+    IncorrectPredictedStateIdBody,
+    Reward,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.serial]
 
@@ -181,6 +185,7 @@ def test_strict_validation_decodes_incorrect_predicted_state(fake_websocket) -> 
     body = connector.recv_reward_or_throw_gameover()
 
     assert connector._current_step == 0
+    assert isinstance(body, IncorrectPredictedStateIdBody)
     assert body.StateId == 9
 
 
@@ -199,6 +204,7 @@ def test_strict_validation_decodes_move_reward(fake_websocket) -> None:
     body = connector.recv_reward_or_throw_gameover()
 
     assert connector._current_step == 1
+    assert isinstance(body, Reward)
     assert body.ForMove.ForCoverage == 1
     assert body.MaxPossibleReward == 3
 

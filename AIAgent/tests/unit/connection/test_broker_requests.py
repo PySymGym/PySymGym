@@ -76,7 +76,8 @@ def test_acquire_instance_decodes_single_encoded_body(
     # C1's test_success_issues_a_real_instance), so the wire format is a
     # single-encoded JSON object. This test feeds the client that
     # single-encoded body and asserts the parsed instance is returned.
-    http = FakeHttp(content=_instance().to_json().encode("utf-8"))
+    # to_json is added by @dataclass_json at runtime (invisible statically).
+    http = FakeHttp(content=_instance().to_json().encode("utf-8"))  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
     monkeypatch.setattr(broker_requests.httplib2, "Http", lambda: http)
 
     acquired = acquire_instance(_svm_info(), _broker_config())
@@ -93,7 +94,7 @@ def test_return_instance_posts_the_body(monkeypatch: pytest.MonkeyPatch) -> None
     url, method, body = http.calls[0]
     assert url == _broker_config().post_ws_url
     assert method == "POST"
-    assert body == _instance().to_json()
+    assert body == _instance().to_json()  # type: ignore[reportAttributeAccessIssue, ty:unresolved-attribute]
 
 
 def test_return_instance_raises_on_non_200(monkeypatch: pytest.MonkeyPatch) -> None:

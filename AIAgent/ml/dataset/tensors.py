@@ -29,7 +29,7 @@ MapName: TypeAlias = str
 PathConditionVertexId: TypeAlias = int
 PathConditionVertexIndex: TypeAlias = int
 
-StatesDistribution: TypeAlias = torch.tensor
+StatesDistribution: TypeAlias = torch.Tensor
 
 
 @dataclass

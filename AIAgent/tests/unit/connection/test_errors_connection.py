@@ -22,8 +22,9 @@ def test_game_interrupted_error_is_abstract() -> None:
 def test_abstract_desc_property_getter_is_a_noop_stub() -> None:
     # The abstract property body is unreachable in production (the class is
     # abstract; concrete subclasses shadow desc with a class attribute). Call
-    # the getter directly to pin the stub.
-    assert GameInterruptedError.desc.fget(None) is None
+    # the getter directly to pin the stub. The None self is deliberate: no
+    # instance of the abstract class exists, and the stub ignores self.
+    assert GameInterruptedError.desc.fget(None) is None  # type: ignore[reportOptionalCall, ty:invalid-argument-type]
 
 
 @pytest.mark.parametrize(

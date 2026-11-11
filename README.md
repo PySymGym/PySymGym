@@ -22,11 +22,11 @@ git submodule update --init --recursive
 Setup environment:
 
 ```bash
-pipx install poetry==2.2.1
-poetry install
+pipx install uv
+uv sync
 ```
 
-For toolchain prerequisites (Python 3.11, .NET SDK, JDK), GPU installation,
+For toolchain prerequisites (Python 3.14, .NET SDK, JDK), GPU installation,
 and submodule repair, see the [setup guide](https://pysymgym.github.io/PySymGym/setup.html).
 
 ## Documentation

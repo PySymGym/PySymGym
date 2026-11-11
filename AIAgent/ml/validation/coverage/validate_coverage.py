@@ -81,6 +81,11 @@ class ValidationCoverage:
             and isinstance(result.game_result, GameResult)
         ):
             game_result = result.game_result
+            # Both game managers set the coverage number on a successful
+            # GameResult; without it the dataset-update machinery (comparison,
+            # persistence) cannot work. The AssertionError flows through
+            # catch_return_exception like any other worker error.
+            assert game_result.actual_coverage_percent is not None
             map_result = Result(
                 coverage_percent=game_result.actual_coverage_percent,
                 tests_number=game_result.tests_count,

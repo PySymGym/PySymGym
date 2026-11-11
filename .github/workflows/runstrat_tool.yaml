@@ -72,7 +72,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Prepare the Python environment
-        uses: ./.github/actions/checkout-poetry
+        uses: ./.github/actions/checkout-uv
 
       - name: Build the .NET game server and maps
         uses: ./.github/actions/dotnet-build
@@ -83,7 +83,7 @@ jobs:
       - name: Run tests
         working-directory: ./tools/runstrat
         run: |
-          poetry run pytest tests -sv -m e2e -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
+          uv run pytest tests -sv -m e2e -o log_file="artifacts/runstrat.log" -o log_file_level="DEBUG"
 
       - name: Upload artifacts
         if: always()

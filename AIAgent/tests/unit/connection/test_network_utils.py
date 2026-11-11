@@ -144,9 +144,12 @@ def test_look_for_free_port_locked_binds_and_listens_under_lock(
 
     assert port == 5
     assert lock.entries == 1
+    # The identity assert ties the returned handle (typed socket.socket by
+    # the production signature) to the fake; the fake-only attributes are
+    # read through the factory's record.
     assert server_socket is factory.created[1]
-    assert server_socket.bound_address == ("localhost", 5)
-    assert server_socket.listened is True
+    assert factory.created[1].bound_address == ("localhost", 5)
+    assert factory.created[1].listened is True
     # The probe and the held server socket bind the same interface: a
     # port free on one interface is not necessarily free on the other.
     assert factory.created[0].bound_address == ("localhost", 5)
@@ -164,8 +167,10 @@ def test_look_for_free_port_locked_uses_the_given_address(
     )
 
     assert port == 5
+    # The probe socket is created first; the held server socket is second.
+    assert server_socket is factory.created[1]
     assert factory.created[0].bound_address == ("127.0.0.1", 5)
-    assert server_socket.bound_address == ("127.0.0.1", 5)
+    assert factory.created[1].bound_address == ("127.0.0.1", 5)
 
 
 def test_look_for_free_port_locked_raises_without_attempts() -> None:

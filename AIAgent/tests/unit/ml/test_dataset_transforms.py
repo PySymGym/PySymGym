@@ -242,8 +242,9 @@ def test_result_ordering_coverage_dominates():
 
 
 def test_result_ordering_mixed_comparison_raises_type_error():
+    # The mixed comparison is deliberate: it must raise TypeError.
     with pytest.raises(TypeError):
-        _ = Result(100, 1, 5, 0) < 42
+        _ = Result(100, 1, 5, 0) < 42  # type: ignore[reportOperatorIssue, ty:unsupported-operator]
 
 
 def test_result_to_from_tuple_round_trips_the_disk_format():

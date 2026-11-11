@@ -8,6 +8,7 @@ delegation contract) and one real-model ``predict`` run.
 """
 
 import inspect
+from typing import Any, cast
 
 import pytest
 import torch
@@ -19,7 +20,7 @@ from ml.training.wrapper import TrainingModelWrapper
 
 pytestmark = pytest.mark.unit
 
-SMALL_MODEL_KWARGS = {
+SMALL_MODEL_KWARGS: dict[str, Any] = {
     "hidden_channels": 8,
     "num_of_state_features": 6,
     "num_hops_1": 1,
@@ -36,7 +37,10 @@ class FixedOutputModel(torch.nn.Module):
         super().__init__()
         self.output = output
 
-    def forward(self, **kwargs) -> torch.Tensor:
+    # torch declares Module.forward as a class attribute (Callable[..., Any]
+    # = _forward_unimplemented); defining it as a method is the documented
+    # torch pattern.
+    def forward(self, **kwargs) -> torch.Tensor:  # ty: ignore[invalid-mutable-override]
         return self.output
 
 
@@ -106,12 +110,17 @@ def test_wrapper_make_copy_deepcopies_the_model_and_renames_it() -> None:
 
     wrapper.make_copy("two")
 
+    # make_copy deepcopies the very model that was passed in, so the copy
+    # is a Linear; the concrete class gives a precise weight type (Module's
+    # __getattr__ is annotated Tensor | Module).
+    copied = cast(torch.nn.Linear, wrapper.model_copy)
+
     assert wrapper.model_copy is not model
-    assert torch.equal(wrapper.model().weight, wrapper.model_copy.weight)
+    assert torch.equal(model.weight, copied.weight)
     assert wrapper._name == "two"
     with torch.no_grad():
-        wrapper.model_copy.weight.add_(1.0)
-    assert not torch.equal(wrapper.model().weight, wrapper.model_copy.weight)
+        copied.weight.add_(1.0)
+    assert not torch.equal(model.weight, copied.weight)
 
 
 def test_wrapper_predict_delegates_to_predict_state_with_dict(
