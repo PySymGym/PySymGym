@@ -2208,14 +2208,14 @@ dev = ["absl-py", "pyink", "pylint (>=2.6.0)", "pytest", "pytest-xdist"]
 
 [[package]]
 name = "mlflow"
-version = "3.17.2"
+version = "3.18.0"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "mlflow-3.17.2-py3-none-any.whl", hash = "sha256:4e44c03791beb518d8b0a40b0982d958c2634d902f46d67d7907c82107f21fac"},
-    {file = "mlflow-3.17.2.tar.gz", hash = "sha256:3fcdb58c683362763bf1cb124eea800b4e3253e16cb5e3adf5b5e562af1fdf2b"},
+    {file = "mlflow-3.18.0-py3-none-any.whl", hash = "sha256:be7d84ba0d0b12392f5b53260cdb3e6d7b7ef4b80c29da90a89b5a1f6db7102f"},
+    {file = "mlflow-3.18.0.tar.gz", hash = "sha256:04e912d5b154b417c5930ba47ef3dc2f74738fb3ba93e3d70499955ec8884540"},
 ]
 
 [package.dependencies]
@@ -2229,11 +2229,11 @@ graphene = "<4"
 gunicorn = {version = "<27", markers = "platform_system != \"Windows\""}
 huey = ">=2.5.4,<4"
 matplotlib = "<4"
-mlflow-skinny = "3.17.2"
-mlflow-tracing = "3.17.2"
+mlflow-skinny = "3.18.0"
+mlflow-tracing = "3.18.0"
 numpy = "<3"
 pandas = "<4"
-pyarrow = ">=4.0.0,<26"
+pyarrow = ">=4.0.0,<27"
 scikit-learn = "<2"
 scipy = "<2"
 skops = "<1"
@@ -2251,20 +2251,20 @@ gateway = ["boto3 (>=1.28.56,<2)", "fastapi (<1)", "slowapi (>=0.1.9,<1)", "tikt
 genai = ["boto3 (>=1.28.56,<2)", "fastapi (<1)", "slowapi (>=0.1.9,<1)", "tiktoken (<1)", "uvicorn[standard] (<1)", "watchfiles (<2)"]
 jfrog = ["mlflow-jfrog-plugin"]
 kubernetes = ["kubernetes"]
-langchain = ["langchain (>=1.0.0,<=1.4.3)"]
+langchain = ["langchain (>=1.0.4,<=1.4.7)"]
 mcp = ["click (!=8.3.0)", "fastmcp (>=2.7.0,<4)"]
 sqlserver = ["mlflow-dbstore"]
 
 [[package]]
 name = "mlflow-skinny"
-version = "3.17.2"
+version = "3.18.0"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "mlflow_skinny-3.17.2-py3-none-any.whl", hash = "sha256:31be9190494212ccd94774170fd06f6fe04d209aae3923eefd16f9bf7830d63c"},
-    {file = "mlflow_skinny-3.17.2.tar.gz", hash = "sha256:5f2a0812d019a8f517a58f1377922f75af4f42832be30c8f1441005b51288596"},
+    {file = "mlflow_skinny-3.18.0-py3-none-any.whl", hash = "sha256:93715e152061e0ecabcc9aa70330b296141a806de9da6b2c29cff8703b00608f"},
+    {file = "mlflow_skinny-3.18.0.tar.gz", hash = "sha256:2653292a390d399ee2dd49e81380a89b16265a05747eb5ea0e6c1b7987e398dd"},
 ]
 
 [package.dependencies]
@@ -2275,7 +2275,7 @@ cloudpickle = "<4"
 databricks-sdk = ">=0.20.0,<1"
 fastapi = "<1"
 gitpython = ">=3.1.9,<4"
-importlib_metadata = ">=3.7.0,!=4.7.0,<10"
+importlib_metadata = ">=3.7.0,!=4.7.0,<11"
 opentelemetry-api = ">=1.9.0,<3"
 opentelemetry-proto = ">=1.9.0,<3"
 opentelemetry-sdk = ">=1.9.0,<3"
@@ -2283,6 +2283,7 @@ packaging = "<27"
 protobuf = ">=3.12.0,<8"
 pydantic = ">=2.0.0,<3"
 python-dotenv = ">=0.19.0,<2"
+python-multipart = ">=0.0.18,<1"
 pyyaml = ">=5.1,<7"
 requests = ">=2.17.3,<3"
 sqlparse = ">=0.4.0,<1"
@@ -2301,20 +2302,20 @@ gateway = ["boto3 (>=1.28.56,<2)", "fastapi (<1)", "slowapi (>=0.1.9,<1)", "tikt
 genai = ["boto3 (>=1.28.56,<2)", "fastapi (<1)", "slowapi (>=0.1.9,<1)", "tiktoken (<1)", "uvicorn[standard] (<1)", "watchfiles (<2)"]
 jfrog = ["mlflow-jfrog-plugin"]
 kubernetes = ["kubernetes"]
-langchain = ["langchain (>=1.0.0,<=1.4.3)"]
+langchain = ["langchain (>=1.0.4,<=1.4.7)"]
 mcp = ["click (!=8.3.0)", "fastmcp (>=2.7.0,<4)"]
 sqlserver = ["mlflow-dbstore"]
 
 [[package]]
 name = "mlflow-tracing"
-version = "3.17.2"
+version = "3.18.0"
 description = "MLflow Tracing SDK is an open-source, lightweight Python package that only includes the minimum set of dependencies and functionality to instrument your code/models/agents with MLflow Tracing."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "mlflow_tracing-3.17.2-py3-none-any.whl", hash = "sha256:1502aa892144cbe93b0c2a706b9564011be92903bbb343d19038dcd322ae5e7c"},
-    {file = "mlflow_tracing-3.17.2.tar.gz", hash = "sha256:35da9f6cc450feae7173941d0d119391f6fe3a41973c0a28ae4a021e6e285c99"},
+    {file = "mlflow_tracing-3.18.0-py3-none-any.whl", hash = "sha256:bd756183ee73ec5964a806e2f8cb87cc13689252a51cf09833b25cf9df110d42"},
+    {file = "mlflow_tracing-3.18.0.tar.gz", hash = "sha256:1e8300b2718be455de2765ea1db293603636bc3fc38852f0ba25d61761616d27"},
 ]
 
 [package.dependencies]
@@ -3919,6 +3920,18 @@ files = [
 
 [package.extras]
 cli = ["click (>=5.0)"]
+
+[[package]]
+name = "python-multipart"
+version = "0.0.33"
+description = "A streaming multipart parser for Python"
+optional = false
+python-versions = ">=3.11"
+groups = ["main"]
+files = [
+    {file = "python_multipart-0.0.33-py3-none-any.whl", hash = "sha256:8f16c07b36add9da6b2ee87d3efcaf0a45a6de9c3d0a5dd94e9ccf7675a7bc45"},
+    {file = "python_multipart-0.0.33.tar.gz", hash = "sha256:b8112424a6abd162ec08d390565dd113ad699f2fe6fef3c987b8bbcbfe9e390d"},
+]
 
 [[package]]
 name = "pywin32"
