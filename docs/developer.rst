@@ -218,15 +218,19 @@ the ``typecheck`` job of ``.github/workflows/python_linting.yaml``.
 The pre-commit hooks run the same guard set on every commit (ruff check
 and format, ``ty check``, the ``uv-lock`` hook that keeps ``uv.lock`` in
 sync with ``pyproject.toml``, and the hygiene basics); install them per
-:doc:`setup` and run them manually over the whole tree with:
+:doc:`setup` and run them manually over the tree with:
 
 .. code-block:: console
 
     pre-commit run --all-files
 
-The configuration is ``.pre-commit-config.yaml``; the Python hooks run
-through the locked environment (``uv run``), so the hook versions are the
-``uv.lock`` versions — the same binaries CI runs.
+The configuration is ``.pre-commit-config.yaml``. The all-files hygiene hooks
+(``trailing-whitespace``, ``end-of-file-fixer``) are scoped to first-party
+sources: the vendored trees (``maps/``, ``GameServers/``, ``resources/``) and
+all non-Python source files are excluded, so they only touch Python sources
+and text config/docs (the exact scope is the ``exclude`` in the config). The
+Python hooks run through the locked environment (``uv run``), so the hook
+versions are the ``uv.lock`` versions — the same binaries CI runs.
 
 Docs build
 ----------

@@ -9,8 +9,23 @@
 # docs`) self-heals on the next commit.
 #
 # Submodules are never seen by pre-commit (it only passes superproject-tracked
-# files), so no exclude patterns are needed for them; the first-party
-# `maps/` and `GameServers/` glue files are tracked and are in scope.
+# files), so no exclude patterns are needed for them. The all-files hygiene
+# hooks (trailing-whitespace, end-of-file-fixer) must only touch first-party
+# sources, so the vendored trees (maps/, GameServers/, resources/ — see
+# .gitattributes; maps/ and GameServers/ are likewise out of scope for
+# ruff/ty/pyright) and all non-Python source
+# code (C#/Java/Gradle fixtures & glue, e.g. tools/runstrat/resources/ForTests/)
+# are excluded below. workflow/ stays in scope: its yaml/json are user-editable
+# configs that check-yaml must validate.
+
+exclude: |
+  (?x)^(
+    maps/|
+    GameServers/|
+    resources/|
+    .*\.(cs|csproj|sln|java|kts|bat|properties)$|
+    .*gradlew$
+  )
 
 repos:
   # Keeps uv.lock in sync with pyproject.toml (the uv integration doc,
